@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 
 import 'controllers/projection_controller.dart';
+import 'ui/kotta_assets.dart';
 import 'ui/home_page.dart';
 
 class DiaVetitoApp extends StatefulWidget {
@@ -17,6 +19,11 @@ class _DiaVetitoAppState extends State<DiaVetitoApp> {
   void initState() {
     super.initState();
     _controller.init();
+    unawaited(KottaAssets.ensureLoaded().then((_) {
+      if (mounted) {
+        setState(() {});
+      }
+    }));
   }
 
   @override
