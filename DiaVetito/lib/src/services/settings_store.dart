@@ -1,0 +1,49 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../models/app_settings.dart';
+
+class SettingsStore {
+  static const String _kPort = 'Port';
+  static const String _kBoot = 'Boot';
+  static const String _kB2C = 'B2C';
+  static const String _kClipL = 'ClipL';
+  static const String _kClipR = 'ClipR';
+  static const String _kClipT = 'ClipT';
+  static const String _kClipB = 'ClipB';
+  static const String _kMirror = 'Mirror';
+  static const String _kRotate = 'Rotate';
+  static const String _kUser = 'Username';
+  static const String _kChannel = 'Channel';
+
+  Future<AppSettings> load() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return AppSettings(
+      port: prefs.getInt(_kPort) ?? 1024,
+      boot: prefs.getBool(_kBoot) ?? false,
+      borderToClip: prefs.getBool(_kB2C) ?? false,
+      clipL: prefs.getDouble(_kClipL) ?? 0,
+      clipR: prefs.getDouble(_kClipR) ?? 0,
+      clipT: prefs.getDouble(_kClipT) ?? 0,
+      clipB: prefs.getDouble(_kClipB) ?? 0,
+      mirror: prefs.getBool(_kMirror) ?? false,
+      rotateQuarterTurns: prefs.getInt(_kRotate) ?? 0,
+      mqttUser: prefs.getString(_kUser) ?? '',
+      mqttChannel: prefs.getString(_kChannel) ?? '1',
+    );
+  }
+
+  Future<void> save(AppSettings settings) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kPort, settings.port);
+    await prefs.setBool(_kBoot, settings.boot);
+    await prefs.setBool(_kB2C, settings.borderToClip);
+    await prefs.setDouble(_kClipL, settings.clipL);
+    await prefs.setDouble(_kClipR, settings.clipR);
+    await prefs.setDouble(_kClipT, settings.clipT);
+    await prefs.setDouble(_kClipB, settings.clipB);
+    await prefs.setBool(_kMirror, settings.mirror);
+    await prefs.setInt(_kRotate, settings.rotateQuarterTurns);
+    await prefs.setString(_kUser, settings.mqttUser);
+    await prefs.setString(_kChannel, settings.mqttChannel);
+  }
+}
