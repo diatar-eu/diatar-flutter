@@ -36,6 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.3
   mqtt_client: ^10.5.1
+  diatar_common:
+    path: ../packages/diatar_common
 
 dev_dependencies:
   flutter_test:

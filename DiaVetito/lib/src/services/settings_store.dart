@@ -1,6 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../models/app_settings.dart';
+import 'package:diatar_common/diatar_common.dart';
 
 class SettingsStore {
   static const String _kPort = 'Port';

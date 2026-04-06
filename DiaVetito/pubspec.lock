@@ -57,6 +57,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
+  diatar_common:
+    dependency: "direct main"
+    description:
+      path: "../packages/diatar_common"
+      relative: true
+    source: path
+    version: "0.0.1"
   event_bus:
     dependency: transitive
     description:
