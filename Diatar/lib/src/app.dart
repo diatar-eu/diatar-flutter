@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:diatar_common/diatar_common.dart';
 
 import 'controllers/diatar_main_controller.dart';
 import 'ui/diatar_home_page.dart';
@@ -18,6 +19,11 @@ class _DiatarAppState extends State<DiatarApp> {
   void initState() {
     super.initState();
     unawaited(_controller.init());
+    unawaited(KottaAssets.ensureLoaded().then((_) {
+      if (mounted) {
+        setState(() {});
+      }
+    }));
   }
 
   @override

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:diatar_common/diatar_common.dart';
 
 import 'controllers/projection_controller.dart';
-import 'ui/kotta_assets.dart';
 import 'ui/home_page.dart';
 
 class DiaVetitoApp extends StatefulWidget {

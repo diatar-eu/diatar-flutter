@@ -1,8 +1,11 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:diatar_common/diatar_common.dart';
 import 'package:flutter/material.dart';
+
+import '../models/app_settings.dart';
+import '../models/projection_frame.dart';
+import '../models/projection_globals.dart';
 
 import 'kotta_assets.dart';
 

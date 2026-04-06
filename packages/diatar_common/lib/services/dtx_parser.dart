@@ -123,7 +123,9 @@ class DtxParser {
       }
 
       if (raw.startsWith(' ')) {
-        currentVerseLines.add(_deFormat(raw.substring(1)));
+        // Keep inline DTX formatting codes (e.g. \K...;) so the painter and
+        // network text payload can render kotta/akkord data.
+        currentVerseLines.add(raw.substring(1));
         songHasBody = true;
       }
     }
@@ -140,49 +142,4 @@ class DtxParser {
     );
   }
 
-  String _deFormat(String src) {
-    final StringBuffer sb = StringBuffer();
-    bool esc = false;
-    int i = 0;
-    while (i < src.length) {
-      final String ch = src[i++];
-      if (!esc) {
-        if (ch == r'\') {
-          esc = true;
-        } else {
-          sb.write(ch);
-        }
-        continue;
-      }
-
-      esc = false;
-      switch (ch) {
-        case '.':
-        case ' ':
-          sb.write(' ');
-          break;
-        case '-':
-        case '_':
-          sb.write('-');
-          break;
-        case 'G':
-        case 'K':
-        case '?':
-          while (i < src.length && src[i++] != ';') {}
-          break;
-        case 'B':
-        case 'b':
-        case 'I':
-        case 'i':
-        case 'U':
-        case 'u':
-          // Style commands are intentionally ignored in plain text preview.
-          break;
-        default:
-          sb.write(ch);
-          break;
-      }
-    }
-    return sb.toString();
-  }
 }

@@ -6,13 +6,57 @@ import 'package:path_provider/path_provider.dart';
 
 import '../services/mqtt_sender_service.dart';
 import '../services/dtx_download_service.dart';
+import '../services/dtx_order_store.dart';
 import '../services/settings_store.dart';
 import '../services/tcp_sender_service.dart';
+
+class SongbookOrderItem {
+  const SongbookOrderItem({
+    required this.fileName,
+    required this.title,
+    required this.group,
+    required this.enabled,
+  });
+
+  final String fileName;
+  final String title;
+  final String group;
+  final bool enabled;
+}
+
+class CustomOrderCandidate {
+  const CustomOrderCandidate({
+    required this.fileName,
+    required this.bookTitle,
+    required this.songIndex,
+    required this.songTitle,
+  });
+
+  final String fileName;
+  final String bookTitle;
+  final int songIndex;
+  final String songTitle;
+
+  String get label => '$bookTitle: $songTitle';
+}
+
+class CustomOrderEntry {
+  const CustomOrderEntry({
+    required this.fileName,
+    required this.songIndex,
+    required this.label,
+  });
+
+  final String fileName;
+  final int songIndex;
+  final String label;
+}
 
 class DiatarMainController extends ChangeNotifier {
   final DtxParser _parser = const DtxParser();
   final SettingsStore _settingsStore = SettingsStore();
   final DtxDownloadService _downloadService = DtxDownloadService();
+  final DtxOrderStore _orderStore = DtxOrderStore();
   final TcpSenderService _sender = TcpSenderService(
     onStatusChanged: (bool connected) {},
     onError: (String message) {},
@@ -44,13 +88,37 @@ class DiatarMainController extends ChangeNotifier {
   double downloadCurrentFraction = 0;
   int _screenWidth = 1920;
   int _screenHeight = 1080;
+  Set<String> _disabledSongbooks = <String>{};
+  List<CustomOrderEntry> _customOrder = <CustomOrderEntry>[];
+  bool customOrderActive = false;
+  int _customOrderCursor = -1;
 
   Future<void> init() async {
     settings = await _settingsStore.load();
+    _disabledSongbooks = await _orderStore.loadDisabled();
+    final ({List<StoredCustomOrderEntry> entries, bool active}) stored =
+        await _orderStore.loadCurrentCustomOrder();
+    _customOrder = stored.entries
+        .map(
+          (StoredCustomOrderEntry e) => CustomOrderEntry(
+            fileName: e.fileName,
+            songIndex: e.songIndex,
+            label: e.label,
+          ),
+        )
+        .toList();
+    customOrderActive = stored.active && _customOrder.isNotEmpty;
+    _customOrderCursor = customOrderActive ? 0 : -1;
     globals = globals.copyWith(
+      bkColor: settings.bkColor,
+      txtColor: settings.txtColor,
+      blankColor: settings.blankColor,
+      hiColor: settings.hiColor,
       projecting: showing,
       fontSize: 70,
       titleSize: 12,
+      useKotta: true,
+      borderToClip: settings.borderToClip,
     );
     _configureSender();
     await _applyTransport();
@@ -80,6 +148,14 @@ class DiatarMainController extends ChangeNotifier {
   Future<void> applySettings(AppSettings newSettings) async {
     settings = newSettings;
     await _settingsStore.save(settings);
+    globals = globals.copyWith(
+      bkColor: settings.bkColor,
+      txtColor: settings.txtColor,
+      blankColor: settings.blankColor,
+      hiColor: settings.hiColor,
+      useKotta: true,
+      borderToClip: settings.borderToClip,
+    );
     await _applyTransport();
     notifyListeners();
     await _syncCurrentDia();
@@ -125,35 +201,13 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final Directory docs = await getApplicationDocumentsDirectory();
-      final Directory dtxDir = Directory('${docs.path}/diatar');
-      final List<DtxBook> loaded = <DtxBook>[];
-
-      if (await dtxDir.exists()) {
-        final List<FileSystemEntity> children = dtxDir.listSync();
-        children.sort((FileSystemEntity a, FileSystemEntity b) => a.path.compareTo(b.path));
-        for (final FileSystemEntity child in children) {
-          if (child is! File || !child.path.toLowerCase().endsWith('.dtx')) {
-            continue;
-          }
-          try {
-            final String content = await child.readAsString();
-            loaded.add(
-              _parser.parse(
-                fileName: child.uri.pathSegments.isNotEmpty
-                    ? child.uri.pathSegments.last
-                    : child.path,
-                content: content,
-              ),
-            );
-          } catch (_) {
-            // Invalid dtx files are skipped to keep the app usable.
-          }
-        }
-      }
+      final List<DtxBook> loaded = await _loadBooksFromDisk();
+      final List<DtxBook> enabled = loaded
+          .where((DtxBook b) => !_disabledSongbooks.contains(b.fileName))
+          .toList();
 
       if (loaded.isEmpty) {
-        loaded.add(
+        books = <DtxBook>[
           const DtxBook(
             fileName: 'demo.dtx',
             title: 'Minta kotet (nincs dtx fajl)',
@@ -168,24 +222,250 @@ class DiatarMainController extends ChangeNotifier {
               ),
             ],
           ),
-        );
-        status = 'Nincs .dtx fajl: ${dtxDir.path}';
+        ];
+        final Directory docs = await getApplicationDocumentsDirectory();
+        status = 'Nincs .dtx fajl: ${docs.path}/diatar';
+      } else if (enabled.isEmpty) {
+        books = const <DtxBook>[];
+        status = 'Minden enektar le van tiltva az enekrendben.';
       } else {
-        loaded.sort(_compareBooksLikeAndroid);
-        status = '${loaded.length} kotet betoltve';
+        enabled.sort(_compareBooksLikeAndroid);
+        books = enabled;
+        status = '${enabled.length} kotet betoltve';
       }
 
-      books = loaded;
       bookIndex = 0;
       songIndex = 0;
       verseIndex = 0;
       highPos = 0;
+      _customOrder = _customOrder.where((CustomOrderEntry e) {
+        final int bIx = books.indexWhere((DtxBook b) => b.fileName == e.fileName);
+        if (bIx < 0) {
+          return false;
+        }
+        return e.songIndex >= 0 && e.songIndex < books[bIx].songs.length;
+      }).toList();
+      if (_customOrder.isEmpty) {
+        customOrderActive = false;
+        _customOrderCursor = -1;
+      } else {
+        _customOrderCursor = _customOrderCursor.clamp(0, _customOrder.length - 1);
+        if (customOrderActive) {
+          _selectByCustomOrderCursor(_customOrderCursor, sync: false);
+        }
+      }
+      await _persistCurrentCustomOrder();
     } catch (e) {
       status = 'Betoltesi hiba: $e';
       books = const <DtxBook>[];
     } finally {
       loading = false;
       notifyListeners();
+    }
+  }
+
+  Future<List<DtxBook>> _loadBooksFromDisk() async {
+    final Directory docs = await getApplicationDocumentsDirectory();
+    final Directory dtxDir = Directory('${docs.path}/diatar');
+    final List<DtxBook> loaded = <DtxBook>[];
+
+    if (!await dtxDir.exists()) {
+      return loaded;
+    }
+
+    final List<FileSystemEntity> children = dtxDir.listSync();
+    children.sort((FileSystemEntity a, FileSystemEntity b) => a.path.compareTo(b.path));
+    for (final FileSystemEntity child in children) {
+      if (child is! File || !child.path.toLowerCase().endsWith('.dtx')) {
+        continue;
+      }
+      try {
+        final String content = await child.readAsString();
+        loaded.add(
+          _parser.parse(
+            fileName: child.uri.pathSegments.isNotEmpty
+                ? child.uri.pathSegments.last
+                : child.path,
+            content: content,
+          ),
+        );
+      } catch (_) {
+        // Invalid dtx files are skipped to keep the app usable.
+      }
+    }
+    return loaded;
+  }
+
+  Future<List<SongbookOrderItem>> loadSongbookOrderItems() async {
+    final List<DtxBook> allBooks = await _loadBooksFromDisk();
+    allBooks.sort(_compareBooksLikeAndroid);
+    return allBooks
+        .map(
+          (DtxBook b) => SongbookOrderItem(
+            fileName: b.fileName,
+            title: b.displayName,
+            group: b.group,
+            enabled: !_disabledSongbooks.contains(b.fileName),
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> applySongbookOrder(Map<String, bool> enabledByFile) async {
+    final Set<String> disabled = <String>{};
+    enabledByFile.forEach((String fileName, bool enabled) {
+      if (!enabled) {
+        disabled.add(fileName);
+      }
+    });
+    _disabledSongbooks = disabled;
+    await _orderStore.saveDisabled(_disabledSongbooks);
+    await reloadBooks();
+  }
+
+  List<CustomOrderEntry> get customOrder => List<CustomOrderEntry>.unmodifiable(_customOrder);
+
+  Future<void> _persistCurrentCustomOrder() async {
+    await _orderStore.saveCurrentCustomOrder(
+      _customOrder
+          .map(
+            (CustomOrderEntry e) => StoredCustomOrderEntry(
+              fileName: e.fileName,
+              songIndex: e.songIndex,
+              label: e.label,
+            ),
+          )
+          .toList(),
+      active: customOrderActive,
+    );
+  }
+
+  Future<List<String>> listCustomOrderPresetNames() async {
+    final Map<String, List<StoredCustomOrderEntry>> presets = await _orderStore.loadCustomOrderPresets();
+    final List<String> names = presets.keys.toList()..sort((String a, String b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return names;
+  }
+
+  Future<List<CustomOrderEntry>> readCustomOrderPreset(String name) async {
+    final String key = name.trim();
+    if (key.isEmpty) {
+      return const <CustomOrderEntry>[];
+    }
+    final Map<String, List<StoredCustomOrderEntry>> presets = await _orderStore.loadCustomOrderPresets();
+    final List<StoredCustomOrderEntry> entries = presets[key] ?? const <StoredCustomOrderEntry>[];
+    return entries
+        .map(
+          (StoredCustomOrderEntry e) => CustomOrderEntry(
+            fileName: e.fileName,
+            songIndex: e.songIndex,
+            label: e.label,
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> saveCustomOrderPreset(String name, List<CustomOrderEntry> entries) async {
+    final String key = name.trim();
+    if (key.isEmpty) {
+      return;
+    }
+    final Map<String, List<StoredCustomOrderEntry>> presets = await _orderStore.loadCustomOrderPresets();
+    presets[key] = entries
+        .map(
+          (CustomOrderEntry e) => StoredCustomOrderEntry(
+            fileName: e.fileName,
+            songIndex: e.songIndex,
+            label: e.label,
+          ),
+        )
+        .toList();
+    await _orderStore.saveCustomOrderPresets(presets);
+  }
+
+  Future<void> deleteCustomOrderPreset(String name) async {
+    final String key = name.trim();
+    if (key.isEmpty) {
+      return;
+    }
+    final Map<String, List<StoredCustomOrderEntry>> presets = await _orderStore.loadCustomOrderPresets();
+    presets.remove(key);
+    await _orderStore.saveCustomOrderPresets(presets);
+  }
+
+  List<CustomOrderCandidate> loadCustomOrderCandidates() {
+    final List<CustomOrderCandidate> out = <CustomOrderCandidate>[];
+    for (final DtxBook book in books) {
+      for (int i = 0; i < book.songs.length; i++) {
+        final DtxSong song = book.songs[i];
+        if (song.separator) {
+          continue;
+        }
+        out.add(
+          CustomOrderCandidate(
+            fileName: book.fileName,
+            bookTitle: book.displayName,
+            songIndex: i,
+            songTitle: song.title,
+          ),
+        );
+      }
+    }
+    return out;
+  }
+
+  Future<void> applyCustomOrder(List<CustomOrderEntry> entries, {required bool activate}) async {
+    _customOrder = List<CustomOrderEntry>.from(entries);
+    customOrderActive = activate && _customOrder.isNotEmpty;
+    if (customOrderActive) {
+      _customOrderCursor = 0;
+      _selectByCustomOrderCursor(0, sync: false);
+      await _persistCurrentCustomOrder();
+      await _syncCurrentDia();
+    } else {
+      _customOrderCursor = -1;
+      await _persistCurrentCustomOrder();
+      notifyListeners();
+    }
+  }
+
+  void _syncCustomCursorFromCurrentSong() {
+    if (!customOrderActive || _customOrder.isEmpty) {
+      return;
+    }
+    final DtxBook? b = currentBook;
+    if (b == null) {
+      return;
+    }
+    final int idx = _customOrder.indexWhere(
+      (CustomOrderEntry e) => e.fileName == b.fileName && e.songIndex == songIndex,
+    );
+    if (idx >= 0) {
+      _customOrderCursor = idx;
+    }
+  }
+
+  void _selectByCustomOrderCursor(int cursor, {required bool sync}) {
+    if (_customOrder.isEmpty) {
+      return;
+    }
+    final int safe = cursor.clamp(0, _customOrder.length - 1);
+    final CustomOrderEntry entry = _customOrder[safe];
+    final int bookIx = books.indexWhere((DtxBook b) => b.fileName == entry.fileName);
+    if (bookIx < 0) {
+      return;
+    }
+    final DtxBook b = books[bookIx];
+    final int maxSong = b.songs.isEmpty ? 0 : b.songs.length - 1;
+
+    bookIndex = bookIx;
+    songIndex = entry.songIndex.clamp(0, maxSong);
+    verseIndex = 0;
+    highPos = 0;
+    _customOrderCursor = safe;
+    status = 'Sajat sorrend: ${entry.label}';
+    notifyListeners();
+    if (sync) {
+      _syncCurrentDia();
     }
   }
 
@@ -303,6 +583,7 @@ class DiatarMainController extends ChangeNotifier {
     highPos = 0;
     final DtxBook? selected = currentBook;
     status = 'Kotet: ${selected?.displayName ?? '-'}';
+    _syncCustomCursorFromCurrentSong();
     notifyListeners();
     _syncCurrentDia();
   }
@@ -317,6 +598,7 @@ class DiatarMainController extends ChangeNotifier {
     verseIndex = 0;
     highPos = 0;
     status = 'Enek: ${currentSong?.title ?? '-'}';
+    _syncCustomCursorFromCurrentSong();
     notifyListeners();
     _syncCurrentDia();
   }
@@ -343,6 +625,14 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
+    if (customOrderActive && _customOrder.isNotEmpty) {
+      if (_customOrderCursor + 1 >= _customOrder.length) {
+        return;
+      }
+      _selectByCustomOrderCursor(_customOrderCursor + 1, sync: true);
+      return;
+    }
+
     final int? nextSongIdx = _findSelectableSongIndex(songIndex + 1, forward: true);
     if (nextSongIdx == null) {
       return;
@@ -360,6 +650,24 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
+    if (customOrderActive && _customOrder.isNotEmpty) {
+      if (_customOrderCursor <= 0) {
+        return;
+      }
+      final int targetCursor = _customOrderCursor - 1;
+      _selectByCustomOrderCursor(targetCursor, sync: false);
+      final DtxSong? targetSong = currentSong;
+      final int targetVerse = (targetSong == null || targetSong.verses.isEmpty)
+          ? 0
+          : targetSong.verses.length - 1;
+      verseIndex = targetVerse;
+      highPos = 0;
+      status = 'Enek/versszak: ${targetSong?.title ?? '-'}';
+      notifyListeners();
+      _syncCurrentDia();
+      return;
+    }
+
     final int? prevSongIdx = _findSelectableSongIndex(songIndex - 1, forward: false);
     if (prevSongIdx == null) {
       return;
@@ -370,6 +678,13 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void nextSong() {
+    if (customOrderActive && _customOrder.isNotEmpty) {
+      if (_customOrderCursor + 1 >= _customOrder.length) {
+        return;
+      }
+      _selectByCustomOrderCursor(_customOrderCursor + 1, sync: true);
+      return;
+    }
     final int? nextSongIdx = _findSelectableSongIndex(songIndex + 1, forward: true);
     if (nextSongIdx == null) {
       return;
@@ -378,6 +693,13 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void prevSong() {
+    if (customOrderActive && _customOrder.isNotEmpty) {
+      if (_customOrderCursor <= 0) {
+        return;
+      }
+      _selectByCustomOrderCursor(_customOrderCursor - 1, sync: true);
+      return;
+    }
     final int? prevSongIdx = _findSelectableSongIndex(songIndex - 1, forward: false);
     if (prevSongIdx == null) {
       return;
@@ -415,6 +737,7 @@ class DiatarMainController extends ChangeNotifier {
     verseIndex = verse;
     highPos = 0;
     status = '$statusPrefix: ${songModel.title}';
+    _syncCustomCursorFromCurrentSong();
     notifyListeners();
     _syncCurrentDia();
   }
@@ -423,7 +746,24 @@ class DiatarMainController extends ChangeNotifier {
     showing = !showing;
     status = showing ? 'Vetites: BE' : 'Vetites: KI';
     notifyListeners();
-    _syncCurrentDia();
+    _syncProjectionOnly();
+  }
+
+  Future<void> _syncProjectionOnly() async {
+    globals = globals.copyWith(projecting: showing, wordToHighlight: highPos);
+    if (mqttActive) {
+      await _mqttSender.sendState(
+        globals,
+        showing: showing,
+        wordToHighlight: highPos,
+      );
+    } else {
+      await _sender.sendState(
+        globals,
+        showing: showing,
+        wordToHighlight: highPos,
+      );
+    }
   }
 
   void highlightNext() {

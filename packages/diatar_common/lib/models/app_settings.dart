@@ -14,7 +14,14 @@ class AppSettings {
     this.mqttUser = '',
     this.mqttPassword = '',
     this.mqttChannel = '1',
-  });
+    Color? bkColor,
+    Color? txtColor,
+    Color? blankColor,
+    Color? hiColor,
+  })  : _bkColor = bkColor,
+        _txtColor = txtColor,
+        _blankColor = blankColor,
+        _hiColor = hiColor;
 
   final int port;
   final bool boot;
@@ -28,6 +35,15 @@ class AppSettings {
   final String mqttUser;
   final String mqttPassword;
   final String mqttChannel;
+  final Color? _bkColor;
+  final Color? _txtColor;
+  final Color? _blankColor;
+  final Color? _hiColor;
+
+  Color get bkColor => _bkColor ?? const Color(0xFF000000);
+  Color get txtColor => _txtColor ?? const Color(0xFFFFFFFF);
+  Color get blankColor => _blankColor ?? const Color(0xFF000000);
+  Color get hiColor => _hiColor ?? const Color(0xFF00FFFF);
 
   bool get tcpEnabled => mqttUser.trim().isEmpty && port > 0;
 
@@ -46,6 +62,10 @@ class AppSettings {
     String? mqttUser,
     String? mqttPassword,
     String? mqttChannel,
+    Color? bkColor,
+    Color? txtColor,
+    Color? blankColor,
+    Color? hiColor,
   }) {
     return AppSettings(
       port: port ?? this.port,
@@ -60,6 +80,10 @@ class AppSettings {
       mqttUser: mqttUser ?? this.mqttUser,
       mqttPassword: mqttPassword ?? this.mqttPassword,
       mqttChannel: mqttChannel ?? this.mqttChannel,
+      bkColor: bkColor ?? this.bkColor,
+      txtColor: txtColor ?? this.txtColor,
+      blankColor: blankColor ?? this.blankColor,
+      hiColor: hiColor ?? this.hiColor,
     );
   }
 }

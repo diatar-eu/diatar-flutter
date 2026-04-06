@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:diatar_common/diatar_common.dart';
 
 import '../controllers/projection_controller.dart';
-import 'projector_painter.dart';
 import 'settings_sheet.dart';
 
 class HomePage extends StatelessWidget {

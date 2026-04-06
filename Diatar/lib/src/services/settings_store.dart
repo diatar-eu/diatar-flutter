@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diatar_common/diatar_common.dart';
 
@@ -14,6 +15,10 @@ class SettingsStore {
   static const String _kUser = 'Username';
   static const String _kPassword = 'Password';
   static const String _kChannel = 'Channel';
+  static const String _kBkColor = 'BkColor';
+  static const String _kTxColor = 'TxColor';
+  static const String _kBlankColor = 'BlankColor';
+  static const String _kHiColor = 'HiColor';
 
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -30,6 +35,10 @@ class SettingsStore {
       mqttUser: prefs.getString(_kUser) ?? '',
       mqttPassword: prefs.getString(_kPassword) ?? '',
       mqttChannel: prefs.getString(_kChannel) ?? '1',
+      bkColor: Color(prefs.getInt(_kBkColor) ?? 0xFF000000),
+      txtColor: Color(prefs.getInt(_kTxColor) ?? 0xFFFFFFFF),
+      blankColor: Color(prefs.getInt(_kBlankColor) ?? 0xFF000000),
+      hiColor: Color(prefs.getInt(_kHiColor) ?? 0xFF00FFFF),
     );
   }
 
@@ -47,5 +56,9 @@ class SettingsStore {
     await prefs.setString(_kUser, settings.mqttUser);
     await prefs.setString(_kPassword, settings.mqttPassword);
     await prefs.setString(_kChannel, settings.mqttChannel);
+    await prefs.setInt(_kBkColor, settings.bkColor.toARGB32());
+    await prefs.setInt(_kTxColor, settings.txtColor.toARGB32());
+    await prefs.setInt(_kBlankColor, settings.blankColor.toARGB32());
+    await prefs.setInt(_kHiColor, settings.hiColor.toARGB32());
   }
 }
