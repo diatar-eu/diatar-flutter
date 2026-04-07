@@ -4,10 +4,21 @@ import 'package:diatar_common/diatar_common.dart';
 import '../controllers/projection_controller.dart';
 import 'settings_sheet.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.controller});
 
   final ProjectionController controller;
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  double? _canvasHeight;
+  Size? _lastViewport;
+  int _lastFrameSignature = 0;
+
+  ProjectionController get controller => widget.controller;
 
   @override
   Widget build(BuildContext context) {
@@ -19,11 +30,16 @@ class HomePage extends StatelessWidget {
           return LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               controller.updateViewport(Size(constraints.maxWidth, constraints.maxHeight));
-              final double canvasHeight = _estimateCanvasHeight(
+              final double viewportHeight = constraints.maxHeight;
+              final double initialCanvasHeight = _canvasHeight ?? viewportHeight;
+              final double canvasHeight = initialCanvasHeight > viewportHeight ? initialCanvasHeight : viewportHeight;
+
+              _scheduleHeightRefresh(
                 frame: controller.activeFrame,
                 viewportWidth: constraints.maxWidth,
-                viewportHeight: constraints.maxHeight,
+                viewportHeight: viewportHeight,
               );
+
               return Stack(
                 children: <Widget>[
                   Positioned.fill(
@@ -55,6 +71,47 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  void _scheduleHeightRefresh({
+    required ProjectionFrame? frame,
+    required double viewportWidth,
+    required double viewportHeight,
+  }) {
+    final Size viewport = Size(viewportWidth, viewportHeight);
+    final int frameSignature = Object.hash(
+      frame.runtimeType,
+      frame is TextFrame ? frame.record.title : null,
+      frame is TextFrame ? frame.record.lines.length : 0,
+      frame is TextFrame ? frame.record.lines.join('\n') : null,
+      controller.globals,
+      controller.settings,
+    );
+
+    if (_lastViewport == viewport && _lastFrameSignature == frameSignature) {
+      return;
+    }
+    _lastViewport = viewport;
+    _lastFrameSignature = frameSignature;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final double estimated = _estimateCanvasHeight(
+        frame: frame,
+        viewportWidth: viewportWidth,
+        viewportHeight: viewportHeight,
+      );
+      final double nextHeight = estimated > viewportHeight ? estimated : viewportHeight;
+      final double current = _canvasHeight ?? viewportHeight;
+      if ((nextHeight - current).abs() < 1) {
+        return;
+      }
+      setState(() {
+        _canvasHeight = nextHeight;
+      });
+    });
+  }
+
   Future<void> _openSettings(BuildContext context) {
     return showModalBottomSheet<void>(
       context: context,
@@ -83,41 +140,12 @@ class HomePage extends StatelessWidget {
     required double viewportWidth,
     required double viewportHeight,
   }) {
-    if (frame is! TextFrame) {
-      return viewportHeight;
-    }
-
-    final bool hasTitle = !controller.globals.hideTitle && frame.record.title.isNotEmpty;
-    final int logicalLines = frame.record.lines.length + (hasTitle ? 1 : 0);
-    if (logicalLines <= 0) {
-      return viewportHeight;
-    }
-
-    final double fontSize = controller.globals.fontSize.toDouble();
-    final double titleSize = (controller.globals.titleSize.toDouble() * 2.5).clamp(8.0, 72.0);
-    final double lineSpacing = controller.globals.spacing100 / 100.0;
-
-    final TextPainter normalProbe = TextPainter(
-      text: TextSpan(text: 'Ag', style: TextStyle(fontSize: fontSize, fontWeight: controller.globals.boldText ? FontWeight.bold : FontWeight.normal)),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: viewportWidth);
-    final TextPainter titleProbe = TextPainter(
-      text: TextSpan(text: 'Ag', style: TextStyle(fontSize: titleSize, fontWeight: FontWeight.bold)),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: viewportWidth);
-
-    double estimated = 8;
-    if (hasTitle) {
-      estimated += titleProbe.height * lineSpacing;
-    }
-    estimated += normalProbe.height * lineSpacing * frame.record.lines.length;
-
-    if (controller.globals.useKotta) {
-      estimated += frame.record.lines.length * (fontSize * (controller.globals.kottaArany / 100.0) * 1.35);
-    }
-
-    // Keep enough headroom for wrapped kotta rows so vertical scrolling becomes available when needed.
-    estimated *= 1.25;
-    return estimated > viewportHeight ? estimated : viewportHeight;
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: frame,
+      globals: controller.globals,
+      settings: controller.settings,
+    );
+    final double required = painter.measureRequiredHeight(Size(viewportWidth, viewportHeight));
+    return required > viewportHeight ? required : viewportHeight;
   }
 }

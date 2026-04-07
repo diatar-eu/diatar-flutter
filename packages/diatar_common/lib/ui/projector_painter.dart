@@ -57,6 +57,16 @@ class ProjectorPainter extends CustomPainter {
     canvas.restore();
   }
 
+  // Computes exact required canvas height using the same wrapping/chord/kotta rules as paint.
+  double measureRequiredHeight(Size size) {
+    final ProjectionFrame? localFrame = frame;
+    if (localFrame is! TextFrame) {
+      return size.height;
+    }
+    final double contentHeight = _measureTextRequiredHeight(size, localFrame);
+    return globals.vCenter ? contentHeight : contentHeight + 8;
+  }
+
   void _drawContent(Canvas canvas, Size size) {
     final ProjectionFrame? localFrame = frame;
     if (localFrame is LogoFrame) {
@@ -159,6 +169,7 @@ class ProjectorPainter extends CustomPainter {
     
     final List<TextPainter> painters = <TextPainter>[];
     final List<List<bool>> highlightByLine = <List<bool>>[];
+    final List<List<_TextRowLayout>> textRowsByLine = <List<_TextRowLayout>>[];
     final List<bool> hasKottaByLine = <bool>[];
     final List<double> chordBandByLine = <double>[];
     final List<List<_KottaRowLayout>> kottaRowsByLine = <List<_KottaRowLayout>>[];
@@ -169,13 +180,16 @@ class ProjectorPainter extends CustomPainter {
       final _RenderLine baseLine = allLines[lineIndex];
       final bool isTitleLine = hasTitleLine && lineIndex == 0;
       final double lineFontSize = isTitleLine ? titleFontSize : fontSize;
-      final bool hasKotta = !isTitleLine && globals.useKotta && baseLine.words.any((w) => (w.kotta ?? '').isNotEmpty);
+      final bool hasKotta = !isTitleLine && globals.useKotta && settings.receiverUseKotta && baseLine.words.any((w) => (w.kotta ?? '').isNotEmpty);
       final _RenderLine line = (!isTitleLine && !hasKotta)
           ? _applyChordPadding(baseLine, lineFontSize)
           : baseLine;
       allLines[lineIndex] = line;
       final double chordBand = (!isTitleLine && !hasKotta) ? _lineChordBandHeight(line, lineFontSize) : 0;
       final List<_KottaRowLayout> lineKottaRows = hasKotta ? _buildKottaRows(line, lineFontSize, maxWidth) : const <_KottaRowLayout>[];
+        final List<_TextRowLayout> lineTextRows = (!isTitleLine && !hasKotta)
+          ? _buildTextRows(line, lineFontSize, maxWidth)
+          : const <_TextRowLayout>[];
       final List<bool> lineHighlights = <bool>[];
       
       final List<InlineSpan> spans = <InlineSpan>[];
@@ -220,6 +234,7 @@ class ProjectorPainter extends CustomPainter {
       )..layout(maxWidth: maxWidth);
       painters.add(tp);
       highlightByLine.add(lineHighlights);
+      textRowsByLine.add(lineTextRows);
       hasKottaByLine.add(hasKotta);
       chordBandByLine.add(chordBand);
       kottaRowsByLine.add(lineKottaRows);
@@ -242,7 +257,17 @@ class ProjectorPainter extends CustomPainter {
         final double rowStep = staffHeight + 2 + rowTextHeight + lineGap * 0.08;
         totalHeight += (staffHeight + 2) + (rows - 1) * rowStep + rowTextHeight;
       } else {
-        totalHeight += chordBandByLine[i] + tp.height * lineSpacing;
+        final bool isTitleLine = hasTitleLine && i == 0;
+        if (isTitleLine) {
+          totalHeight += chordBandByLine[i] + tp.height * lineSpacing;
+        } else {
+          final double lineFontSize = fontSize;
+          final double textRowHeight = _textRowHeight(lineFontSize);
+          final List<_TextRowLayout> rows = textRowsByLine[i];
+          for (final _TextRowLayout row in rows) {
+            totalHeight += _rowChordBandHeight(allLines[i], row, lineFontSize) + textRowHeight * lineSpacing;
+          }
+        }
       }
     }
     double y = globals.vCenter ? (size.height - totalHeight) / 2 : 8;
@@ -256,6 +281,7 @@ class ProjectorPainter extends CustomPainter {
       final List<_KottaRowLayout> lineKottaRows = kottaRowsByLine[painterIndex];
       final double chordBand = chordBandByLine[painterIndex];
       final double lineStep = tp.height * lineSpacing;
+      final List<_TextRowLayout> lineTextRows = textRowsByLine[painterIndex];
 
       final bool titleToKottaTransition = hasTitleLine && painterIndex == 1 && hasKotta;
       if (titleToKottaTransition) {
@@ -303,17 +329,137 @@ class ProjectorPainter extends CustomPainter {
       }
 
       final double x = globals.hCenter ? (size.width - tp.width) / 2 : horizontalPad;
-      final double textY = y + chordBand;
-      tp.paint(canvas, Offset(x, textY));
-      _paintChords(canvas, rline, x, textY, lineFontSize);
-      y += chordBand + lineStep;
+      if (isTitleLine || lineTextRows.isEmpty) {
+        final double textY = y + chordBand;
+        tp.paint(canvas, Offset(x, textY));
+        _paintChords(canvas, rline, x, textY, lineFontSize);
+        y += chordBand + lineStep;
+        continue;
+      }
+
+      final double rowHeight = _textRowHeight(lineFontSize);
+      for (final _TextRowLayout row in lineTextRows) {
+        final List<_WordToken> rowWords = <_WordToken>[for (final int wi in row.wordIndices) rline.words[wi]];
+        final List<bool> rowHighlights = <bool>[for (final int wi in row.wordIndices) highlightByLine[painterIndex][wi]];
+        final _RenderLine rowLine = _RenderLine(words: rowWords);
+        final double rowChordBand = _rowChordBandHeight(rline, row, lineFontSize);
+        final double rowX = globals.hCenter ? (size.width - row.width) / 2 : horizontalPad;
+        final double textY = y + rowChordBand;
+        _paintTextRow(canvas, rowLine, rowHighlights, rowX, textY, lineFontSize);
+        _paintChords(canvas, rowLine, rowX, textY, lineFontSize);
+        y += rowChordBand + rowHeight * lineSpacing;
+      }
     }
   }
 
+  double _measureTextRequiredHeight(Size size, TextFrame frame) {
+    final double horizontalPad = globals.leftIndent.toDouble() * 4;
+    final double maxWidth = math.max(40, size.width - horizontalPad * 2);
+
+    final bool hasTitleLine = !globals.hideTitle && frame.record.title.isNotEmpty;
+    final List<String> sourceLines = <String>[
+      if (hasTitleLine) frame.record.title,
+      ...frame.record.lines,
+    ];
+
+    final List<_RenderLine> allLines = _parseRenderLines(sourceLines);
+
+    double fontSize = globals.fontSize.toDouble();
+    if (globals.autoResize) {
+      while (fontSize > 8) {
+        final double required = _measureTextHeight(allLines, maxWidth, fontSize);
+        if (required <= size.height * 0.95) {
+          break;
+        }
+        fontSize -= 1;
+      }
+    }
+
+    final double titleFontSize = (globals.titleSize.toDouble() * 2.5).clamp(8.0, 72.0);
+    final double lineSpacing = globals.spacing100 / 100.0;
+
+    final List<List<_TextRowLayout>> textRowsByLine = <List<_TextRowLayout>>[];
+    final List<bool> hasKottaByLine = <bool>[];
+    final List<double> chordBandByLine = <double>[];
+    final List<List<_KottaRowLayout>> kottaRowsByLine = <List<_KottaRowLayout>>[];
+    final List<double> lineHeightsByLine = <double>[];
+
+    for (int lineIndex = 0; lineIndex < allLines.length; lineIndex++) {
+      final _RenderLine baseLine = allLines[lineIndex];
+      final bool isTitleLine = hasTitleLine && lineIndex == 0;
+      final double lineFontSize = isTitleLine ? titleFontSize : fontSize;
+      final bool hasKotta = !isTitleLine && globals.useKotta && settings.receiverUseKotta && baseLine.words.any((w) => (w.kotta ?? '').isNotEmpty);
+      final _RenderLine line = (!isTitleLine && !hasKotta)
+          ? _applyChordPadding(baseLine, lineFontSize)
+          : baseLine;
+      allLines[lineIndex] = line;
+
+      final double chordBand = (!isTitleLine && !hasKotta) ? _lineChordBandHeight(line, lineFontSize) : 0;
+      final List<_KottaRowLayout> lineKottaRows = hasKotta ? _buildKottaRows(line, lineFontSize, maxWidth) : const <_KottaRowLayout>[];
+      final List<_TextRowLayout> lineTextRows = (!isTitleLine && !hasKotta)
+          ? _buildTextRows(line, lineFontSize, maxWidth)
+          : const <_TextRowLayout>[];
+
+      final TextPainter lineProbe = TextPainter(
+        text: TextSpan(
+          text: 'Ag',
+          style: TextStyle(
+            fontSize: lineFontSize,
+            fontWeight: globals.boldText ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      textRowsByLine.add(lineTextRows);
+      hasKottaByLine.add(hasKotta);
+      chordBandByLine.add(chordBand);
+      kottaRowsByLine.add(lineKottaRows);
+      lineHeightsByLine.add(lineProbe.height);
+    }
+
+    double totalHeight = 0;
+    for (int i = 0; i < allLines.length; i++) {
+      final bool titleToKottaTransition = hasTitleLine && i == 1 && hasKottaByLine[i];
+      if (titleToKottaTransition) {
+        totalHeight += _titleToKottaGap(fontSize);
+      }
+
+      if (hasKottaByLine[i]) {
+        final int rows = math.max(1, kottaRowsByLine[i].length);
+        final bool isTitleLine = hasTitleLine && i == 0;
+        final double lineFontSize = isTitleLine ? titleFontSize : fontSize;
+        final double lineGap = _kottaLineGap(lineFontSize);
+        final double staffHeight = lineGap * 4;
+        final double rowTextHeight = _kottaRowTextHeight(lineFontSize);
+        final double rowStep = staffHeight + 2 + rowTextHeight + lineGap * 0.08;
+        totalHeight += (staffHeight + 2) + (rows - 1) * rowStep + rowTextHeight;
+      } else {
+        final bool isTitleLine = hasTitleLine && i == 0;
+        if (isTitleLine) {
+          totalHeight += chordBandByLine[i] + lineHeightsByLine[i] * lineSpacing;
+        } else {
+          final double lineFontSize = fontSize;
+          final double textRowHeight = _textRowHeight(lineFontSize);
+          final List<_TextRowLayout> rows = textRowsByLine[i];
+          for (final _TextRowLayout row in rows) {
+            totalHeight += _rowChordBandHeight(allLines[i], row, lineFontSize) + textRowHeight * lineSpacing;
+          }
+        }
+      }
+    }
+
+    return totalHeight;
+  }
+
   double _lineChordBandHeight(_RenderLine line, double fontSize) {
-    if (!globals.useAkkord || !line.words.any((w) => (w.chord ?? '').isNotEmpty)) {
+    if (!globals.useAkkord || !settings.receiverUseAkkord || !line.words.any((w) => (w.chord ?? '').isNotEmpty)) {
       return 0;
     }
+    return _chordBandHeightForFont(fontSize);
+  }
+
+  double _chordBandHeightForFont(double fontSize) {
     final TextPainter chordMeasure = TextPainter(
       text: TextSpan(
         text: 'Ag',
@@ -327,8 +473,69 @@ class ProjectorPainter extends CustomPainter {
     return chordMeasure.height + 2;
   }
 
+  double _rowChordBandHeight(_RenderLine line, _TextRowLayout row, double fontSize) {
+    if (!globals.useAkkord || !settings.receiverUseAkkord) {
+      return 0;
+    }
+    for (final int wi in row.wordIndices) {
+      if (wi >= 0 && wi < line.words.length && (line.words[wi].chord ?? '').isNotEmpty) {
+        return _chordBandHeightForFont(fontSize);
+      }
+    }
+    return 0;
+  }
+
+  double _textRowHeight(double fontSize) {
+    final TextPainter measure = TextPainter(
+      text: TextSpan(
+        text: 'Ag',
+        style: TextStyle(fontSize: fontSize, fontWeight: globals.boldText ? FontWeight.bold : FontWeight.normal),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return measure.height;
+  }
+
+  void _paintTextRow(
+    Canvas canvas,
+    _RenderLine rowLine,
+    List<bool> rowHighlights,
+    double x,
+    double y,
+    double fontSize,
+  ) {
+    final List<InlineSpan> spans = <InlineSpan>[];
+    for (int i = 0; i < rowLine.words.length; i++) {
+      final _WordToken word = rowLine.words[i];
+      final bool highlighted = i < rowHighlights.length ? rowHighlights[i] : false;
+      final Color baseColor = word.color ?? globals.txtColor;
+      spans.add(
+        TextSpan(
+          text: word.text + (word.spaceAfter ? ' ' : ''),
+          style: TextStyle(
+            color: highlighted ? globals.hiColor : baseColor,
+            fontSize: fontSize,
+            fontWeight: (globals.boldText || word.bold) ? FontWeight.bold : FontWeight.normal,
+            fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
+            decoration: TextDecoration.combine(<TextDecoration>[
+              if (word.underline) TextDecoration.underline,
+              if (word.strike) TextDecoration.lineThrough,
+            ]),
+          ),
+        ),
+      );
+    }
+
+    final TextPainter tp = TextPainter(
+      text: TextSpan(children: spans),
+      textDirection: TextDirection.ltr,
+      textAlign: globals.hCenter ? TextAlign.center : TextAlign.left,
+    )..layout();
+    tp.paint(canvas, Offset(x, y));
+  }
+
   _RenderLine _applyChordPadding(_RenderLine line, double fontSize) {
-    if (!globals.useAkkord || line.words.isEmpty) {
+    if (!globals.useAkkord || !settings.receiverUseAkkord || line.words.isEmpty) {
       return line;
     }
 
@@ -411,7 +618,7 @@ class ProjectorPainter extends CustomPainter {
   }
 
   void _paintChords(Canvas canvas, _RenderLine line, double x, double y, double fontSize) {
-    if (line.words.isEmpty || !globals.useAkkord) {
+    if (line.words.isEmpty || !globals.useAkkord || !settings.receiverUseAkkord) {
       return;
     }
     final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
@@ -626,6 +833,37 @@ class ProjectorPainter extends CustomPainter {
 
     if (currentWords.isNotEmpty) {
       rows.add(_KottaRowLayout(words: List<_KottaWordLayout>.from(currentWords), width: currentWidth));
+    }
+
+    return rows;
+  }
+
+  List<_TextRowLayout> _buildTextRows(_RenderLine line, double fontSize, double maxWidth) {
+    if (line.words.isEmpty) {
+      return const <_TextRowLayout>[];
+    }
+
+    final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
+    final double wrapWidth = math.max(8.0, maxWidth);
+    final List<_TextRowLayout> rows = <_TextRowLayout>[];
+    final List<int> currentWordIndices = <int>[];
+    double currentWidth = 0;
+
+    for (int i = 0; i < line.words.length; i++) {
+      final _WordToken w = line.words[i];
+      final double slotWidth = _measureWordDisplayWidth(w, fontSize, measure);
+      if (currentWordIndices.isNotEmpty && (currentWidth + slotWidth) > wrapWidth) {
+        rows.add(_TextRowLayout(wordIndices: List<int>.from(currentWordIndices), width: currentWidth));
+        currentWordIndices.clear();
+        currentWidth = 0;
+      }
+
+      currentWordIndices.add(i);
+      currentWidth += slotWidth;
+    }
+
+    if (currentWordIndices.isNotEmpty) {
+      rows.add(_TextRowLayout(wordIndices: List<int>.from(currentWordIndices), width: currentWidth));
     }
 
     return rows;
@@ -1900,6 +2138,12 @@ class _KottaWordLayout {
 class _KottaRowLayout {
   const _KottaRowLayout({required this.words, required this.width});
   final List<_KottaWordLayout> words;
+  final double width;
+}
+
+class _TextRowLayout {
+  const _TextRowLayout({required this.wordIndices, required this.width});
+  final List<int> wordIndices;
   final double width;
 }
 
