@@ -35,6 +35,8 @@ class AppSettings {
     this.projBgMode = 0,
     this.projBackTrans = 0,
     this.projBlankTrans = 0,
+    this.receiverUseAkkord = true,
+    this.receiverUseKotta = true,
     Color? bkColor,
     Color? txtColor,
     Color? blankColor,
@@ -77,6 +79,8 @@ class AppSettings {
   final int projBgMode;
   final int projBackTrans;
   final int projBlankTrans;
+  final bool receiverUseAkkord;
+  final bool receiverUseKotta;
   final Color? _bkColor;
   final Color? _txtColor;
   final Color? _blankColor;
@@ -125,6 +129,8 @@ class AppSettings {
     int? projBgMode,
     int? projBackTrans,
     int? projBlankTrans,
+    bool? receiverUseAkkord,
+    bool? receiverUseKotta,
     Color? bkColor,
     Color? txtColor,
     Color? blankColor,
@@ -164,6 +170,8 @@ class AppSettings {
       projBgMode: projBgMode ?? this.projBgMode,
       projBackTrans: projBackTrans ?? this.projBackTrans,
       projBlankTrans: projBlankTrans ?? this.projBlankTrans,
+      receiverUseAkkord: receiverUseAkkord ?? this.receiverUseAkkord,
+      receiverUseKotta: receiverUseKotta ?? this.receiverUseKotta,
       bkColor: bkColor ?? this.bkColor,
       txtColor: txtColor ?? this.txtColor,
       blankColor: blankColor ?? this.blankColor,

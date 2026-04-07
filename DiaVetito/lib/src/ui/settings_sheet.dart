@@ -45,6 +45,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
   late bool _boot;
   late int _rotate;
   late String _channel;
+  late bool _receiverUseAkkord;
+  late bool _receiverUseKotta;
 
   @override
   void initState() {
@@ -62,6 +64,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
     _boot = s.boot;
     _rotate = s.rotateQuarterTurns;
     _channel = s.mqttChannel;
+    _receiverUseAkkord = s.receiverUseAkkord;
+    _receiverUseKotta = s.receiverUseKotta;
 
     _mqttUser.addListener(() {
       widget.onSenderFilterChanged(_mqttUser.text);
@@ -234,6 +238,21 @@ class _SettingsSheetState extends State<SettingsSheet> {
               onChanged: (int? v) => setState(() => _rotate = v ?? 0),
             ),
             const SizedBox(height: 12),
+            const Text('Vetites szurese', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _receiverUseAkkord,
+              onChanged: (bool v) => setState(() => _receiverUseAkkord = v),
+              title: const Text('Akkordok mutatasa'),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _receiverUseKotta,
+              onChanged: (bool v) => setState(() => _receiverUseKotta = v),
+              title: const Text('Kotta mutatasa'),
+            ),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -297,6 +316,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
       mirror: _mirror,
       boot: _boot,
       rotateQuarterTurns: _rotate,
+      receiverUseAkkord: _receiverUseAkkord,
+      receiverUseKotta: _receiverUseKotta,
     );
 
     widget.onApply(updated);

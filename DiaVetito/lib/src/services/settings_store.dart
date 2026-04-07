@@ -13,6 +13,8 @@ class SettingsStore {
   static const String _kRotate = 'Rotate';
   static const String _kUser = 'Username';
   static const String _kChannel = 'Channel';
+  static const String _kReceiverUseAkkord = 'ReceiverUseAkkord';
+  static const String _kReceiverUseKotta = 'ReceiverUseKotta';
 
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -28,6 +30,8 @@ class SettingsStore {
       rotateQuarterTurns: prefs.getInt(_kRotate) ?? 0,
       mqttUser: prefs.getString(_kUser) ?? '',
       mqttChannel: prefs.getString(_kChannel) ?? '1',
+      receiverUseAkkord: prefs.getBool(_kReceiverUseAkkord) ?? true,
+      receiverUseKotta: prefs.getBool(_kReceiverUseKotta) ?? true,
     );
   }
 
@@ -44,5 +48,7 @@ class SettingsStore {
     await prefs.setInt(_kRotate, settings.rotateQuarterTurns);
     await prefs.setString(_kUser, settings.mqttUser);
     await prefs.setString(_kChannel, settings.mqttChannel);
+    await prefs.setBool(_kReceiverUseAkkord, settings.receiverUseAkkord);
+    await prefs.setBool(_kReceiverUseKotta, settings.receiverUseKotta);
   }
 }

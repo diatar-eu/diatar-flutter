@@ -70,6 +70,7 @@ class ProjectionController extends ChangeNotifier {
       return;
     }
     settings = await _settingsStore.load();
+    globals = _applyReceiverDisplayFilters(globals);
     await _applyTransport();
     await refreshMqttUsers();
     _startLogo();
@@ -85,6 +86,7 @@ class ProjectionController extends ChangeNotifier {
     }
     settings = newSettings;
     await _settingsStore.save(settings);
+    globals = _applyReceiverDisplayFilters(globals);
     _updateChannelSuggestionsFor(settings.mqttUser);
     await _applyTransport();
     if (!_disposed) {
@@ -107,6 +109,13 @@ class ProjectionController extends ChangeNotifier {
   void chooseSender(String sender) {
     _updateChannelSuggestionsFor(sender);
     notifyListeners();
+  }
+
+  ProjectionGlobals _applyReceiverDisplayFilters(ProjectionGlobals source) {
+    return source.copyWith(
+      useAkkord: settings.receiverUseAkkord && source.useAkkord,
+      useKotta: settings.receiverUseKotta && source.useKotta,
+    );
   }
 
   Future<void> requestExit() async {
@@ -154,7 +163,7 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
-    globals = globals.fromState(record);
+    globals = _applyReceiverDisplayFilters(globals.fromState(record));
     final int ep = record.endProgram;
     if (ep == RecStateEndProgram.stop || ep == RecStateEndProgram.stop + RecStateEndProgram.skipSerialOff) {
       statusMessage = 'Leallitas kerve (epStop).';
