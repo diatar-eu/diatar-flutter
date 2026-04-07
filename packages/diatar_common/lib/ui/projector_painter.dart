@@ -156,7 +156,7 @@ class ProjectorPainter extends CustomPainter {
     double fontSize = globals.fontSize.toDouble();
     if (globals.autoResize) {
       while (fontSize > 8) {
-        final double required = _measureTextHeight(allLines, maxWidth, fontSize);
+        final double required = _measureTextRequiredHeightForFontSize(size, frame, fontSize);
         if (required <= size.height * 0.95) {
           break;
         }
@@ -353,6 +353,21 @@ class ProjectorPainter extends CustomPainter {
   }
 
   double _measureTextRequiredHeight(Size size, TextFrame frame) {
+    double fontSize = globals.fontSize.toDouble();
+    if (globals.autoResize) {
+      while (fontSize > 8) {
+        final double required = _measureTextRequiredHeightForFontSize(size, frame, fontSize);
+        if (required <= size.height * 0.95) {
+          break;
+        }
+        fontSize -= 1;
+      }
+    }
+
+    return _measureTextRequiredHeightForFontSize(size, frame, fontSize);
+  }
+
+  double _measureTextRequiredHeightForFontSize(Size size, TextFrame frame, double fontSize) {
     final double horizontalPad = globals.leftIndent.toDouble() * 4;
     final double maxWidth = math.max(40, size.width - horizontalPad * 2);
 
@@ -363,17 +378,6 @@ class ProjectorPainter extends CustomPainter {
     ];
 
     final List<_RenderLine> allLines = _parseRenderLines(sourceLines);
-
-    double fontSize = globals.fontSize.toDouble();
-    if (globals.autoResize) {
-      while (fontSize > 8) {
-        final double required = _measureTextHeight(allLines, maxWidth, fontSize);
-        if (required <= size.height * 0.95) {
-          break;
-        }
-        fontSize -= 1;
-      }
-    }
 
     final double titleFontSize = (globals.titleSize.toDouble() * 2.5).clamp(8.0, 72.0);
     final double lineSpacing = globals.spacing100 / 100.0;
@@ -400,22 +404,11 @@ class ProjectorPainter extends CustomPainter {
           ? _buildTextRows(line, lineFontSize, maxWidth)
           : const <_TextRowLayout>[];
 
-      final TextPainter lineProbe = TextPainter(
-        text: TextSpan(
-          text: 'Ag',
-          style: TextStyle(
-            fontSize: lineFontSize,
-            fontWeight: globals.boldText ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-
       textRowsByLine.add(lineTextRows);
       hasKottaByLine.add(hasKotta);
       chordBandByLine.add(chordBand);
       kottaRowsByLine.add(lineKottaRows);
-      lineHeightsByLine.add(lineProbe.height);
+      lineHeightsByLine.add(_measureTextRowHeight(line, lineFontSize));
     }
 
     double totalHeight = 0;
@@ -440,10 +433,9 @@ class ProjectorPainter extends CustomPainter {
           totalHeight += chordBandByLine[i] + lineHeightsByLine[i] * lineSpacing;
         } else {
           final double lineFontSize = fontSize;
-          final double textRowHeight = _textRowHeight(lineFontSize);
           final List<_TextRowLayout> rows = textRowsByLine[i];
           for (final _TextRowLayout row in rows) {
-            totalHeight += _rowChordBandHeight(allLines[i], row, lineFontSize) + textRowHeight * lineSpacing;
+            totalHeight += _rowChordBandHeight(allLines[i], row, lineFontSize) + _measureTextRowHeight(allLines[i], lineFontSize) * lineSpacing;
           }
         }
       }
@@ -494,6 +486,34 @@ class ProjectorPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout();
     return measure.height;
+  }
+
+  double _measureTextRowHeight(_RenderLine line, double fontSize) {
+    final List<InlineSpan> spans = <InlineSpan>[];
+    for (final _WordToken word in line.words) {
+      final Color baseColor = word.color ?? globals.txtColor;
+      spans.add(
+        TextSpan(
+          text: word.text + (word.spaceAfter ? ' ' : ''),
+          style: TextStyle(
+            color: baseColor,
+            fontSize: fontSize,
+            fontWeight: (globals.boldText || word.bold) ? FontWeight.bold : FontWeight.normal,
+            fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
+            decoration: TextDecoration.combine(<TextDecoration>[
+              if (word.underline) TextDecoration.underline,
+              if (word.strike) TextDecoration.lineThrough,
+            ]),
+          ),
+        ),
+      );
+    }
+    final TextPainter tp = TextPainter(
+      text: TextSpan(children: spans),
+      textDirection: TextDirection.ltr,
+      textAlign: globals.hCenter ? TextAlign.center : TextAlign.left,
+    )..layout();
+    return tp.height;
   }
 
   void _paintTextRow(
@@ -791,16 +811,6 @@ class ProjectorPainter extends CustomPainter {
       tp.paint(canvas, Offset(cx, y));
       cx += slot.slotWidth;
     }
-  }
-
-  double _kottaReservedHeight(double fontSize, int rows) {
-    if (rows <= 0) {
-      return 0;
-    }
-    final double lineGap = _kottaLineGap(fontSize);
-    final double staffHeight = lineGap * 4;
-    final double rowGap = lineGap * 1.2;
-    return (staffHeight + 2) + (rows - 1) * (staffHeight + rowGap);
   }
 
   List<_KottaRowLayout> _buildKottaRows(_RenderLine line, double fontSize, double maxWidth) {
@@ -1694,27 +1704,6 @@ class ProjectorPainter extends CustomPainter {
 
   double _linePos(double top, double lineGap, int lineIndex) {
     return top + (lineIndex - 3) * lineGap;
-  }
-
-  double _measureTextHeight(List<_RenderLine> lines, double maxWidth, double fontSize) {
-    double h = 0;
-    final double lineSpacing = globals.spacing100 / 100.0;
-    for (final _RenderLine line in lines) {
-      final TextPainter tp = TextPainter(
-        text: TextSpan(
-          text: line.words.map((w) => w.text + (w.spaceAfter ? ' ' : '')).join(),
-          style: TextStyle(fontSize: fontSize, fontWeight: globals.boldText ? FontWeight.bold : FontWeight.normal),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: maxWidth);
-      h += tp.height * lineSpacing;
-      h += _lineChordBandHeight(line, fontSize);
-      if (globals.useKotta && line.words.any((w) => (w.kotta ?? '').isNotEmpty)) {
-        final int kottaRows = _buildKottaRows(line, fontSize, maxWidth).length;
-        h += _kottaReservedHeight(fontSize, kottaRows);
-      }
-    }
-    return h;
   }
 
   List<_RenderLine> _parseRenderLines(List<String> lines) {

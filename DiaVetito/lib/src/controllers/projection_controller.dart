@@ -112,7 +112,17 @@ class ProjectionController extends ChangeNotifier {
   }
 
   ProjectionGlobals _applyReceiverDisplayFilters(ProjectionGlobals source) {
-    return source.copyWith(
+    final ProjectionGlobals colored = settings.receiverUseServerColors
+        ? source
+        : source.copyWith(
+            bkColor: settings.bkColor,
+            txtColor: settings.txtColor,
+            blankColor: settings.blankColor,
+            hiColor: settings.hiColor,
+          );
+
+    return colored.copyWith(
+      wordToHighlight: settings.receiverShowHighlight ? colored.wordToHighlight : 0,
       useAkkord: settings.receiverUseAkkord && source.useAkkord,
       useKotta: settings.receiverUseKotta && source.useKotta,
     );

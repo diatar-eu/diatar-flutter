@@ -32,6 +32,33 @@ class SettingsSheet extends StatefulWidget {
 }
 
 class _SettingsSheetState extends State<SettingsSheet> {
+  static const List<Color> _palette = <Color>[
+    Color(0xFF000000),
+    Color(0xFF1E1E1E),
+    Color(0xFF37474F),
+    Color(0xFF263238),
+    Color(0xFFFFFFFF),
+    Color(0xFFECEFF1),
+    Color(0xFFFFEB3B),
+    Color(0xFFFFC107),
+    Color(0xFFFF9800),
+    Color(0xFFFF5722),
+    Color(0xFFF44336),
+    Color(0xFFE91E63),
+    Color(0xFF9C27B0),
+    Color(0xFF673AB7),
+    Color(0xFF3F51B5),
+    Color(0xFF2196F3),
+    Color(0xFF03A9F4),
+    Color(0xFF00BCD4),
+    Color(0xFF009688),
+    Color(0xFF4CAF50),
+    Color(0xFF8BC34A),
+    Color(0xFFCDDC39),
+    Color(0xFF795548),
+    Color(0xFF607D8B),
+  ];
+
   late final TextEditingController _port;
   late final TextEditingController _clipL;
   late final TextEditingController _clipT;
@@ -45,8 +72,14 @@ class _SettingsSheetState extends State<SettingsSheet> {
   late bool _boot;
   late int _rotate;
   late String _channel;
+  late bool _receiverUseServerColors;
+  late bool _receiverShowHighlight;
   late bool _receiverUseAkkord;
   late bool _receiverUseKotta;
+  late Color _bkColor;
+  late Color _txtColor;
+  late Color _blankColor;
+  late Color _hiColor;
 
   @override
   void initState() {
@@ -64,8 +97,14 @@ class _SettingsSheetState extends State<SettingsSheet> {
     _boot = s.boot;
     _rotate = s.rotateQuarterTurns;
     _channel = s.mqttChannel;
+    _receiverUseServerColors = s.receiverUseServerColors;
+    _receiverShowHighlight = s.receiverShowHighlight;
     _receiverUseAkkord = s.receiverUseAkkord;
     _receiverUseKotta = s.receiverUseKotta;
+    _bkColor = s.bkColor;
+    _txtColor = s.txtColor;
+    _blankColor = s.blankColor;
+    _hiColor = s.hiColor;
 
     _mqttUser.addListener(() {
       widget.onSenderFilterChanged(_mqttUser.text);
@@ -242,6 +281,19 @@ class _SettingsSheetState extends State<SettingsSheet> {
             const SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
+              value: _receiverUseServerColors,
+              onChanged: (bool v) => setState(() => _receiverUseServerColors = v),
+              title: const Text('Szerver szinei'),
+              subtitle: const Text('Ha ki van kapcsolva, a helyi szinek lesznek hasznalva.'),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _receiverShowHighlight,
+              onChanged: (bool v) => setState(() => _receiverShowHighlight = v),
+              title: const Text('Kiemeles megjelenitese'),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
               value: _receiverUseAkkord,
               onChanged: (bool v) => setState(() => _receiverUseAkkord = v),
               title: const Text('Akkordok mutatasa'),
@@ -252,6 +304,13 @@ class _SettingsSheetState extends State<SettingsSheet> {
               onChanged: (bool v) => setState(() => _receiverUseKotta = v),
               title: const Text('Kotta mutatasa'),
             ),
+            const SizedBox(height: 12),
+            const Text('Helyi szinek', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            _colorRow('Hatterszin', _bkColor, (Color c) => setState(() => _bkColor = c), enabled: !_receiverUseServerColors),
+            _colorRow('Szovegszin', _txtColor, (Color c) => setState(() => _txtColor = c), enabled: !_receiverUseServerColors),
+            _colorRow('Blank szin', _blankColor, (Color c) => setState(() => _blankColor = c), enabled: !_receiverUseServerColors),
+            _colorRow('Kiemeles szin', _hiColor, (Color c) => setState(() => _hiColor = c), enabled: !_receiverUseServerColors),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -316,11 +375,96 @@ class _SettingsSheetState extends State<SettingsSheet> {
       mirror: _mirror,
       boot: _boot,
       rotateQuarterTurns: _rotate,
+      receiverUseServerColors: _receiverUseServerColors,
+      receiverShowHighlight: _receiverShowHighlight,
       receiverUseAkkord: _receiverUseAkkord,
       receiverUseKotta: _receiverUseKotta,
+      bkColor: _bkColor,
+      txtColor: _txtColor,
+      blankColor: _blankColor,
+      hiColor: _hiColor,
     );
 
     widget.onApply(updated);
     Navigator.of(context).pop();
+  }
+
+  Widget _colorRow(String label, Color color, ValueChanged<Color> onChanged, {required bool enabled}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: <Widget>[
+          Expanded(child: Text(label)),
+          InkWell(
+            onTap: enabled ? () => _pickColor(color, onChanged) : null,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: 64,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white24),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '#${color.value.toRadixString(16).padLeft(8, '0').toUpperCase().substring(2)}',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            onPressed: enabled ? () => _pickColor(color, onChanged) : null,
+            child: const Text('Valt'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickColor(Color current, ValueChanged<Color> onChanged) async {
+    final Color? selected = await showDialog<Color>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Színválasztó'),
+          content: SizedBox(
+            width: 360,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _palette.map((Color c) {
+                final bool selected = c.value == current.value;
+                return GestureDetector(
+                  onTap: () => Navigator.of(context).pop(c),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: c,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: selected ? Theme.of(context).colorScheme.primary : Colors.white24,
+                        width: selected ? 3 : 1,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Megse')),
+          ],
+        );
+      },
+    );
+    if (selected != null) {
+      onChanged(selected);
+    }
   }
 }
