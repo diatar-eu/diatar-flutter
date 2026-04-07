@@ -70,6 +70,9 @@ class HomePage extends StatelessWidget {
           onRefreshUsers: controller.refreshMqttUsers,
           onSenderFilterChanged: controller.updateSenderFilter,
           onSenderChosen: controller.chooseSender,
+          onExitRequested: controller.requestExit,
+          onShutdownRequested: controller.requestShutdown,
+          onRebootRequested: controller.requestReboot,
         );
       },
     );

@@ -1,4 +1,5 @@
 import 'package:diatar_common/diatar_common.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 class DiatarSettingsSheet extends StatefulWidget {
@@ -20,10 +21,27 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _mqttUser;
   late final TextEditingController _mqttPassword;
   late final TextEditingController _mqttChannel;
-  late bool _borderToClip;
-  late bool _mirror;
-  late bool _boot;
-  late int _rotate;
+  late final TextEditingController _blankPicPath;
+  late final TextEditingController _projFontSize;
+  late final TextEditingController _projTitleSize;
+  late final TextEditingController _projLeftIndent;
+  late final TextEditingController _projBorderL;
+  late final TextEditingController _projBorderT;
+  late final TextEditingController _projBorderR;
+  late final TextEditingController _projBorderB;
+  late int _projSpacingStep;
+  late int _projKottaArany;
+  late int _projAkkordArany;
+  late int _projBgMode;
+  late int _projBackTrans;
+  late int _projBlankTrans;
+  late bool _projAutoSize;
+  late bool _projHCenter;
+  late bool _projVCenter;
+  late bool _projUseAkkord;
+  late bool _projUseKotta;
+  late bool _projUseTitle;
+  late bool _projBoldText;
   late Color _bkColor;
   late Color _txtColor;
   late Color _blankColor;
@@ -37,10 +55,27 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _mqttUser = TextEditingController(text: s.mqttUser);
     _mqttPassword = TextEditingController(text: s.mqttPassword);
     _mqttChannel = TextEditingController(text: s.mqttChannel);
-    _borderToClip = s.borderToClip;
-    _mirror = s.mirror;
-    _boot = s.boot;
-    _rotate = s.rotateQuarterTurns;
+    _blankPicPath = TextEditingController(text: s.blankPicPath);
+    _projFontSize = TextEditingController(text: s.projFontSize.toString());
+    _projTitleSize = TextEditingController(text: s.projTitleSize.toString());
+    _projLeftIndent = TextEditingController(text: s.projLeftIndent.toString());
+    _projBorderL = TextEditingController(text: s.projBorderL.toString());
+    _projBorderT = TextEditingController(text: s.projBorderT.toString());
+    _projBorderR = TextEditingController(text: s.projBorderR.toString());
+    _projBorderB = TextEditingController(text: s.projBorderB.toString());
+    _projSpacingStep = s.projSpacingStep.clamp(0, 10);
+    _projKottaArany = s.projKottaArany.clamp(10, 200);
+    _projAkkordArany = s.projAkkordArany.clamp(10, 200);
+    _projBgMode = s.projBgMode.clamp(0, 4);
+    _projBackTrans = s.projBackTrans.clamp(0, 100);
+    _projBlankTrans = s.projBlankTrans.clamp(0, 100);
+    _projAutoSize = s.projAutoSize;
+    _projHCenter = s.projHCenter;
+    _projVCenter = s.projVCenter;
+    _projUseAkkord = s.projUseAkkord;
+    _projUseKotta = s.projUseKotta;
+    _projUseTitle = s.projUseTitle;
+    _projBoldText = s.projBoldText;
     _bkColor = s.bkColor;
     _txtColor = s.txtColor;
     _blankColor = s.blankColor;
@@ -53,6 +88,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _mqttUser.dispose();
     _mqttPassword.dispose();
     _mqttChannel.dispose();
+    _blankPicPath.dispose();
+    _projFontSize.dispose();
+    _projTitleSize.dispose();
+    _projLeftIndent.dispose();
+    _projBorderL.dispose();
+    _projBorderT.dispose();
+    _projBorderR.dispose();
+    _projBorderB.dispose();
     super.dispose();
   }
 
@@ -92,24 +135,150 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               controller: _mqttChannel,
               decoration: const InputDecoration(labelText: 'MQTT csatorna'),
             ),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    controller: _blankPicPath,
+                    decoration: const InputDecoration(labelText: 'Blank kep utvonal'),
+                  ),
+                ),
+                IconButton(
+                  onPressed: _pickBlankFile,
+                  icon: const Icon(Icons.folder_open),
+                  tooltip: 'Fajl valasztasa',
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _borderToClip,
-              onChanged: (bool v) => setState(() => _borderToClip = v),
-              title: const Text('Margok a vezerlotol (Border2Clip)'),
+            const Text('Vetitesi beallitasok', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                _projectionNumberField('Betumeret', _projFontSize),
+                _projectionNumberField('Cim meret', _projTitleSize),
+                _projectionNumberField('Bal margo', _projLeftIndent),
+                _projectionNumberField('Border L', _projBorderL),
+                _projectionNumberField('Border T', _projBorderT),
+                _projectionNumberField('Border R', _projBorderR),
+                _projectionNumberField('Border B', _projBorderB),
+              ],
+            ),
+            DropdownButtonFormField<int>(
+              value: _projSpacingStep,
+              decoration: const InputDecoration(labelText: 'Sorkoz'),
+              items: List<DropdownMenuItem<int>>.generate(
+                11,
+                (int i) => DropdownMenuItem<int>(
+                  value: i,
+                  child: Text('${100 + i * 10}%'),
+                ),
+              ),
+              onChanged: (int? v) => setState(() => _projSpacingStep = v ?? 0),
+            ),
+            DropdownButtonFormField<int>(
+              value: _projKottaArany,
+              decoration: const InputDecoration(labelText: 'Kotta meret arany'),
+              items: List<DropdownMenuItem<int>>.generate(
+                20,
+                (int i) {
+                  final int value = (i + 1) * 10;
+                  return DropdownMenuItem<int>(value: value, child: Text('$value%'));
+                },
+              ),
+              onChanged: (int? v) => setState(() => _projKottaArany = v ?? 100),
+            ),
+            DropdownButtonFormField<int>(
+              value: _projAkkordArany,
+              decoration: const InputDecoration(labelText: 'Akkord meret arany'),
+              items: List<DropdownMenuItem<int>>.generate(
+                20,
+                (int i) {
+                  final int value = (i + 1) * 10;
+                  return DropdownMenuItem<int>(value: value, child: Text('$value%'));
+                },
+              ),
+              onChanged: (int? v) => setState(() => _projAkkordArany = v ?? 100),
+            ),
+            DropdownButtonFormField<int>(
+              value: _projBgMode,
+              decoration: const InputDecoration(labelText: 'Hatters kep mod'),
+              items: const <DropdownMenuItem<int>>[
+                DropdownMenuItem<int>(value: 0, child: Text('Center')),
+                DropdownMenuItem<int>(value: 1, child: Text('Zoom')),
+                DropdownMenuItem<int>(value: 2, child: Text('Full')),
+                DropdownMenuItem<int>(value: 3, child: Text('Cascade')),
+                DropdownMenuItem<int>(value: 4, child: Text('Mirror')),
+              ],
+              onChanged: (int? v) => setState(() => _projBgMode = v ?? 0),
+            ),
+            DropdownButtonFormField<int>(
+              value: _projBackTrans,
+              decoration: const InputDecoration(labelText: 'Hatter atszosag'),
+              items: List<DropdownMenuItem<int>>.generate(
+                11,
+                (int i) {
+                  final int value = i * 10;
+                  return DropdownMenuItem<int>(value: value, child: Text('$value%'));
+                },
+              ),
+              onChanged: (int? v) => setState(() => _projBackTrans = v ?? 0),
+            ),
+            DropdownButtonFormField<int>(
+              value: _projBlankTrans,
+              decoration: const InputDecoration(labelText: 'Blank atszosag'),
+              items: List<DropdownMenuItem<int>>.generate(
+                11,
+                (int i) {
+                  final int value = i * 10;
+                  return DropdownMenuItem<int>(value: value, child: Text('$value%'));
+                },
+              ),
+              onChanged: (int? v) => setState(() => _projBlankTrans = v ?? 0),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              value: _mirror,
-              onChanged: (bool v) => setState(() => _mirror = v),
-              title: const Text('Tukrozes'),
+              value: _projAutoSize,
+              onChanged: (bool v) => setState(() => _projAutoSize = v),
+              title: const Text('Automatikus meretezes'),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              value: _boot,
-              onChanged: (bool v) => setState(() => _boot = v),
-              title: const Text('Automatikus inditas (jelzo)'),
+              value: _projUseTitle,
+              onChanged: (bool v) => setState(() => _projUseTitle = v),
+              title: const Text('Cim mutatasa'),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _projHCenter,
+              onChanged: (bool v) => setState(() => _projHCenter = v),
+              title: const Text('Vizszintes kozepre igazitas'),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _projVCenter,
+              onChanged: (bool v) => setState(() => _projVCenter = v),
+              title: const Text('Fuggoleges kozepre igazitas'),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _projUseAkkord,
+              onChanged: (bool v) => setState(() => _projUseAkkord = v),
+              title: const Text('Akkordok mutatasa'),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _projUseKotta,
+              onChanged: (bool v) => setState(() => _projUseKotta = v),
+              title: const Text('Kotta mutatasa'),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _projBoldText,
+              onChanged: (bool v) => setState(() => _projBoldText = v),
+              title: const Text('Felkover szoveg'),
             ),
             const SizedBox(height: 8),
             const Text('Szinek', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -160,17 +329,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 ),
               ],
             ),
-            DropdownButtonFormField<int>(
-              value: _rotate,
-              decoration: const InputDecoration(labelText: 'Forgatas'),
-              items: const <DropdownMenuItem<int>>[
-                DropdownMenuItem<int>(value: 0, child: Text('0°')),
-                DropdownMenuItem<int>(value: 1, child: Text('90°')),
-                DropdownMenuItem<int>(value: 2, child: Text('180°')),
-                DropdownMenuItem<int>(value: 3, child: Text('270°')),
-              ],
-              onChanged: (int? v) => setState(() => _rotate = v ?? 0),
-            ),
             const SizedBox(height: 12),
             Row(
               children: <Widget>[
@@ -197,10 +355,27 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       mqttUser: _mqttUser.text.trim(),
       mqttPassword: _mqttPassword.text,
       mqttChannel: _mqttChannel.text.trim().isEmpty ? '1' : _mqttChannel.text.trim(),
-      borderToClip: _borderToClip,
-      mirror: _mirror,
-      boot: _boot,
-      rotateQuarterTurns: _rotate,
+      blankPicPath: _blankPicPath.text.trim(),
+      projFontSize: _parseInt(_projFontSize.text, widget.initialSettings.projFontSize, min: 12, max: 128),
+      projTitleSize: _parseInt(_projTitleSize.text, widget.initialSettings.projTitleSize, min: 12, max: 128),
+      projLeftIndent: _parseInt(_projLeftIndent.text, widget.initialSettings.projLeftIndent, min: 0, max: 10),
+      projBorderL: _parseInt(_projBorderL.text, widget.initialSettings.projBorderL, min: 0, max: 1000),
+      projBorderT: _parseInt(_projBorderT.text, widget.initialSettings.projBorderT, min: 0, max: 1000),
+      projBorderR: _parseInt(_projBorderR.text, widget.initialSettings.projBorderR, min: 0, max: 1000),
+      projBorderB: _parseInt(_projBorderB.text, widget.initialSettings.projBorderB, min: 0, max: 1000),
+      projSpacingStep: _projSpacingStep.clamp(0, 10),
+      projAutoSize: _projAutoSize,
+      projHCenter: _projHCenter,
+      projVCenter: _projVCenter,
+      projUseAkkord: _projUseAkkord,
+      projUseKotta: _projUseKotta,
+      projUseTitle: _projUseTitle,
+      projKottaArany: _projKottaArany.clamp(10, 200),
+      projAkkordArany: _projAkkordArany.clamp(10, 200),
+      projBgMode: _projBgMode.clamp(0, 4),
+      projBackTrans: _projBackTrans.clamp(0, 100),
+      projBlankTrans: _projBlankTrans.clamp(0, 100),
+      projBoldText: _projBoldText,
       bkColor: _bkColor,
       txtColor: _txtColor,
       blankColor: _blankColor,
@@ -209,6 +384,36 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
     widget.onApply(updated);
     Navigator.of(context).pop();
+  }
+
+  Widget _projectionNumberField(String label, TextEditingController controller) {
+    return SizedBox(
+      width: 150,
+      child: TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(labelText: label),
+      ),
+    );
+  }
+
+  int _parseInt(String raw, int fallback, {required int min, required int max}) {
+    final int value = int.tryParse(raw.trim()) ?? fallback;
+    return value.clamp(min, max);
+  }
+
+  Future<void> _pickBlankFile() async {
+    const XTypeGroup images = XTypeGroup(
+      label: 'images',
+      extensions: <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
+    );
+    final XFile? file = await openFile(acceptedTypeGroups: <XTypeGroup>[images]);
+    if (!mounted || file == null) {
+      return;
+    }
+    setState(() {
+      _blankPicPath.text = file.path;
+    });
   }
 
   Widget _colorButton({required String label, required Color color, required VoidCallback onPressed}) {

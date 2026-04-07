@@ -11,6 +11,9 @@ class SettingsSheet extends StatefulWidget {
     required this.onRefreshUsers,
     required this.onSenderFilterChanged,
     required this.onSenderChosen,
+    required this.onExitRequested,
+    required this.onShutdownRequested,
+    required this.onRebootRequested,
   });
 
   final AppSettings initialSettings;
@@ -20,6 +23,9 @@ class SettingsSheet extends StatefulWidget {
   final VoidCallback onRefreshUsers;
   final ValueChanged<String> onSenderFilterChanged;
   final ValueChanged<String> onSenderChosen;
+  final VoidCallback onExitRequested;
+  final VoidCallback onShutdownRequested;
+  final VoidCallback onRebootRequested;
 
   @override
   State<SettingsSheet> createState() => _SettingsSheetState();
@@ -228,6 +234,25 @@ class _SettingsSheetState extends State<SettingsSheet> {
               onChanged: (int? v) => setState(() => _rotate = v ?? 0),
             ),
             const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                OutlinedButton(
+                  onPressed: widget.onExitRequested,
+                  child: const Text('Kilepes'),
+                ),
+                OutlinedButton(
+                  onPressed: widget.onShutdownRequested,
+                  child: const Text('Leallitas'),
+                ),
+                OutlinedButton(
+                  onPressed: widget.onRebootRequested,
+                  child: const Text('Ujrainditas'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Row(
               children: <Widget>[
                 TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Megse')),

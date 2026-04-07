@@ -66,4 +66,17 @@ void main() {
     expect(book.group, isEmpty);
     expect(book.order, 0);
   });
+
+  test('dtx parser keeps chord and kotta directives at column 0', () {
+    const DtxParser parser = DtxParser();
+    final DtxBook book = parser.parse(
+      fileName: 'akkord.dtx',
+      content: '>Song\n/1\n\\GAm;Aldd Uram\n\\KkGu4;Aldd Uram',
+    );
+
+    final List<String> lines = book.songs.first.verses.first.lines;
+    expect(lines, hasLength(2));
+    expect(lines.first, r'\GAm;Aldd Uram');
+    expect(lines.last, r'\KkGu4;Aldd Uram');
+  });
 }

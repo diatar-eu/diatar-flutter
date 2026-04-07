@@ -109,6 +109,31 @@ class ProjectionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> requestExit() async {
+    if (_disposed) {
+      return;
+    }
+    statusMessage = 'Kilepes...';
+    notifyListeners();
+    await SystemNavigator.pop();
+  }
+
+  void requestShutdown() {
+    if (_disposed) {
+      return;
+    }
+    statusMessage = 'Rendszerleallitas Flutteren nem tamogatott.';
+    notifyListeners();
+  }
+
+  void requestReboot() {
+    if (_disposed) {
+      return;
+    }
+    statusMessage = 'Rendszer ujrainditas Flutteren nem tamogatott.';
+    notifyListeners();
+  }
+
   void _updateChannelSuggestionsFor(String sender) {
     final MqttUser? u = _mqtt.getUser(sender);
     if (u == null) {

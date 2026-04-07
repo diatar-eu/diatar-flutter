@@ -27,7 +27,7 @@ class ProjectionGlobals {
     this.hCenter = false,
     this.vCenter = false,
     this.scholaMode = false,
-    this.useAkkord = false,
+    this.useAkkord = true,
     this.useKotta = false,
     this.useTransitions = false,
     this.endProgram = 0,
@@ -36,6 +36,8 @@ class ProjectionGlobals {
     this.bgMode = 0,
     this.kottaArany = 100,
     this.akkordArany = 100,
+    this.backTrans = 0,
+    this.blankTrans = 0,
     this.borderToClip = false,
     this.boldText = false,
   });
@@ -71,6 +73,8 @@ class ProjectionGlobals {
   final int bgMode;
   final int kottaArany;
   final int akkordArany;
+  final int backTrans;
+  final int blankTrans;
   final bool borderToClip;
   final bool boldText;
 
@@ -106,6 +110,8 @@ class ProjectionGlobals {
     int? bgMode,
     int? kottaArany,
     int? akkordArany,
+    int? backTrans,
+    int? blankTrans,
     bool? borderToClip,
     bool? boldText,
   }) {
@@ -141,6 +147,8 @@ class ProjectionGlobals {
       bgMode: bgMode ?? this.bgMode,
       kottaArany: kottaArany ?? this.kottaArany,
       akkordArany: akkordArany ?? this.akkordArany,
+      backTrans: backTrans ?? this.backTrans,
+      blankTrans: blankTrans ?? this.blankTrans,
       borderToClip: borderToClip ?? this.borderToClip,
       boldText: boldText ?? this.boldText,
     );
@@ -179,6 +187,8 @@ class ProjectionGlobals {
       bgMode: r.bgMode,
       kottaArany: r.kottaArany,
       akkordArany: r.akkordArany,
+      backTrans: r.backTrans,
+      blankTrans: r.blankTrans,
       boldText: r.boldText,
     );
   }
@@ -248,8 +258,8 @@ Uint8List encodeStateRecord(
   writeColor(328, globals.hiColor);
   writeInt(332, globals.kottaArany);
   writeInt(336, globals.akkordArany);
-  writeInt(340, 0);
-  writeInt(344, 0);
+  writeInt(340, globals.backTrans);
+  writeInt(344, globals.blankTrans);
   writeBool(348, globals.boldText);
   return body;
 }

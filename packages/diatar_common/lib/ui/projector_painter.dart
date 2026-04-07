@@ -70,11 +70,12 @@ class ProjectorPainter extends CustomPainter {
     }
 
     if (localFrame is ImageFrame) {
-      _drawImage(canvas, size, localFrame, globals.bkColor, localFrame.bgMode);
+      _drawImage(canvas, size, localFrame, localFrame.bgMode);
       return;
     }
 
-    canvas.drawRect(Offset.zero & size, Paint()..color = globals.blankColor);
+    final Color blank = _colorWithTransparency(globals.blankColor, globals.blankTrans);
+    canvas.drawRect(Offset.zero & size, Paint()..color = blank);
   }
 
   void _drawLogo(Canvas canvas, Size size, int phase) {
@@ -128,7 +129,8 @@ class ProjectorPainter extends CustomPainter {
   }
 
   void _drawText(Canvas canvas, Size size, TextFrame frame) {
-    canvas.drawRect(Offset.zero & size, Paint()..color = globals.bkColor);
+    final Color bg = _colorWithTransparency(globals.bkColor, globals.backTrans);
+    canvas.drawRect(Offset.zero & size, Paint()..color = bg);
 
     final double horizontalPad = globals.leftIndent.toDouble() * 4;
     final double maxWidth = math.max(40, size.width - horizontalPad * 2);
@@ -158,15 +160,21 @@ class ProjectorPainter extends CustomPainter {
     final List<TextPainter> painters = <TextPainter>[];
     final List<List<bool>> highlightByLine = <List<bool>>[];
     final List<bool> hasKottaByLine = <bool>[];
+    final List<double> chordBandByLine = <double>[];
     final List<List<_KottaRowLayout>> kottaRowsByLine = <List<_KottaRowLayout>>[];
     int globalWordIndex = 0; // Track word index for highlighting (skips title)
     bool prevWordHadSpace = true;
     
     for (int lineIndex = 0; lineIndex < allLines.length; lineIndex++) {
-      final _RenderLine line = allLines[lineIndex];
+      final _RenderLine baseLine = allLines[lineIndex];
       final bool isTitleLine = hasTitleLine && lineIndex == 0;
       final double lineFontSize = isTitleLine ? titleFontSize : fontSize;
-      final bool hasKotta = !isTitleLine && globals.useKotta && line.words.any((w) => (w.kotta ?? '').isNotEmpty);
+      final bool hasKotta = !isTitleLine && globals.useKotta && baseLine.words.any((w) => (w.kotta ?? '').isNotEmpty);
+      final _RenderLine line = (!isTitleLine && !hasKotta)
+          ? _applyChordPadding(baseLine, lineFontSize)
+          : baseLine;
+      allLines[lineIndex] = line;
+      final double chordBand = (!isTitleLine && !hasKotta) ? _lineChordBandHeight(line, lineFontSize) : 0;
       final List<_KottaRowLayout> lineKottaRows = hasKotta ? _buildKottaRows(line, lineFontSize, maxWidth) : const <_KottaRowLayout>[];
       final List<bool> lineHighlights = <bool>[];
       
@@ -213,6 +221,7 @@ class ProjectorPainter extends CustomPainter {
       painters.add(tp);
       highlightByLine.add(lineHighlights);
       hasKottaByLine.add(hasKotta);
+      chordBandByLine.add(chordBand);
       kottaRowsByLine.add(lineKottaRows);
     }
 
@@ -233,7 +242,7 @@ class ProjectorPainter extends CustomPainter {
         final double rowStep = staffHeight + 2 + rowTextHeight + lineGap * 0.08;
         totalHeight += (staffHeight + 2) + (rows - 1) * rowStep + rowTextHeight;
       } else {
-        totalHeight += tp.height * lineSpacing;
+        totalHeight += chordBandByLine[i] + tp.height * lineSpacing;
       }
     }
     double y = globals.vCenter ? (size.height - totalHeight) / 2 : 8;
@@ -245,6 +254,7 @@ class ProjectorPainter extends CustomPainter {
       final bool hasKotta = hasKottaByLine[painterIndex];
       final double lineFontSize = isTitleLine ? titleFontSize : fontSize;
       final List<_KottaRowLayout> lineKottaRows = kottaRowsByLine[painterIndex];
+      final double chordBand = chordBandByLine[painterIndex];
       final double lineStep = tp.height * lineSpacing;
 
       final bool titleToKottaTransition = hasTitleLine && painterIndex == 1 && hasKotta;
@@ -293,10 +303,111 @@ class ProjectorPainter extends CustomPainter {
       }
 
       final double x = globals.hCenter ? (size.width - tp.width) / 2 : horizontalPad;
-      tp.paint(canvas, Offset(x, y));
-      _paintChords(canvas, rline, x, y, lineFontSize);
-      y += lineStep;
+      final double textY = y + chordBand;
+      tp.paint(canvas, Offset(x, textY));
+      _paintChords(canvas, rline, x, textY, lineFontSize);
+      y += chordBand + lineStep;
     }
+  }
+
+  double _lineChordBandHeight(_RenderLine line, double fontSize) {
+    if (!globals.useAkkord || !line.words.any((w) => (w.chord ?? '').isNotEmpty)) {
+      return 0;
+    }
+    final TextPainter chordMeasure = TextPainter(
+      text: TextSpan(
+        text: 'Ag',
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: fontSize * (globals.akkordArany / 100.0),
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return chordMeasure.height + 2;
+  }
+
+  _RenderLine _applyChordPadding(_RenderLine line, double fontSize) {
+    if (!globals.useAkkord || line.words.isEmpty) {
+      return line;
+    }
+
+    final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
+    bool changed = false;
+    final List<_WordToken> padded = <_WordToken>[];
+
+    for (final _WordToken word in line.words) {
+      final String chordText = (word.chord ?? '').trim();
+      if (chordText.isEmpty) {
+        padded.add(word);
+        continue;
+      }
+
+      measure.text = TextSpan(
+        text: word.text + (word.spaceAfter ? ' ' : ''),
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: (globals.boldText || word.bold) ? FontWeight.bold : FontWeight.normal,
+          fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
+        ),
+      );
+      measure.layout();
+      double textWidth = measure.width;
+
+      measure.text = TextSpan(
+        text: chordText,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: fontSize * (globals.akkordArany / 100.0),
+        ),
+      );
+      measure.layout();
+      final double chordWidth = measure.width;
+
+      if (textWidth + 1 >= chordWidth) {
+        padded.add(word);
+        continue;
+      }
+
+      String paddedText = word.text;
+      int guard = 0;
+      while (textWidth + 1 < chordWidth && guard < 24) {
+        paddedText = '${paddedText}_';
+        measure.text = TextSpan(
+          text: paddedText + (word.spaceAfter ? ' ' : ''),
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: (globals.boldText || word.bold) ? FontWeight.bold : FontWeight.normal,
+            fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
+          ),
+        );
+        measure.layout();
+        textWidth = measure.width;
+        guard++;
+      }
+
+      if (paddedText != word.text) {
+        changed = true;
+        padded.add(_WordToken(
+          text: paddedText,
+          bold: word.bold,
+          italic: word.italic,
+          underline: word.underline,
+          strike: word.strike,
+          color: word.color,
+          chord: word.chord,
+          kotta: word.kotta,
+          spaceAfter: word.spaceAfter,
+        ));
+      } else {
+        padded.add(word);
+      }
+    }
+
+    if (!changed) {
+      return line;
+    }
+    return _RenderLine(words: padded);
   }
 
   void _paintChords(Canvas canvas, _RenderLine line, double x, double y, double fontSize) {
@@ -1359,9 +1470,7 @@ class ProjectorPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout(maxWidth: maxWidth);
       h += tp.height * lineSpacing;
-      if (globals.useAkkord && line.words.any((w) => (w.chord ?? '').isNotEmpty)) {
-        h += tp.height * (globals.akkordArany / 200);
-      }
+      h += _lineChordBandHeight(line, fontSize);
       if (globals.useKotta && line.words.any((w) => (w.kotta ?? '').isNotEmpty)) {
         final int kottaRows = _buildKottaRows(line, fontSize, maxWidth).length;
         h += _kottaReservedHeight(fontSize, kottaRows);
@@ -1606,8 +1715,12 @@ class ProjectorPainter extends CustomPainter {
     return Color(0xFF000000 | v);
   }
 
-  void _drawImage(Canvas canvas, Size size, ImageFrame frame, Color bgColor, int mode) {
-    canvas.drawRect(Offset.zero & size, Paint()..color = bgColor);
+  void _drawImage(Canvas canvas, Size size, ImageFrame frame, int mode) {
+    final bool blankView = !globals.projecting || globals.showBlankPic || globals.isBlankPic;
+    final Color fill = blankView
+        ? _colorWithTransparency(globals.blankColor, globals.blankTrans)
+        : _colorWithTransparency(globals.bkColor, globals.backTrans);
+    canvas.drawRect(Offset.zero & size, Paint()..color = fill);
 
     final ui.Image image = frame.image;
     final Rect src = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
@@ -1664,6 +1777,12 @@ class ProjectorPainter extends CustomPainter {
   @override
   bool shouldRepaint(ProjectorPainter oldDelegate) {
     return oldDelegate.frame != frame || oldDelegate.globals != globals || oldDelegate.settings != settings;
+  }
+
+  Color _colorWithTransparency(Color color, int transparencyPercent) {
+    final int clamped = transparencyPercent.clamp(0, 100);
+    final int alpha = ((100 - clamped) * 255 / 100).round().clamp(0, 255);
+    return color.withAlpha(alpha);
   }
 }
 

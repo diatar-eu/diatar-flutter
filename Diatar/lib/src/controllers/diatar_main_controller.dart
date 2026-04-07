@@ -95,6 +95,7 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<void> init() async {
     settings = await _settingsStore.load();
+    lastBlankPath = settings.blankPicPath;
     _disabledSongbooks = await _orderStore.loadDisabled();
     final ({List<StoredCustomOrderEntry> entries, bool active}) stored =
         await _orderStore.loadCurrentCustomOrder();
@@ -115,10 +116,26 @@ class DiatarMainController extends ChangeNotifier {
       blankColor: settings.blankColor,
       hiColor: settings.hiColor,
       projecting: showing,
-      fontSize: 70,
-      titleSize: 12,
-      useKotta: true,
-      borderToClip: settings.borderToClip,
+      fontSize: settings.projFontSize,
+      titleSize: settings.projTitleSize,
+      leftIndent: settings.projLeftIndent,
+      borderL: settings.projBorderL,
+      borderT: settings.projBorderT,
+      borderR: settings.projBorderR,
+      borderB: settings.projBorderB,
+      spacing100: 100 + settings.projSpacingStep * 10,
+      autoResize: settings.projAutoSize,
+      hCenter: settings.projHCenter,
+      vCenter: settings.projVCenter,
+      useAkkord: settings.projUseAkkord,
+      useKotta: settings.projUseKotta,
+      hideTitle: !settings.projUseTitle,
+      kottaArany: settings.projKottaArany,
+      akkordArany: settings.projAkkordArany,
+      bgMode: settings.projBgMode,
+      backTrans: settings.projBackTrans,
+      blankTrans: settings.projBlankTrans,
+      boldText: settings.projBoldText,
     );
     _configureSender();
     await _applyTransport();
@@ -147,14 +164,33 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<void> applySettings(AppSettings newSettings) async {
     settings = newSettings;
+    lastBlankPath = settings.blankPicPath;
     await _settingsStore.save(settings);
     globals = globals.copyWith(
       bkColor: settings.bkColor,
       txtColor: settings.txtColor,
       blankColor: settings.blankColor,
       hiColor: settings.hiColor,
-      useKotta: true,
-      borderToClip: settings.borderToClip,
+      fontSize: settings.projFontSize,
+      titleSize: settings.projTitleSize,
+      leftIndent: settings.projLeftIndent,
+      borderL: settings.projBorderL,
+      borderT: settings.projBorderT,
+      borderR: settings.projBorderR,
+      borderB: settings.projBorderB,
+      spacing100: 100 + settings.projSpacingStep * 10,
+      autoResize: settings.projAutoSize,
+      hCenter: settings.projHCenter,
+      vCenter: settings.projVCenter,
+      useAkkord: settings.projUseAkkord,
+      useKotta: settings.projUseKotta,
+      hideTitle: !settings.projUseTitle,
+      kottaArany: settings.projKottaArany,
+      akkordArany: settings.projAkkordArany,
+      bgMode: settings.projBgMode,
+      backTrans: settings.projBackTrans,
+      blankTrans: settings.projBlankTrans,
+      boldText: settings.projBoldText,
     );
     await _applyTransport();
     notifyListeners();
@@ -897,6 +933,8 @@ class DiatarMainController extends ChangeNotifier {
         await _sender.sendState(globals, showing: showing, wordToHighlight: highPos);
       }
       lastBlankPath = normalized;
+      settings = settings.copyWith(blankPicPath: normalized);
+      await _settingsStore.save(settings);
       status = 'Blank kep beallitva: ${file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : normalized}';
       notifyListeners();
     } catch (e) {

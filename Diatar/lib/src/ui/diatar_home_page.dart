@@ -1016,7 +1016,6 @@ class _VersePreview extends StatelessWidget {
     final ProjectionFrame frame = TextFrame(record: previewRecord);
     final ProjectionGlobals globals = controller.globals.copyWith(
       projecting: true,
-      useKotta: true,
       wordToHighlight: controller.highPos,
     );
 

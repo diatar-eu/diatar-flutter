@@ -122,10 +122,18 @@ class DtxParser {
         continue;
       }
 
-      if (raw.startsWith(' ')) {
-        // Keep inline DTX formatting codes (e.g. \K...;) so the painter and
-        // network text payload can render kotta/akkord data.
+      if (raw.startsWith(' ') || raw.startsWith('\t')) {
+        // Keep inline DTX formatting codes (e.g. \K...; / \G...;) so the
+        // painter and network text payload can render kotta/akkord data.
         currentVerseLines.add(raw.substring(1));
+        songHasBody = true;
+        continue;
+      }
+
+      // Some DTX sources place inline formatting at column 0 (no leading
+      // indentation), e.g. "\GAm;Aldd...". Keep those lines as verse text too.
+      if (raw.startsWith(r'\')) {
+        currentVerseLines.add(raw);
         songHasBody = true;
       }
     }

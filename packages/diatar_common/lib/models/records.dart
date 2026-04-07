@@ -102,6 +102,8 @@ class RecStateRecord {
     required this.bgMode,
     required this.kottaArany,
     required this.akkordArany,
+    required this.backTrans,
+    required this.blankTrans,
     required this.boldText,
   });
 
@@ -136,6 +138,8 @@ class RecStateRecord {
   final int bgMode;
   final int kottaArany;
   final int akkordArany;
+  final int backTrans;
+  final int blankTrans;
   final bool boldText;
 
   static RecStateRecord fromBytes(Uint8List data) {
@@ -171,6 +175,8 @@ class RecStateRecord {
       bgMode: _readIntLE(data, 324),
       kottaArany: _readIntLE(data, 332),
       akkordArany: _readIntLE(data, 336),
+      backTrans: _readIntLE(data, 340),
+      blankTrans: _readIntLE(data, 344),
       boldText: _readBool(data, 348),
     );
   }
