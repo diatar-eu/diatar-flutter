@@ -25,9 +25,8 @@ class CustomOrderEditorPanel extends StatefulWidget {
 
 class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   late List<CustomOrderEntry> _entries;
-  late bool _active;
+  final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  bool _saving = false;
 
   int _safeEntryVerseIndex(CustomOrderEntry entry, {int fallback = 0}) {
     try {
@@ -48,7 +47,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   void initState() {
     super.initState();
     _entries = List<CustomOrderEntry>.from(controller.customOrder);
-    _active = controller.customOrderActive;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -60,86 +64,71 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           color: widget.embedded ? Colors.transparent : Theme.of(context).scaffoldBackgroundColor,
           child: Column(
             children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: <Widget>[
-                const Expanded(
-                  child: Text(
-                    'Saját sorrend szerkesztése',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: <Widget>[
+                    const Expanded(
+                      child: Text(
+                        'Saját sorrend szerkesztése',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    if (!widget.embedded) ...<Widget>[
+                      const SizedBox(width: 4),
+                      IconButton(
+                        tooltip: 'Bezárás',
+                        onPressed: widget.onClose,
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ],
                 ),
-                Switch(
-                  value: _active,
-                  onChanged: (bool v) => setState(() => _active = v),
-                ),
-                Text(_active ? 'Aktív' : 'Inaktív'),
-                if (!widget.embedded) ...<Widget>[
-                  const SizedBox(width: 4),
-                  IconButton(
-                    tooltip: 'Bezárás',
-                    onPressed: widget.onClose,
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-            child: TextField(
-              decoration: const InputDecoration(
-                labelText: 'Ének hozzáadása',
-                hintText: 'Kötet vagy énekcím',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
               ),
-              onChanged: (String value) => setState(() => _searchQuery = value.trim()),
-            ),
-          ),
-          Expanded(
-            child: _searchQuery.isNotEmpty ? _buildSearchResults() : _buildCurrentOrderList(),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.end,
-              children: <Widget>[
-                OutlinedButton.icon(
-                  onPressed: _importDia,
-                  icon: const Icon(Icons.file_open),
-                  label: const Text('Betöltés .DIA'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _exportDia,
-                  icon: const Icon(Icons.save_alt),
-                  label: const Text('Mentés .DIA'),
-                ),
-                if (!widget.embedded)
-                  OutlinedButton.icon(
-                    onPressed: widget.onClose,
-                    icon: const Icon(Icons.cancel_outlined),
-                    label: const Text('Mégse'),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Ének hozzáadása',
+                    hintText: 'Kötet vagy énekcím',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
                   ),
-                FilledButton.icon(
-                  onPressed: _saving ? null : _save,
-                  icon: _saving
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.save),
-                  label: const Text('Mentés'),
+                  onChanged: (String value) => setState(() => _searchQuery = value.trim()),
                 ),
-              ],
-            ),
-          ),
+              ),
+              Expanded(
+                child: _searchQuery.isNotEmpty ? _buildSearchResults() : _buildCurrentOrderList(),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  children: <Widget>[
+                    OutlinedButton.icon(
+                      onPressed: _importDia,
+                      icon: const Icon(Icons.file_open),
+                      label: const Text('Betöltés .DIA'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _exportDia,
+                      icon: const Icon(Icons.save_alt),
+                      label: const Text('Mentés .DIA'),
+                    ),
+                    if (!widget.embedded)
+                      OutlinedButton.icon(
+                        onPressed: widget.onClose,
+                        icon: const Icon(Icons.cancel_outlined),
+                        label: const Text('Mégse'),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
         );
@@ -147,16 +136,14 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     );
   }
 
-  Future<void> _save() async {
-    setState(() => _saving = true);
-    await controller.applyCustomOrder(_entries, activate: _active);
+  Future<void> _commitEntries() async {
+    await controller.applyCustomOrder(_entries, activate: true);
     if (!mounted) {
       return;
     }
-    setState(() => _saving = false);
-    if (!widget.embedded) {
-      widget.onClose?.call();
-    }
+    setState(() {
+      _entries = List<CustomOrderEntry>.from(controller.customOrder);
+    });
   }
 
   Future<void> _exportDia() async {
@@ -171,7 +158,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     if (target == null) {
       return;
     }
-    await controller.applyCustomOrder(_entries, activate: _active);
+    await _commitEntries();
     final String outPath = await controller.exportCustomOrderToDia(target.path);
     if (!mounted) {
       return;
@@ -190,15 +177,15 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     if (file == null) {
       return;
     }
-    final int count = await controller.importCustomOrderFromDia(file.path, activate: _active);
+    final int count = await controller.importCustomOrderFromDia(file.path, activate: true);
     if (!mounted) {
       return;
     }
     setState(() {
       _entries = List<CustomOrderEntry>.from(controller.customOrder);
-      _active = controller.customOrderActive;
       _searchQuery = '';
     });
+    _searchController.clear();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Betöltve: $count elem')),
     );
@@ -248,16 +235,30 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           trailing: IconButton(
             icon: const Icon(Icons.add_circle_outline),
             onPressed: () {
+              final CustomOrderEntry baseEntry = CustomOrderEntry(
+                fileName: hit.fileName,
+                songIndex: hit.songIndex,
+                verseIndex: 0,
+                label: controller.buildEntryLabel(hit.fileName, hit.songIndex, 0),
+              );
+              final List<DtxVerse> verses = controller.versesForEntry(baseEntry);
+              final List<CustomOrderEntry> toInsert = verses.isEmpty
+                  ? <CustomOrderEntry>[baseEntry]
+                  : List<CustomOrderEntry>.generate(
+                      verses.length,
+                      (int verseIx) => CustomOrderEntry(
+                        fileName: hit.fileName,
+                        songIndex: hit.songIndex,
+                        verseIndex: verseIx,
+                        label: controller.buildEntryLabel(hit.fileName, hit.songIndex, verseIx),
+                      ),
+                    );
               setState(() {
-                _entries.add(
-                  CustomOrderEntry(
-                    fileName: hit.fileName,
-                    songIndex: hit.songIndex,
-                    verseIndex: 0,
-                    label: controller.buildEntryLabel(hit.fileName, hit.songIndex, 0),
-                  ),
-                );
+                _entries.addAll(toInsert);
+                _searchQuery = '';
               });
+              _searchController.clear();
+              unawaited(_commitEntries());
             },
           ),
         );
@@ -278,6 +279,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
     return ReorderableListView.builder(
       itemCount: _entries.length,
+      buildDefaultDragHandles: false,
       onReorder: (int oldIndex, int newIndex) {
         setState(() {
           if (newIndex > oldIndex) {
@@ -286,11 +288,26 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           final CustomOrderEntry entry = _entries.removeAt(oldIndex);
           _entries.insert(newIndex, entry);
         });
+        unawaited(_commitEntries());
       },
       itemBuilder: (BuildContext context, int index) {
         final CustomOrderEntry entry = _entries[index];
+        final bool isContinuation =
+            index > 0 &&
+            _entries[index - 1].fileName == entry.fileName &&
+            _entries[index - 1].songIndex == entry.songIndex;
+        final List<DtxVerse> verses = controller.versesForEntry(entry);
+        final int verseIx = _safeEntryVerseIndex(entry);
+        final String verseLabel = verses.isEmpty
+            ? '-'
+            : verses[verseIx.clamp(0, verses.length - 1)].name;
+        final String titleText = isContinuation ? verseLabel : entry.label;
         return ListTile(
           key: ValueKey<String>('${entry.fileName}_${entry.songIndex}_$index'),
+          dense: true,
+          visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
+          minVerticalPadding: 0,
+          minTileHeight: 30,
           selected: controller.isCustomOrderIndexCurrent(index),
           selectedTileColor: Colors.blue.withValues(alpha: 0.12),
           onTap: () => unawaited(controller.projectCustomOrderEntry(entry, preferredCursor: index)),
@@ -298,23 +315,41 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             index: index,
             child: const Icon(Icons.drag_handle),
           ),
-          title: Text(entry.label, maxLines: 1, overflow: TextOverflow.ellipsis),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              IconButton(
-                tooltip: 'Versszak',
-                icon: const Icon(Icons.format_list_numbered),
-                onPressed: () => _pickVerse(index),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                onPressed: () {
-                  setState(() => _entries.removeAt(index));
-                },
-              ),
-            ],
+          contentPadding: EdgeInsets.only(
+            left: isContinuation ? 70 : 16,
+            right: 8,
           ),
+          title: Text(
+            titleText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(height: 0.95),
+          ),
+          trailing: isContinuation
+              ? null
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    IconButton(
+                      tooltip: 'Versszak',
+                      icon: const Icon(Icons.format_list_numbered),
+                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      onPressed: () => _pickVerse(index),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      onPressed: () {
+                        setState(() => _entries.removeAt(index));
+                        unawaited(_commitEntries());
+                      },
+                    ),
+                  ],
+                ),
         );
       },
     );
@@ -427,13 +462,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
     // Commit immediately so multi-verse selections are not lost if user
     // continues navigating without pressing the bottom save button yet.
-    await controller.applyCustomOrder(_entries, activate: _active);
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _entries = List<CustomOrderEntry>.from(controller.customOrder);
-    });
+    await _commitEntries();
   }
 
   ({int start, int end}) _contiguousSongGroup(int index) {

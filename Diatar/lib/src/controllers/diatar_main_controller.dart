@@ -568,6 +568,96 @@ class DiatarMainController extends ChangeNotifier {
     return '${b.displayName}: ${song.title} / $verseName';
   }
 
+  String _normalizeDiaText(String text) {
+    const Map<String, String> repl = <String, String>{
+      'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ö': 'o', 'ő': 'o', 'ú': 'u', 'ü': 'u', 'ű': 'u',
+      'Á': 'a', 'É': 'e', 'Í': 'i', 'Ó': 'o', 'Ö': 'o', 'Ő': 'o', 'Ú': 'u', 'Ü': 'u', 'Ű': 'u',
+    };
+    final StringBuffer sb = StringBuffer();
+    bool lastWasSpace = false;
+    for (final int rune in text.runes) {
+      final String ch = String.fromCharCode(rune);
+      final String mapped = repl[ch] ?? ch;
+      final bool isSep = mapped.trim().isEmpty || mapped == '_' || mapped == '-' || mapped == '/';
+      if (isSep) {
+        if (!lastWasSpace) {
+          sb.write(' ');
+          lastWasSpace = true;
+        }
+        continue;
+      }
+      sb.write(mapped.toLowerCase());
+      lastWasSpace = false;
+    }
+    return sb.toString().trim().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  int _findBookIndexForDia(String kotet) {
+    final String needle = _normalizeDiaText(kotet);
+    if (needle.isEmpty) {
+      return -1;
+    }
+    return books.indexWhere((DtxBook b) {
+      return _normalizeDiaText(b.title) == needle ||
+          _normalizeDiaText(b.displayName) == needle ||
+          _normalizeDiaText(b.fileName) == needle;
+    });
+  }
+
+  int _findSongIndexForDia(DtxBook book, String enek) {
+    final String needle = _normalizeDiaText(enek);
+    if (needle.isEmpty) {
+      return -1;
+    }
+    return book.songs.indexWhere((DtxSong s) => !s.separator && _normalizeDiaText(s.title) == needle);
+  }
+
+  int _findVerseIndexForDia(DtxSong song, String versszak) {
+    final String needle = _normalizeDiaText(versszak);
+    if (needle.isEmpty) {
+      return 0;
+    }
+    final int parsed = song.verses.indexWhere((DtxVerse v) => _normalizeDiaText(v.name) == needle);
+    return parsed >= 0 ? parsed : 0;
+  }
+
+  int _findCustomOrderIndexByEntry(CustomOrderEntry entry, {int preferredCursor = -1}) {
+    bool matches(int idx) {
+      if (idx < 0 || idx >= _customOrder.length) {
+        return false;
+      }
+      final CustomOrderEntry candidate = _customOrder[idx];
+      return candidate.fileName == entry.fileName &&
+          candidate.songIndex == entry.songIndex &&
+          _safeVerseIndex(candidate) == _safeVerseIndex(entry);
+    }
+
+    if (preferredCursor >= 0 && preferredCursor < _customOrder.length && matches(preferredCursor)) {
+      return preferredCursor;
+    }
+
+    if (preferredCursor >= 0) {
+      for (int i = preferredCursor + 1; i < _customOrder.length; i++) {
+        if (matches(i)) {
+          return i;
+        }
+      }
+      for (int i = 0; i < preferredCursor && i < _customOrder.length; i++) {
+        if (matches(i)) {
+          return i;
+        }
+      }
+      return -1;
+    }
+
+    for (int i = 0; i < _customOrder.length; i++) {
+      if (matches(i)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   CustomOrderEntry normalizeEntry(CustomOrderEntry entry) {
     final int bIx = books.indexWhere((DtxBook b) => b.fileName == entry.fileName);
     if (bIx < 0) {
@@ -590,11 +680,27 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> applyCustomOrder(List<CustomOrderEntry> entries, {required bool activate}) async {
+    final int previousCursor = _customOrderCursor;
+    final CustomOrderEntry? previousEntry = previousCursor >= 0 && previousCursor < _customOrder.length
+        ? _customOrder[previousCursor]
+        : null;
+
     _customOrder = entries.map(normalizeEntry).toList();
     customOrderActive = activate && _customOrder.isNotEmpty;
     if (customOrderActive) {
-      _customOrderCursor = 0;
-      _selectByCustomOrderCursor(0, sync: false);
+      final int preservedCursor = previousEntry == null
+          ? -1
+          : _findCustomOrderIndexByEntry(previousEntry, preferredCursor: previousCursor);
+      if (preservedCursor >= 0) {
+        _customOrderCursor = preservedCursor;
+      } else if (_customOrder.isNotEmpty) {
+        _customOrderCursor = previousCursor.clamp(0, _customOrder.length - 1);
+      } else {
+        _customOrderCursor = -1;
+      }
+      if (_customOrderCursor >= 0) {
+        _selectByCustomOrderCursor(_customOrderCursor, sync: false);
+      }
       await _persistCurrentCustomOrder();
       await _syncCurrentDia();
     } else {
@@ -726,9 +832,11 @@ class DiatarMainController extends ChangeNotifier {
       final List<DtxVerse> verses = versesForEntry(entry);
       final int verse = _safeVerseIndex(entry);
       final String verseName = verses.isEmpty ? '' : verses[verse.clamp(0, verses.length - 1)].name;
+      final String idValue = '${entry.fileName}|${entry.songIndex}|$verse';
 
       out.writeln();
       out.writeln('[${i + 1}]');
+      out.writeln('id=$idValue');
       out.writeln('kotet=${book?.title ?? entry.fileName}');
       out.writeln('enek=${song?.title ?? entry.label}');
       out.writeln('versszak=$verseName');
@@ -768,31 +876,19 @@ class DiatarMainController extends ChangeNotifier {
       final String enek = (sec['enek'] ?? '').trim();
       final String versszak = (sec['versszak'] ?? '').trim();
 
-      final int bIx = books.indexWhere((DtxBook b) {
-        final String title = b.title.trim().toLowerCase();
-        final String nick = b.displayName.trim().toLowerCase();
-        final String fn = b.fileName.trim().toLowerCase();
-        final String needle = kotet.toLowerCase();
-        return title == needle || nick == needle || fn == needle;
-      });
+      final int bIx = _findBookIndexForDia(kotet);
       if (bIx < 0) {
         continue;
       }
 
       final DtxBook b = books[bIx];
-      final int sIx = b.songs.indexWhere((DtxSong s) => !s.separator && s.title.trim().toLowerCase() == enek.toLowerCase());
+      final int sIx = _findSongIndexForDia(b, enek);
       if (sIx < 0) {
         continue;
       }
 
       final DtxSong s = b.songs[sIx];
-      int vIx = 0;
-      if (s.verses.isNotEmpty && versszak.isNotEmpty) {
-        final int parsed = s.verses.indexWhere((DtxVerse v) => v.name.trim().toLowerCase() == versszak.toLowerCase());
-        if (parsed >= 0) {
-          vIx = parsed;
-        }
-      }
+      final int vIx = _findVerseIndexForDia(s, versszak);
 
       imported.add(
         CustomOrderEntry(
