@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:diatar_common/diatar_common.dart';
@@ -9,6 +10,8 @@ import '../services/dtx_download_service.dart';
 import '../services/dtx_order_store.dart';
 import '../services/settings_store.dart';
 import '../services/tcp_sender_service.dart';
+
+enum DiatarHomeViewMode { szimpla, spontan, sorrend }
 
 class SongbookOrderItem {
   const SongbookOrderItem({
@@ -44,12 +47,28 @@ class CustomOrderEntry {
   const CustomOrderEntry({
     required this.fileName,
     required this.songIndex,
+    required this.verseIndex,
     required this.label,
   });
 
   final String fileName;
   final int songIndex;
+  final int verseIndex;
   final String label;
+
+  CustomOrderEntry copyWith({
+    String? fileName,
+    int? songIndex,
+    int? verseIndex,
+    String? label,
+  }) {
+    return CustomOrderEntry(
+      fileName: fileName ?? this.fileName,
+      songIndex: songIndex ?? this.songIndex,
+      verseIndex: verseIndex ?? this.verseIndex,
+      label: label ?? this.label,
+    );
+  }
 }
 
 class DiatarMainController extends ChangeNotifier {
@@ -93,6 +112,19 @@ class DiatarMainController extends ChangeNotifier {
   bool customOrderActive = false;
   int _customOrderCursor = -1;
 
+  int _safeVerseIndex(CustomOrderEntry entry, {int fallback = 0}) {
+    try {
+      final dynamic value = (entry as dynamic).verseIndex;
+      if (value is int) {
+        return value;
+      }
+      if (value is num) {
+        return value.toInt();
+      }
+    } catch (_) {}
+    return fallback;
+  }
+
   Future<void> init() async {
     settings = await _settingsStore.load();
     lastBlankPath = settings.blankPicPath;
@@ -104,6 +136,7 @@ class DiatarMainController extends ChangeNotifier {
           (StoredCustomOrderEntry e) => CustomOrderEntry(
             fileName: e.fileName,
             songIndex: e.songIndex,
+            verseIndex: e.verseIndex,
             label: e.label,
           ),
         )
@@ -141,6 +174,17 @@ class DiatarMainController extends ChangeNotifier {
     await _applyTransport();
     await reloadBooks();
     await _syncCurrentDia();
+  }
+
+  DiatarHomeViewMode get viewMode {
+    final int idx = settings.homeViewMode.clamp(0, DiatarHomeViewMode.values.length - 1);
+    return DiatarHomeViewMode.values[idx];
+  }
+
+  Future<void> setViewMode(DiatarHomeViewMode mode) async {
+    settings = settings.copyWith(homeViewMode: mode.index);
+    await _settingsStore.save(settings);
+    notifyListeners();
   }
 
   void _configureSender() {
@@ -279,7 +323,15 @@ class DiatarMainController extends ChangeNotifier {
         if (bIx < 0) {
           return false;
         }
-        return e.songIndex >= 0 && e.songIndex < books[bIx].songs.length;
+        if (e.songIndex < 0 || e.songIndex >= books[bIx].songs.length) {
+          return false;
+        }
+        final DtxSong s = books[bIx].songs[e.songIndex];
+        if (s.verses.isEmpty) {
+          return _safeVerseIndex(e) == 0;
+        }
+        final int verse = _safeVerseIndex(e);
+        return verse >= 0 && verse < s.verses.length;
       }).toList();
       if (_customOrder.isEmpty) {
         customOrderActive = false;
@@ -360,6 +412,31 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   List<CustomOrderEntry> get customOrder => List<CustomOrderEntry>.unmodifiable(_customOrder);
+  int get customOrderCursor => _customOrderCursor;
+
+  bool isCustomOrderIndexCurrent(int index) {
+    if (index < 0 || index >= _customOrder.length) {
+      return false;
+    }
+    return customOrderActive && _customOrderCursor == index;
+  }
+
+  void projectCustomOrderAt(int index) {
+    if (index < 0 || index >= _customOrder.length) {
+      return;
+    }
+    _selectByCustomOrderCursor(index, sync: true);
+  }
+
+  bool isEntryCurrentlyProjected(CustomOrderEntry entry) {
+    final DtxBook? b = currentBook;
+    if (b == null) {
+      return false;
+    }
+    return b.fileName == entry.fileName &&
+        songIndex == entry.songIndex &&
+        verseIndex == _safeVerseIndex(entry);
+  }
 
   Future<void> _persistCurrentCustomOrder() async {
     await _orderStore.saveCurrentCustomOrder(
@@ -368,6 +445,7 @@ class DiatarMainController extends ChangeNotifier {
             (CustomOrderEntry e) => StoredCustomOrderEntry(
               fileName: e.fileName,
               songIndex: e.songIndex,
+              verseIndex: _safeVerseIndex(e),
               label: e.label,
             ),
           )
@@ -394,6 +472,7 @@ class DiatarMainController extends ChangeNotifier {
           (StoredCustomOrderEntry e) => CustomOrderEntry(
             fileName: e.fileName,
             songIndex: e.songIndex,
+            verseIndex: e.verseIndex,
             label: e.label,
           ),
         )
@@ -411,6 +490,7 @@ class DiatarMainController extends ChangeNotifier {
           (CustomOrderEntry e) => StoredCustomOrderEntry(
             fileName: e.fileName,
             songIndex: e.songIndex,
+            verseIndex: _safeVerseIndex(e),
             label: e.label,
           ),
         )
@@ -449,8 +529,68 @@ class DiatarMainController extends ChangeNotifier {
     return out;
   }
 
+  DtxBook? bookForEntry(CustomOrderEntry entry) {
+    final int idx = books.indexWhere((DtxBook b) => b.fileName == entry.fileName);
+    if (idx < 0) {
+      return null;
+    }
+    return books[idx];
+  }
+
+  DtxSong? songForEntry(CustomOrderEntry entry) {
+    final DtxBook? b = bookForEntry(entry);
+    if (b == null || b.songs.isEmpty) {
+      return null;
+    }
+    final int safeSong = entry.songIndex.clamp(0, b.songs.length - 1);
+    return b.songs[safeSong];
+  }
+
+  List<DtxVerse> versesForEntry(CustomOrderEntry entry) {
+    final DtxSong? s = songForEntry(entry);
+    return s?.verses ?? const <DtxVerse>[];
+  }
+
+  String buildEntryLabel(String fileName, int songIndex, int verseIndex) {
+    final int bIx = books.indexWhere((DtxBook b) => b.fileName == fileName);
+    if (bIx < 0) {
+      return fileName;
+    }
+    final DtxBook b = books[bIx];
+    if (b.songs.isEmpty) {
+      return b.displayName;
+    }
+    final int safeSong = songIndex.clamp(0, b.songs.length - 1);
+    final DtxSong song = b.songs[safeSong];
+    final String verseName = song.verses.isEmpty
+        ? '-'
+      : song.verses[verseIndex.clamp(0, song.verses.length - 1)].name;
+    return '${b.displayName}: ${song.title} / $verseName';
+  }
+
+  CustomOrderEntry normalizeEntry(CustomOrderEntry entry) {
+    final int bIx = books.indexWhere((DtxBook b) => b.fileName == entry.fileName);
+    if (bIx < 0) {
+      return entry;
+    }
+    final DtxBook b = books[bIx];
+    if (b.songs.isEmpty) {
+      return entry.copyWith(label: b.displayName);
+    }
+    final int safeSong = entry.songIndex.clamp(0, b.songs.length - 1);
+    final DtxSong song = b.songs[safeSong];
+    final int safeVerse = song.verses.isEmpty
+        ? 0
+      : _safeVerseIndex(entry).clamp(0, song.verses.length - 1);
+    return entry.copyWith(
+      songIndex: safeSong,
+      verseIndex: safeVerse,
+      label: buildEntryLabel(entry.fileName, safeSong, safeVerse),
+    );
+  }
+
   Future<void> applyCustomOrder(List<CustomOrderEntry> entries, {required bool activate}) async {
-    _customOrder = List<CustomOrderEntry>.from(entries);
+    _customOrder = entries.map(normalizeEntry).toList();
     customOrderActive = activate && _customOrder.isNotEmpty;
     if (customOrderActive) {
       _customOrderCursor = 0;
@@ -464,6 +604,42 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
+  Future<void> projectCustomOrderEntry(CustomOrderEntry rawEntry, {int? preferredCursor}) async {
+    final CustomOrderEntry entry = normalizeEntry(rawEntry);
+    final int bookIx = books.indexWhere((DtxBook b) => b.fileName == entry.fileName);
+    if (bookIx < 0) {
+      return;
+    }
+    final DtxBook b = books[bookIx];
+    final int maxSong = b.songs.isEmpty ? 0 : b.songs.length - 1;
+
+    bookIndex = bookIx;
+    songIndex = entry.songIndex.clamp(0, maxSong);
+    final DtxSong? s = currentSong;
+    verseIndex = (s == null || s.verses.isEmpty)
+        ? 0
+        : _safeVerseIndex(entry).clamp(0, s.verses.length - 1);
+    highPos = 0;
+
+    if (preferredCursor != null) {
+      _customOrderCursor = preferredCursor.clamp(0, _customOrder.isEmpty ? 0 : _customOrder.length - 1);
+    } else {
+      final int idx = _customOrder.indexWhere(
+        (CustomOrderEntry e) =>
+            e.fileName == entry.fileName &&
+            e.songIndex == entry.songIndex &&
+            _safeVerseIndex(e) == _safeVerseIndex(entry),
+      );
+      if (idx >= 0) {
+        _customOrderCursor = idx;
+      }
+    }
+
+    status = 'Sajat sorrend: ${entry.label}';
+    notifyListeners();
+    await _syncCurrentDia();
+  }
+
   void _syncCustomCursorFromCurrentSong() {
     if (!customOrderActive || _customOrder.isEmpty) {
       return;
@@ -472,11 +648,33 @@ class DiatarMainController extends ChangeNotifier {
     if (b == null) {
       return;
     }
-    final int idx = _customOrder.indexWhere(
-      (CustomOrderEntry e) => e.fileName == b.fileName && e.songIndex == songIndex,
-    );
-    if (idx >= 0) {
-      _customOrderCursor = idx;
+
+    bool matches(int idx) {
+      if (idx < 0 || idx >= _customOrder.length) {
+        return false;
+      }
+      final CustomOrderEntry e = _customOrder[idx];
+      return e.fileName == b.fileName && e.songIndex == songIndex && _safeVerseIndex(e) == verseIndex;
+    }
+
+    // Keep current position stable for duplicate entries.
+    if (matches(_customOrderCursor)) {
+      return;
+    }
+
+    // Prefer the next matching occurrence after current cursor.
+    for (int i = _customOrderCursor + 1; i < _customOrder.length; i++) {
+      if (matches(i)) {
+        _customOrderCursor = i;
+        return;
+      }
+    }
+    // Then search before current cursor.
+    for (int i = 0; i <= _customOrderCursor && i < _customOrder.length; i++) {
+      if (matches(i)) {
+        _customOrderCursor = i;
+        return;
+      }
     }
   }
 
@@ -495,7 +693,10 @@ class DiatarMainController extends ChangeNotifier {
 
     bookIndex = bookIx;
     songIndex = entry.songIndex.clamp(0, maxSong);
-    verseIndex = 0;
+    final DtxSong? s = currentSong;
+    verseIndex = (s == null || s.verses.isEmpty)
+      ? 0
+      : _safeVerseIndex(entry).clamp(0, s.verses.length - 1);
     highPos = 0;
     _customOrderCursor = safe;
     status = 'Sajat sorrend: ${entry.label}';
@@ -509,6 +710,131 @@ class DiatarMainController extends ChangeNotifier {
     final Directory docs = await getApplicationDocumentsDirectory();
     final Directory dtxDir = Directory('${docs.path}/diatar');
     return _downloadService.listUpdates(targetDir: dtxDir);
+  }
+
+  Future<String> exportCustomOrderToDia(String path) async {
+    final String safePath = path.toLowerCase().endsWith('.dia') ? path : '$path.dia';
+    final StringBuffer out = StringBuffer();
+    out.writeln('[main]');
+    out.writeln('diaszam=${_customOrder.length}');
+    out.writeln('utf8=1');
+
+    for (int i = 0; i < _customOrder.length; i++) {
+      final CustomOrderEntry entry = normalizeEntry(_customOrder[i]);
+      final DtxBook? book = bookForEntry(entry);
+      final DtxSong? song = songForEntry(entry);
+      final List<DtxVerse> verses = versesForEntry(entry);
+      final int verse = _safeVerseIndex(entry);
+      final String verseName = verses.isEmpty ? '' : verses[verse.clamp(0, verses.length - 1)].name;
+
+      out.writeln();
+      out.writeln('[${i + 1}]');
+      out.writeln('kotet=${book?.title ?? entry.fileName}');
+      out.writeln('enek=${song?.title ?? entry.label}');
+      out.writeln('versszak=$verseName');
+    }
+
+    final File f = File(safePath);
+    await f.writeAsString(out.toString(), encoding: utf8);
+    status = 'Sorrend mentve: $safePath';
+    notifyListeners();
+    return safePath;
+  }
+
+  Future<int> importCustomOrderFromDia(String path, {bool activate = true}) async {
+    final File f = File(path);
+    if (!await f.exists()) {
+      status = 'Nincs ilyen .DIA fájl: $path';
+      notifyListeners();
+      return 0;
+    }
+
+    final String content = await f.readAsString();
+    final Map<String, Map<String, String>> sections = _parseDiaIni(content);
+    final int declaredCount = int.tryParse(sections['main']?['diaszam'] ?? '') ?? 0;
+
+    final List<CustomOrderEntry> imported = <CustomOrderEntry>[];
+    final Iterable<String> keys = sections.keys.where((String k) => k != 'main');
+    final List<String> sectionOrder = keys.toList()
+      ..sort((String a, String b) => (int.tryParse(a) ?? 999999).compareTo(int.tryParse(b) ?? 999999));
+
+    final int max = declaredCount > 0 ? declaredCount : sectionOrder.length;
+    for (int i = 1; i <= max; i++) {
+      final Map<String, String>? sec = sections['$i'];
+      if (sec == null) {
+        continue;
+      }
+      final String kotet = (sec['kotet'] ?? '').trim();
+      final String enek = (sec['enek'] ?? '').trim();
+      final String versszak = (sec['versszak'] ?? '').trim();
+
+      final int bIx = books.indexWhere((DtxBook b) {
+        final String title = b.title.trim().toLowerCase();
+        final String nick = b.displayName.trim().toLowerCase();
+        final String fn = b.fileName.trim().toLowerCase();
+        final String needle = kotet.toLowerCase();
+        return title == needle || nick == needle || fn == needle;
+      });
+      if (bIx < 0) {
+        continue;
+      }
+
+      final DtxBook b = books[bIx];
+      final int sIx = b.songs.indexWhere((DtxSong s) => !s.separator && s.title.trim().toLowerCase() == enek.toLowerCase());
+      if (sIx < 0) {
+        continue;
+      }
+
+      final DtxSong s = b.songs[sIx];
+      int vIx = 0;
+      if (s.verses.isNotEmpty && versszak.isNotEmpty) {
+        final int parsed = s.verses.indexWhere((DtxVerse v) => v.name.trim().toLowerCase() == versszak.toLowerCase());
+        if (parsed >= 0) {
+          vIx = parsed;
+        }
+      }
+
+      imported.add(
+        CustomOrderEntry(
+          fileName: b.fileName,
+          songIndex: sIx,
+          verseIndex: vIx,
+          label: buildEntryLabel(b.fileName, sIx, vIx),
+        ),
+      );
+    }
+
+    await applyCustomOrder(imported, activate: activate);
+    status = 'Sorrend betoltve (${imported.length} elem): $path';
+    notifyListeners();
+    return imported.length;
+  }
+
+  Map<String, Map<String, String>> _parseDiaIni(String content) {
+    final Map<String, Map<String, String>> sections = <String, Map<String, String>>{};
+    String current = 'main';
+    sections[current] = <String, String>{};
+
+    for (final String rawLine in content.split(RegExp(r'\r?\n'))) {
+      final String line = rawLine.trim();
+      if (line.isEmpty || line.startsWith(';') || line.startsWith('#')) {
+        continue;
+      }
+      if (line.startsWith('[') && line.endsWith(']')) {
+        current = line.substring(1, line.length - 1).trim().toLowerCase();
+        sections.putIfAbsent(current, () => <String, String>{});
+        continue;
+      }
+      final int eq = line.indexOf('=');
+      if (eq <= 0) {
+        continue;
+      }
+      final String key = line.substring(0, eq).trim().toLowerCase();
+      final String value = line.substring(eq + 1).trim();
+      sections[current]![key] = value;
+    }
+
+    return sections;
   }
 
   Future<void> downloadSongBooks({List<DtxDownloadItem>? selected}) async {
@@ -656,16 +982,36 @@ class DiatarMainController extends ChangeNotifier {
     if (s == null || s.verses.isEmpty) {
       return;
     }
-    if (verseIndex + 1 < s.verses.length) {
-      setVerseIndex(verseIndex + 1);
+
+    if (customOrderActive && _customOrder.isNotEmpty) {
+      final int exactIdx = _currentCustomOrderIndex();
+      if (exactIdx >= 0) {
+        if (exactIdx + 1 >= _customOrder.length) {
+          return;
+        }
+        _selectByCustomOrderCursor(exactIdx + 1, sync: true);
+        return;
+      }
+
+      // Ha sorrenden kivuli dian allunk, eloszor azon lepdelunk vegig,
+      // es csak a vege utan ugrunk vissza a sorrend kovetkezo elemere.
+      if (verseIndex + 1 < s.verses.length) {
+        setVerseIndex(verseIndex + 1);
+        return;
+      }
+
+      if (_customOrderCursor < 0) {
+        _selectByCustomOrderCursor(0, sync: true);
+        return;
+      }
+      if (_customOrderCursor + 1 < _customOrder.length) {
+        _selectByCustomOrderCursor(_customOrderCursor + 1, sync: true);
+      }
       return;
     }
 
-    if (customOrderActive && _customOrder.isNotEmpty) {
-      if (_customOrderCursor + 1 >= _customOrder.length) {
-        return;
-      }
-      _selectByCustomOrderCursor(_customOrderCursor + 1, sync: true);
+    if (verseIndex + 1 < s.verses.length) {
+      setVerseIndex(verseIndex + 1);
       return;
     }
 
@@ -676,31 +1022,72 @@ class DiatarMainController extends ChangeNotifier {
     _selectSongAndVerse(nextSongIdx, 0, statusPrefix: 'Enek/versszak');
   }
 
+  int _currentCustomOrderIndex() {
+    final DtxBook? b = currentBook;
+    if (b == null || _customOrder.isEmpty) {
+      return -1;
+    }
+
+    bool matches(int idx) {
+      if (idx < 0 || idx >= _customOrder.length) {
+        return false;
+      }
+      final CustomOrderEntry e = _customOrder[idx];
+      return e.fileName == b.fileName && e.songIndex == songIndex && _safeVerseIndex(e) == verseIndex;
+    }
+
+    // Prefer current cursor when duplicates exist.
+    if (matches(_customOrderCursor)) {
+      return _customOrderCursor;
+    }
+    for (int i = _customOrderCursor + 1; i < _customOrder.length; i++) {
+      if (matches(i)) {
+        return i;
+      }
+    }
+    for (int i = 0; i <= _customOrderCursor && i < _customOrder.length; i++) {
+      if (matches(i)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   void prevVerse() {
     final DtxSong? s = currentSong;
     if (s == null || s.verses.isEmpty) {
       return;
     }
-    if (verseIndex > 0) {
-      setVerseIndex(verseIndex - 1);
+
+    if (customOrderActive && _customOrder.isNotEmpty) {
+      final int exactIdx = _currentCustomOrderIndex();
+      if (exactIdx >= 0) {
+        if (exactIdx <= 0) {
+          return;
+        }
+        _selectByCustomOrderCursor(exactIdx - 1, sync: true);
+        return;
+      }
+
+      // Ha sorrenden kivuli dian allunk, eloszor azon lepdelunk vissza,
+      // es csak az eleje utan ugrunk vissza a sorrend elozo elemere.
+      if (verseIndex > 0) {
+        setVerseIndex(verseIndex - 1);
+        return;
+      }
+
+      if (_customOrderCursor < 0) {
+        _selectByCustomOrderCursor(0, sync: true);
+        return;
+      }
+      if (_customOrderCursor > 0) {
+        _selectByCustomOrderCursor(_customOrderCursor - 1, sync: true);
+      }
       return;
     }
 
-    if (customOrderActive && _customOrder.isNotEmpty) {
-      if (_customOrderCursor <= 0) {
-        return;
-      }
-      final int targetCursor = _customOrderCursor - 1;
-      _selectByCustomOrderCursor(targetCursor, sync: false);
-      final DtxSong? targetSong = currentSong;
-      final int targetVerse = (targetSong == null || targetSong.verses.isEmpty)
-          ? 0
-          : targetSong.verses.length - 1;
-      verseIndex = targetVerse;
-      highPos = 0;
-      status = 'Enek/versszak: ${targetSong?.title ?? '-'}';
-      notifyListeners();
-      _syncCurrentDia();
+    if (verseIndex > 0) {
+      setVerseIndex(verseIndex - 1);
       return;
     }
 

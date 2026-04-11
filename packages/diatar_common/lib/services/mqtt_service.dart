@@ -5,7 +5,9 @@ import 'dart:typed_data';
 
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
-import 'package:diatar_common/diatar_common.dart';
+
+import '../models/mqtt_user.dart';
+import '../models/records.dart';
 
 typedef MqttErrorCallback = void Function(String message);
 typedef MqttStateCallback = void Function(RecStateRecord record);

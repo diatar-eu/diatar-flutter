@@ -5,16 +5,19 @@ class StoredCustomOrderEntry {
   const StoredCustomOrderEntry({
     required this.fileName,
     required this.songIndex,
+    required this.verseIndex,
     required this.label,
   });
 
   final String fileName;
   final int songIndex;
+  final int verseIndex;
   final String label;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'fileName': fileName,
         'songIndex': songIndex,
+        'verseIndex': verseIndex,
         'label': label,
       };
 
@@ -24,11 +27,17 @@ class StoredCustomOrderEntry {
     }
     final Object? f = raw['fileName'];
     final Object? s = raw['songIndex'];
+    final Object? v = raw['verseIndex'];
     final Object? l = raw['label'];
     if (f is! String || s is! num || l is! String) {
       return null;
     }
-    return StoredCustomOrderEntry(fileName: f, songIndex: s.toInt(), label: l);
+    return StoredCustomOrderEntry(
+      fileName: f,
+      songIndex: s.toInt(),
+      verseIndex: v is num ? v.toInt() : 0,
+      label: l,
+    );
   }
 }
 
