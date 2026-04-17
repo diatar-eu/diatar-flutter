@@ -1,0 +1,118 @@
+{
+  "@@locale": "en",
+  "appTitle": "DiaVetito",
+  "settingsTitleReceiver": "Settings",
+  "modeIp": "IP",
+  "modeInternet": "Internet",
+  "tcpPortRange": "TCP port (0..65535)",
+  "senderLabel": "Sender",
+  "senderHelper": "MQTT sender name",
+  "senderRefreshTooltip": "Refresh sender list",
+  "channelLabel": "Channel",
+  "clipLeft": "Left",
+  "clipTop": "Top",
+  "clipRight": "Right",
+  "clipBottom": "Bottom",
+  "borderToClip": "Margins from controller (Border2Clip)",
+  "mirror": "Mirror",
+  "autoBootIndicator": "Auto start (indicator)",
+  "rotationLabel": "Rotation",
+  "projectionFilteringTitle": "Projection filters",
+  "receiverUseServerColors": "Server colors",
+  "receiverUseServerColorsHint": "If disabled, local colors are used.",
+  "receiverShowHighlight": "Show highlight",
+  "showChords": "Show chords",
+  "showKotta": "Show notation",
+  "localColorsTitle": "Local colors",
+  "backgroundColorLabel": "Background color",
+  "textColorLabel": "Text color",
+  "blankColorLabel": "Blank color",
+  "highlightColorLabel": "Highlight color",
+  "change": "Change",
+  "colorPickerTitle": "Color picker",
+  "exit": "Exit",
+  "shutdown": "Shutdown",
+  "reboot": "Reboot",
+  "cancel": "Cancel",
+  "save": "Save",
+  "ok": "OK",
+  "invalidPortRange": "Port must be between 0 and 65535.",
+  "statusStarting": "Starting...",
+  "statusExitRequested": "Exiting...",
+  "statusShutdownUnsupported": "System shutdown is not supported in Flutter.",
+  "statusRebootUnsupported": "System reboot is not supported in Flutter.",
+  "statusStopRequested": "Stop requested (epStop).",
+  "statusShutdownRequestedUnsupported": "Shutdown requested (epShutdown), unsupported in Flutter.",
+  "statusReceiverError": "{message}",
+  "@statusReceiverError": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "statusMqttOff": "MQTT disabled",
+  "statusMqttReceiving": "MQTT receiving: {user}/{channel}",
+  "@statusMqttReceiving": {
+    "placeholders": {
+      "user": {},
+      "channel": {}
+    }
+  },
+  "statusConnected": "Connected ({port})",
+  "@statusConnected": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "statusWaitingForClient": "Waiting for client ({port})",
+  "@statusWaitingForClient": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "statusTcpOff": "TCP disabled",
+  "statusTcpListening": "TCP listening: {port}",
+  "@statusTcpListening": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "statusTcpServerError": "TCP error: {error}",
+  "@statusTcpServerError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusTcpServerOpenPortFailed": "Failed to open port ({port}): {error}",
+  "@statusTcpServerOpenPortFailed": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      },
+      "error": {}
+    }
+  },
+  "statusTcpServerClientError": "Client error: {error}",
+  "@statusTcpServerClientError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusTcpServerPacketParseError": "Packet parse error: {error}",
+  "@statusTcpServerPacketParseError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusTcpServerSendError": "Send error: {error}",
+  "@statusTcpServerSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  }
+}

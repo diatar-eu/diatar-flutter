@@ -46,13 +46,6 @@ class DtxDownloadSummary {
 
   final int downloaded;
   final int skipped;
-
-  String get message {
-    if (downloaded == 0) {
-      return 'Nincs uj enektar frissites.';
-    }
-    return '$downloaded fajl letoltve, $skipped valtozatlan.';
-  }
 }
 
 class DtxDownloadService {

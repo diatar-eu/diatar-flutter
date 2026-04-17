@@ -1,0 +1,118 @@
+{
+  "@@locale": "hu",
+  "appTitle": "DiaVetito",
+  "settingsTitleReceiver": "Beallitasok",
+  "modeIp": "IP",
+  "modeInternet": "Internet",
+  "tcpPortRange": "TCP port (0..65535)",
+  "senderLabel": "Kuldo",
+  "senderHelper": "MQTT sender neve",
+  "senderRefreshTooltip": "Kuldo lista frissites",
+  "channelLabel": "Csatorna",
+  "clipLeft": "Bal",
+  "clipTop": "Felso",
+  "clipRight": "Jobb",
+  "clipBottom": "Also",
+  "borderToClip": "Margok a vezerlotol (Border2Clip)",
+  "mirror": "Tukrozes",
+  "autoBootIndicator": "Automatikus inditas (jelzo)",
+  "rotationLabel": "Forgatas",
+  "projectionFilteringTitle": "Vetites szurese",
+  "receiverUseServerColors": "Szerver szinei",
+  "receiverUseServerColorsHint": "Ha ki van kapcsolva, a helyi szinek lesznek hasznalva.",
+  "receiverShowHighlight": "Kiemeles megjelenitese",
+  "showChords": "Akkordok mutatasa",
+  "showKotta": "Kotta mutatasa",
+  "localColorsTitle": "Helyi szinek",
+  "backgroundColorLabel": "Hatterszin",
+  "textColorLabel": "Szovegszin",
+  "blankColorLabel": "Blank szin",
+  "highlightColorLabel": "Kiemeles szin",
+  "change": "Valt",
+  "colorPickerTitle": "Szinvalaszto",
+  "exit": "Kilepes",
+  "shutdown": "Leallitas",
+  "reboot": "Ujrainditas",
+  "cancel": "Megse",
+  "save": "Ment",
+  "ok": "OK",
+  "invalidPortRange": "A port 0..65535 kozott legyen.",
+  "statusStarting": "Inditas...",
+  "statusExitRequested": "Kilepes...",
+  "statusShutdownUnsupported": "Rendszerleallitas Flutteren nem tamogatott.",
+  "statusRebootUnsupported": "Rendszer ujrainditas Flutteren nem tamogatott.",
+  "statusStopRequested": "Leallitas kerve (epStop).",
+  "statusShutdownRequestedUnsupported": "Rendszerleallitas kerve (epShutdown), Flutterben nem tamogatott.",
+  "statusReceiverError": "{message}",
+  "@statusReceiverError": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "statusMqttOff": "MQTT kikapcsolva",
+  "statusMqttReceiving": "MQTT fogadas: {user}/{channel}",
+  "@statusMqttReceiving": {
+    "placeholders": {
+      "user": {},
+      "channel": {}
+    }
+  },
+  "statusConnected": "Kapcsolodva ({port})",
+  "@statusConnected": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "statusWaitingForClient": "Varakozas kliensre ({port})",
+  "@statusWaitingForClient": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "statusTcpOff": "TCP kikapcsolva",
+  "statusTcpListening": "TCP figyeles: {port}",
+  "@statusTcpListening": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "statusTcpServerError": "TCP hiba: {error}",
+  "@statusTcpServerError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusTcpServerOpenPortFailed": "Nem sikerult portot nyitni ({port}): {error}",
+  "@statusTcpServerOpenPortFailed": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      },
+      "error": {}
+    }
+  },
+  "statusTcpServerClientError": "Kliens hiba: {error}",
+  "@statusTcpServerClientError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusTcpServerPacketParseError": "Csomag feldolgozasi hiba: {error}",
+  "@statusTcpServerPacketParseError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusTcpServerSendError": "Kuldesi hiba: {error}",
+  "@statusTcpServerSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  }
+}

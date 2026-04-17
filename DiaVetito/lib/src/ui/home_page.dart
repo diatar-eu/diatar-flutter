@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:diatar_common/diatar_common.dart';
 
 import '../controllers/projection_controller.dart';
+import '../l10n/l10n.dart';
 import 'settings_sheet.dart';
 
 class HomePage extends StatefulWidget {
@@ -62,6 +63,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
+                  
                 ],
               );
             },
@@ -147,5 +149,64 @@ class _HomePageState extends State<HomePage> {
     );
     final double required = painter.measureRequiredHeight(Size(viewportWidth, viewportHeight));
     return required > viewportHeight ? required : viewportHeight;
+  }
+
+  int _portParam(String key, int fallback) {
+    final Object? value = controller.statusParams[key];
+    if (value is int) {
+      return value;
+    }
+    if (value is String) {
+      return int.tryParse(value) ?? fallback;
+    }
+    return fallback;
+  }
+
+  String _localizedStatus(BuildContext context) {
+    final l10n = context.l10n;
+    final Map<String, Object> p = controller.statusParams;
+    switch (controller.statusCode) {
+      case 'statusStarting':
+        return l10n.statusStarting;
+      case 'statusExitRequested':
+        return l10n.statusExitRequested;
+      case 'statusShutdownUnsupported':
+        return l10n.statusShutdownUnsupported;
+      case 'statusRebootUnsupported':
+        return l10n.statusRebootUnsupported;
+      case 'statusStopRequested':
+        return l10n.statusStopRequested;
+      case 'statusShutdownRequestedUnsupported':
+        return l10n.statusShutdownRequestedUnsupported;
+      case 'statusReceiverError':
+        return l10n.statusReceiverError('${p['message'] ?? ''}');
+      case 'statusMqttOff':
+        return l10n.statusMqttOff;
+      case 'statusMqttReceiving':
+        return l10n.statusMqttReceiving('${p['user'] ?? ''}', '${p['channel'] ?? ''}');
+      case 'statusConnected':
+        return l10n.statusConnected(_portParam('port', controller.settings.port));
+      case 'statusWaitingForClient':
+        return l10n.statusWaitingForClient(_portParam('port', controller.settings.port));
+      case 'statusTcpOff':
+        return l10n.statusTcpOff;
+      case 'statusTcpListening':
+        return l10n.statusTcpListening(_portParam('port', controller.settings.port));
+      case 'statusTcpServerError':
+        return l10n.statusTcpServerError('${p['error'] ?? ''}');
+      case 'statusTcpServerOpenPortFailed':
+        return l10n.statusTcpServerOpenPortFailed(
+          _portParam('port', controller.settings.port),
+          '${p['error'] ?? ''}',
+        );
+      case 'statusTcpServerClientError':
+        return l10n.statusTcpServerClientError('${p['error'] ?? ''}');
+      case 'statusTcpServerPacketParseError':
+        return l10n.statusTcpServerPacketParseError('${p['error'] ?? ''}');
+      case 'statusTcpServerSendError':
+        return l10n.statusTcpServerSendError('${p['error'] ?? ''}');
+      default:
+        return controller.statusCode;
+    }
   }
 }

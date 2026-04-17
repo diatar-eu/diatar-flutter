@@ -1,0 +1,402 @@
+{
+  "@@locale": "en",
+  "appTitle": "Diatar",
+  "viewTooltip": "View",
+  "viewSimple": "Simple",
+  "viewSpontaneous": "Spontaneous",
+  "viewOrder": "Order",
+  "settingsTooltip": "Settings",
+  "playlistsTooltip": "Playlists",
+  "playlistsTitle": "Playlists",
+  "playlistsMessage": "This action can get back the full dialog later.",
+  "customOrderTooltip": "Custom order",
+  "downloadBooksTooltip": "Download songbooks",
+  "downloadTitle": "Download",
+  "downloadMessage": "The download dialog can be restored later.",
+  "refreshTooltip": "Refresh",
+  "ok": "OK",
+  "songPrev": "Song -",
+  "songNext": "Song +",
+  "projectionOn": "Projection ON",
+  "projectionOff": "Projection OFF",
+  "previous": "Previous",
+  "next": "Next",
+  "highlightPrev": "Highlight -",
+  "highlightNext": "Highlight +",
+  "positionLabel": "Position: {current}/{total}",
+  "@positionLabel": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "statusLabel": "Status: {status}",
+  "@statusLabel": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "statusStarting": "Starting...",
+  "statusSenderError": "{message}",
+  "@statusSenderError": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "statusSenderTcpError": "TCP error: {error}",
+  "@statusSenderTcpError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusSenderOpenPortFailed": "Failed to open port ({port}): {error}",
+  "@statusSenderOpenPortFailed": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      },
+      "error": {}
+    }
+  },
+  "statusSenderMqttConnectFailed": "MQTT sender connection failed.",
+  "statusSenderMqttError": "MQTT sender error: {error}",
+  "@statusSenderMqttError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusMqttSending": "MQTT send: {user}/{channel}",
+  "@statusMqttSending": {
+    "placeholders": {
+      "user": {},
+      "channel": {}
+    }
+  },
+  "statusTcpSending": "TCP send: {port}",
+  "@statusTcpSending": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "statusNoDtxFiles": "No .dtx files: {path}",
+  "@statusNoDtxFiles": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "statusAllSongbooksDisabled": "All songbooks are disabled in order settings.",
+  "statusSongbooksLoaded": "{count} songbooks loaded",
+  "@statusSongbooksLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statusLoadError": "Load error: {error}",
+  "@statusLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusCustomOrderSelected": "Custom order: {label}",
+  "@statusCustomOrderSelected": {
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "statusOrderSaved": "Order saved: {path}",
+  "@statusOrderSaved": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "statusDiaFileMissing": "No such .DIA file: {path}",
+  "@statusDiaFileMissing": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "statusOrderLoaded": "Order loaded ({count} items): {path}",
+  "@statusOrderLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "path": {}
+    }
+  },
+  "statusDownloadListLoading": "Loading songbook update list...",
+  "statusDownloadProgress": "Download: {current}/{total} {name} {percent}%",
+  "@statusDownloadProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "name": {},
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "statusDownloadSummaryNone": "No new songbook updates.",
+  "statusDownloadSummary": "{downloaded} files downloaded, {skipped} unchanged.",
+  "@statusDownloadSummary": {
+    "placeholders": {
+      "downloaded": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "statusDownloadError": "Download error: {error}",
+  "@statusDownloadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusBookSelected": "Book: {name}",
+  "@statusBookSelected": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusSongPicked": "Song: {name}",
+  "@statusSongPicked": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusVersePicked": "Verse: {name}",
+  "@statusVersePicked": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusSongSelected": "Song: {title}",
+  "@statusSongSelected": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "statusSongVerseSelected": "Song/verse: {title}",
+  "@statusSongVerseSelected": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "statusProjectionOn": "Projection: ON",
+  "statusProjectionOff": "Projection: OFF",
+  "statusImagePathEmpty": "Image file path is empty.",
+  "statusImageNotFound": "Image file not found: {path}",
+  "@statusImageNotFound": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "statusImageSent": "Image sent: {name}",
+  "@statusImageSent": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusImageSendError": "Image send error: {error}",
+  "@statusImageSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusBlankPathEmpty": "Blank image file path is empty.",
+  "statusBlankNotFound": "Blank image file not found: {path}",
+  "@statusBlankNotFound": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "statusBlankSet": "Blank image set: {name}",
+  "@statusBlankSet": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusBlankSendError": "Blank image send error: {error}",
+  "@statusBlankSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusBlankCleared": "Blank image cleared.",
+  "statusBlankClearError": "Blank image clear error: {error}",
+  "@statusBlankClearError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusShutdownCommandSent": "Shutdown command sent.",
+  "statusStopCommandSent": "Stop command sent.",
+  "statusCommandSendError": "Command send error: {error}",
+  "@statusCommandSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "sendStatusLabel": "Sender ({protocol}): {senderState}, client: {clientState}",
+  "@sendStatusLabel": {
+    "placeholders": {
+      "protocol": {},
+      "senderState": {},
+      "clientState": {}
+    }
+  },
+  "protocolMqtt": "MQTT",
+  "protocolTcp": "TCP",
+  "senderStateActive": "active",
+  "senderStateOff": "off",
+  "clientStateConnected": "connected",
+  "clientStateWaiting": "waiting",
+  "tcpPortLabel": "TCP port: {port}",
+  "@tcpPortLabel": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadProgress": "Download: {current}/{total} {name}",
+  "@downloadProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "name": {}
+    }
+  },
+  "noLoadedSlide": "No slide loaded.",
+  "bookLabel": "Book",
+  "songLabel": "Song",
+  "verseLabel": "Verse",
+  "versePanelTitle": "{title}: {verse}",
+  "@versePanelTitle": {
+    "placeholders": {
+      "title": {},
+      "verse": {}
+    }
+  },
+  "searchLabel": "Slide search",
+  "searchHint": "Book or song title",
+  "noResults": "No results.",
+  "customOrderStatus": "Custom order: {state}",
+  "@customOrderStatus": {
+    "placeholders": {
+      "state": {}
+    }
+  },
+  "stateActive": "Active",
+  "stateInactive": "Inactive",
+  "nextShort": "Next",
+  "previewTitle": "Slide preview",
+  "projectedImage": "Projected image:",
+  "settingsTitle": "Diatar settings",
+  "settingsTitleReceiver": "Settings",
+  "modeIp": "IP",
+  "modeInternet": "Internet",
+  "senderLabel": "Sender",
+  "senderHelper": "MQTT sender name",
+  "senderRefreshTooltip": "Refresh sender list",
+  "channelLabel": "Channel",
+  "clipLeft": "Left",
+  "clipTop": "Top",
+  "clipRight": "Right",
+  "clipBottom": "Bottom",
+  "borderToClip": "Margins from controller (Border2Clip)",
+  "mirror": "Mirror",
+  "autoBootIndicator": "Auto start (indicator)",
+  "rotationLabel": "Rotation",
+  "tcpPortRange": "TCP port (0..65535)",
+  "mqttUserHint": "MQTT user (empty = TCP mode)",
+  "mqttPassword": "MQTT password",
+  "mqttChannel": "MQTT channel",
+  "blankImagePath": "Blank image path",
+  "fileChoose": "Choose file",
+  "projectionSettingsTitle": "Projection settings",
+  "fontSize": "Font size",
+  "titleSize": "Title size",
+  "leftMargin": "Left margin",
+  "borderLeft": "Border L",
+  "borderTop": "Border T",
+  "borderRight": "Border R",
+  "borderBottom": "Border B",
+  "lineSpacing": "Line spacing",
+  "kottaScale": "Music notation scale",
+  "chordScale": "Chord scale",
+  "backgroundMode": "Background image mode",
+  "bgModeCenter": "Center",
+  "bgModeZoom": "Zoom",
+  "bgModeFull": "Full",
+  "bgModeCascade": "Cascade",
+  "bgModeMirror": "Mirror",
+  "backgroundOpacity": "Background opacity",
+  "blankOpacity": "Blank opacity",
+  "autoSize": "Auto sizing",
+  "showTitle": "Show title",
+  "hCenter": "Horizontal center align",
+  "vCenter": "Vertical center align",
+  "showChords": "Show chords",
+  "showKotta": "Show notation",
+  "boldText": "Bold text",
+  "colorsTitle": "Colors",
+  "backgroundColor": "Background",
+  "textColor": "Text",
+  "emptySlideColor": "Empty slide",
+  "highlightColor": "Highlight",
+  "backgroundColorTitle": "Background color",
+  "textColorTitle": "Text color",
+  "emptySlideColorTitle": "Empty slide color",
+  "highlightColorTitle": "Highlight color",
+  "cancel": "Cancel",
+  "save": "Save",
+  "invalidPortRange": "Port must be between 0 and 65535.",
+  "hexColorHint": "Hex color (#AARRGGBB or #RRGGBB)",
+  "close": "Close",
+  "imagesFileTypeLabel": "images",
+  "diatarPlaylistFileTypeLabel": "Diatar playlist",
+  "customOrderSuggestedFileName": "order.dia",
+  "customOrderEditTitle": "Edit custom order",
+  "addSong": "Add song",
+  "searchSongHint": "Book or song title",
+  "loadDia": "Load .DIA",
+  "saveDia": "Save .DIA",
+  "savedPath": "Saved: {path}",
+  "@savedPath": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "loadedCount": "Loaded: {count} items",
+  "@loadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customOrderEmpty": "The order is empty.\nSearch songs to edit it.",
+  "versePicker": "Verse",
+  "selectedVersesTitle": "Selected verses",
+  "selectedVersesSubtitle": "You can select multiple.",
+  "apply": "Apply"
+}

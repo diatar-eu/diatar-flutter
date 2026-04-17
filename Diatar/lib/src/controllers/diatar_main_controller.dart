@@ -78,11 +78,11 @@ class DiatarMainController extends ChangeNotifier {
   final DtxOrderStore _orderStore = DtxOrderStore();
   final TcpSenderService _sender = TcpSenderService(
     onStatusChanged: (bool connected) {},
-    onError: (String message) {},
+    onError: (String code, Map<String, String> params) {},
   );
   final MqttSenderService _mqttSender = MqttSenderService(
     onStatusChanged: (bool connected) {},
-    onError: (String message) {},
+    onError: (String code, Map<String, String> params) {},
   );
 
   List<DtxBook> books = <DtxBook>[];
@@ -97,7 +97,8 @@ class DiatarMainController extends ChangeNotifier {
   bool senderRunning = false;
   bool senderConnected = false;
   bool mqttActive = false;
-  String status = 'Inditas...';
+  String statusCode = 'statusStarting';
+  Map<String, String> _statusParams = <String, String>{};
   String lastPicPath = '';
   String lastBlankPath = '';
   bool downloadInProgress = false;
@@ -111,6 +112,13 @@ class DiatarMainController extends ChangeNotifier {
   List<CustomOrderEntry> _customOrder = <CustomOrderEntry>[];
   bool customOrderActive = false;
   int _customOrderCursor = -1;
+
+  Map<String, String> get statusParams => Map<String, String>.unmodifiable(_statusParams);
+
+  void _setStatus(String code, [Map<String, String> params = const <String, String>{}]) {
+    statusCode = code;
+    _statusParams = Map<String, String>.from(params);
+  }
 
   int _safeVerseIndex(CustomOrderEntry entry, {int fallback = 0}) {
     try {
@@ -192,16 +200,39 @@ class DiatarMainController extends ChangeNotifier {
       senderConnected = connected;
       notifyListeners();
     };
-    _sender.onError = (String message) {
-      status = message;
+    _sender.onError = (String code, Map<String, String> params) {
+      switch (code) {
+        case 'senderTcpError':
+          _setStatus('statusSenderTcpError', <String, String>{'error': params['error'] ?? ''});
+          break;
+        case 'senderOpenPortFailed':
+          _setStatus('statusSenderOpenPortFailed', <String, String>{
+            'port': params['port'] ?? '0',
+            'error': params['error'] ?? '',
+          });
+          break;
+        default:
+          _setStatus('statusSenderError', <String, String>{'message': code});
+          break;
+      }
       notifyListeners();
     };
     _mqttSender.onStatusChanged = (bool connected) {
       senderConnected = connected;
       notifyListeners();
     };
-    _mqttSender.onError = (String message) {
-      status = message;
+    _mqttSender.onError = (String code, Map<String, String> params) {
+      switch (code) {
+        case 'senderMqttConnectFailed':
+          _setStatus('statusSenderMqttConnectFailed');
+          break;
+        case 'senderMqttError':
+          _setStatus('statusSenderMqttError', <String, String>{'error': params['error'] ?? ''});
+          break;
+        default:
+          _setStatus('statusSenderError', <String, String>{'message': code});
+          break;
+      }
       notifyListeners();
     };
   }
@@ -252,13 +283,18 @@ class DiatarMainController extends ChangeNotifier {
         channel: settings.mqttChannel,
       );
       senderRunning = _mqttSender.running;
-      status = 'MQTT kuldes: $user/${settings.mqttChannel}';
+      _setStatus('statusMqttSending', <String, String>{
+        'user': user,
+        'channel': settings.mqttChannel,
+      });
     } else {
       await _mqttSender.close();
       await _sender.restart(settings.port);
       await _sender.sendScreenSize(width: _screenWidth, height: _screenHeight);
       senderRunning = _sender.running;
-      status = 'TCP kuldes: ${settings.port}';
+      _setStatus('statusTcpSending', <String, String>{
+        'port': '${settings.port}',
+      });
     }
   }
 
@@ -287,31 +323,16 @@ class DiatarMainController extends ChangeNotifier {
           .toList();
 
       if (loaded.isEmpty) {
-        books = <DtxBook>[
-          const DtxBook(
-            fileName: 'demo.dtx',
-            title: 'Minta kotet (nincs dtx fajl)',
-            nick: 'Minta',
-            songs: <DtxSong>[
-              DtxSong(
-                title: 'Minta enek',
-                verses: <DtxVerse>[
-                  DtxVerse(name: '1', lines: <String>['Tegy egy .dtx fajlt a dokumentum konyvtar diatar mappajaba.']),
-                  DtxVerse(name: '2', lines: <String>['Utana frissits, es valos eneklistat kapsz.']),
-                ],
-              ),
-            ],
-          ),
-        ];
+        books = const <DtxBook>[];
         final Directory docs = await getApplicationDocumentsDirectory();
-        status = 'Nincs .dtx fajl: ${docs.path}/diatar';
+        _setStatus('statusNoDtxFiles', <String, String>{'path': '${docs.path}/diatar'});
       } else if (enabled.isEmpty) {
         books = const <DtxBook>[];
-        status = 'Minden enektar le van tiltva az enekrendben.';
+        _setStatus('statusAllSongbooksDisabled');
       } else {
         enabled.sort(_compareBooksLikeAndroid);
         books = enabled;
-        status = '${enabled.length} kotet betoltve';
+        _setStatus('statusSongbooksLoaded', <String, String>{'count': '${enabled.length}'});
       }
 
       bookIndex = 0;
@@ -344,7 +365,7 @@ class DiatarMainController extends ChangeNotifier {
       }
       await _persistCurrentCustomOrder();
     } catch (e) {
-      status = 'Betoltesi hiba: $e';
+      _setStatus('statusLoadError', <String, String>{'error': '$e'});
       books = const <DtxBook>[];
     } finally {
       loading = false;
@@ -741,7 +762,7 @@ class DiatarMainController extends ChangeNotifier {
       }
     }
 
-    status = 'Sajat sorrend: ${entry.label}';
+    _setStatus('statusCustomOrderSelected', <String, String>{'label': entry.label});
     notifyListeners();
     await _syncCurrentDia();
   }
@@ -805,7 +826,7 @@ class DiatarMainController extends ChangeNotifier {
       : _safeVerseIndex(entry).clamp(0, s.verses.length - 1);
     highPos = 0;
     _customOrderCursor = safe;
-    status = 'Sajat sorrend: ${entry.label}';
+    _setStatus('statusCustomOrderSelected', <String, String>{'label': entry.label});
     notifyListeners();
     if (sync) {
       _syncCurrentDia();
@@ -844,7 +865,7 @@ class DiatarMainController extends ChangeNotifier {
 
     final File f = File(safePath);
     await f.writeAsString(out.toString(), encoding: utf8);
-    status = 'Sorrend mentve: $safePath';
+    _setStatus('statusOrderSaved', <String, String>{'path': safePath});
     notifyListeners();
     return safePath;
   }
@@ -852,7 +873,7 @@ class DiatarMainController extends ChangeNotifier {
   Future<int> importCustomOrderFromDia(String path, {bool activate = true}) async {
     final File f = File(path);
     if (!await f.exists()) {
-      status = 'Nincs ilyen .DIA fájl: $path';
+      _setStatus('statusDiaFileMissing', <String, String>{'path': path});
       notifyListeners();
       return 0;
     }
@@ -901,7 +922,10 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     await applyCustomOrder(imported, activate: activate);
-    status = 'Sorrend betoltve (${imported.length} elem): $path';
+    _setStatus('statusOrderLoaded', <String, String>{
+      'count': '${imported.length}',
+      'path': path,
+    });
     notifyListeners();
     return imported.length;
   }
@@ -940,7 +964,7 @@ class DiatarMainController extends ChangeNotifier {
     downloadTotalFiles = selected?.length ?? 0;
     downloadCurrentName = '';
     downloadCurrentFraction = 0;
-    status = 'Enektar lista letoltese...';
+    _setStatus('statusDownloadListLoading');
     notifyListeners();
 
     try {
@@ -954,16 +978,26 @@ class DiatarMainController extends ChangeNotifier {
           downloadTotalFiles = progress.totalFiles;
           downloadCurrentName = progress.fileName;
           downloadCurrentFraction = progress.fraction;
-          status =
-              'Letoltes: ${progress.currentFile}/${progress.totalFiles} ${progress.fileName} '
-              '${(progress.fraction * 100).toStringAsFixed(0)}%';
+          _setStatus('statusDownloadProgress', <String, String>{
+            'current': '${progress.currentFile}',
+            'total': '${progress.totalFiles}',
+            'name': progress.fileName,
+            'percent': (progress.fraction * 100).toStringAsFixed(0),
+          });
           notifyListeners();
         },
       );
       await reloadBooks();
-      status = summary.message;
+      if (summary.downloaded == 0) {
+        _setStatus('statusDownloadSummaryNone');
+      } else {
+        _setStatus('statusDownloadSummary', <String, String>{
+          'downloaded': '${summary.downloaded}',
+          'skipped': '${summary.skipped}',
+        });
+      }
     } catch (e) {
-      status = 'Letoltesi hiba: $e';
+      _setStatus('statusDownloadError', <String, String>{'error': '$e'});
     } finally {
       downloadInProgress = false;
       loading = false;
@@ -1040,7 +1074,7 @@ class DiatarMainController extends ChangeNotifier {
     verseIndex = 0;
     highPos = 0;
     final DtxBook? selected = currentBook;
-    status = 'Kotet: ${selected?.displayName ?? '-'}';
+    _setStatus('statusBookSelected', <String, String>{'name': selected?.displayName ?? '-'});
     _syncCustomCursorFromCurrentSong();
     notifyListeners();
     _syncCurrentDia();
@@ -1055,7 +1089,7 @@ class DiatarMainController extends ChangeNotifier {
     songIndex = value.clamp(0, max);
     verseIndex = 0;
     highPos = 0;
-    status = 'Enek: ${currentSong?.title ?? '-'}';
+    _setStatus('statusSongPicked', <String, String>{'name': currentSong?.title ?? '-'});
     _syncCustomCursorFromCurrentSong();
     notifyListeners();
     _syncCurrentDia();
@@ -1068,7 +1102,7 @@ class DiatarMainController extends ChangeNotifier {
     }
     verseIndex = value.clamp(0, s.verses.length - 1);
     highPos = 0;
-    status = 'Versszak: ${currentVerse?.name ?? '-'}';
+    _setStatus('statusVersePicked', <String, String>{'name': currentVerse?.name ?? '-'});
     notifyListeners();
     _syncCurrentDia();
   }
@@ -1115,7 +1149,7 @@ class DiatarMainController extends ChangeNotifier {
     if (nextSongIdx == null) {
       return;
     }
-    _selectSongAndVerse(nextSongIdx, 0, statusPrefix: 'Enek/versszak');
+    _selectSongAndVerse(nextSongIdx, 0, includeVerseInStatus: true);
   }
 
   int _currentCustomOrderIndex() {
@@ -1193,7 +1227,7 @@ class DiatarMainController extends ChangeNotifier {
     }
     final DtxSong targetSong = currentBook!.songs[prevSongIdx];
     final int targetVerse = targetSong.verses.isEmpty ? 0 : targetSong.verses.length - 1;
-    _selectSongAndVerse(prevSongIdx, targetVerse, statusPrefix: 'Enek/versszak');
+    _selectSongAndVerse(prevSongIdx, targetVerse, includeVerseInStatus: true);
   }
 
   void nextSong() {
@@ -1208,7 +1242,7 @@ class DiatarMainController extends ChangeNotifier {
     if (nextSongIdx == null) {
       return;
     }
-    _selectSongAndVerse(nextSongIdx, 0, statusPrefix: 'Enek');
+    _selectSongAndVerse(nextSongIdx, 0, includeVerseInStatus: false);
   }
 
   void prevSong() {
@@ -1223,7 +1257,7 @@ class DiatarMainController extends ChangeNotifier {
     if (prevSongIdx == null) {
       return;
     }
-    _selectSongAndVerse(prevSongIdx, 0, statusPrefix: 'Enek');
+    _selectSongAndVerse(prevSongIdx, 0, includeVerseInStatus: false);
   }
 
   int? _findSelectableSongIndex(int start, {required bool forward}) {
@@ -1241,7 +1275,7 @@ class DiatarMainController extends ChangeNotifier {
     return null;
   }
 
-  void _selectSongAndVerse(int targetSong, int targetVerse, {required String statusPrefix}) {
+  void _selectSongAndVerse(int targetSong, int targetVerse, {required bool includeVerseInStatus}) {
     final DtxBook? b = currentBook;
     if (b == null || b.songs.isEmpty) {
       return;
@@ -1255,7 +1289,8 @@ class DiatarMainController extends ChangeNotifier {
     songIndex = song;
     verseIndex = verse;
     highPos = 0;
-    status = '$statusPrefix: ${songModel.title}';
+    final String code = includeVerseInStatus ? 'statusSongVerseSelected' : 'statusSongSelected';
+    _setStatus(code, <String, String>{'title': songModel.title});
     _syncCustomCursorFromCurrentSong();
     notifyListeners();
     _syncCurrentDia();
@@ -1263,7 +1298,7 @@ class DiatarMainController extends ChangeNotifier {
 
   void toggleShowing() {
     showing = !showing;
-    status = showing ? 'Vetites: BE' : 'Vetites: KI';
+    _setStatus(showing ? 'statusProjectionOn' : 'statusProjectionOff');
     notifyListeners();
     _syncProjectionOnly();
   }
@@ -1360,7 +1395,7 @@ class DiatarMainController extends ChangeNotifier {
   Future<void> sendPicFromPath(String path) async {
     final String normalized = path.trim();
     if (normalized.isEmpty) {
-      status = 'A kep fajl utvonala ures.';
+      _setStatus('statusImagePathEmpty');
       notifyListeners();
       return;
     }
@@ -1368,7 +1403,7 @@ class DiatarMainController extends ChangeNotifier {
     try {
       final File file = File(normalized);
       if (!await file.exists()) {
-        status = 'A kep fajl nem talalhato: $normalized';
+        _setStatus('statusImageNotFound', <String, String>{'path': normalized});
         notifyListeners();
         return;
       }
@@ -1381,10 +1416,12 @@ class DiatarMainController extends ChangeNotifier {
         await _sender.sendPic(bytes, ext: ext);
       }
       lastPicPath = normalized;
-      status = 'Kep elkuldve: ${file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : normalized}';
+      _setStatus('statusImageSent', <String, String>{
+        'name': file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : normalized,
+      });
       notifyListeners();
     } catch (e) {
-      status = 'Kep kuldesi hiba: $e';
+      _setStatus('statusImageSendError', <String, String>{'error': '$e'});
       notifyListeners();
     }
   }
@@ -1392,7 +1429,7 @@ class DiatarMainController extends ChangeNotifier {
   Future<void> sendBlankFromPath(String path) async {
     final String normalized = path.trim();
     if (normalized.isEmpty) {
-      status = 'A blank kep fajl utvonala ures.';
+      _setStatus('statusBlankPathEmpty');
       notifyListeners();
       return;
     }
@@ -1400,7 +1437,7 @@ class DiatarMainController extends ChangeNotifier {
     try {
       final File file = File(normalized);
       if (!await file.exists()) {
-        status = 'A blank kep fajl nem talalhato: $normalized';
+        _setStatus('statusBlankNotFound', <String, String>{'path': normalized});
         notifyListeners();
         return;
       }
@@ -1418,10 +1455,12 @@ class DiatarMainController extends ChangeNotifier {
       lastBlankPath = normalized;
       settings = settings.copyWith(blankPicPath: normalized);
       await _settingsStore.save(settings);
-      status = 'Blank kep beallitva: ${file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : normalized}';
+      _setStatus('statusBlankSet', <String, String>{
+        'name': file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : normalized,
+      });
       notifyListeners();
     } catch (e) {
-      status = 'Blank kep kuldesi hiba: $e';
+      _setStatus('statusBlankSendError', <String, String>{'error': '$e'});
       notifyListeners();
     }
   }
@@ -1436,10 +1475,10 @@ class DiatarMainController extends ChangeNotifier {
         await _sender.sendBlank(Uint8List(0), ext: '');
         await _sender.sendState(globals, showing: showing, wordToHighlight: highPos);
       }
-      status = 'Blank kep torolve.';
+      _setStatus('statusBlankCleared');
       notifyListeners();
     } catch (e) {
-      status = 'Blank kep torlesi hiba: $e';
+      _setStatus('statusBlankClearError', <String, String>{'error': '$e'});
       notifyListeners();
     }
   }
@@ -1461,12 +1500,10 @@ class DiatarMainController extends ChangeNotifier {
       // End-program commands are one-shot signals in Android too.
       globals = globals.copyWith(endProgram: 0);
 
-      status = wantShutdown
-          ? 'Lezaras utasitas elkuldve.'
-          : 'Megallitas utasitas elkuldve.';
+      _setStatus(wantShutdown ? 'statusShutdownCommandSent' : 'statusStopCommandSent');
       notifyListeners();
     } catch (e) {
-      status = 'Utasitas kuldesi hiba: $e';
+      _setStatus('statusCommandSendError', <String, String>{'error': '$e'});
       notifyListeners();
     }
   }

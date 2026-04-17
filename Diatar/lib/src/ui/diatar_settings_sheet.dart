@@ -2,6 +2,8 @@ import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+
 class DiatarSettingsSheet extends StatefulWidget {
   const DiatarSettingsSheet({
     super.key,
@@ -101,6 +103,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -113,62 +116,62 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text('Diatar beallitasok', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+            Text(l10n.settingsTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             TextField(
               controller: _port,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'TCP port (0..65535)'),
+              decoration: InputDecoration(labelText: l10n.tcpPortRange),
             ),
             TextField(
               controller: _mqttUser,
-              decoration: const InputDecoration(
-                labelText: 'MQTT user (ures = TCP mod)',
+              decoration: InputDecoration(
+                labelText: l10n.mqttUserHint,
               ),
             ),
             TextField(
               controller: _mqttPassword,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'MQTT jelszo'),
+              decoration: InputDecoration(labelText: l10n.mqttPassword),
             ),
             TextField(
               controller: _mqttChannel,
-              decoration: const InputDecoration(labelText: 'MQTT csatorna'),
+              decoration: InputDecoration(labelText: l10n.mqttChannel),
             ),
             Row(
               children: <Widget>[
                 Expanded(
                   child: TextField(
                     controller: _blankPicPath,
-                    decoration: const InputDecoration(labelText: 'Blank kep utvonal'),
+                    decoration: InputDecoration(labelText: l10n.blankImagePath),
                   ),
                 ),
                 IconButton(
                   onPressed: _pickBlankFile,
                   icon: const Icon(Icons.folder_open),
-                  tooltip: 'Fajl valasztasa',
+                  tooltip: l10n.fileChoose,
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            const Text('Vetitesi beallitasok', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text(l10n.projectionSettingsTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: <Widget>[
-                _projectionNumberField('Betumeret', _projFontSize),
-                _projectionNumberField('Cim meret', _projTitleSize),
-                _projectionNumberField('Bal margo', _projLeftIndent),
-                _projectionNumberField('Border L', _projBorderL),
-                _projectionNumberField('Border T', _projBorderT),
-                _projectionNumberField('Border R', _projBorderR),
-                _projectionNumberField('Border B', _projBorderB),
+                _projectionNumberField(l10n.fontSize, _projFontSize),
+                _projectionNumberField(l10n.titleSize, _projTitleSize),
+                _projectionNumberField(l10n.leftMargin, _projLeftIndent),
+                _projectionNumberField(l10n.borderLeft, _projBorderL),
+                _projectionNumberField(l10n.borderTop, _projBorderT),
+                _projectionNumberField(l10n.borderRight, _projBorderR),
+                _projectionNumberField(l10n.borderBottom, _projBorderB),
               ],
             ),
             DropdownButtonFormField<int>(
               value: _projSpacingStep,
-              decoration: const InputDecoration(labelText: 'Sorkoz'),
+              decoration: InputDecoration(labelText: l10n.lineSpacing),
               items: List<DropdownMenuItem<int>>.generate(
                 11,
                 (int i) => DropdownMenuItem<int>(
@@ -180,7 +183,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             ),
             DropdownButtonFormField<int>(
               value: _projKottaArany,
-              decoration: const InputDecoration(labelText: 'Kotta meret arany'),
+              decoration: InputDecoration(labelText: l10n.kottaScale),
               items: List<DropdownMenuItem<int>>.generate(
                 20,
                 (int i) {
@@ -192,7 +195,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             ),
             DropdownButtonFormField<int>(
               value: _projAkkordArany,
-              decoration: const InputDecoration(labelText: 'Akkord meret arany'),
+              decoration: InputDecoration(labelText: l10n.chordScale),
               items: List<DropdownMenuItem<int>>.generate(
                 20,
                 (int i) {
@@ -204,19 +207,19 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             ),
             DropdownButtonFormField<int>(
               value: _projBgMode,
-              decoration: const InputDecoration(labelText: 'Hatters kep mod'),
-              items: const <DropdownMenuItem<int>>[
-                DropdownMenuItem<int>(value: 0, child: Text('Center')),
-                DropdownMenuItem<int>(value: 1, child: Text('Zoom')),
-                DropdownMenuItem<int>(value: 2, child: Text('Full')),
-                DropdownMenuItem<int>(value: 3, child: Text('Cascade')),
-                DropdownMenuItem<int>(value: 4, child: Text('Mirror')),
+              decoration: InputDecoration(labelText: l10n.backgroundMode),
+              items: <DropdownMenuItem<int>>[
+                DropdownMenuItem<int>(value: 0, child: Text(l10n.bgModeCenter)),
+                DropdownMenuItem<int>(value: 1, child: Text(l10n.bgModeZoom)),
+                DropdownMenuItem<int>(value: 2, child: Text(l10n.bgModeFull)),
+                DropdownMenuItem<int>(value: 3, child: Text(l10n.bgModeCascade)),
+                DropdownMenuItem<int>(value: 4, child: Text(l10n.bgModeMirror)),
               ],
               onChanged: (int? v) => setState(() => _projBgMode = v ?? 0),
             ),
             DropdownButtonFormField<int>(
               value: _projBackTrans,
-              decoration: const InputDecoration(labelText: 'Hatter atszosag'),
+              decoration: InputDecoration(labelText: l10n.backgroundOpacity),
               items: List<DropdownMenuItem<int>>.generate(
                 11,
                 (int i) {
@@ -228,7 +231,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             ),
             DropdownButtonFormField<int>(
               value: _projBlankTrans,
-              decoration: const InputDecoration(labelText: 'Blank atszosag'),
+              decoration: InputDecoration(labelText: l10n.blankOpacity),
               items: List<DropdownMenuItem<int>>.generate(
                 11,
                 (int i) {
@@ -242,86 +245,86 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               contentPadding: EdgeInsets.zero,
               value: _projAutoSize,
               onChanged: (bool v) => setState(() => _projAutoSize = v),
-              title: const Text('Automatikus meretezes'),
+              title: Text(l10n.autoSize),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _projUseTitle,
               onChanged: (bool v) => setState(() => _projUseTitle = v),
-              title: const Text('Cim mutatasa'),
+              title: Text(l10n.showTitle),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _projHCenter,
               onChanged: (bool v) => setState(() => _projHCenter = v),
-              title: const Text('Vizszintes kozepre igazitas'),
+              title: Text(l10n.hCenter),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _projVCenter,
               onChanged: (bool v) => setState(() => _projVCenter = v),
-              title: const Text('Fuggoleges kozepre igazitas'),
+              title: Text(l10n.vCenter),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _projUseAkkord,
               onChanged: (bool v) => setState(() => _projUseAkkord = v),
-              title: const Text('Akkordok mutatasa'),
+              title: Text(l10n.showChords),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _projUseKotta,
               onChanged: (bool v) => setState(() => _projUseKotta = v),
-              title: const Text('Kotta mutatasa'),
+              title: Text(l10n.showKotta),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _projBoldText,
               onChanged: (bool v) => setState(() => _projBoldText = v),
-              title: const Text('Felkover szoveg'),
+              title: Text(l10n.boldText),
             ),
             const SizedBox(height: 8),
-            const Text('Szinek', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text(l10n.colorsTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: <Widget>[
                 _colorButton(
-                  label: 'Hatter',
+                  label: l10n.backgroundColor,
                   color: _bkColor,
                   onPressed: () async {
-                    final Color? picked = await _pickColor(context, _bkColor, title: 'Hatter szine');
+                    final Color? picked = await _pickColor(context, _bkColor, title: l10n.backgroundColorTitle);
                     if (picked != null) {
                       setState(() => _bkColor = picked);
                     }
                   },
                 ),
                 _colorButton(
-                  label: 'Szoveg',
+                  label: l10n.textColor,
                   color: _txtColor,
                   onPressed: () async {
-                    final Color? picked = await _pickColor(context, _txtColor, title: 'Szoveg szine');
+                    final Color? picked = await _pickColor(context, _txtColor, title: l10n.textColorTitle);
                     if (picked != null) {
                       setState(() => _txtColor = picked);
                     }
                   },
                 ),
                 _colorButton(
-                  label: 'Ures dia',
+                  label: l10n.emptySlideColor,
                   color: _blankColor,
                   onPressed: () async {
-                    final Color? picked = await _pickColor(context, _blankColor, title: 'Ures dia szine');
+                    final Color? picked = await _pickColor(context, _blankColor, title: l10n.emptySlideColorTitle);
                     if (picked != null) {
                       setState(() => _blankColor = picked);
                     }
                   },
                 ),
                 _colorButton(
-                  label: 'Kiemeles',
+                  label: l10n.highlightColor,
                   color: _hiColor,
                   onPressed: () async {
-                    final Color? picked = await _pickColor(context, _hiColor, title: 'Kiemeles szine');
+                    final Color? picked = await _pickColor(context, _hiColor, title: l10n.highlightColorTitle);
                     if (picked != null) {
                       setState(() => _hiColor = picked);
                     }
@@ -332,9 +335,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             const SizedBox(height: 12),
             Row(
               children: <Widget>[
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Megse')),
+                TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
                 const Spacer(),
-                FilledButton(onPressed: _save, child: const Text('Ment')),
+                FilledButton(onPressed: _save, child: Text(l10n.save)),
               ],
             ),
           ],
@@ -346,7 +349,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   void _save() {
     final int port = int.tryParse(_port.text.trim()) ?? widget.initialSettings.port;
     if (port < 0 || port > 65535) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A port 0..65535 kozott legyen.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.invalidPortRange)));
       return;
     }
 
@@ -403,8 +406,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 
   Future<void> _pickBlankFile() async {
-    const XTypeGroup images = XTypeGroup(
-      label: 'images',
+    final XTypeGroup images = XTypeGroup(
+      label: context.l10n.imagesFileTypeLabel,
       extensions: <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
     );
     final XFile? file = await openFile(acceptedTypeGroups: <XTypeGroup>[images]);
@@ -479,9 +482,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     const SizedBox(height: 8),
                     TextField(
                       controller: hex,
-                      decoration: const InputDecoration(
-                        labelText: 'Hex szin (#AARRGGBB vagy #RRGGBB)',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.hexColorHint,
+                        border: const OutlineInputBorder(),
                         isDense: true,
                       ),
                       onChanged: (String value) {
@@ -523,11 +526,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               actions: <Widget>[
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Megse'),
+                  child: Text(context.l10n.cancel),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(temp),
-                  child: const Text('OK'),
+                  child: Text(context.l10n.ok),
                 ),
               ],
             );

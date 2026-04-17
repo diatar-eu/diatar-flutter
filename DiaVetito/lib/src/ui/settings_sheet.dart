@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:diatar_common/diatar_common.dart';
 
+import '../l10n/l10n.dart';
+
 class SettingsSheet extends StatefulWidget {
   const SettingsSheet({
     super.key,
@@ -127,6 +129,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -139,7 +142,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text('Beallitasok', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+            Text(l10n.settingsTitleReceiver, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Row(
               children: <Widget>[
@@ -155,7 +158,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         });
                       }
                     },
-                    title: const Text('IP'),
+                    title: Text(l10n.modeIp),
                     dense: true,
                   ),
                 ),
@@ -171,7 +174,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         widget.onRefreshUsers();
                       }
                     },
-                    title: const Text('Internet'),
+                    title: Text(l10n.modeInternet),
                     dense: true,
                   ),
                 ),
@@ -181,7 +184,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
               controller: _port,
               keyboardType: TextInputType.number,
               enabled: _ipMode,
-              decoration: const InputDecoration(labelText: 'TCP port (0..65535)'),
+              decoration: InputDecoration(labelText: l10n.tcpPortRange),
             ),
             if (!_ipMode) ...<Widget>[
               Row(
@@ -189,16 +192,16 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   Expanded(
                     child: TextField(
                       controller: _mqttUser,
-                      decoration: const InputDecoration(
-                        labelText: 'Kuldo',
-                        helperText: 'MQTT sender neve',
+                      decoration: InputDecoration(
+                        labelText: l10n.senderLabel,
+                        helperText: l10n.senderHelper,
                       ),
                     ),
                   ),
                   IconButton(
                     onPressed: widget.onRefreshUsers,
                     icon: const Icon(Icons.refresh),
-                    tooltip: 'Kuldo lista frissites',
+                    tooltip: l10n.senderRefreshTooltip,
                   ),
                 ],
               ),
@@ -222,7 +225,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 ),
               DropdownButtonFormField<String>(
                 value: _channel,
-                decoration: const InputDecoration(labelText: 'Csatorna'),
+                decoration: InputDecoration(labelText: l10n.channelLabel),
                 items: <DropdownMenuItem<String>>[
                   const DropdownMenuItem<String>(value: '1', child: Text('1.')),
                   ...widget.channelSuggestions.asMap().entries.map((MapEntry<int, String> e) {
@@ -241,33 +244,33 @@ class _SettingsSheetState extends State<SettingsSheet> {
               spacing: 12,
               runSpacing: 8,
               children: <Widget>[
-                _clipField('Bal', _clipL),
-                _clipField('Felso', _clipT),
-                _clipField('Jobb', _clipR),
-                _clipField('Also', _clipB),
+                _clipField(l10n.clipLeft, _clipL),
+                _clipField(l10n.clipTop, _clipT),
+                _clipField(l10n.clipRight, _clipR),
+                _clipField(l10n.clipBottom, _clipB),
               ],
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _borderToClip,
               onChanged: (bool v) => setState(() => _borderToClip = v),
-              title: const Text('Margok a vezerlotol (Border2Clip)'),
+              title: Text(l10n.borderToClip),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _mirror,
               onChanged: (bool v) => setState(() => _mirror = v),
-              title: const Text('Tukrozes'),
+              title: Text(l10n.mirror),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _boot,
               onChanged: (bool v) => setState(() => _boot = v),
-              title: const Text('Automatikus inditas (jelzo)'),
+              title: Text(l10n.autoBootIndicator),
             ),
             DropdownButtonFormField<int>(
               value: _rotate,
-              decoration: const InputDecoration(labelText: 'Forgatas'),
+              decoration: InputDecoration(labelText: l10n.rotationLabel),
               items: const <DropdownMenuItem<int>>[
                 DropdownMenuItem<int>(value: 0, child: Text('0°')),
                 DropdownMenuItem<int>(value: 1, child: Text('90°')),
@@ -277,40 +280,40 @@ class _SettingsSheetState extends State<SettingsSheet> {
               onChanged: (int? v) => setState(() => _rotate = v ?? 0),
             ),
             const SizedBox(height: 12),
-            const Text('Vetites szurese', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text(l10n.projectionFilteringTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _receiverUseServerColors,
               onChanged: (bool v) => setState(() => _receiverUseServerColors = v),
-              title: const Text('Szerver szinei'),
-              subtitle: const Text('Ha ki van kapcsolva, a helyi szinek lesznek hasznalva.'),
+              title: Text(l10n.receiverUseServerColors),
+              subtitle: Text(l10n.receiverUseServerColorsHint),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _receiverShowHighlight,
               onChanged: (bool v) => setState(() => _receiverShowHighlight = v),
-              title: const Text('Kiemeles megjelenitese'),
+              title: Text(l10n.receiverShowHighlight),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _receiverUseAkkord,
               onChanged: (bool v) => setState(() => _receiverUseAkkord = v),
-              title: const Text('Akkordok mutatasa'),
+              title: Text(l10n.showChords),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _receiverUseKotta,
               onChanged: (bool v) => setState(() => _receiverUseKotta = v),
-              title: const Text('Kotta mutatasa'),
+              title: Text(l10n.showKotta),
             ),
             const SizedBox(height: 12),
-            const Text('Helyi szinek', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text(l10n.localColorsTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            _colorRow('Hatterszin', _bkColor, (Color c) => setState(() => _bkColor = c), enabled: !_receiverUseServerColors),
-            _colorRow('Szovegszin', _txtColor, (Color c) => setState(() => _txtColor = c), enabled: !_receiverUseServerColors),
-            _colorRow('Blank szin', _blankColor, (Color c) => setState(() => _blankColor = c), enabled: !_receiverUseServerColors),
-            _colorRow('Kiemeles szin', _hiColor, (Color c) => setState(() => _hiColor = c), enabled: !_receiverUseServerColors),
+            _colorRow(l10n.backgroundColorLabel, _bkColor, (Color c) => setState(() => _bkColor = c), enabled: !_receiverUseServerColors),
+            _colorRow(l10n.textColorLabel, _txtColor, (Color c) => setState(() => _txtColor = c), enabled: !_receiverUseServerColors),
+            _colorRow(l10n.blankColorLabel, _blankColor, (Color c) => setState(() => _blankColor = c), enabled: !_receiverUseServerColors),
+            _colorRow(l10n.highlightColorLabel, _hiColor, (Color c) => setState(() => _hiColor = c), enabled: !_receiverUseServerColors),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -318,24 +321,24 @@ class _SettingsSheetState extends State<SettingsSheet> {
               children: <Widget>[
                 OutlinedButton(
                   onPressed: widget.onExitRequested,
-                  child: const Text('Kilepes'),
+                  child: Text(l10n.exit),
                 ),
                 OutlinedButton(
                   onPressed: widget.onShutdownRequested,
-                  child: const Text('Leallitas'),
+                  child: Text(l10n.shutdown),
                 ),
                 OutlinedButton(
                   onPressed: widget.onRebootRequested,
-                  child: const Text('Ujrainditas'),
+                  child: Text(l10n.reboot),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: <Widget>[
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Megse')),
+                TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
                 const Spacer(),
-                FilledButton(onPressed: _save, child: const Text('Ment')),
+                FilledButton(onPressed: _save, child: Text(l10n.save)),
               ],
             ),
           ],
@@ -359,7 +362,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   void _save() {
     final int port = int.tryParse(_port.text.trim()) ?? widget.initialSettings.port;
     if (port < 0 || port > 65535) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A port 0..65535 kozott legyen.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.invalidPortRange)));
       return;
     }
 
@@ -408,7 +411,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
               ),
               alignment: Alignment.center,
               child: Text(
-                '#${color.value.toRadixString(16).padLeft(8, '0').toUpperCase().substring(2)}',
+                '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase().substring(2)}',
                 style: TextStyle(
                   fontSize: 10,
                   color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
@@ -419,7 +422,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
           const SizedBox(width: 8),
           OutlinedButton(
             onPressed: enabled ? () => _pickColor(color, onChanged) : null,
-            child: const Text('Valt'),
+            child: Text(context.l10n.change),
           ),
         ],
       ),
@@ -431,14 +434,14 @@ class _SettingsSheetState extends State<SettingsSheet> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Színválasztó'),
+          title: Text(context.l10n.colorPickerTitle),
           content: SizedBox(
             width: 360,
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
               children: _palette.map((Color c) {
-                final bool selected = c.value == current.value;
+                final bool selected = c.toARGB32() == current.toARGB32();
                 return GestureDetector(
                   onTap: () => Navigator.of(context).pop(c),
                   child: Container(
@@ -458,7 +461,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
             ),
           ),
           actions: <Widget>[
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Megse')),
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.cancel)),
           ],
         );
       },

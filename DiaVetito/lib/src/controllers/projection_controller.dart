@@ -58,7 +58,8 @@ class ProjectionController extends ChangeNotifier {
   bool initialized = false;
   bool connected = false;
   bool mqttActive = false;
-  String statusMessage = 'Inditas...';
+  String statusCode = 'statusStarting';
+  Map<String, Object> statusParams = const <String, Object>{};
   Size viewportSize = const Size(1920, 1080);
 
   Timer? _logoTimer;
@@ -131,8 +132,7 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
-    statusMessage = 'Kilepes...';
-    notifyListeners();
+    _setStatus('statusExitRequested');
     await SystemNavigator.pop();
   }
 
@@ -140,16 +140,14 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
-    statusMessage = 'Rendszerleallitas Flutteren nem tamogatott.';
-    notifyListeners();
+    _setStatus('statusShutdownUnsupported');
   }
 
   void requestReboot() {
     if (_disposed) {
       return;
     }
-    statusMessage = 'Rendszer ujrainditas Flutteren nem tamogatott.';
-    notifyListeners();
+    _setStatus('statusRebootUnsupported');
   }
 
   void _updateChannelSuggestionsFor(String sender) {
@@ -175,12 +173,12 @@ class ProjectionController extends ChangeNotifier {
     globals = _applyReceiverDisplayFilters(globals.fromState(record));
     final int ep = record.endProgram;
     if (ep == RecStateEndProgram.stop || ep == RecStateEndProgram.stop + RecStateEndProgram.skipSerialOff) {
-      statusMessage = 'Leallitas kerve (epStop).';
+      _setStatus('statusStopRequested', notify: false);
       await SystemNavigator.pop();
       return;
     }
     if (ep == RecStateEndProgram.shutdown || ep == RecStateEndProgram.shutdown + RecStateEndProgram.skipSerialOff) {
-      statusMessage = 'Rendszerleallitas kerve (epShutdown), Flutterben nem tamogatott.';
+      _setStatus('statusShutdownRequestedUnsupported', notify: false);
     }
     if (settings.borderToClip) {
       settings = settings.copyWith(
@@ -246,8 +244,42 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
-    statusMessage = message;
-    notifyListeners();
+    if (message.startsWith('tcpServerOpenPortFailed:')) {
+      const String prefix = 'tcpServerOpenPortFailed:';
+      final String payload = message.substring(prefix.length);
+      final int separator = payload.indexOf(':');
+      if (separator > 0) {
+        final int? port = int.tryParse(payload.substring(0, separator));
+        final String error = payload.substring(separator + 1);
+        _setStatus(
+          'statusTcpServerOpenPortFailed',
+          params: <String, Object>{
+            'port': port ?? settings.port,
+            'error': error,
+          },
+        );
+        return;
+      }
+    }
+
+    if (message.startsWith('tcpServerError:')) {
+      _setStatus('statusTcpServerError', params: <String, Object>{'error': message.substring('tcpServerError:'.length)});
+      return;
+    }
+    if (message.startsWith('tcpServerClientError:')) {
+      _setStatus('statusTcpServerClientError', params: <String, Object>{'error': message.substring('tcpServerClientError:'.length)});
+      return;
+    }
+    if (message.startsWith('tcpServerPacketParseError:')) {
+      _setStatus('statusTcpServerPacketParseError', params: <String, Object>{'error': message.substring('tcpServerPacketParseError:'.length)});
+      return;
+    }
+    if (message.startsWith('tcpServerSendError:')) {
+      _setStatus('statusTcpServerSendError', params: <String, Object>{'error': message.substring('tcpServerSendError:'.length)});
+      return;
+    }
+
+    _setStatus('statusReceiverError', params: <String, Object>{'message': message});
   }
 
   void _onConnection(bool isConnected) {
@@ -256,13 +288,24 @@ class ProjectionController extends ChangeNotifier {
     }
     connected = isConnected;
     if (mqttActive) {
-      statusMessage = settings.mqttUser.trim().isEmpty
-          ? 'MQTT kikapcsolva'
-          : 'MQTT fogadas: ${settings.mqttUser}/${settings.mqttChannel}';
+      _setStatus(
+        settings.mqttUser.trim().isEmpty ? 'statusMqttOff' : 'statusMqttReceiving',
+        notify: false,
+        params: settings.mqttUser.trim().isEmpty
+            ? const <String, Object>{}
+            : <String, Object>{
+                'user': settings.mqttUser,
+                'channel': settings.mqttChannel,
+              },
+      );
     } else {
-      statusMessage = isConnected
-          ? 'Kapcsolodva (${settings.port})'
-          : (settings.tcpEnabled ? 'Varakozas kliensre (${settings.port})' : 'TCP kikapcsolva');
+      if (isConnected) {
+        _setStatus('statusConnected', notify: false, params: <String, Object>{'port': settings.port});
+      } else if (settings.tcpEnabled) {
+        _setStatus('statusWaitingForClient', notify: false, params: <String, Object>{'port': settings.port});
+      } else {
+        _setStatus('statusTcpOff', notify: false);
+      }
     }
     notifyListeners();
   }
@@ -309,12 +352,27 @@ class ProjectionController extends ChangeNotifier {
       mqttActive = false;
       await _mqtt.closeReceiver();
       await _server.restart(settings.port);
-      statusMessage = 'TCP figyeles: ${settings.port}';
+      _setStatus('statusTcpListening', notify: false, params: <String, Object>{'port': settings.port});
     } else {
       mqttActive = true;
       await _server.stop();
       await _mqtt.openReceiver(username: user, channel: settings.mqttChannel);
-      statusMessage = 'MQTT fogadas: $user/${settings.mqttChannel}';
+      _setStatus(
+        'statusMqttReceiving',
+        notify: false,
+        params: <String, Object>{
+          'user': user,
+          'channel': settings.mqttChannel,
+        },
+      );
+    }
+  }
+
+  void _setStatus(String code, {Map<String, Object> params = const <String, Object>{}, bool notify = true}) {
+    statusCode = code;
+    statusParams = params;
+    if (notify && !_disposed) {
+      notifyListeners();
     }
   }
 

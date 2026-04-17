@@ -5,11 +5,13 @@ import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:typed_data/typed_buffers.dart';
 
+typedef SenderErrorCallback = void Function(String code, Map<String, String> params);
+
 class MqttSenderService {
   MqttSenderService({required this.onStatusChanged, required this.onError});
 
   ValueChanged<bool> onStatusChanged;
-  ValueChanged<String> onError;
+  SenderErrorCallback onError;
 
   static const String _host = 'mqtt.diatar.eu';
   static const int _port = 1883;
@@ -65,7 +67,7 @@ class MqttSenderService {
     try {
       final MqttClientConnectionStatus? status = await client.connect();
       if (status?.state != MqttConnectionState.connected) {
-        onError('MQTT sender kapcsolodas sikertelen.');
+        onError('senderMqttConnectFailed', const <String, String>{});
         client.disconnect();
         onStatusChanged(false);
         return;
@@ -76,7 +78,7 @@ class MqttSenderService {
       onStatusChanged(true);
       await _replayCache();
     } catch (e) {
-      onError('MQTT sender hiba: $e');
+      onError('senderMqttError', <String, String>{'error': '$e'});
       try {
         client.disconnect();
       } catch (_) {}
@@ -128,6 +130,6 @@ class MqttSenderService {
     }
     final Uint8Buffer buffer = Uint8Buffer()..addAll(payload);
     final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder()..addBuffer(buffer);
-    client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
+    client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!, retain: true);
   }
 }

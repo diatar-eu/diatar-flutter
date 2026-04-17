@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'dart:async';
 import 'package:diatar_common/diatar_common.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import 'controllers/diatar_main_controller.dart';
 import 'ui/diatar_home_page.dart';
 
@@ -36,7 +38,14 @@ class _DiatarAppState extends State<DiatarApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Diatar',
+      onGenerateTitle: (BuildContext context) => AppLocalizations.of(context)!.appTitle,
+      localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData.dark(useMaterial3: true),
       home: DiatarHomePage(controller: _controller),
     );

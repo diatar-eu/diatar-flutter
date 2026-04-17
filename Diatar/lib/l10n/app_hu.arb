@@ -1,0 +1,402 @@
+{
+  "@@locale": "hu",
+  "appTitle": "Diatar",
+  "viewTooltip": "Nezet",
+  "viewSimple": "Szimpla",
+  "viewSpontaneous": "Spontan",
+  "viewOrder": "Sorrend",
+  "settingsTooltip": "Beallitasok",
+  "playlistsTooltip": "Enekrendek",
+  "playlistsTitle": "Enekrendek",
+  "playlistsMessage": "Ez a muvelet kesobb visszakaphatja a teljes dialogust.",
+  "customOrderTooltip": "Sajat sorrend",
+  "downloadBooksTooltip": "Enektarak letoltese",
+  "downloadTitle": "Letoltes",
+  "downloadMessage": "A letoltesi parbeszed kesobb visszahelyezheto.",
+  "refreshTooltip": "Frissites",
+  "ok": "Rendben",
+  "songPrev": "Ének -",
+  "songNext": "Ének +",
+  "projectionOn": "Vetites BE",
+  "projectionOff": "Vetites KI",
+  "previous": "Elozo",
+  "next": "Kovetkezo",
+  "highlightPrev": "Highlight -",
+  "highlightNext": "Highlight +",
+  "positionLabel": "Pozicio: {current}/{total}",
+  "@positionLabel": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "statusLabel": "Statusz: {status}",
+  "@statusLabel": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "statusStarting": "Inditas...",
+  "statusSenderError": "{message}",
+  "@statusSenderError": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "statusSenderTcpError": "TCP hiba: {error}",
+  "@statusSenderTcpError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusSenderOpenPortFailed": "Nem sikerult portot nyitni ({port}): {error}",
+  "@statusSenderOpenPortFailed": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      },
+      "error": {}
+    }
+  },
+  "statusSenderMqttConnectFailed": "MQTT sender kapcsolodas sikertelen.",
+  "statusSenderMqttError": "MQTT sender hiba: {error}",
+  "@statusSenderMqttError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusMqttSending": "MQTT kuldes: {user}/{channel}",
+  "@statusMqttSending": {
+    "placeholders": {
+      "user": {},
+      "channel": {}
+    }
+  },
+  "statusTcpSending": "TCP kuldes: {port}",
+  "@statusTcpSending": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "statusNoDtxFiles": "Nincs .dtx fajl: {path}",
+  "@statusNoDtxFiles": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "statusAllSongbooksDisabled": "Minden enektar le van tiltva az enekrendben.",
+  "statusSongbooksLoaded": "{count} kotet betoltve",
+  "@statusSongbooksLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statusLoadError": "Betoltesi hiba: {error}",
+  "@statusLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusCustomOrderSelected": "Sajat sorrend: {label}",
+  "@statusCustomOrderSelected": {
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "statusOrderSaved": "Sorrend mentve: {path}",
+  "@statusOrderSaved": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "statusDiaFileMissing": "Nincs ilyen .DIA fajl: {path}",
+  "@statusDiaFileMissing": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "statusOrderLoaded": "Sorrend betoltve ({count} elem): {path}",
+  "@statusOrderLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "path": {}
+    }
+  },
+  "statusDownloadListLoading": "Enektar lista letoltese...",
+  "statusDownloadProgress": "Letoltes: {current}/{total} {name} {percent}%",
+  "@statusDownloadProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "name": {},
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "statusDownloadSummaryNone": "Nincs uj enektar frissites.",
+  "statusDownloadSummary": "{downloaded} fajl letoltve, {skipped} valtozatlan.",
+  "@statusDownloadSummary": {
+    "placeholders": {
+      "downloaded": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "statusDownloadError": "Letoltesi hiba: {error}",
+  "@statusDownloadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusBookSelected": "Kotet: {name}",
+  "@statusBookSelected": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusSongPicked": "Enek: {name}",
+  "@statusSongPicked": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusVersePicked": "Versszak: {name}",
+  "@statusVersePicked": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusSongSelected": "Enek: {title}",
+  "@statusSongSelected": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "statusSongVerseSelected": "Enek/versszak: {title}",
+  "@statusSongVerseSelected": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "statusProjectionOn": "Vetites: BE",
+  "statusProjectionOff": "Vetites: KI",
+  "statusImagePathEmpty": "A kep fajl utvonala ures.",
+  "statusImageNotFound": "A kep fajl nem talalhato: {path}",
+  "@statusImageNotFound": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "statusImageSent": "Kep elkuldve: {name}",
+  "@statusImageSent": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusImageSendError": "Kep kuldesi hiba: {error}",
+  "@statusImageSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusBlankPathEmpty": "A blank kep fajl utvonala ures.",
+  "statusBlankNotFound": "A blank kep fajl nem talalhato: {path}",
+  "@statusBlankNotFound": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "statusBlankSet": "Blank kep beallitva: {name}",
+  "@statusBlankSet": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusBlankSendError": "Blank kep kuldesi hiba: {error}",
+  "@statusBlankSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusBlankCleared": "Blank kep torolve.",
+  "statusBlankClearError": "Blank kep torlesi hiba: {error}",
+  "@statusBlankClearError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusShutdownCommandSent": "Lezaras utasitas elkuldve.",
+  "statusStopCommandSent": "Megallitas utasitas elkuldve.",
+  "statusCommandSendError": "Utasitas kuldesi hiba: {error}",
+  "@statusCommandSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "sendStatusLabel": "Kuldes ({protocol}): {senderState}, kliens: {clientState}",
+  "@sendStatusLabel": {
+    "placeholders": {
+      "protocol": {},
+      "senderState": {},
+      "clientState": {}
+    }
+  },
+  "protocolMqtt": "MQTT",
+  "protocolTcp": "TCP",
+  "senderStateActive": "aktiv",
+  "senderStateOff": "kikapcsolva",
+  "clientStateConnected": "csatlakozva",
+  "clientStateWaiting": "varakozik",
+  "tcpPortLabel": "TCP port: {port}",
+  "@tcpPortLabel": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadProgress": "Letoltes: {current}/{total} {name}",
+  "@downloadProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "name": {}
+    }
+  },
+  "noLoadedSlide": "Nincs betoltott dia.",
+  "bookLabel": "Kötet",
+  "songLabel": "Enek",
+  "verseLabel": "Versszak",
+  "versePanelTitle": "{title}: {verse}",
+  "@versePanelTitle": {
+    "placeholders": {
+      "title": {},
+      "verse": {}
+    }
+  },
+  "searchLabel": "Diakereso",
+  "searchHint": "Kötet vagy enekcim",
+  "noResults": "Nincs talalat.",
+  "customOrderStatus": "Sajat sorrend: {state}",
+  "@customOrderStatus": {
+    "placeholders": {
+      "state": {}
+    }
+  },
+  "stateActive": "Aktiv",
+  "stateInactive": "Inaktiv",
+  "nextShort": "Kov.",
+  "previewTitle": "Dia elonezet",
+  "projectedImage": "Vetitett kep:",
+  "settingsTitle": "Diatar beallitasok",
+  "settingsTitleReceiver": "Beallitasok",
+  "modeIp": "IP",
+  "modeInternet": "Internet",
+  "senderLabel": "Kuldo",
+  "senderHelper": "MQTT sender neve",
+  "senderRefreshTooltip": "Kuldo lista frissites",
+  "channelLabel": "Csatorna",
+  "clipLeft": "Bal",
+  "clipTop": "Felso",
+  "clipRight": "Jobb",
+  "clipBottom": "Also",
+  "borderToClip": "Margok a vezerlotol (Border2Clip)",
+  "mirror": "Tukrozes",
+  "autoBootIndicator": "Automatikus inditas (jelzo)",
+  "rotationLabel": "Forgatas",
+  "tcpPortRange": "TCP port (0..65535)",
+  "mqttUserHint": "MQTT user (ures = TCP mod)",
+  "mqttPassword": "MQTT jelszo",
+  "mqttChannel": "MQTT csatorna",
+  "blankImagePath": "Blank kep utvonal",
+  "fileChoose": "Fajl valasztasa",
+  "projectionSettingsTitle": "Vetitesi beallitasok",
+  "fontSize": "Betumeret",
+  "titleSize": "Cim meret",
+  "leftMargin": "Bal margo",
+  "borderLeft": "Border L",
+  "borderTop": "Border T",
+  "borderRight": "Border R",
+  "borderBottom": "Border B",
+  "lineSpacing": "Sorkoz",
+  "kottaScale": "Kotta meret arany",
+  "chordScale": "Akkord meret arany",
+  "backgroundMode": "Hatters kep mod",
+  "bgModeCenter": "Center",
+  "bgModeZoom": "Zoom",
+  "bgModeFull": "Full",
+  "bgModeCascade": "Cascade",
+  "bgModeMirror": "Mirror",
+  "backgroundOpacity": "Hatter atszosag",
+  "blankOpacity": "Blank atszosag",
+  "autoSize": "Automatikus meretezes",
+  "showTitle": "Cim mutatasa",
+  "hCenter": "Vizszintes kozepre igazitas",
+  "vCenter": "Fuggoleges kozepre igazitas",
+  "showChords": "Akkordok mutatasa",
+  "showKotta": "Kotta mutatasa",
+  "boldText": "Felkover szoveg",
+  "colorsTitle": "Szinek",
+  "backgroundColor": "Hatter",
+  "textColor": "Szoveg",
+  "emptySlideColor": "Ures dia",
+  "highlightColor": "Kiemeles",
+  "backgroundColorTitle": "Hatter szine",
+  "textColorTitle": "Szoveg szine",
+  "emptySlideColorTitle": "Ures dia szine",
+  "highlightColorTitle": "Kiemeles szine",
+  "cancel": "Megse",
+  "save": "Ment",
+  "invalidPortRange": "A port 0..65535 kozott legyen.",
+  "hexColorHint": "Hex szin (#AARRGGBB vagy #RRGGBB)",
+  "close": "Bezaras",
+  "imagesFileTypeLabel": "kepek",
+  "diatarPlaylistFileTypeLabel": "Diatar playlist",
+  "customOrderSuggestedFileName": "sorrend.dia",
+  "customOrderEditTitle": "Sajat sorrend szerkesztese",
+  "addSong": "Enek hozzaadasa",
+  "searchSongHint": "Kötet vagy enekcim",
+  "loadDia": "Betoltes .DIA",
+  "saveDia": "Mentes .DIA",
+  "savedPath": "Mentve: {path}",
+  "@savedPath": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "loadedCount": "Betoltve: {count} elem",
+  "@loadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customOrderEmpty": "A sorrend ures.\nKeress enekeket a szerkeszteshez.",
+  "versePicker": "Versszak",
+  "selectedVersesTitle": "Kivalasztott versszakok",
+  "selectedVersesSubtitle": "Tobbet is kijelolhetsz.",
+  "apply": "Alkalmaz"
+}

@@ -223,7 +223,7 @@ class MqttService {
       return;
     }
     final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder()..addString(jsonPayload);
-    client.publishMessage(_dynSecTopic, MqttQos.atLeastOnce, builder.payload!);
+    client.publishMessage(_dynSecTopic, MqttQos.atLeastOnce, builder.payload!, retain: true);
   }
 
   void _onAdminMessages(List<MqttReceivedMessage<MqttMessage>> event) {

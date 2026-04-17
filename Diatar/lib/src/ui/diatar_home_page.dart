@@ -4,6 +4,7 @@ import 'package:diatar_common/diatar_common.dart';
 import 'package:flutter/material.dart';
 
 import '../controllers/diatar_main_controller.dart';
+import '../l10n/l10n.dart';
 import 'diatar_settings_sheet.dart';
 import 'custom_order_editor_sheet.dart';
 
@@ -14,43 +15,44 @@ class DiatarHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Diatar'),
+        title: Text(l10n.appTitle),
         actions: <Widget>[
           PopupMenuButton<DiatarHomeViewMode>(
-            tooltip: 'Nézet',
+            tooltip: l10n.viewTooltip,
             initialValue: controller.viewMode,
             onSelected: (DiatarHomeViewMode mode) => unawaited(controller.setViewMode(mode)),
-            itemBuilder: (BuildContext context) => const <PopupMenuEntry<DiatarHomeViewMode>>[
-              PopupMenuItem<DiatarHomeViewMode>(value: DiatarHomeViewMode.szimpla, child: Text('Szimpla')),
-              PopupMenuItem<DiatarHomeViewMode>(value: DiatarHomeViewMode.spontan, child: Text('Spontán')),
-              PopupMenuItem<DiatarHomeViewMode>(value: DiatarHomeViewMode.sorrend, child: Text('Sorrend')),
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<DiatarHomeViewMode>>[
+              PopupMenuItem<DiatarHomeViewMode>(value: DiatarHomeViewMode.szimpla, child: Text(l10n.viewSimple)),
+              PopupMenuItem<DiatarHomeViewMode>(value: DiatarHomeViewMode.spontan, child: Text(l10n.viewSpontaneous)),
+              PopupMenuItem<DiatarHomeViewMode>(value: DiatarHomeViewMode.sorrend, child: Text(l10n.viewOrder)),
             ],
             icon: const Icon(Icons.view_carousel_outlined),
           ),
           IconButton(
-            tooltip: 'Beállítások',
+            tooltip: l10n.settingsTooltip,
             onPressed: () => _openSettings(context),
             icon: const Icon(Icons.settings),
           ),
           IconButton(
-            tooltip: 'Énekrendek',
-            onPressed: () => _showPlaceholder(context, 'Énekrendek', 'Ez a művelet később visszakaphatja a teljes dialógust.'),
+            tooltip: l10n.playlistsTooltip,
+            onPressed: () => _showPlaceholder(context, l10n.playlistsTitle, l10n.playlistsMessage),
             icon: const Icon(Icons.playlist_play),
           ),
           IconButton(
-            tooltip: 'Saját sorrend',
+            tooltip: l10n.customOrderTooltip,
             onPressed: () => _openCustomOrderEditor(context),
             icon: const Icon(Icons.queue_music),
           ),
           IconButton(
-            tooltip: 'Énektárak letöltése',
-            onPressed: () => _showPlaceholder(context, 'Letöltés', 'A letöltési párbeszéd később visszahelyezhető.'),
+            tooltip: l10n.downloadBooksTooltip,
+            onPressed: () => _showPlaceholder(context, l10n.downloadTitle, l10n.downloadMessage),
             icon: const Icon(Icons.download_for_offline_outlined),
           ),
           IconButton(
-            tooltip: 'Frissítés',
+            tooltip: l10n.refreshTooltip,
             onPressed: controller.reloadBooks,
             icon: const Icon(Icons.refresh),
           ),
@@ -75,6 +77,7 @@ class DiatarHomePage extends StatelessWidget {
   }
 
   Widget _buildSimpleView(BuildContext context) {
+    final l10n = context.l10n;
     final DtxBook? book = controller.currentBook;
     final DtxSong? song = controller.currentSong;
     final DtxVerse? verse = controller.currentVerse;
@@ -96,47 +99,57 @@ class DiatarHomePage extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: <Widget>[
-                  OutlinedButton.icon(onPressed: controller.prevSong, icon: const Icon(Icons.keyboard_double_arrow_left), label: const Text('Ének -')),
-                  OutlinedButton.icon(onPressed: controller.nextSong, icon: const Icon(Icons.keyboard_double_arrow_right), label: const Text('Ének +')),
+                  OutlinedButton.icon(onPressed: controller.prevSong, icon: const Icon(Icons.keyboard_double_arrow_left), label: Text(l10n.songPrev)),
+                  OutlinedButton.icon(onPressed: controller.nextSong, icon: const Icon(Icons.keyboard_double_arrow_right), label: Text(l10n.songNext)),
                   FilledButton.icon(
                     onPressed: controller.toggleShowing,
                     icon: Icon(controller.showing ? Icons.visibility : Icons.visibility_off),
-                    label: Text(controller.showing ? 'Vetítés BE' : 'Vetítés KI'),
+                    label: Text(controller.showing ? l10n.projectionOn : l10n.projectionOff),
                   ),
-                  OutlinedButton.icon(onPressed: controller.prevVerse, icon: const Icon(Icons.skip_previous), label: const Text('Előző')),
-                  OutlinedButton.icon(onPressed: controller.nextVerse, icon: const Icon(Icons.skip_next), label: const Text('Következő')),
+                  OutlinedButton.icon(onPressed: controller.prevVerse, icon: const Icon(Icons.skip_previous), label: Text(l10n.previous)),
+                  OutlinedButton.icon(onPressed: controller.nextVerse, icon: const Icon(Icons.skip_next), label: Text(l10n.next)),
                 ],
               ),
               const SizedBox(height: 8),
               Row(
                 children: <Widget>[
-                  OutlinedButton(onPressed: controller.highlightPrev, child: const Text('Highlight -')),
+                  OutlinedButton(onPressed: controller.highlightPrev, child: Text(l10n.highlightPrev)),
                   const SizedBox(width: 8),
-                  OutlinedButton(onPressed: controller.highlightNext, child: const Text('Highlight +')),
+                  OutlinedButton(onPressed: controller.highlightNext, child: Text(l10n.highlightNext)),
                   const SizedBox(width: 12),
-                  Text('Pozíció: ${controller.highPos}/${controller.wordCount}'),
+                  Text(l10n.positionLabel(controller.highPos, controller.wordCount)),
                 ],
               ),
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Státusz: ${controller.status}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                child: Text(l10n.statusLabel(_localizedStatus(context)), style: const TextStyle(fontWeight: FontWeight.w600)),
               ),
               const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Küldés (${controller.mqttActive ? 'MQTT' : 'TCP'}): ${controller.senderRunning ? 'aktív' : 'kikapcsolva'}, kliens: ${controller.senderConnected ? 'csatlakozva' : 'várakozik'}',
+                  l10n.sendStatusLabel(
+                    controller.mqttActive ? l10n.protocolMqtt : l10n.protocolTcp,
+                    controller.senderRunning ? l10n.senderStateActive : l10n.senderStateOff,
+                    controller.senderConnected ? l10n.clientStateConnected : l10n.clientStateWaiting,
+                  ),
                 ),
               ),
-              Align(alignment: Alignment.centerLeft, child: Text('TCP port: ${controller.settings.port}')),
+              Align(alignment: Alignment.centerLeft, child: Text(l10n.tcpPortLabel(controller.settings.port))),
               if (controller.downloadInProgress) ...<Widget>[
                 const SizedBox(height: 8),
                 LinearProgressIndicator(value: controller.downloadCurrentFraction),
                 const SizedBox(height: 4),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('Letöltés: ${controller.downloadCurrentFile}/${controller.downloadTotalFiles} ${controller.downloadCurrentName}'),
+                  child: Text(
+                    l10n.downloadProgress(
+                      controller.downloadCurrentFile,
+                      controller.downloadTotalFiles,
+                      controller.downloadCurrentName,
+                    ),
+                  ),
                 ),
               ],
             ],
@@ -150,8 +163,8 @@ class DiatarHomePage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: SingleChildScrollView(
               child: book == null || song == null || verse == null
-                  ? Text('Nincs betöltött dia.', style: TextStyle(color: controller.globals.txtColor))
-                  : _VersePreview(controller: controller, song: song, verse: verse),
+                  ? Text(l10n.noLoadedSlide, style: TextStyle(color: controller.globals.txtColor))
+                  : _VersePreview(controller: controller, song: song, verse: verse, panelTitle: l10n.previewTitle),
             ),
           ),
         ),
@@ -170,6 +183,105 @@ class DiatarHomePage extends StatelessWidget {
     return _OrderDashboard(
       controller: controller,
     );
+  }
+
+  String _localizedStatus(BuildContext context) {
+    final l10n = context.l10n;
+    final Map<String, String> p = controller.statusParams;
+    switch (controller.statusCode) {
+      case 'statusStarting':
+        return l10n.statusStarting;
+      case 'statusSenderError':
+        return l10n.statusSenderError(p['message'] ?? '');
+      case 'statusSenderTcpError':
+        return l10n.statusSenderTcpError(p['error'] ?? '');
+      case 'statusSenderOpenPortFailed':
+        return l10n.statusSenderOpenPortFailed(int.tryParse(p['port'] ?? '') ?? 0, p['error'] ?? '');
+      case 'statusSenderMqttConnectFailed':
+        return l10n.statusSenderMqttConnectFailed;
+      case 'statusSenderMqttError':
+        return l10n.statusSenderMqttError(p['error'] ?? '');
+      case 'statusMqttSending':
+        return l10n.statusMqttSending(p['user'] ?? '', p['channel'] ?? '');
+      case 'statusTcpSending':
+        return l10n.statusTcpSending(int.tryParse(p['port'] ?? '') ?? 0);
+      case 'statusNoDtxFiles':
+        return l10n.statusNoDtxFiles(p['path'] ?? '');
+      case 'statusAllSongbooksDisabled':
+        return l10n.statusAllSongbooksDisabled;
+      case 'statusSongbooksLoaded':
+        return l10n.statusSongbooksLoaded(int.tryParse(p['count'] ?? '') ?? 0);
+      case 'statusLoadError':
+        return l10n.statusLoadError(p['error'] ?? '');
+      case 'statusCustomOrderSelected':
+        return l10n.statusCustomOrderSelected(p['label'] ?? '');
+      case 'statusOrderSaved':
+        return l10n.statusOrderSaved(p['path'] ?? '');
+      case 'statusDiaFileMissing':
+        return l10n.statusDiaFileMissing(p['path'] ?? '');
+      case 'statusOrderLoaded':
+        return l10n.statusOrderLoaded(int.tryParse(p['count'] ?? '') ?? 0, p['path'] ?? '');
+      case 'statusDownloadListLoading':
+        return l10n.statusDownloadListLoading;
+      case 'statusDownloadProgress':
+        return l10n.statusDownloadProgress(
+          int.tryParse(p['current'] ?? '') ?? 0,
+          int.tryParse(p['total'] ?? '') ?? 0,
+          p['name'] ?? '',
+          int.tryParse(p['percent'] ?? '') ?? 0,
+        );
+      case 'statusDownloadSummaryNone':
+        return l10n.statusDownloadSummaryNone;
+      case 'statusDownloadSummary':
+        return l10n.statusDownloadSummary(
+          int.tryParse(p['downloaded'] ?? '') ?? 0,
+          int.tryParse(p['skipped'] ?? '') ?? 0,
+        );
+      case 'statusDownloadError':
+        return l10n.statusDownloadError(p['error'] ?? '');
+      case 'statusBookSelected':
+        return l10n.statusBookSelected(p['name'] ?? '-');
+      case 'statusSongPicked':
+        return l10n.statusSongPicked(p['name'] ?? '-');
+      case 'statusVersePicked':
+        return l10n.statusVersePicked(p['name'] ?? '-');
+      case 'statusSongSelected':
+        return l10n.statusSongSelected(p['title'] ?? '');
+      case 'statusSongVerseSelected':
+        return l10n.statusSongVerseSelected(p['title'] ?? '');
+      case 'statusProjectionOn':
+        return l10n.statusProjectionOn;
+      case 'statusProjectionOff':
+        return l10n.statusProjectionOff;
+      case 'statusImagePathEmpty':
+        return l10n.statusImagePathEmpty;
+      case 'statusImageNotFound':
+        return l10n.statusImageNotFound(p['path'] ?? '');
+      case 'statusImageSent':
+        return l10n.statusImageSent(p['name'] ?? '');
+      case 'statusImageSendError':
+        return l10n.statusImageSendError(p['error'] ?? '');
+      case 'statusBlankPathEmpty':
+        return l10n.statusBlankPathEmpty;
+      case 'statusBlankNotFound':
+        return l10n.statusBlankNotFound(p['path'] ?? '');
+      case 'statusBlankSet':
+        return l10n.statusBlankSet(p['name'] ?? '');
+      case 'statusBlankSendError':
+        return l10n.statusBlankSendError(p['error'] ?? '');
+      case 'statusBlankCleared':
+        return l10n.statusBlankCleared;
+      case 'statusBlankClearError':
+        return l10n.statusBlankClearError(p['error'] ?? '');
+      case 'statusShutdownCommandSent':
+        return l10n.statusShutdownCommandSent;
+      case 'statusStopCommandSent':
+        return l10n.statusStopCommandSent;
+      case 'statusCommandSendError':
+        return l10n.statusCommandSendError(p['error'] ?? '');
+      default:
+        return controller.statusCode;
+    }
   }
 
   Future<void> _openSettings(BuildContext context) {
@@ -203,7 +315,7 @@ class DiatarHomePage extends StatelessWidget {
           title: Text(title),
           content: Text(message),
           actions: <Widget>[
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Rendben')),
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.ok)),
           ],
         );
       },
@@ -223,7 +335,7 @@ class _BookDropdown extends StatelessWidget {
     }
     return DropdownButtonFormField<int>(
       value: controller.bookIndex,
-      decoration: const InputDecoration(labelText: 'Kötet', border: OutlineInputBorder()),
+      decoration: InputDecoration(labelText: context.l10n.bookLabel, border: const OutlineInputBorder()),
       items: controller.books.asMap().entries.map((MapEntry<int, DtxBook> e) {
         final DtxBook book = e.value;
         final String groupPrefix = book.group.trim().isEmpty ? '' : '[${book.group}] ';
@@ -252,7 +364,7 @@ class _SongDropdown extends StatelessWidget {
     }
     return DropdownButtonFormField<int>(
       value: controller.songIndex.clamp(0, songs.length - 1),
-      decoration: const InputDecoration(labelText: 'Ének', border: OutlineInputBorder()),
+      decoration: InputDecoration(labelText: context.l10n.songLabel, border: const OutlineInputBorder()),
       items: songs.asMap().entries.map((MapEntry<int, DtxSong> e) {
         final String title = e.value.separator ? '-- ${e.value.title} --' : e.value.title;
         return DropdownMenuItem<int>(value: e.key, child: Text(title));
@@ -280,7 +392,7 @@ class _VerseDropdown extends StatelessWidget {
     }
     return DropdownButtonFormField<int>(
       value: controller.verseIndex.clamp(0, verses.length - 1),
-      decoration: const InputDecoration(labelText: 'Versszak', border: OutlineInputBorder()),
+      decoration: InputDecoration(labelText: context.l10n.verseLabel, border: const OutlineInputBorder()),
       items: verses.asMap().entries.map((MapEntry<int, DtxVerse> e) {
         return DropdownMenuItem<int>(value: e.key, child: Text(e.value.name));
       }).toList(),
@@ -294,7 +406,7 @@ class _VerseDropdown extends StatelessWidget {
 }
 
 class _VersePreview extends StatelessWidget {
-  const _VersePreview({required this.controller, required this.song, required this.verse, this.panelTitle = 'Versszak'});
+  const _VersePreview({required this.controller, required this.song, required this.verse, required this.panelTitle});
 
   final DiatarMainController controller;
   final DtxSong song;
@@ -322,7 +434,7 @@ class _VersePreview extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text('$panelTitle: ${verse.name}', style: TextStyle(color: controller.globals.txtColor.withValues(alpha: 0.75))),
+            Text(context.l10n.versePanelTitle(panelTitle, verse.name), style: TextStyle(color: controller.globals.txtColor.withValues(alpha: 0.75))),
             const SizedBox(height: 10),
             SizedBox(
               width: width,
@@ -397,6 +509,7 @@ class _SongSearchDashboardState extends State<_SongSearchDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final List<_SearchHit> allHits = <_SearchHit>[];
     for (final DtxBook book in controller.books) {
       for (int i = 0; i < book.songs.length; i++) {
@@ -432,11 +545,11 @@ class _SongSearchDashboardState extends State<_SongSearchDashboard> {
         Padding(
           padding: const EdgeInsets.all(12),
           child: TextField(
-            decoration: const InputDecoration(
-              labelText: 'Diakereső',
-              hintText: 'Kötet vagy énekcím',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.searchLabel,
+              hintText: l10n.searchHint,
+              prefixIcon: const Icon(Icons.search),
+              border: const OutlineInputBorder(),
             ),
             onChanged: (String value) => setState(() => _query = value.trim()),
           ),
@@ -488,7 +601,7 @@ class _SongSearchDashboardState extends State<_SongSearchDashboard> {
 
   Widget _buildSearchList(List<_SearchHit> hits) {
     if (hits.isEmpty) {
-      return const Center(child: Text('Nincs találat.'));
+      return Center(child: Text(context.l10n.noResults));
     }
 
     return ListView.builder(
@@ -522,7 +635,9 @@ class _SongSearchDashboardState extends State<_SongSearchDashboard> {
     if (!hasEntries) {
       return Center(
         child: Text(
-          'Saját sorrend: ${controller.customOrderActive ? "Aktív" : "Inaktív"}',
+          context.l10n.customOrderStatus(
+            controller.customOrderActive ? context.l10n.stateActive : context.l10n.stateInactive,
+          ),
           style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
         ),
       );
@@ -549,7 +664,7 @@ class _SongSearchDashboardState extends State<_SongSearchDashboard> {
 
   Widget _buildDetailPane({required DtxSong? currentSong, required DtxVerse? currentVerse}) {
     if (currentSong == null || currentVerse == null) {
-      return const Center(child: Text('Nincs betöltött dia.'));
+      return Center(child: Text(context.l10n.noLoadedSlide));
     }
 
     return SingleChildScrollView(
@@ -566,9 +681,9 @@ class _SongSearchDashboardState extends State<_SongSearchDashboard> {
                 ),
                 Row(
                   children: <Widget>[
-                    OutlinedButton.icon(onPressed: controller.prevVerse, icon: const Icon(Icons.skip_previous, size: 18), label: const Text('Előző')),
+                    OutlinedButton.icon(onPressed: controller.prevVerse, icon: const Icon(Icons.skip_previous, size: 18), label: Text(context.l10n.previous)),
                     const SizedBox(width: 4),
-                    OutlinedButton.icon(onPressed: controller.nextVerse, icon: const Icon(Icons.skip_next, size: 18), label: const Text('Köv.')),
+                    OutlinedButton.icon(onPressed: controller.nextVerse, icon: const Icon(Icons.skip_next, size: 18), label: Text(context.l10n.nextShort)),
                   ],
                 ),
               ],
@@ -589,9 +704,9 @@ class _SongSearchDashboardState extends State<_SongSearchDashboard> {
             const SizedBox(height: 12),
             const Divider(height: 1),
             const SizedBox(height: 12),
-            _VersePreview(controller: controller, song: currentSong, verse: currentVerse, panelTitle: 'Dia előnézet'),
+            _VersePreview(controller: controller, song: currentSong, verse: currentVerse, panelTitle: context.l10n.previewTitle),
             const SizedBox(height: 16),
-            const Text('Vetített kép:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+            Text(context.l10n.projectedImage, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
             const SizedBox(height: 8),
             Container(
               constraints: const BoxConstraints(maxHeight: 180),
@@ -669,37 +784,37 @@ class _OrderDashboard extends StatelessWidget {
                   OutlinedButton.icon(
                     onPressed: controller.prevSong,
                     icon: const Icon(Icons.keyboard_double_arrow_left, size: 16),
-                    label: const Text('−'),
+                    label: Text(context.l10n.songPrev),
                   ),
                   OutlinedButton.icon(
                     onPressed: controller.nextSong,
                     icon: const Icon(Icons.keyboard_double_arrow_right, size: 16),
-                    label: const Text('+'),
+                    label: Text(context.l10n.songNext),
                   ),
                   FilledButton.icon(
                     onPressed: controller.toggleShowing,
                     icon: Icon(controller.showing ? Icons.visibility : Icons.visibility_off, size: 16),
-                    label: Text(controller.showing ? 'BE' : 'KI'),
+                    label: Text(controller.showing ? context.l10n.projectionOn : context.l10n.projectionOff),
                   ),
                   OutlinedButton.icon(
                     onPressed: controller.prevVerse,
                     icon: const Icon(Icons.skip_previous, size: 16),
-                    label: const Text('←'),
+                    label: Text(context.l10n.previous),
                   ),
                   OutlinedButton.icon(
                     onPressed: controller.nextVerse,
                     icon: const Icon(Icons.skip_next, size: 16),
-                    label: const Text('→'),
+                    label: Text(context.l10n.next),
                   ),
                   OutlinedButton.icon(
                     onPressed: controller.highlightPrev,
                     icon: const Icon(Icons.light_mode_outlined, size: 16),
-                    label: const Text('−'),
+                    label: Text(context.l10n.highlightPrev),
                   ),
                   OutlinedButton.icon(
                     onPressed: controller.highlightNext,
                     icon: const Icon(Icons.light_mode, size: 16),
-                    label: const Text('+'),
+                    label: Text(context.l10n.highlightNext),
                   ),
                 ],
               ),
@@ -712,8 +827,8 @@ class _OrderDashboard extends StatelessWidget {
             builder: (BuildContext context, BoxConstraints constraints) {
               final bool wide = constraints.maxWidth > 1200;
               final Widget preview = book == null || song == null || verse == null
-                  ? const Center(child: Text('Nincs betöltött dia.'))
-                  : _VersePreview(controller: controller, song: song, verse: verse, panelTitle: 'Dia előnézet');
+                  ? Center(child: Text(context.l10n.noLoadedSlide))
+                  : _VersePreview(controller: controller, song: song, verse: verse, panelTitle: context.l10n.previewTitle);
               final Widget orderPanel = Card(
                 margin: EdgeInsets.zero,
                 child: Padding(

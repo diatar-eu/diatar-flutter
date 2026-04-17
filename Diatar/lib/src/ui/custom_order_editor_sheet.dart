@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../controllers/diatar_main_controller.dart';
+import '../l10n/l10n.dart';
 
 class CustomOrderEditorPanel extends StatefulWidget {
   const CustomOrderEditorPanel({
@@ -57,6 +58,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AnimatedBuilder(
       animation: controller,
       builder: (BuildContext context, Widget? child) {
@@ -68,16 +70,16 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: <Widget>[
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Saját sorrend szerkesztése',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        l10n.customOrderEditTitle,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                       ),
                     ),
                     if (!widget.embedded) ...<Widget>[
                       const SizedBox(width: 4),
                       IconButton(
-                        tooltip: 'Bezárás',
+                        tooltip: l10n.close,
                         onPressed: widget.onClose,
                         icon: const Icon(Icons.close),
                       ),
@@ -90,11 +92,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
                 child: TextField(
                   controller: _searchController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ének hozzáadása',
-                    hintText: 'Kötet vagy énekcím',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.addSong,
+                    hintText: l10n.searchSongHint,
+                    prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(),
                   ),
                   onChanged: (String value) => setState(() => _searchQuery = value.trim()),
                 ),
@@ -113,18 +115,18 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                     OutlinedButton.icon(
                       onPressed: _importDia,
                       icon: const Icon(Icons.file_open),
-                      label: const Text('Betöltés .DIA'),
+                      label: Text(l10n.loadDia),
                     ),
                     OutlinedButton.icon(
                       onPressed: _exportDia,
                       icon: const Icon(Icons.save_alt),
-                      label: const Text('Mentés .DIA'),
+                      label: Text(l10n.saveDia),
                     ),
                     if (!widget.embedded)
                       OutlinedButton.icon(
                         onPressed: widget.onClose,
                         icon: const Icon(Icons.cancel_outlined),
-                        label: const Text('Mégse'),
+                        label: Text(l10n.cancel),
                       ),
                   ],
                 ),
@@ -147,12 +149,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<void> _exportDia() async {
-    const XTypeGroup diaType = XTypeGroup(
-      label: 'Diatar playlist',
+    final XTypeGroup diaType = XTypeGroup(
+      label: context.l10n.diatarPlaylistFileTypeLabel,
       extensions: <String>['dia'],
     );
     final FileSaveLocation? target = await getSaveLocation(
-      suggestedName: 'sorrend.dia',
+      suggestedName: context.l10n.customOrderSuggestedFileName,
       acceptedTypeGroups: <XTypeGroup>[diaType],
     );
     if (target == null) {
@@ -164,13 +166,13 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Mentve: $outPath')),
+      SnackBar(content: Text(context.l10n.savedPath(outPath))),
     );
   }
 
   Future<void> _importDia() async {
-    const XTypeGroup diaType = XTypeGroup(
-      label: 'Diatar playlist',
+    final XTypeGroup diaType = XTypeGroup(
+      label: context.l10n.diatarPlaylistFileTypeLabel,
       extensions: <String>['dia'],
     );
     final XFile? file = await openFile(acceptedTypeGroups: <XTypeGroup>[diaType]);
@@ -187,7 +189,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
     _searchController.clear();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Betöltve: $count elem')),
+      SnackBar(content: Text(context.l10n.loadedCount(count))),
     );
   }
 
@@ -220,7 +222,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       });
 
     if (hits.isEmpty) {
-      return const Center(child: Text('Nincs találat.'));
+      return Center(child: Text(context.l10n.noResults));
     }
 
     return ListView.builder(
@@ -270,7 +272,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     if (_entries.isEmpty) {
       return Center(
         child: Text(
-          'A sorrend üres.\nKeresj énekeket a szerkesztéshez.',
+          context.l10n.customOrderEmpty,
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey[600], fontStyle: FontStyle.italic),
         ),
@@ -331,7 +333,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     IconButton(
-                      tooltip: 'Versszak',
+                      tooltip: context.l10n.versePicker,
                       icon: const Icon(Icons.format_list_numbered),
                       visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                       padding: EdgeInsets.zero,
@@ -377,9 +379,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 return SafeArea(
                   child: Column(
                     children: <Widget>[
-                      const ListTile(
-                        title: Text('Kiválasztott versszakok', style: TextStyle(fontWeight: FontWeight.w700)),
-                        subtitle: Text('Többet is kijelölhetsz.'),
+                      ListTile(
+                        title: Text(context.l10n.selectedVersesTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        subtitle: Text(context.l10n.selectedVersesSubtitle),
                       ),
                       const Divider(height: 1),
                       Expanded(
@@ -410,7 +412,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                             Expanded(
                               child: OutlinedButton(
                                 onPressed: () => Navigator.of(context).pop(null),
-                                child: const Text('Mégse'),
+                                child: Text(context.l10n.cancel),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -422,7 +424,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                                         final List<int> out = selectedSet.toList()..sort();
                                         Navigator.of(context).pop(out);
                                       },
-                                child: const Text('Alkalmaz'),
+                                child: Text(context.l10n.apply),
                               ),
                             ),
                           ],

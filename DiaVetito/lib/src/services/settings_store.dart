@@ -66,9 +66,9 @@ class SettingsStore {
     await prefs.setBool(_kReceiverShowHighlight, settings.receiverShowHighlight);
     await prefs.setBool(_kReceiverUseAkkord, settings.receiverUseAkkord);
     await prefs.setBool(_kReceiverUseKotta, settings.receiverUseKotta);
-    await prefs.setInt(_kBkColor, settings.bkColor.value);
-    await prefs.setInt(_kTxtColor, settings.txtColor.value);
-    await prefs.setInt(_kBlankColor, settings.blankColor.value);
-    await prefs.setInt(_kHiColor, settings.hiColor.value);
+    await prefs.setInt(_kBkColor, settings.bkColor.toARGB32());
+    await prefs.setInt(_kTxtColor, settings.txtColor.toARGB32());
+    await prefs.setInt(_kBlankColor, settings.blankColor.toARGB32());
+    await prefs.setInt(_kHiColor, settings.hiColor.toARGB32());
   }
 }

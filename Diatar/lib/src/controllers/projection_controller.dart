@@ -58,8 +58,16 @@ class ProjectionController extends ChangeNotifier {
   bool initialized = false;
   bool connected = false;
   bool mqttActive = false;
-  String statusMessage = 'Inditas...';
+  String statusCode = 'projectionStatusStarting';
+  Map<String, String> _statusParams = <String, String>{};
   Size viewportSize = const Size(1920, 1080);
+
+  Map<String, String> get statusParams => Map<String, String>.unmodifiable(_statusParams);
+
+  void _setStatus(String code, [Map<String, String> params = const <String, String>{}]) {
+    statusCode = code;
+    _statusParams = Map<String, String>.from(params);
+  }
 
   Timer? _logoTimer;
   bool _disposed = false;
@@ -131,12 +139,12 @@ class ProjectionController extends ChangeNotifier {
     globals = globals.fromState(record);
     final int ep = record.endProgram;
     if (ep == RecStateEndProgram.stop || ep == RecStateEndProgram.stop + RecStateEndProgram.skipSerialOff) {
-      statusMessage = 'Leallitas kerve (epStop).';
+      _setStatus('projectionStatusStopRequested');
       await SystemNavigator.pop();
       return;
     }
     if (ep == RecStateEndProgram.shutdown || ep == RecStateEndProgram.shutdown + RecStateEndProgram.skipSerialOff) {
-      statusMessage = 'Rendszerleallitas kerve (epShutdown), Flutterben nem tamogatott.';
+      _setStatus('projectionStatusShutdownRequestedUnsupported');
     }
     if (settings.borderToClip) {
       settings = settings.copyWith(
@@ -202,7 +210,7 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
-    statusMessage = message;
+    _setStatus('projectionStatusReceiverError', <String, String>{'message': message});
     notifyListeners();
   }
 
@@ -212,13 +220,22 @@ class ProjectionController extends ChangeNotifier {
     }
     connected = isConnected;
     if (mqttActive) {
-      statusMessage = settings.mqttUser.trim().isEmpty
-          ? 'MQTT kikapcsolva'
-          : 'MQTT fogadas: ${settings.mqttUser}/${settings.mqttChannel}';
+      if (settings.mqttUser.trim().isEmpty) {
+        _setStatus('projectionStatusMqttOff');
+      } else {
+        _setStatus('projectionStatusMqttReceiving', <String, String>{
+          'user': settings.mqttUser,
+          'channel': settings.mqttChannel,
+        });
+      }
     } else {
-      statusMessage = isConnected
-          ? 'Kapcsolodva (${settings.port})'
-          : (settings.tcpEnabled ? 'Varakozas kliensre (${settings.port})' : 'TCP kikapcsolva');
+      if (isConnected) {
+        _setStatus('projectionStatusConnected', <String, String>{'port': '${settings.port}'});
+      } else if (settings.tcpEnabled) {
+        _setStatus('projectionStatusWaitingForClient', <String, String>{'port': '${settings.port}'});
+      } else {
+        _setStatus('projectionStatusTcpOff');
+      }
     }
     notifyListeners();
   }
@@ -265,12 +282,15 @@ class ProjectionController extends ChangeNotifier {
       mqttActive = false;
       await _mqtt.closeReceiver();
       await _server.restart(settings.port);
-      statusMessage = 'TCP figyeles: ${settings.port}';
+      _setStatus('projectionStatusTcpListening', <String, String>{'port': '${settings.port}'});
     } else {
       mqttActive = true;
       await _server.stop();
       await _mqtt.openReceiver(username: user, channel: settings.mqttChannel);
-      statusMessage = 'MQTT fogadas: $user/${settings.mqttChannel}';
+      _setStatus('projectionStatusMqttReceiving', <String, String>{
+        'user': user,
+        'channel': settings.mqttChannel,
+      });
     }
   }
 

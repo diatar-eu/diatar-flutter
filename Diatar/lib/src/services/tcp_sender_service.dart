@@ -4,11 +4,13 @@ import 'dart:io';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:flutter/foundation.dart';
 
+typedef SenderErrorCallback = void Function(String code, Map<String, String> params);
+
 class TcpSenderService {
   TcpSenderService({required this.onStatusChanged, required this.onError});
 
   ValueChanged<bool> onStatusChanged;
-  ValueChanged<String> onError;
+  SenderErrorCallback onError;
 
   ServerSocket? _server;
   final Set<Socket> _clients = <Socket>{};
@@ -36,13 +38,16 @@ class TcpSenderService {
       _server = await ServerSocket.bind(InternetAddress.anyIPv4, _port, shared: true);
       _server!.listen(
         _onClient,
-        onError: (Object e) => onError('TCP hiba: $e'),
+        onError: (Object e) => onError('senderTcpError', <String, String>{'error': '$e'}),
         onDone: () => onStatusChanged(_clients.isNotEmpty),
       );
       _startIdleKeepAlive();
       onStatusChanged(false);
     } catch (e) {
-      onError('Nem sikerult portot nyitni ($_port): $e');
+      onError('senderOpenPortFailed', <String, String>{
+        'port': '$_port',
+        'error': '$e',
+      });
       onStatusChanged(false);
     }
   }

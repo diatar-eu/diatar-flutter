@@ -47,10 +47,10 @@ class TcpServerService {
     try {
       _server = await ServerSocket.bind(InternetAddress.anyIPv4, _port, shared: true);
       _server!.listen(_onClient, onError: (Object e) {
-        onError('TCP hiba: $e');
+        onError('tcpServerError:$e');
       });
     } catch (e) {
-      onError('Nem sikerult portot nyitni ($_port): $e');
+      onError('tcpServerOpenPortFailed:$_port:$e');
     }
   }
 
@@ -84,7 +84,7 @@ class TcpServerService {
     _clientSub = socket.listen(
       _onData,
       onError: (Object e) {
-        onError('Kliens hiba: $e');
+        onError('tcpServerClientError:$e');
         _disconnectClient();
       },
       onDone: _disconnectClient,
@@ -133,7 +133,7 @@ class TcpServerService {
           break;
       }
     } catch (e) {
-      onError('Csomag feldolgozasi hiba: $e');
+      onError('tcpServerPacketParseError:$e');
     }
   }
 
@@ -147,7 +147,7 @@ class TcpServerService {
       client.add(packet);
       await client.flush();
     } catch (e) {
-      onError('Kuldesi hiba: $e');
+      onError('tcpServerSendError:$e');
       _disconnectClient();
     }
   }
