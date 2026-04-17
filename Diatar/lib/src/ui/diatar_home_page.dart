@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
+import '../services/dtx_download_service.dart';
 import 'diatar_settings_sheet.dart';
 import 'custom_order_editor_sheet.dart';
 
@@ -48,7 +49,7 @@ class DiatarHomePage extends StatelessWidget {
           ),
           IconButton(
             tooltip: l10n.downloadBooksTooltip,
-            onPressed: () => _showPlaceholder(context, l10n.downloadTitle, l10n.downloadMessage),
+            onPressed: () => _openDownloadDialog(context),
             icon: const Icon(Icons.download_for_offline_outlined),
           ),
           IconButton(
@@ -307,6 +308,17 @@ class DiatarHomePage extends StatelessWidget {
     );
   }
 
+  Future<void> _openDownloadDialog(BuildContext context) async {
+    final List<DtxDownloadItem>? selected = await showDialog<List<DtxDownloadItem>>(
+      context: context,
+      builder: (BuildContext context) => _DownloadSongbooksDialog(controller: controller),
+    );
+    if (selected == null || selected.isEmpty) {
+      return;
+    }
+    unawaited(controller.downloadSongBooks(selected: selected));
+  }
+
   Future<void> _showPlaceholder(BuildContext context, String title, String message) {
     return showDialog<void>(
       context: context,
@@ -319,6 +331,134 @@ class DiatarHomePage extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _DownloadSongbooksDialog extends StatefulWidget {
+  const _DownloadSongbooksDialog({required this.controller});
+
+  final DiatarMainController controller;
+
+  @override
+  State<_DownloadSongbooksDialog> createState() => _DownloadSongbooksDialogState();
+}
+
+class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
+  late Future<List<DtxDownloadItem>> _candidatesFuture;
+  final Set<String> _selectedFiles = <String>{};
+  bool _selectionInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _candidatesFuture = widget.controller.loadDownloadCandidates();
+  }
+
+  void _reload() {
+    setState(() {
+      _selectionInitialized = false;
+      _selectedFiles.clear();
+      _candidatesFuture = widget.controller.loadDownloadCandidates();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Row(
+        children: <Widget>[
+          Expanded(child: Text(l10n.downloadTitle)),
+          IconButton(
+            tooltip: l10n.refreshTooltip,
+            onPressed: _reload,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 460,
+        child: FutureBuilder<List<DtxDownloadItem>>(
+          future: _candidatesFuture,
+          builder: (BuildContext context, AsyncSnapshot<List<DtxDownloadItem>> snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 12),
+                    Text(l10n.statusDownloadListLoading),
+                  ],
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Text(l10n.statusDownloadError('${snapshot.error}'));
+            }
+
+            final List<DtxDownloadItem> items = snapshot.data ?? const <DtxDownloadItem>[];
+            if (!_selectionInitialized) {
+              _selectedFiles
+                ..clear()
+                ..addAll(items.map((DtxDownloadItem item) => item.fileName));
+              _selectionInitialized = true;
+            }
+
+            if (items.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(l10n.statusDownloadSummaryNone),
+              );
+            }
+
+            return ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 360),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: items.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final DtxDownloadItem item = items[index];
+                  return CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _selectedFiles.contains(item.fileName),
+                    title: Text(item.fileName),
+                    subtitle: Text(item.timestamp),
+                    onChanged: (bool? checked) {
+                      setState(() {
+                        if (checked ?? false) {
+                          _selectedFiles.add(item.fileName);
+                        } else {
+                          _selectedFiles.remove(item.fileName);
+                        }
+                      });
+                    },
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.close)),
+        FutureBuilder<List<DtxDownloadItem>>(
+          future: _candidatesFuture,
+          builder: (BuildContext context, AsyncSnapshot<List<DtxDownloadItem>> snapshot) {
+            final List<DtxDownloadItem> items = snapshot.data ?? const <DtxDownloadItem>[];
+            final List<DtxDownloadItem> selected = items.where((DtxDownloadItem item) => _selectedFiles.contains(item.fileName)).toList();
+            return FilledButton(
+              onPressed: selected.isEmpty || widget.controller.downloadInProgress
+                  ? null
+                  : () => Navigator.of(context).pop(selected),
+              child: Text(l10n.apply),
+            );
+          },
+        ),
+      ],
     );
   }
 }
