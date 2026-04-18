@@ -12,6 +12,37 @@ import '../services/dtx_download_service.dart';
 import 'diatar_settings_sheet.dart';
 import 'custom_order_editor_sheet.dart';
 
+class _BookDropdownEntry {
+  const _BookDropdownEntry.header(this.group) : bookIndex = null, title = null;
+
+  const _BookDropdownEntry.book({required this.bookIndex, required this.title})
+    : group = null;
+
+  final String? group;
+  final int? bookIndex;
+  final String? title;
+
+  bool get isHeader => group != null;
+}
+
+List<_BookDropdownEntry> _buildBookDropdownEntries(List<DtxBook> books) {
+  final List<_BookDropdownEntry> entries = <_BookDropdownEntry>[];
+  String? lastGroup;
+  for (int index = 0; index < books.length; index++) {
+    final DtxBook book = books[index];
+    final String group = book.group.trim();
+    if (group.isNotEmpty && group != lastGroup) {
+      entries.add(_BookDropdownEntry.header(group));
+      lastGroup = group;
+    }
+    if (group.isEmpty) {
+      lastGroup = null;
+    }
+    entries.add(_BookDropdownEntry.book(bookIndex: index, title: book.title));
+  }
+  return entries;
+}
+
 class DiatarHomePage extends StatelessWidget {
   const DiatarHomePage({super.key, required this.controller});
 
@@ -614,7 +645,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
               ) {
                 final List<DtxDownloadItem> items =
                     snapshot.data ?? const <DtxDownloadItem>[];
-                final List<DtxDownloadItem> selected = _effectiveSelected(items);
+                final List<DtxDownloadItem> selected = _effectiveSelected(
+                  items,
+                );
                 return FilledButton(
                   onPressed:
                       selected.isEmpty || widget.controller.downloadInProgress
@@ -639,6 +672,10 @@ class _BookDropdown extends StatelessWidget {
     if (controller.books.isEmpty) {
       return const SizedBox.shrink();
     }
+    final ThemeData theme = Theme.of(context);
+    final List<_BookDropdownEntry> entries = _buildBookDropdownEntries(
+      controller.books,
+    );
     return DropdownButtonFormField<int>(
       value: controller.bookIndex,
       decoration: InputDecoration(
@@ -646,23 +683,48 @@ class _BookDropdown extends StatelessWidget {
         border: const OutlineInputBorder(),
       ),
       isExpanded: true,
-      items: controller.books.asMap().entries.map((MapEntry<int, DtxBook> e) {
-        final DtxBook book = e.value;
-        final String groupPrefix = book.group.trim().isEmpty
-            ? ''
-            : '[${book.group}] ';
-        return DropdownMenuItem<int>(
-          value: e.key,
-          child: SizedBox(
-            width: double.infinity,
+      items: entries.asMap().entries.map((MapEntry<int, _BookDropdownEntry> e) {
+        final _BookDropdownEntry entry = e.value;
+        if (entry.isHeader) {
+          return DropdownMenuItem<int>(
+            value: -(e.key + 1),
+            enabled: false,
             child: Text(
-              '$groupPrefix${book.title}',
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
+              '[${entry.group!}]',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          );
+        }
+        return DropdownMenuItem<int>(
+          value: entry.bookIndex,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: Text(
+                entry.title!,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
             ),
           ),
         );
       }).toList(),
+      selectedItemBuilder: (BuildContext context) {
+        return entries.map((_BookDropdownEntry entry) {
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              entry.title ?? '[${entry.group!}]',
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          );
+        }).toList();
+      },
       onChanged: (int? value) {
         if (value != null) {
           controller.setBookIndex(value);
@@ -844,18 +906,16 @@ class _VersePreview extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: controller.globals.txtColor.withValues(alpha: 0.75),
+                        color: controller.globals.txtColor.withValues(
+                          alpha: 0.75,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
                     Expanded(
                       child: SizedBox(
                         width: width,
-                        child: ClipRect(
-                          child: CustomPaint(
-                            painter: painter,
-                          ),
-                        ),
+                        child: ClipRect(child: CustomPaint(painter: painter)),
                       ),
                     ),
                   ],
@@ -868,7 +928,9 @@ class _VersePreview extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: controller.globals.txtColor.withValues(alpha: 0.75),
+                        color: controller.globals.txtColor.withValues(
+                          alpha: 0.75,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -940,7 +1002,10 @@ class _CustomTextPreview extends StatelessWidget {
         final double width = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : 800;
-        final String fullTitle = context.l10n.versePanelTitle(panelTitle, title);
+        final String fullTitle = context.l10n.versePanelTitle(
+          panelTitle,
+          title,
+        );
         final TextStyle titleStyle = TextStyle(
           color: controller.globals.txtColor.withValues(alpha: 0.75),
         );
@@ -1006,11 +1071,16 @@ class _CustomImagePreview extends StatelessWidget {
           panelTitle,
           normalized.isEmpty ? '-' : normalized,
         );
-        final TextPainter titlePainter = TextPainter(
-          text: TextSpan(text: fullTitle),
-          maxLines: 2,
-          textDirection: TextDirection.ltr,
-        )..layout(maxWidth: constraints.maxWidth.isFinite ? constraints.maxWidth : 800);
+        final TextPainter titlePainter =
+            TextPainter(
+              text: TextSpan(text: fullTitle),
+              maxLines: 2,
+              textDirection: TextDirection.ltr,
+            )..layout(
+              maxWidth: constraints.maxWidth.isFinite
+                  ? constraints.maxWidth
+                  : 800,
+            );
         final double titleHeight = titlePainter.height + 10;
         final double imageHeight = constraints.maxHeight.isFinite
             ? math.max(0, constraints.maxHeight - titleHeight)
@@ -1019,11 +1089,7 @@ class _CustomImagePreview extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              fullTitle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
+            Text(fullTitle, maxLines: 2, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 10),
             if (!exists)
               Text(context.l10n.statusImageNotFound(normalized))
