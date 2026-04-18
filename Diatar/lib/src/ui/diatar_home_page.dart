@@ -778,23 +778,29 @@ class _VersePreview extends StatelessWidget {
       projecting: true,
       wordToHighlight: controller.highPos,
     );
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: frame,
+      globals: globals,
+      settings: controller.settings,
+    );
+    final String verseTitle = _buildVerseTitle(controller, song, verse);
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double width = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : 800;
-      final double maxAvailableHeight = constraints.maxHeight.isFinite
-        ? constraints.maxHeight
+        final double viewportHeightForMeasure = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
             : (MediaQuery.of(context).size.height -
                       kToolbarHeight -
                       MediaQuery.of(context).padding.vertical -
                       220)
-                  .clamp(240, 1200);
+                  .clamp(240, double.infinity);
 
         final TextPainter titlePainter = TextPainter(
           text: TextSpan(
-            text: _buildVerseTitle(controller, song, verse),
+            text: verseTitle,
             style: TextStyle(
               color: controller.globals.txtColor.withValues(alpha: 0.75),
             ),
@@ -805,7 +811,14 @@ class _VersePreview extends StatelessWidget {
         final double titleHeight = titlePainter.height + 10;
         final double fallbackCanvasHeight = math.max(
           120,
-          maxAvailableHeight - titleHeight,
+          viewportHeightForMeasure - titleHeight,
+        );
+        final double requiredCanvasHeight = painter.measureRequiredHeight(
+          Size(width, fallbackCanvasHeight),
+        );
+        final double scrollCanvasHeight = math.max(
+          fallbackCanvasHeight,
+          requiredCanvasHeight,
         );
 
         return GestureDetector(
@@ -827,7 +840,7 @@ class _VersePreview extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      _buildVerseTitle(controller, song, verse),
+                      verseTitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -838,11 +851,9 @@ class _VersePreview extends StatelessWidget {
                     Expanded(
                       child: SizedBox(
                         width: width,
-                        child: CustomPaint(
-                          painter: ProjectorPainter(
-                            frame: frame,
-                            globals: globals,
-                            settings: controller.settings,
+                        child: ClipRect(
+                          child: CustomPaint(
+                            painter: painter,
                           ),
                         ),
                       ),
@@ -853,7 +864,7 @@ class _VersePreview extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      _buildVerseTitle(controller, song, verse),
+                      verseTitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -863,13 +874,11 @@ class _VersePreview extends StatelessWidget {
                     const SizedBox(height: 10),
                     SizedBox(
                       width: width,
-                      height: fallbackCanvasHeight,
-                      child: CustomPaint(
-                        size: Size(width, fallbackCanvasHeight),
-                        painter: ProjectorPainter(
-                          frame: frame,
-                          globals: globals,
-                          settings: controller.settings,
+                      height: scrollCanvasHeight,
+                      child: ClipRect(
+                        child: CustomPaint(
+                          size: Size(width, scrollCanvasHeight),
+                          painter: painter,
                         ),
                       ),
                     ),
