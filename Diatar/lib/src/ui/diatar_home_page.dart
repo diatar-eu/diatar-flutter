@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
@@ -200,39 +201,6 @@ class DiatarHomePage extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.positionLabel(controller.highPos, controller.wordCount),
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  l10n.statusLabel(_localizedStatus(context)),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  l10n.sendStatusLabel(
-                    controller.mqttActive
-                        ? l10n.protocolMqtt
-                        : l10n.protocolTcp,
-                    controller.senderRunning
-                        ? l10n.senderStateActive
-                        : l10n.senderStateOff,
-                    controller.senderConnected
-                        ? l10n.clientStateConnected
-                        : l10n.clientStateWaiting,
-                  ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(l10n.tcpPortLabel(controller.settings.port)),
-              ),
               if (controller.downloadInProgress) ...<Widget>[
                 const SizedBox(height: 8),
                 LinearProgressIndicator(
@@ -326,117 +294,6 @@ class DiatarHomePage extends StatelessWidget {
 
   Widget _buildOrderView(BuildContext context) {
     return _OrderDashboard(controller: controller);
-  }
-
-  String _localizedStatus(BuildContext context) {
-    final l10n = context.l10n;
-    final Map<String, String> p = controller.statusParams;
-    switch (controller.statusCode) {
-      case 'statusStarting':
-        return l10n.statusStarting;
-      case 'statusSenderError':
-        return l10n.statusSenderError(p['message'] ?? '');
-      case 'statusSenderTcpError':
-        return l10n.statusSenderTcpError(p['error'] ?? '');
-      case 'statusSenderOpenPortFailed':
-        return l10n.statusSenderOpenPortFailed(
-          int.tryParse(p['port'] ?? '') ?? 0,
-          p['error'] ?? '',
-        );
-      case 'statusSenderMqttConnectFailed':
-        return l10n.statusSenderMqttConnectFailed;
-      case 'statusSenderMqttError':
-        return l10n.statusSenderMqttError(p['error'] ?? '');
-      case 'statusMqttSending':
-        return l10n.statusMqttSending(p['user'] ?? '', p['channel'] ?? '');
-      case 'statusTcpSending':
-        return l10n.statusTcpSending(int.tryParse(p['port'] ?? '') ?? 0);
-      case 'statusNoDtxFiles':
-        return l10n.statusNoDtxFiles(p['path'] ?? '');
-      case 'statusAllSongbooksDisabled':
-        return l10n.statusAllSongbooksDisabled;
-      case 'statusSongbooksLoaded':
-        return l10n.statusSongbooksLoaded(int.tryParse(p['count'] ?? '') ?? 0);
-      case 'statusLoadError':
-        return l10n.statusLoadError(p['error'] ?? '');
-      case 'statusCustomOrderSelected':
-        return l10n.statusCustomOrderSelected(p['label'] ?? '');
-      case 'statusOrderSaved':
-        return l10n.statusOrderSaved(p['path'] ?? '');
-      case 'statusDiaFileMissing':
-        return l10n.statusDiaFileMissing(p['path'] ?? '');
-      case 'statusOrderLoaded':
-        return l10n.statusOrderLoaded(
-          int.tryParse(p['count'] ?? '') ?? 0,
-          p['path'] ?? '',
-        );
-      case 'statusDownloadListLoading':
-        return l10n.statusDownloadListLoading;
-      case 'statusDownloadProgress':
-        return l10n.statusDownloadProgress(
-          int.tryParse(p['current'] ?? '') ?? 0,
-          int.tryParse(p['total'] ?? '') ?? 0,
-          p['name'] ?? '',
-          int.tryParse(p['percent'] ?? '') ?? 0,
-        );
-      case 'statusDownloadSummaryNone':
-        return l10n.statusDownloadSummaryNone;
-      case 'statusDownloadSummary':
-        return l10n.statusDownloadSummary(
-          int.tryParse(p['downloaded'] ?? '') ?? 0,
-          int.tryParse(p['skipped'] ?? '') ?? 0,
-        );
-      case 'statusDownloadError':
-        return l10n.statusDownloadError(p['error'] ?? '');
-      case 'statusBookSelected':
-        return l10n.statusBookSelected(p['name'] ?? '-');
-      case 'statusSongPicked':
-        return l10n.statusSongPicked(p['name'] ?? '-');
-      case 'statusVersePicked':
-        return l10n.statusVersePicked(p['name'] ?? '-');
-      case 'statusSongSelected':
-        return l10n.statusSongSelected(p['title'] ?? '');
-      case 'statusSongVerseSelected':
-        return l10n.statusSongVerseSelected(p['title'] ?? '');
-      case 'statusProjectionOn':
-        return l10n.statusProjectionOn;
-      case 'statusProjectionOff':
-        return l10n.statusProjectionOff;
-      case 'statusImagePathEmpty':
-        return l10n.statusImagePathEmpty;
-      case 'statusCustomTextEmpty':
-        return l10n.statusCustomTextEmpty;
-      case 'statusCustomTextSent':
-        return l10n.statusCustomTextSent(p['title'] ?? '');
-      case 'statusCustomTextError':
-        return l10n.statusCustomTextError(p['error'] ?? '');
-      case 'statusImageNotFound':
-        return l10n.statusImageNotFound(p['path'] ?? '');
-      case 'statusImageSent':
-        return l10n.statusImageSent(p['name'] ?? '');
-      case 'statusImageSendError':
-        return l10n.statusImageSendError(p['error'] ?? '');
-      case 'statusBlankPathEmpty':
-        return l10n.statusBlankPathEmpty;
-      case 'statusBlankNotFound':
-        return l10n.statusBlankNotFound(p['path'] ?? '');
-      case 'statusBlankSet':
-        return l10n.statusBlankSet(p['name'] ?? '');
-      case 'statusBlankSendError':
-        return l10n.statusBlankSendError(p['error'] ?? '');
-      case 'statusBlankCleared':
-        return l10n.statusBlankCleared;
-      case 'statusBlankClearError':
-        return l10n.statusBlankClearError(p['error'] ?? '');
-      case 'statusShutdownCommandSent':
-        return l10n.statusShutdownCommandSent;
-      case 'statusStopCommandSent':
-        return l10n.statusStopCommandSent;
-      case 'statusCommandSendError':
-        return l10n.statusCommandSendError(p['error'] ?? '');
-      default:
-        return controller.statusCode;
-    }
   }
 
   Future<void> _openSettings(BuildContext context) {
@@ -910,10 +767,27 @@ class _VersePreview extends StatelessWidget {
         final double width = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : 800;
-        final double canvasHeight = _estimateCanvasHeight(
-          globals: globals,
-          frame: previewRecord,
-          viewportWidth: width,
+        final double maxAvailableHeight = constraints.maxHeight.isFinite
+            ? (constraints.maxHeight - 50).clamp(240, 1200)
+            : (MediaQuery.of(context).size.height -
+                      kToolbarHeight -
+                      MediaQuery.of(context).padding.vertical -
+                      220)
+                  .clamp(240, 1200);
+
+        final TextPainter titlePainter = TextPainter(
+          text: TextSpan(
+            text: _buildVerseTitle(controller, song, verse),
+            style: TextStyle(
+              color: controller.globals.txtColor.withValues(alpha: 0.75),
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout(maxWidth: width);
+        final double titleHeight = titlePainter.height + 10;
+        final double availableCanvasHeight = math.max(
+          120,
+          maxAvailableHeight - titleHeight,
         );
 
         return GestureDetector(
@@ -942,9 +816,9 @@ class _VersePreview extends StatelessWidget {
               const SizedBox(height: 10),
               SizedBox(
                 width: width,
-                height: canvasHeight,
+                height: availableCanvasHeight,
                 child: CustomPaint(
-                  size: Size(width, canvasHeight),
+                  size: Size(width, availableCanvasHeight),
                   painter: ProjectorPainter(
                     frame: frame,
                     globals: globals,
@@ -957,56 +831,6 @@ class _VersePreview extends StatelessWidget {
         );
       },
     );
-  }
-
-  double _estimateCanvasHeight({
-    required ProjectionGlobals globals,
-    required RecTextRecord frame,
-    required double viewportWidth,
-  }) {
-    final bool hasTitle = !globals.hideTitle && frame.title.isNotEmpty;
-    final int logicalLines = frame.lines.length + (hasTitle ? 1 : 0);
-    if (logicalLines <= 0) {
-      return 280;
-    }
-
-    final double fontSize = globals.fontSize.toDouble();
-    final double titleSize = (globals.titleSize.toDouble() * 2.5).clamp(
-      8.0,
-      72.0,
-    );
-    final double lineSpacing = globals.spacing100 / 100.0;
-
-    final TextPainter normalProbe = TextPainter(
-      text: TextSpan(
-        text: 'Ag',
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: globals.boldText ? FontWeight.bold : FontWeight.normal,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: viewportWidth);
-    final TextPainter titleProbe = TextPainter(
-      text: TextSpan(
-        text: 'Ag',
-        style: TextStyle(fontSize: titleSize, fontWeight: FontWeight.bold),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: viewportWidth);
-
-    double estimated = 8;
-    if (hasTitle) {
-      estimated += titleProbe.height * lineSpacing;
-    }
-    estimated += normalProbe.height * lineSpacing * frame.lines.length;
-
-    if (globals.useKotta) {
-      estimated +=
-          frame.lines.length * (fontSize * (globals.kottaArany / 100.0) * 1.35);
-    }
-
-    return estimated * 1.25;
   }
 
   String _buildVerseTitle(
@@ -1371,83 +1195,78 @@ class _SongSearchDashboardState extends State<_SongSearchDashboard> {
       return Center(child: Text(context.l10n.noLoadedSlide));
     }
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    currentSong.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  currentSong.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Row(
-                  children: <Widget>[
-                    OutlinedButton.icon(
-                      onPressed: controller.prevVerse,
-                      icon: const Icon(Icons.skip_previous, size: 18),
-                      label: Text(context.l10n.previous),
-                    ),
-                    const SizedBox(width: 4),
-                    OutlinedButton.icon(
-                      onPressed: controller.nextVerse,
-                      icon: const Icon(Icons.skip_next, size: 18),
-                      label: Text(context.l10n.nextShort),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: currentSong.verses.asMap().entries.map((
-                MapEntry<int, DtxVerse> e,
-              ) {
-                final bool selected = e.key == controller.verseIndex;
-                return ChoiceChip(
-                  label: Text(
-                    e.value.name,
-                    style: const TextStyle(fontSize: 12),
+              ),
+              Row(
+                children: <Widget>[
+                  OutlinedButton.icon(
+                    onPressed: controller.prevVerse,
+                    icon: const Icon(Icons.skip_previous, size: 18),
+                    label: Text(context.l10n.previous),
                   ),
-                  selected: selected,
-                  onSelected: (_) => controller.setVerseIndex(e.key),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 12),
-            _VersePreview(
-              controller: controller,
-              song: currentSong,
-              verse: currentVerse,
-              panelTitle: context.l10n.previewTitle,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              context.l10n.projectedImage,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              constraints: const BoxConstraints(maxHeight: 180),
-              color: controller.globals.bkColor,
-              child: _buildProjectedImagePreview(currentSong, currentVerse),
-            ),
-          ],
-        ),
+                  const SizedBox(width: 4),
+                  OutlinedButton.icon(
+                    onPressed: controller.nextVerse,
+                    icon: const Icon(Icons.skip_next, size: 18),
+                    label: Text(context.l10n.nextShort),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: currentSong.verses.asMap().entries.map((
+              MapEntry<int, DtxVerse> e,
+            ) {
+              final bool selected = e.key == controller.verseIndex;
+              return ChoiceChip(
+                label: Text(e.value.name, style: const TextStyle(fontSize: 12)),
+                selected: selected,
+                onSelected: (_) => controller.setVerseIndex(e.key),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          _VersePreview(
+            controller: controller,
+            song: currentSong,
+            verse: currentVerse,
+            panelTitle: context.l10n.previewTitle,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            context.l10n.projectedImage,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 180),
+            color: controller.globals.bkColor,
+            child: _buildProjectedImagePreview(currentSong, currentVerse),
+          ),
+        ],
       ),
     );
   }
@@ -1659,11 +1478,9 @@ class _OrderDashboard extends StatelessWidget {
                       flex: 3,
                       child: Container(
                         color: controller.globals.bkColor,
-                        child: SingleChildScrollView(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: preview,
-                          ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: preview,
                         ),
                       ),
                     ),
@@ -1686,11 +1503,9 @@ class _OrderDashboard extends StatelessWidget {
                     height: 300,
                     child: Container(
                       color: controller.globals.bkColor,
-                      child: SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: preview,
-                        ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: preview,
                       ),
                     ),
                   ),
