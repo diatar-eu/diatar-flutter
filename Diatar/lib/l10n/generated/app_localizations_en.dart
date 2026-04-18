@@ -419,6 +419,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mqttChannel => 'MQTT channel';
 
   @override
+  String get dtxFolderPath => 'DTX folder';
+
+  @override
   String get blankImagePath => 'Blank image path';
 
   @override

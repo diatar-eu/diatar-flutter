@@ -761,6 +761,12 @@ abstract class AppLocalizations {
   /// **'MQTT csatorna'**
   String get mqttChannel;
 
+  /// No description provided for @dtxFolderPath.
+  ///
+  /// In hu, this message translates to:
+  /// **'DTX mappa'**
+  String get dtxFolderPath;
+
   /// No description provided for @blankImagePath.
   ///
   /// In hu, this message translates to:

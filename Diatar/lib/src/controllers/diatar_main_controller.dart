@@ -238,6 +238,8 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> applySettings(AppSettings newSettings) async {
+    final String oldDtxPath = _normalizedDtxPath(settings.dtxPath);
+    final String newDtxPath = _normalizedDtxPath(newSettings.dtxPath);
     settings = newSettings;
     lastBlankPath = settings.blankPicPath;
     await _settingsStore.save(settings);
@@ -268,8 +270,22 @@ class DiatarMainController extends ChangeNotifier {
       boldText: settings.projBoldText,
     );
     await _applyTransport();
+    if (oldDtxPath != newDtxPath) {
+      await reloadBooks();
+    }
     notifyListeners();
     await _syncCurrentDia();
+  }
+
+  String _normalizedDtxPath(String raw) {
+    return raw.trim().replaceAll('\\', '/');
+  }
+
+  Future<Directory> _resolveDtxDirectory() async {
+    final Directory docs = await getApplicationDocumentsDirectory();
+    final String configured = settings.dtxPath.trim();
+    final String path = configured.isNotEmpty ? configured : '${docs.path}/diatar/DTXs';
+    return Directory(path);
   }
 
   Future<void> _applyTransport() async {
@@ -324,8 +340,8 @@ class DiatarMainController extends ChangeNotifier {
 
       if (loaded.isEmpty) {
         books = const <DtxBook>[];
-        final Directory docs = await getApplicationDocumentsDirectory();
-        _setStatus('statusNoDtxFiles', <String, String>{'path': '${docs.path}/diatar'});
+        final Directory dtxDir = await _resolveDtxDirectory();
+        _setStatus('statusNoDtxFiles', <String, String>{'path': dtxDir.path});
       } else if (enabled.isEmpty) {
         books = const <DtxBook>[];
         _setStatus('statusAllSongbooksDisabled');
@@ -374,8 +390,7 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<List<DtxBook>> _loadBooksFromDisk() async {
-    final Directory docs = await getApplicationDocumentsDirectory();
-    final Directory dtxDir = Directory('${docs.path}/diatar');
+    final Directory dtxDir = await _resolveDtxDirectory();
     final List<DtxBook> loaded = <DtxBook>[];
 
     if (!await dtxDir.exists()) {
@@ -834,8 +849,7 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<List<DtxDownloadItem>> loadDownloadCandidates() async {
-    final Directory docs = await getApplicationDocumentsDirectory();
-    final Directory dtxDir = Directory('${docs.path}/diatar');
+    final Directory dtxDir = await _resolveDtxDirectory();
     return _downloadService.listUpdates(targetDir: dtxDir);
   }
 
@@ -968,8 +982,7 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final Directory docs = await getApplicationDocumentsDirectory();
-      final Directory dtxDir = Directory('${docs.path}/diatar');
+      final Directory dtxDir = await _resolveDtxDirectory();
       final DtxDownloadSummary summary = await _downloadService.downloadUpdates(
         targetDir: dtxDir,
         selected: selected,

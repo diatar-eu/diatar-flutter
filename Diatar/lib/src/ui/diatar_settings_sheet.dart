@@ -23,6 +23,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _mqttUser;
   late final TextEditingController _mqttPassword;
   late final TextEditingController _mqttChannel;
+  late final TextEditingController _dtxPath;
   late final TextEditingController _blankPicPath;
   late final TextEditingController _projFontSize;
   late final TextEditingController _projTitleSize;
@@ -57,6 +58,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _mqttUser = TextEditingController(text: s.mqttUser);
     _mqttPassword = TextEditingController(text: s.mqttPassword);
     _mqttChannel = TextEditingController(text: s.mqttChannel);
+    _dtxPath = TextEditingController(text: s.dtxPath);
     _blankPicPath = TextEditingController(text: s.blankPicPath);
     _projFontSize = TextEditingController(text: s.projFontSize.toString());
     _projTitleSize = TextEditingController(text: s.projTitleSize.toString());
@@ -90,6 +92,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _mqttUser.dispose();
     _mqttPassword.dispose();
     _mqttChannel.dispose();
+    _dtxPath.dispose();
     _blankPicPath.dispose();
     _projFontSize.dispose();
     _projTitleSize.dispose();
@@ -137,6 +140,21 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             TextField(
               controller: _mqttChannel,
               decoration: InputDecoration(labelText: l10n.mqttChannel),
+            ),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    controller: _dtxPath,
+                    decoration: InputDecoration(labelText: l10n.dtxFolderPath),
+                  ),
+                ),
+                IconButton(
+                  onPressed: _pickDtxFolder,
+                  icon: const Icon(Icons.folder_open),
+                  tooltip: l10n.fileChoose,
+                ),
+              ],
             ),
             Row(
               children: <Widget>[
@@ -358,6 +376,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       mqttUser: _mqttUser.text.trim(),
       mqttPassword: _mqttPassword.text,
       mqttChannel: _mqttChannel.text.trim().isEmpty ? '1' : _mqttChannel.text.trim(),
+      dtxPath: _dtxPath.text.trim(),
       blankPicPath: _blankPicPath.text.trim(),
       projFontSize: _parseInt(_projFontSize.text, widget.initialSettings.projFontSize, min: 12, max: 128),
       projTitleSize: _parseInt(_projTitleSize.text, widget.initialSettings.projTitleSize, min: 12, max: 128),
@@ -416,6 +435,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     }
     setState(() {
       _blankPicPath.text = file.path;
+    });
+  }
+
+  Future<void> _pickDtxFolder() async {
+    final String? folderPath = await getDirectoryPath();
+    if (!mounted || folderPath == null) {
+      return;
+    }
+    setState(() {
+      _dtxPath.text = folderPath;
     });
   }
 

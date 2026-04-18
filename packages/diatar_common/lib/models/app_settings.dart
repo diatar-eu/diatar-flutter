@@ -14,6 +14,7 @@ class AppSettings {
     this.mqttUser = '',
     this.mqttPassword = '',
     this.mqttChannel = '1',
+    this.dtxPath = '',
     this.blankPicPath = '',
     this.projFontSize = 70,
     this.projTitleSize = 12,
@@ -61,6 +62,7 @@ class AppSettings {
   final String mqttUser;
   final String mqttPassword;
   final String mqttChannel;
+  final String dtxPath;
   final String blankPicPath;
   final int projFontSize;
   final int projTitleSize;
@@ -114,6 +116,7 @@ class AppSettings {
     String? mqttUser,
     String? mqttPassword,
     String? mqttChannel,
+    String? dtxPath,
     String? blankPicPath,
     int? projFontSize,
     int? projTitleSize,
@@ -158,6 +161,7 @@ class AppSettings {
       mqttUser: mqttUser ?? this.mqttUser,
       mqttPassword: mqttPassword ?? this.mqttPassword,
       mqttChannel: mqttChannel ?? this.mqttChannel,
+      dtxPath: dtxPath ?? this.dtxPath,
       blankPicPath: blankPicPath ?? this.blankPicPath,
       projFontSize: projFontSize ?? this.projFontSize,
       projTitleSize: projTitleSize ?? this.projTitleSize,

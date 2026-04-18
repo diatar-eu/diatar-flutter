@@ -7,6 +7,7 @@ class SettingsStore {
   static const String _kUser = 'Username';
   static const String _kPassword = 'Password';
   static const String _kChannel = 'Channel';
+  static const String _kDtxPath = 'DtxPath';
   static const String _kBlankPicPath = 'BlankPicPath';
   static const String _kBkColor = 'BkColor';
   static const String _kTxColor = 'TxColor';
@@ -49,6 +50,7 @@ class SettingsStore {
       mqttUser: prefs.getString(_kUser) ?? '',
       mqttPassword: prefs.getString(_kPassword) ?? '',
       mqttChannel: prefs.getString(_kChannel) ?? '1',
+      dtxPath: prefs.getString(_kDtxPath) ?? '',
       blankPicPath: prefs.getString(_kBlankPicPath) ?? '',
       projFontSize: prefs.getInt(_kProjFontSize) ?? 70,
       projTitleSize: prefs.getInt(_kProjTitleSize) ?? 12,
@@ -84,6 +86,7 @@ class SettingsStore {
     await prefs.setString(_kUser, settings.mqttUser);
     await prefs.setString(_kPassword, settings.mqttPassword);
     await prefs.setString(_kChannel, settings.mqttChannel);
+    await prefs.setString(_kDtxPath, settings.dtxPath);
     await prefs.setString(_kBlankPicPath, settings.blankPicPath);
     await prefs.setInt(_kProjFontSize, settings.projFontSize);
     await prefs.setInt(_kProjTitleSize, settings.projTitleSize);

@@ -421,6 +421,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get mqttChannel => 'MQTT csatorna';
 
   @override
+  String get dtxFolderPath => 'DTX mappa';
+
+  @override
   String get blankImagePath => 'Blank kep utvonal';
 
   @override

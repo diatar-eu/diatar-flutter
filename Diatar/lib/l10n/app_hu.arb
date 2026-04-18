@@ -330,6 +330,7 @@
   "mqttUserHint": "MQTT user (ures = TCP mod)",
   "mqttPassword": "MQTT jelszo",
   "mqttChannel": "MQTT csatorna",
+  "dtxFolderPath": "DTX mappa",
   "blankImagePath": "Blank kep utvonal",
   "fileChoose": "Fajl valasztasa",
   "projectionSettingsTitle": "Vetitesi beallitasok",

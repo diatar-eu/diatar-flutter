@@ -330,6 +330,7 @@
   "mqttUserHint": "MQTT user (empty = TCP mode)",
   "mqttPassword": "MQTT password",
   "mqttChannel": "MQTT channel",
+  "dtxFolderPath": "DTX folder",
   "blankImagePath": "Blank image path",
   "fileChoose": "Choose file",
   "projectionSettingsTitle": "Projection settings",
