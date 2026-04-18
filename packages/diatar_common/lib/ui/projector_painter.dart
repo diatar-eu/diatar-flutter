@@ -135,7 +135,10 @@ class ProjectorPainter extends CustomPainter {
       return const <double>[];
     }
     final double blockStartX = _kottaRowsStartX(rows, sizeWidth, horizontalPad);
-    return List<double>.filled(rows.length, blockStartX);
+    return <double>[
+      for (int i = 0; i < rows.length; i++)
+        blockStartX + _kottaContinuationIndent(i, horizontalPad),
+    ];
   }
 
   List<double> debugKottaVisibleStartXsForLine(
@@ -167,12 +170,12 @@ class ProjectorPainter extends CustomPainter {
     return <double>[
       for (int i = 0; i < rows.length; i++)
         rowPrefixes[i].kotta.isNotEmpty
-            ? blockStartX
+            ? blockStartX + _kottaContinuationIndent(i, horizontalPad)
             : _debugCenteredKottaStartX(
                 rows[i],
                 lines.first,
                 fontSize,
-                blockStartX,
+                blockStartX + _kottaContinuationIndent(i, horizontalPad),
               ),
     ];
   }
@@ -507,7 +510,8 @@ class ProjectorPainter extends CustomPainter {
             final _KottaRowLayout row = lineKottaRows[rowIndex];
             final _KottaRowPrefix rowPrefix = rowPrefixes[rowIndex];
             final double rowY = firstTextY + rowIndex * rowStep;
-            final double rowX = kottaBlockX;
+            final double rowX =
+                kottaBlockX + _kottaContinuationIndent(rowIndex, horizontalPad);
             _paintKottaAlignedTextRow(
               canvas,
               rline,
@@ -523,7 +527,9 @@ class ProjectorPainter extends CustomPainter {
               firstTextY + (lineKottaRows.length - 1) * rowStep;
           final _KottaRowPrefix lastRowPrefix =
               rowPrefixes[lineKottaRows.length - 1];
-          final double lastRowX = kottaBlockX;
+          final double lastRowX =
+              kottaBlockX +
+              _kottaContinuationIndent(lineKottaRows.length - 1, horizontalPad);
           _paintChords(
             canvas,
             rline,
@@ -1014,7 +1020,8 @@ class ProjectorPainter extends CustomPainter {
     for (int rowIndex = 0; rowIndex < rows.length; rowIndex++) {
       final _KottaRowLayout row = rows[rowIndex];
       final _KottaRowPrefix rowPrefix = rowPrefixes[rowIndex];
-      final double rowX = blockStartX;
+      final double rowX =
+          blockStartX + _kottaContinuationIndent(rowIndex, horizontalPad);
       final double rowTop = baseTop + rowIndex * rowStep;
       for (int i = 0; i < 5; i++) {
         final double ly = rowTop + i * lineGap;
@@ -1070,7 +1077,9 @@ class ProjectorPainter extends CustomPainter {
 
     if (lineState.deferFinalDoubleBarAtEnd) {
       final _KottaRowLayout last = rows.last;
-      final double lastX = blockStartX;
+      final double lastX =
+          blockStartX +
+          _kottaContinuationIndent(rows.length - 1, horizontalPad);
       final double lastTop = baseTop + (rows.length - 1) * rowStep;
       _drawForcedClosingBarline(canvas, lastX + last.width, lastTop, lineGap);
     }
@@ -1159,6 +1168,13 @@ class ProjectorPainter extends CustomPainter {
       (double maxWidth, _KottaRowLayout row) => math.max(maxWidth, row.width),
     );
     return _kottaRowStartX(blockWidth, sizeWidth, horizontalPad);
+  }
+
+  double _kottaContinuationIndent(int rowIndex, double horizontalPad) {
+    if (rowIndex <= 0) {
+      return 0;
+    }
+    return horizontalPad;
   }
 
   double _debugCenteredKottaStartX(

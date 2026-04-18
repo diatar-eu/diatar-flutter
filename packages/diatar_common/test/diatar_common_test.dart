@@ -169,7 +169,7 @@ void main() {
     expect(linePrefixes[1], everyElement('kGE2'));
   });
 
-  test('centered kotta rows share the same left edge after wrapping', () {
+  test('centered kotta continuation rows share the same left edge', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
       globals: const ProjectionGlobals(useKotta: true, hCenter: true),
@@ -185,7 +185,8 @@ void main() {
     );
 
     expect(startXs.length, greaterThanOrEqualTo(2));
-    expect(startXs.skip(1), everyElement(startXs.first));
+    expect(startXs.skip(2), everyElement(startXs[1]));
+    expect(startXs[1] - startXs.first, 16);
   });
 
   test('continuation row prefixes start at the same visible x position', () {
@@ -205,5 +206,25 @@ void main() {
 
     expect(visibleStartXs.length, greaterThanOrEqualTo(2));
     expect(visibleStartXs.skip(1), everyElement(visibleStartXs[1]));
+  });
+
+  test('continuation rows are indented by the configured left margin', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    final List<double> startXs = painter.debugKottaRowStartXsForLine(
+      r'\KkGE2r41a;Alfa \Kr41a;Beta \Kr41a;Gamma \Kr41a;Delta \Kr41a;Epszilon',
+      fontSize: 24,
+      maxWidth: 90,
+      sizeWidth: 320,
+      horizontalPad: 16,
+    );
+
+    expect(startXs.length, greaterThanOrEqualTo(2));
+    expect(startXs.first, 16);
+    expect(startXs.skip(1), everyElement(32));
   });
 }
