@@ -79,6 +79,13 @@ class AppLocalizationsHu extends AppLocalizations {
   String get showKotta => 'Kotta mutatasa';
 
   @override
+  String get scrollableProjection => 'Gorgetheto vetites';
+
+  @override
+  String get scrollableProjectionHint =>
+      'Ha ki van kapcsolva, a szoveg automatikusan a vetitesi terulethez igazodik.';
+
+  @override
   String get localColorsTitle => 'Helyi szinek';
 
   @override

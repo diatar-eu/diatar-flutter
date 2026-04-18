@@ -236,6 +236,18 @@ abstract class AppLocalizations {
   /// **'Kotta mutatasa'**
   String get showKotta;
 
+  /// No description provided for @scrollableProjection.
+  ///
+  /// In hu, this message translates to:
+  /// **'Gorgetheto vetites'**
+  String get scrollableProjection;
+
+  /// No description provided for @scrollableProjectionHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ha ki van kapcsolva, a szoveg automatikusan a vetitesi terulethez igazodik.'**
+  String get scrollableProjectionHint;
+
   /// No description provided for @localColorsTitle.
   ///
   /// In hu, this message translates to:

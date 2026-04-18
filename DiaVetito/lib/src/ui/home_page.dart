@@ -32,35 +32,53 @@ class _HomePageState extends State<HomePage> {
             builder: (BuildContext context, BoxConstraints constraints) {
               controller.updateViewport(Size(constraints.maxWidth, constraints.maxHeight));
               final double viewportHeight = constraints.maxHeight;
+              final bool fitToViewport = controller.settings.projAutoSize;
               final double initialCanvasHeight = _canvasHeight ?? viewportHeight;
-              final double canvasHeight = initialCanvasHeight > viewportHeight ? initialCanvasHeight : viewportHeight;
+              final double canvasHeight = fitToViewport
+                  ? viewportHeight
+                  : (initialCanvasHeight > viewportHeight ? initialCanvasHeight : viewportHeight);
 
-              _scheduleHeightRefresh(
-                frame: controller.activeFrame,
-                viewportWidth: constraints.maxWidth,
-                viewportHeight: viewportHeight,
-              );
+              if (!fitToViewport) {
+                _scheduleHeightRefresh(
+                  frame: controller.activeFrame,
+                  viewportWidth: constraints.maxWidth,
+                  viewportHeight: viewportHeight,
+                );
+              }
 
               return Stack(
                 children: <Widget>[
                   Positioned.fill(
                     child: GestureDetector(
                       onLongPress: () => _openSettings(context),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.vertical,
-                        child: SizedBox(
-                          width: constraints.maxWidth,
-                          height: canvasHeight,
-                          child: CustomPaint(
-                            size: Size(constraints.maxWidth, canvasHeight),
-                            painter: ProjectorPainter(
-                              frame: controller.activeFrame,
-                              globals: controller.globals,
-                              settings: controller.settings,
+                      child: fitToViewport
+                          ? SizedBox(
+                              width: constraints.maxWidth,
+                              height: viewportHeight,
+                              child: CustomPaint(
+                                size: Size(constraints.maxWidth, viewportHeight),
+                                painter: ProjectorPainter(
+                                  frame: controller.activeFrame,
+                                  globals: controller.globals,
+                                  settings: controller.settings,
+                                ),
+                              ),
+                            )
+                          : SingleChildScrollView(
+                              scrollDirection: Axis.vertical,
+                              child: SizedBox(
+                                width: constraints.maxWidth,
+                                height: canvasHeight,
+                                child: CustomPaint(
+                                  size: Size(constraints.maxWidth, canvasHeight),
+                                  painter: ProjectorPainter(
+                                    frame: controller.activeFrame,
+                                    globals: controller.globals,
+                                    settings: controller.settings,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ),
                     ),
                   ),
                   

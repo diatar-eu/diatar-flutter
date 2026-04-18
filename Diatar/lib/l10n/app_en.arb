@@ -369,6 +369,8 @@
   "backgroundOpacity": "Background opacity",
   "blankOpacity": "Blank opacity",
   "autoSize": "Auto sizing",
+  "scrollableProjection": "Scrollable projection",
+  "scrollableProjectionHint": "If turned off, text is auto-sized to fit the projection area.",
   "showTitle": "Show title",
   "hCenter": "Horizontal center align",
   "vCenter": "Vertical center align",

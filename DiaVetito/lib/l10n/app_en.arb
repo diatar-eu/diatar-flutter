@@ -23,6 +23,8 @@
   "receiverShowHighlight": "Show highlight",
   "showChords": "Show chords",
   "showKotta": "Show notation",
+  "scrollableProjection": "Scrollable projection",
+  "scrollableProjectionHint": "If turned off, text is auto-sized to fit the projection area.",
   "localColorsTitle": "Local colors",
   "backgroundColorLabel": "Background color",
   "textColorLabel": "Text color",

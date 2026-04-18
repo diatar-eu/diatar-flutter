@@ -78,6 +78,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   late bool _receiverShowHighlight;
   late bool _receiverUseAkkord;
   late bool _receiverUseKotta;
+  late bool _projectionScrollable;
   late Color _bkColor;
   late Color _txtColor;
   late Color _blankColor;
@@ -103,6 +104,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
     _receiverShowHighlight = s.receiverShowHighlight;
     _receiverUseAkkord = s.receiverUseAkkord;
     _receiverUseKotta = s.receiverUseKotta;
+    _projectionScrollable = !s.projAutoSize;
     _bkColor = s.bkColor;
     _txtColor = s.txtColor;
     _blankColor = s.blankColor;
@@ -307,6 +309,13 @@ class _SettingsSheetState extends State<SettingsSheet> {
               onChanged: (bool v) => setState(() => _receiverUseKotta = v),
               title: Text(l10n.showKotta),
             ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _projectionScrollable,
+              onChanged: (bool v) => setState(() => _projectionScrollable = v),
+              title: Text(l10n.scrollableProjection),
+              subtitle: Text(l10n.scrollableProjectionHint),
+            ),
             const SizedBox(height: 12),
             Text(l10n.localColorsTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
@@ -382,6 +391,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
       receiverShowHighlight: _receiverShowHighlight,
       receiverUseAkkord: _receiverUseAkkord,
       receiverUseKotta: _receiverUseKotta,
+      projAutoSize: !_projectionScrollable,
       bkColor: _bkColor,
       txtColor: _txtColor,
       blankColor: _blankColor,

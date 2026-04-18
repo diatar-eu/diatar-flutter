@@ -125,6 +125,7 @@ class ProjectionController extends ChangeNotifier {
       wordToHighlight: settings.receiverShowHighlight ? colored.wordToHighlight : 0,
       useAkkord: settings.receiverUseAkkord && source.useAkkord,
       useKotta: settings.receiverUseKotta && source.useKotta,
+      autoResize: settings.projAutoSize,
     );
   }
 

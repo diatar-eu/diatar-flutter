@@ -227,11 +227,23 @@ class DiatarHomePage extends StatelessWidget {
             color: controller.globals.bkColor,
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              child: _buildActivePreview(
-                context,
-                panelTitle: l10n.previewTitle,
-              ),
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final Widget preview = _buildActivePreview(
+                  context,
+                  panelTitle: l10n.previewTitle,
+                );
+                final bool scrollableProjection =
+                    !controller.settings.projAutoSize;
+                if (scrollableProjection) {
+                  return SingleChildScrollView(child: preview);
+                }
+                return SizedBox(
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
+                  child: preview,
+                );
+              },
             ),
           ),
         ),
@@ -491,6 +503,16 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
     });
   }
 
+  List<DtxDownloadItem> _effectiveSelected(List<DtxDownloadItem> items) {
+    if (!_selectionInitialized) {
+      // Default behavior: before first interaction every candidate is selected.
+      return items;
+    }
+    return items
+        .where((DtxDownloadItem item) => _selectedFiles.contains(item.fileName))
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -592,12 +614,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
               ) {
                 final List<DtxDownloadItem> items =
                     snapshot.data ?? const <DtxDownloadItem>[];
-                final List<DtxDownloadItem> selected = items
-                    .where(
-                      (DtxDownloadItem item) =>
-                          _selectedFiles.contains(item.fileName),
-                    )
-                    .toList();
+                final List<DtxDownloadItem> selected = _effectiveSelected(items);
                 return FilledButton(
                   onPressed:
                       selected.isEmpty || widget.controller.downloadInProgress
@@ -767,8 +784,8 @@ class _VersePreview extends StatelessWidget {
         final double width = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : 800;
-        final double maxAvailableHeight = constraints.maxHeight.isFinite
-            ? (constraints.maxHeight - 50).clamp(240, 1200)
+      final double maxAvailableHeight = constraints.maxHeight.isFinite
+        ? constraints.maxHeight
             : (MediaQuery.of(context).size.height -
                       kToolbarHeight -
                       MediaQuery.of(context).padding.vertical -
@@ -782,10 +799,11 @@ class _VersePreview extends StatelessWidget {
               color: controller.globals.txtColor.withValues(alpha: 0.75),
             ),
           ),
+          maxLines: 2,
           textDirection: TextDirection.ltr,
         )..layout(maxWidth: width);
         final double titleHeight = titlePainter.height + 10;
-        final double availableCanvasHeight = math.max(
+        final double fallbackCanvasHeight = math.max(
           120,
           maxAvailableHeight - titleHeight,
         );
@@ -804,30 +822,59 @@ class _VersePreview extends StatelessWidget {
               }
             }
           },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                _buildVerseTitle(controller, song, verse),
-                style: TextStyle(
-                  color: controller.globals.txtColor.withValues(alpha: 0.75),
+          child: constraints.maxHeight.isFinite
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      _buildVerseTitle(controller, song, verse),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: controller.globals.txtColor.withValues(alpha: 0.75),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: SizedBox(
+                        width: width,
+                        child: CustomPaint(
+                          painter: ProjectorPainter(
+                            frame: frame,
+                            globals: globals,
+                            settings: controller.settings,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      _buildVerseTitle(controller, song, verse),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: controller.globals.txtColor.withValues(alpha: 0.75),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: width,
+                      height: fallbackCanvasHeight,
+                      child: CustomPaint(
+                        size: Size(width, fallbackCanvasHeight),
+                        painter: ProjectorPainter(
+                          frame: frame,
+                          globals: globals,
+                          settings: controller.settings,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: width,
-                height: availableCanvasHeight,
-                child: CustomPaint(
-                  size: Size(width, availableCanvasHeight),
-                  painter: ProjectorPainter(
-                    frame: frame,
-                    globals: globals,
-                    settings: controller.settings,
-                  ),
-                ),
-              ),
-            ],
-          ),
         );
       },
     );
@@ -884,17 +931,30 @@ class _CustomTextPreview extends StatelessWidget {
         final double width = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : 800;
-        final double height = (120 + (previewRecord.lines.length * 54))
+        final String fullTitle = context.l10n.versePanelTitle(panelTitle, title);
+        final TextStyle titleStyle = TextStyle(
+          color: controller.globals.txtColor.withValues(alpha: 0.75),
+        );
+        final TextPainter titlePainter = TextPainter(
+          text: TextSpan(text: fullTitle, style: titleStyle),
+          maxLines: 2,
+          textDirection: TextDirection.ltr,
+        )..layout(maxWidth: width);
+        final double titleHeight = titlePainter.height + 10;
+        final double naturalHeight = (120 + (previewRecord.lines.length * 54))
             .clamp(220, 1200)
             .toDouble();
+        final double height = constraints.maxHeight.isFinite
+            ? math.max(0, constraints.maxHeight - titleHeight)
+            : naturalHeight;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              context.l10n.versePanelTitle(panelTitle, title),
-              style: TextStyle(
-                color: controller.globals.txtColor.withValues(alpha: 0.75),
-              ),
+              fullTitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: titleStyle,
             ),
             const SizedBox(height: 10),
             SizedBox(
@@ -931,24 +991,45 @@ class _CustomImagePreview extends StatelessWidget {
     final File f = File(normalized);
     final bool exists = normalized.isNotEmpty && f.existsSync();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          context.l10n.versePanelTitle(
-            panelTitle,
-            normalized.isEmpty ? '-' : normalized,
-          ),
-        ),
-        const SizedBox(height: 10),
-        if (!exists)
-          Text(context.l10n.statusImageNotFound(normalized))
-        else
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.file(f, fit: BoxFit.contain),
-          ),
-      ],
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final String fullTitle = context.l10n.versePanelTitle(
+          panelTitle,
+          normalized.isEmpty ? '-' : normalized,
+        );
+        final TextPainter titlePainter = TextPainter(
+          text: TextSpan(text: fullTitle),
+          maxLines: 2,
+          textDirection: TextDirection.ltr,
+        )..layout(maxWidth: constraints.maxWidth.isFinite ? constraints.maxWidth : 800);
+        final double titleHeight = titlePainter.height + 10;
+        final double imageHeight = constraints.maxHeight.isFinite
+            ? math.max(0, constraints.maxHeight - titleHeight)
+            : 360;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              fullTitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 10),
+            if (!exists)
+              Text(context.l10n.statusImageNotFound(normalized))
+            else
+              SizedBox(
+                height: imageHeight,
+                width: double.infinity,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(f, fit: BoxFit.contain),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

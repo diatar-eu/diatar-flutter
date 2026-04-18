@@ -369,6 +369,8 @@
   "backgroundOpacity": "Hatter atszosag",
   "blankOpacity": "Blank atszosag",
   "autoSize": "Automatikus meretezes",
+  "scrollableProjection": "Gorgetheto vetites",
+  "scrollableProjectionHint": "Ha ki van kapcsolva, a szoveg automatikusan a vetitesi terulethez igazodik.",
   "showTitle": "Cim mutatasa",
   "hCenter": "Vizszintes kozepre igazitas",
   "vCenter": "Fuggoleges kozepre igazitas",

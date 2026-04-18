@@ -79,6 +79,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get showKotta => 'Show notation';
 
   @override
+  String get scrollableProjection => 'Scrollable projection';
+
+  @override
+  String get scrollableProjectionHint =>
+      'If turned off, text is auto-sized to fit the projection area.';
+
+  @override
   String get localColorsTitle => 'Local colors';
 
   @override

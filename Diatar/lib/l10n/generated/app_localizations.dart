@@ -935,6 +935,18 @@ abstract class AppLocalizations {
   /// **'Automatikus meretezes'**
   String get autoSize;
 
+  /// No description provided for @scrollableProjection.
+  ///
+  /// In hu, this message translates to:
+  /// **'Gorgetheto vetites'**
+  String get scrollableProjection;
+
+  /// No description provided for @scrollableProjectionHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ha ki van kapcsolva, a szoveg automatikusan a vetitesi terulethez igazodik.'**
+  String get scrollableProjectionHint;
+
   /// No description provided for @showTitle.
   ///
   /// In hu, this message translates to:

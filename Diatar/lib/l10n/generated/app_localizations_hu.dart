@@ -512,6 +512,13 @@ class AppLocalizationsHu extends AppLocalizations {
   String get autoSize => 'Automatikus meretezes';
 
   @override
+  String get scrollableProjection => 'Gorgetheto vetites';
+
+  @override
+  String get scrollableProjectionHint =>
+      'Ha ki van kapcsolva, a szoveg automatikusan a vetitesi terulethez igazodik.';
+
+  @override
   String get showTitle => 'Cim mutatasa';
 
   @override

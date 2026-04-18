@@ -261,9 +261,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              value: _projAutoSize,
-              onChanged: (bool v) => setState(() => _projAutoSize = v),
-              title: Text(l10n.autoSize),
+              value: !_projAutoSize,
+              onChanged: (bool v) => setState(() => _projAutoSize = !v),
+              title: Text(l10n.scrollableProjection),
+              subtitle: Text(l10n.scrollableProjectionHint),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,

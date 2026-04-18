@@ -23,6 +23,8 @@
   "receiverShowHighlight": "Kiemeles megjelenitese",
   "showChords": "Akkordok mutatasa",
   "showKotta": "Kotta mutatasa",
+  "scrollableProjection": "Gorgetheto vetites",
+  "scrollableProjectionHint": "Ha ki van kapcsolva, a szoveg automatikusan a vetitesi terulethez igazodik.",
   "localColorsTitle": "Helyi szinek",
   "backgroundColorLabel": "Hatterszin",
   "textColorLabel": "Szovegszin",

@@ -23,6 +23,7 @@ class SettingsStore {
   static const String _kTxtColor = 'TxtColor';
   static const String _kBlankColor = 'BlankColor';
   static const String _kHiColor = 'HiColor';
+  static const String _kProjAutoSize = 'ProjAutoSize';
 
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -46,6 +47,7 @@ class SettingsStore {
       txtColor: Color(prefs.getInt(_kTxtColor) ?? 0xFFFFFFFF),
       blankColor: Color(prefs.getInt(_kBlankColor) ?? 0xFF000000),
       hiColor: Color(prefs.getInt(_kHiColor) ?? 0xFF00FFFF),
+      projAutoSize: prefs.getBool(_kProjAutoSize) ?? false,
     );
   }
 
@@ -70,5 +72,6 @@ class SettingsStore {
     await prefs.setInt(_kTxtColor, settings.txtColor.toARGB32());
     await prefs.setInt(_kBlankColor, settings.blankColor.toARGB32());
     await prefs.setInt(_kHiColor, settings.hiColor.toARGB32());
+    await prefs.setBool(_kProjAutoSize, settings.projAutoSize);
   }
 }
