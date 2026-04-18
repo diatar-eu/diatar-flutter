@@ -962,12 +962,14 @@ class _VersePreview extends StatelessWidget {
     final String bookShortName = book.nick.trim().isNotEmpty
         ? book.nick
         : book.title;
-    final String songNumber = (controller.songIndex + 1).toString();
+    final String songTitle = song.title.trim().isNotEmpty
+        ? song.title.trim()
+        : (controller.songIndex + 1).toString();
     final String versePart = verse.name.trim().isNotEmpty
         ? '/${verse.name}'
         : '';
 
-    return '$bookShortName: $songNumber$versePart';
+    return '$bookShortName: $songTitle$versePart';
   }
 }
 
