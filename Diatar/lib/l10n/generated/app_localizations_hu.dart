@@ -40,6 +40,15 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderTooltip => 'Sajat sorrend';
 
   @override
+  String get addSlideTooltip => 'Dia hozzaadasa';
+
+  @override
+  String get addTextSlide => 'Szoveges dia';
+
+  @override
+  String get addImageSlide => 'Kepes dia';
+
+  @override
   String get downloadBooksTooltip => 'Enektarak letoltese';
 
   @override
@@ -224,6 +233,19 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get statusImagePathEmpty => 'A kep fajl utvonala ures.';
+
+  @override
+  String get statusCustomTextEmpty => 'Adj meg cimet vagy legalabb egy sort.';
+
+  @override
+  String statusCustomTextSent(Object title) {
+    return 'Szoveges dia elkuldve: $title';
+  }
+
+  @override
+  String statusCustomTextError(Object error) {
+    return 'Szoveges dia kuldesi hiba: $error';
+  }
 
   @override
   String statusImageNotFound(Object path) {
@@ -566,6 +588,15 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get searchSongHint => 'Kötet vagy enekcim';
+
+  @override
+  String get textSlideDialogTitle => 'Szoveges dia hozzaadasa';
+
+  @override
+  String get textSlideTitleLabel => 'Cim';
+
+  @override
+  String get textSlideBodyLabel => 'Szoveg (soronként)';
 
   @override
   String get loadDia => 'Betoltes .DIA';

@@ -10,6 +10,9 @@
   "playlistsTitle": "Playlists",
   "playlistsMessage": "This action can get back the full dialog later.",
   "customOrderTooltip": "Custom order",
+  "addSlideTooltip": "Add slide",
+  "addTextSlide": "Text slide",
+  "addImageSlide": "Image slide",
   "downloadBooksTooltip": "Download songbooks",
   "downloadTitle": "Download",
   "downloadMessage": "The download dialog can be restored later.",
@@ -199,6 +202,19 @@
   "statusProjectionOn": "Projection: ON",
   "statusProjectionOff": "Projection: OFF",
   "statusImagePathEmpty": "Image file path is empty.",
+  "statusCustomTextEmpty": "Provide a title or at least one line.",
+  "statusCustomTextSent": "Text slide sent: {title}",
+  "@statusCustomTextSent": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "statusCustomTextError": "Text slide send error: {error}",
+  "@statusCustomTextError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "statusImageNotFound": "Image file not found: {path}",
   "@statusImageNotFound": {
     "placeholders": {
@@ -379,6 +395,9 @@
   "customOrderEditTitle": "Edit custom order",
   "addSong": "Add song",
   "searchSongHint": "Book or song title",
+  "textSlideDialogTitle": "Add text slide",
+  "textSlideTitleLabel": "Title",
+  "textSlideBodyLabel": "Text (one line per row)",
   "loadDia": "Load .DIA",
   "saveDia": "Save .DIA",
   "savedPath": "Saved: {path}",

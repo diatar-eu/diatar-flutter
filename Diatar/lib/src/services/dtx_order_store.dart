@@ -7,18 +7,27 @@ class StoredCustomOrderEntry {
     required this.songIndex,
     required this.verseIndex,
     required this.label,
+    this.customTextTitle,
+    this.customTextBody,
+    this.customImagePath,
   });
 
   final String fileName;
   final int songIndex;
   final int verseIndex;
   final String label;
+  final String? customTextTitle;
+  final String? customTextBody;
+  final String? customImagePath;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'fileName': fileName,
         'songIndex': songIndex,
         'verseIndex': verseIndex,
         'label': label,
+        'customTextTitle': customTextTitle,
+        'customTextBody': customTextBody,
+        'customImagePath': customImagePath,
       };
 
   static StoredCustomOrderEntry? fromJson(Object? raw) {
@@ -29,6 +38,9 @@ class StoredCustomOrderEntry {
     final Object? s = raw['songIndex'];
     final Object? v = raw['verseIndex'];
     final Object? l = raw['label'];
+    final Object? textTitle = raw['customTextTitle'];
+    final Object? textBody = raw['customTextBody'];
+    final Object? imagePath = raw['customImagePath'];
     if (f is! String || s is! num || l is! String) {
       return null;
     }
@@ -37,6 +49,9 @@ class StoredCustomOrderEntry {
       songIndex: s.toInt(),
       verseIndex: v is num ? v.toInt() : 0,
       label: l,
+      customTextTitle: textTitle is String ? textTitle : null,
+      customTextBody: textBody is String ? textBody : null,
+      customImagePath: imagePath is String ? imagePath : null,
     );
   }
 }

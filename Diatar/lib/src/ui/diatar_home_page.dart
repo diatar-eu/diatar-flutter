@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:diatar_common/diatar_common.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../controllers/diatar_main_controller.dart';
@@ -62,6 +64,27 @@ class DiatarHomePage extends StatelessWidget {
             onPressed: () => _openCustomOrderEditor(context),
             icon: const Icon(Icons.queue_music),
           ),
+          PopupMenuButton<_AddSlideAction>(
+            tooltip: l10n.addSlideTooltip,
+            onSelected: (_AddSlideAction action) {
+              if (action == _AddSlideAction.text) {
+                unawaited(_openCustomTextSlideDialog(context));
+              } else {
+                unawaited(_pickAndSendImageSlide(context));
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<_AddSlideAction>>[
+              PopupMenuItem<_AddSlideAction>(
+                value: _AddSlideAction.text,
+                child: Text(l10n.addTextSlide),
+              ),
+              PopupMenuItem<_AddSlideAction>(
+                value: _AddSlideAction.image,
+                child: Text(l10n.addImageSlide),
+              ),
+            ],
+            icon: const Icon(Icons.add_circle_outline),
+          ),
           IconButton(
             tooltip: l10n.downloadBooksTooltip,
             onPressed: () => _openDownloadDialog(context),
@@ -96,9 +119,6 @@ class DiatarHomePage extends StatelessWidget {
 
   Widget _buildSimpleView(BuildContext context) {
     final l10n = context.l10n;
-    final DtxBook? book = controller.currentBook;
-    final DtxSong? song = controller.currentSong;
-    final DtxVerse? verse = controller.currentVerse;
 
     return Column(
       children: <Widget>[
@@ -141,10 +161,10 @@ class DiatarHomePage extends StatelessWidget {
                           : l10n.projectionOn,
                       onPressed: controller.toggleShowing,
                       backgroundColor: controller.showing
-                          ? const Color(0xFFD32F2F).withOpacity(0.15)
+                          ? const Color(0xFFD32F2F).withValues(alpha: 0.15)
                           : Theme.of(
                               context,
-                            ).colorScheme.onSurfaceVariant.withOpacity(0.08),
+                            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
                       foregroundColor: controller.showing
                           ? const Color(0xFFD32F2F)
                           : Theme.of(context).colorScheme.onSurfaceVariant,
@@ -240,21 +260,52 @@ class DiatarHomePage extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             child: SingleChildScrollView(
-              child: book == null || song == null || verse == null
-                  ? Text(
-                      l10n.noLoadedSlide,
-                      style: TextStyle(color: controller.globals.txtColor),
-                    )
-                  : _VersePreview(
-                      controller: controller,
-                      song: song,
-                      verse: verse,
-                      panelTitle: l10n.previewTitle,
-                    ),
+              child: _buildActivePreview(context, panelTitle: l10n.previewTitle),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildActivePreview(BuildContext context, {required String panelTitle}) {
+    final CustomOrderEntry? projectedCustom = controller.projectedCustomOrderEntry;
+    if (projectedCustom != null && projectedCustom.isCustomText) {
+      final String title = (projectedCustom.customTextTitle ?? '').trim().isEmpty
+          ? 'Dia'
+          : (projectedCustom.customTextTitle ?? '').trim();
+      final List<String> lines = (projectedCustom.customTextBody ?? '')
+          .split(RegExp(r'\r?\n'))
+          .map((String line) => line.trimRight())
+          .where((String line) => line.trim().isNotEmpty)
+          .toList();
+      return _CustomTextPreview(
+        controller: controller,
+        title: title,
+        lines: lines,
+        panelTitle: panelTitle,
+      );
+    }
+    if (projectedCustom != null && projectedCustom.isCustomImage) {
+      return _CustomImagePreview(
+        imagePath: projectedCustom.customImagePath ?? '',
+        panelTitle: panelTitle,
+      );
+    }
+
+    final DtxSong? song = controller.currentSong;
+    final DtxVerse? verse = controller.currentVerse;
+    if (song == null || verse == null) {
+      return Text(
+        context.l10n.noLoadedSlide,
+        style: TextStyle(color: controller.globals.txtColor),
+      );
+    }
+    return _VersePreview(
+      controller: controller,
+      song: song,
+      verse: verse,
+      panelTitle: panelTitle,
     );
   }
 
@@ -345,6 +396,12 @@ class DiatarHomePage extends StatelessWidget {
         return l10n.statusProjectionOff;
       case 'statusImagePathEmpty':
         return l10n.statusImagePathEmpty;
+      case 'statusCustomTextEmpty':
+        return l10n.statusCustomTextEmpty;
+      case 'statusCustomTextSent':
+        return l10n.statusCustomTextSent(p['title'] ?? '');
+      case 'statusCustomTextError':
+        return l10n.statusCustomTextError(p['error'] ?? '');
       case 'statusImageNotFound':
         return l10n.statusImageNotFound(p['path'] ?? '');
       case 'statusImageSent':
@@ -410,6 +467,29 @@ class DiatarHomePage extends StatelessWidget {
     unawaited(controller.downloadSongBooks(selected: selected));
   }
 
+  Future<void> _openCustomTextSlideDialog(BuildContext context) async {
+    final _TextSlideInput? input = await showDialog<_TextSlideInput>(
+      context: context,
+      builder: (BuildContext context) => const _CustomTextSlideDialog(),
+    );
+    if (input == null) {
+      return;
+    }
+    await controller.addCustomTextSlideToOrder(title: input.title, body: input.body);
+  }
+
+  Future<void> _pickAndSendImageSlide(BuildContext context) async {
+    final XTypeGroup images = XTypeGroup(
+      label: context.l10n.imagesFileTypeLabel,
+      extensions: <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
+    );
+    final XFile? file = await openFile(acceptedTypeGroups: <XTypeGroup>[images]);
+    if (file == null) {
+      return;
+    }
+    await controller.addCustomImageSlideToOrder(file.path);
+  }
+
   Future<void> _showPlaceholder(
     BuildContext context,
     String title,
@@ -429,6 +509,82 @@ class DiatarHomePage extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+enum _AddSlideAction { text, image }
+
+class _TextSlideInput {
+  const _TextSlideInput({required this.title, required this.body});
+
+  final String title;
+  final String body;
+}
+
+class _CustomTextSlideDialog extends StatefulWidget {
+  const _CustomTextSlideDialog();
+
+  @override
+  State<_CustomTextSlideDialog> createState() => _CustomTextSlideDialogState();
+}
+
+class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _bodyController;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController();
+    _bodyController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.textSlideDialogTitle),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TextField(
+              controller: _titleController,
+              decoration: InputDecoration(labelText: l10n.textSlideTitleLabel),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _bodyController,
+              decoration: InputDecoration(labelText: l10n.textSlideBodyLabel),
+              minLines: 4,
+              maxLines: 8,
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
+        FilledButton(
+          onPressed: () {
+            Navigator.of(context).pop(
+              _TextSlideInput(
+                title: _titleController.text,
+                body: _bodyController.text,
+              ),
+            );
+          },
+          child: Text(l10n.apply),
+        ),
+      ],
     );
   }
 }
@@ -797,6 +953,98 @@ class _VersePreview extends StatelessWidget {
   }
 }
 
+class _CustomTextPreview extends StatelessWidget {
+  const _CustomTextPreview({
+    required this.controller,
+    required this.title,
+    required this.lines,
+    required this.panelTitle,
+  });
+
+  final DiatarMainController controller;
+  final String title;
+  final List<String> lines;
+  final String panelTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final RecTextRecord previewRecord = RecTextRecord(
+      scholaLine: '',
+      title: title,
+      lines: lines.isEmpty ? const <String>[''] : lines,
+    );
+    final ProjectionFrame frame = TextFrame(record: previewRecord);
+    final ProjectionGlobals globals = controller.globals.copyWith(
+      projecting: true,
+      wordToHighlight: 0,
+    );
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double width = constraints.maxWidth.isFinite ? constraints.maxWidth : 800;
+        final double height = (120 + (previewRecord.lines.length * 54)).clamp(220, 1200).toDouble();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              context.l10n.versePanelTitle(panelTitle, title),
+              style: TextStyle(color: controller.globals.txtColor.withValues(alpha: 0.75)),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: width,
+              height: height,
+              child: CustomPaint(
+                size: Size(width, height),
+                painter: ProjectorPainter(
+                  frame: frame,
+                  globals: globals,
+                  settings: controller.settings,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CustomImagePreview extends StatelessWidget {
+  const _CustomImagePreview({
+    required this.imagePath,
+    required this.panelTitle,
+  });
+
+  final String imagePath;
+  final String panelTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final String normalized = imagePath.trim();
+    final File f = File(normalized);
+    final bool exists = normalized.isNotEmpty && f.existsSync();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(context.l10n.versePanelTitle(panelTitle, normalized.isEmpty ? '-' : normalized)),
+        const SizedBox(height: 10),
+        if (!exists)
+          Text(context.l10n.statusImageNotFound(normalized))
+        else
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.file(
+              f,
+              fit: BoxFit.contain,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _SongSearchDashboard extends StatefulWidget {
   const _SongSearchDashboard({
     required this.controller,
@@ -999,6 +1247,40 @@ class _SongSearchDashboardState extends State<_SongSearchDashboard> {
     required DtxSong? currentSong,
     required DtxVerse? currentVerse,
   }) {
+    final CustomOrderEntry? projectedCustom = controller.projectedCustomOrderEntry;
+    if (projectedCustom != null && projectedCustom.isCustomText) {
+      final String title = (projectedCustom.customTextTitle ?? '').trim().isEmpty
+          ? 'Dia'
+          : (projectedCustom.customTextTitle ?? '').trim();
+      final List<String> lines = (projectedCustom.customTextBody ?? '')
+          .split(RegExp(r'\r?\n'))
+          .map((String line) => line.trimRight())
+          .where((String line) => line.trim().isNotEmpty)
+          .toList();
+      return SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: _CustomTextPreview(
+            controller: controller,
+            title: title,
+            lines: lines,
+            panelTitle: context.l10n.previewTitle,
+          ),
+        ),
+      );
+    }
+    if (projectedCustom != null && projectedCustom.isCustomImage) {
+      return SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: _CustomImagePreview(
+            imagePath: projectedCustom.customImagePath ?? '',
+            panelTitle: context.l10n.previewTitle,
+          ),
+        ),
+      );
+    }
+
     if (currentSong == null || currentVerse == null) {
       return Center(child: Text(context.l10n.noLoadedSlide));
     }
@@ -1190,10 +1472,10 @@ class _OrderDashboard extends StatelessWidget {
                           : context.l10n.projectionOn,
                       onPressed: controller.toggleShowing,
                       backgroundColor: controller.showing
-                          ? const Color(0xFFD32F2F).withOpacity(0.15)
+                          ? const Color(0xFFD32F2F).withValues(alpha: 0.15)
                           : Theme.of(
                               context,
-                            ).colorScheme.onSurfaceVariant.withOpacity(0.08),
+                            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
                       foregroundColor: controller.showing
                           ? const Color(0xFFD32F2F)
                           : Theme.of(context).colorScheme.onSurfaceVariant,
@@ -1237,15 +1519,39 @@ class _OrderDashboard extends StatelessWidget {
           child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               final bool wide = constraints.maxWidth > 1200;
-              final Widget preview =
-                  book == null || song == null || verse == null
-                  ? Center(child: Text(context.l10n.noLoadedSlide))
-                  : _VersePreview(
-                      controller: controller,
-                      song: song,
-                      verse: verse,
-                      panelTitle: context.l10n.previewTitle,
-                    );
+              final CustomOrderEntry? projectedCustom = controller.projectedCustomOrderEntry;
+              final Widget preview;
+              if (projectedCustom != null && projectedCustom.isCustomText) {
+                final String title = (projectedCustom.customTextTitle ?? '').trim().isEmpty
+                    ? 'Dia'
+                    : (projectedCustom.customTextTitle ?? '').trim();
+                final List<String> lines = (projectedCustom.customTextBody ?? '')
+                    .split(RegExp(r'\r?\n'))
+                    .map((String line) => line.trimRight())
+                    .where((String line) => line.trim().isNotEmpty)
+                    .toList();
+                preview = _CustomTextPreview(
+                  controller: controller,
+                  title: title,
+                  lines: lines,
+                  panelTitle: context.l10n.previewTitle,
+                );
+              } else if (projectedCustom != null && projectedCustom.isCustomImage) {
+                preview = _CustomImagePreview(
+                  imagePath: projectedCustom.customImagePath ?? '',
+                  panelTitle: context.l10n.previewTitle,
+                );
+              } else {
+                preview =
+                    book == null || song == null || verse == null
+                    ? Center(child: Text(context.l10n.noLoadedSlide))
+                    : _VersePreview(
+                        controller: controller,
+                        song: song,
+                        verse: verse,
+                        panelTitle: context.l10n.previewTitle,
+                      );
+              }
               final Widget orderPanel = Card(
                 margin: EdgeInsets.zero,
                 child: Padding(
@@ -1342,7 +1648,7 @@ Widget _actionIconButton(
         ),
         backgroundColor:
             backgroundColor ??
-            (selected ? colors.primary.withOpacity(0.14) : null),
+            (selected ? colors.primary.withValues(alpha: 0.14) : null),
         foregroundColor:
             foregroundColor ?? (selected ? colors.onPrimary : null),
       ),

@@ -44,6 +44,30 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
   DiatarMainController get controller => widget.controller;
 
+  String _entrySignature(CustomOrderEntry entry) {
+    return '${entry.fileName}|${entry.songIndex}|${entry.verseIndex}|${entry.customTextTitle ?? ''}|${entry.customTextBody ?? ''}|${entry.customImagePath ?? ''}|${entry.label}';
+  }
+
+  bool _sameEntries(List<CustomOrderEntry> left, List<CustomOrderEntry> right) {
+    if (left.length != right.length) {
+      return false;
+    }
+    for (int i = 0; i < left.length; i++) {
+      if (_entrySignature(left[i]) != _entrySignature(right[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _syncEntriesFromControllerIfNeeded() {
+    final List<CustomOrderEntry> source = List<CustomOrderEntry>.from(controller.customOrder);
+    if (_sameEntries(_entries, source)) {
+      return;
+    }
+    _entries = source;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +86,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     return AnimatedBuilder(
       animation: controller,
       builder: (BuildContext context, Widget? child) {
+        _syncEntriesFromControllerIfNeeded();
         return Material(
           color: widget.embedded ? Colors.transparent : Theme.of(context).scaffoldBackgroundColor,
           child: Column(
@@ -294,11 +319,15 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       },
       itemBuilder: (BuildContext context, int index) {
         final CustomOrderEntry entry = _entries[index];
+        final bool isSongEntry = controller.isSongOrderEntry(entry);
         final bool isContinuation =
+          isSongEntry &&
             index > 0 &&
             _entries[index - 1].fileName == entry.fileName &&
             _entries[index - 1].songIndex == entry.songIndex;
-        final List<DtxVerse> verses = controller.versesForEntry(entry);
+        final List<DtxVerse> verses = isSongEntry
+          ? controller.versesForEntry(entry)
+          : const <DtxVerse>[];
         final int verseIx = _safeEntryVerseIndex(entry);
         final String verseLabel = verses.isEmpty
             ? '-'
@@ -332,14 +361,15 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
               : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    IconButton(
-                      tooltip: context.l10n.versePicker,
-                      icon: const Icon(Icons.format_list_numbered),
-                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                      onPressed: () => _pickVerse(index),
-                    ),
+                    if (isSongEntry)
+                      IconButton(
+                        tooltip: context.l10n.versePicker,
+                        icon: const Icon(Icons.format_list_numbered),
+                        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                        onPressed: () => _pickVerse(index),
+                      ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline, color: Colors.red),
                       visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
@@ -469,8 +499,13 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
   ({int start, int end}) _contiguousSongGroup(int index) {
     final CustomOrderEntry center = _entries[index];
+    if (!controller.isSongOrderEntry(center)) {
+      return (start: index, end: index);
+    }
     bool sameSong(CustomOrderEntry e) =>
-        e.fileName == center.fileName && e.songIndex == center.songIndex;
+        controller.isSongOrderEntry(e) &&
+        e.fileName == center.fileName &&
+        e.songIndex == center.songIndex;
 
     int start = index;
     while (start > 0 && sameSong(_entries[start - 1])) {

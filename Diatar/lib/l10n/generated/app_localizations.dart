@@ -158,6 +158,24 @@ abstract class AppLocalizations {
   /// **'Sajat sorrend'**
   String get customOrderTooltip;
 
+  /// No description provided for @addSlideTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dia hozzaadasa'**
+  String get addSlideTooltip;
+
+  /// No description provided for @addTextSlide.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szoveges dia'**
+  String get addTextSlide;
+
+  /// No description provided for @addImageSlide.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kepes dia'**
+  String get addImageSlide;
+
   /// No description provided for @downloadBooksTooltip.
   ///
   /// In hu, this message translates to:
@@ -426,6 +444,24 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'A kep fajl utvonala ures.'**
   String get statusImagePathEmpty;
+
+  /// No description provided for @statusCustomTextEmpty.
+  ///
+  /// In hu, this message translates to:
+  /// **'Adj meg cimet vagy legalabb egy sort.'**
+  String get statusCustomTextEmpty;
+
+  /// No description provided for @statusCustomTextSent.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szoveges dia elkuldve: {title}'**
+  String statusCustomTextSent(Object title);
+
+  /// No description provided for @statusCustomTextError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szoveges dia kuldesi hiba: {error}'**
+  String statusCustomTextError(Object error);
 
   /// No description provided for @statusImageNotFound.
   ///
@@ -1054,6 +1090,24 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Kötet vagy enekcim'**
   String get searchSongHint;
+
+  /// No description provided for @textSlideDialogTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szoveges dia hozzaadasa'**
+  String get textSlideDialogTitle;
+
+  /// No description provided for @textSlideTitleLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Cim'**
+  String get textSlideTitleLabel;
+
+  /// No description provided for @textSlideBodyLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szoveg (soronként)'**
+  String get textSlideBodyLabel;
 
   /// No description provided for @loadDia.
   ///

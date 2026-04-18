@@ -40,6 +40,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderTooltip => 'Custom order';
 
   @override
+  String get addSlideTooltip => 'Add slide';
+
+  @override
+  String get addTextSlide => 'Text slide';
+
+  @override
+  String get addImageSlide => 'Image slide';
+
+  @override
   String get downloadBooksTooltip => 'Download songbooks';
 
   @override
@@ -222,6 +231,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statusImagePathEmpty => 'Image file path is empty.';
+
+  @override
+  String get statusCustomTextEmpty => 'Provide a title or at least one line.';
+
+  @override
+  String statusCustomTextSent(Object title) {
+    return 'Text slide sent: $title';
+  }
+
+  @override
+  String statusCustomTextError(Object error) {
+    return 'Text slide send error: $error';
+  }
 
   @override
   String statusImageNotFound(Object path) {
@@ -564,6 +586,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchSongHint => 'Book or song title';
+
+  @override
+  String get textSlideDialogTitle => 'Add text slide';
+
+  @override
+  String get textSlideTitleLabel => 'Title';
+
+  @override
+  String get textSlideBodyLabel => 'Text (one line per row)';
 
   @override
   String get loadDia => 'Load .DIA';

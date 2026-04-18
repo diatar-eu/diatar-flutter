@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -49,24 +50,40 @@ class CustomOrderEntry {
     required this.songIndex,
     required this.verseIndex,
     required this.label,
+    this.customTextTitle,
+    this.customTextBody,
+    this.customImagePath,
   });
 
   final String fileName;
   final int songIndex;
   final int verseIndex;
   final String label;
+  final String? customTextTitle;
+  final String? customTextBody;
+  final String? customImagePath;
+
+  bool get isCustomText => customTextBody != null;
+  bool get isCustomImage => customImagePath != null;
+  bool get isSongEntry => !isCustomText && !isCustomImage;
 
   CustomOrderEntry copyWith({
     String? fileName,
     int? songIndex,
     int? verseIndex,
     String? label,
+    String? customTextTitle,
+    String? customTextBody,
+    String? customImagePath,
   }) {
     return CustomOrderEntry(
       fileName: fileName ?? this.fileName,
       songIndex: songIndex ?? this.songIndex,
       verseIndex: verseIndex ?? this.verseIndex,
       label: label ?? this.label,
+      customTextTitle: customTextTitle ?? this.customTextTitle,
+      customTextBody: customTextBody ?? this.customTextBody,
+      customImagePath: customImagePath ?? this.customImagePath,
     );
   }
 }
@@ -112,6 +129,7 @@ class DiatarMainController extends ChangeNotifier {
   List<CustomOrderEntry> _customOrder = <CustomOrderEntry>[];
   bool customOrderActive = false;
   int _customOrderCursor = -1;
+  int _projectedCustomCursor = -1;
 
   Map<String, String> get statusParams => Map<String, String>.unmodifiable(_statusParams);
 
@@ -146,6 +164,9 @@ class DiatarMainController extends ChangeNotifier {
             songIndex: e.songIndex,
             verseIndex: e.verseIndex,
             label: e.label,
+            customTextTitle: e.customTextTitle,
+            customTextBody: e.customTextBody,
+            customImagePath: e.customImagePath,
           ),
         )
         .toList();
@@ -449,6 +470,12 @@ class DiatarMainController extends ChangeNotifier {
 
   List<CustomOrderEntry> get customOrder => List<CustomOrderEntry>.unmodifiable(_customOrder);
   int get customOrderCursor => _customOrderCursor;
+  CustomOrderEntry? get projectedCustomOrderEntry {
+    if (_projectedCustomCursor < 0 || _projectedCustomCursor >= _customOrder.length) {
+      return null;
+    }
+    return _customOrder[_projectedCustomCursor];
+  }
 
   bool isCustomOrderIndexCurrent(int index) {
     if (index < 0 || index >= _customOrder.length) {
@@ -483,6 +510,9 @@ class DiatarMainController extends ChangeNotifier {
               songIndex: e.songIndex,
               verseIndex: _safeVerseIndex(e),
               label: e.label,
+              customTextTitle: e.customTextTitle,
+              customTextBody: e.customTextBody,
+              customImagePath: e.customImagePath,
             ),
           )
           .toList(),
@@ -510,6 +540,9 @@ class DiatarMainController extends ChangeNotifier {
             songIndex: e.songIndex,
             verseIndex: e.verseIndex,
             label: e.label,
+            customTextTitle: e.customTextTitle,
+            customTextBody: e.customTextBody,
+            customImagePath: e.customImagePath,
           ),
         )
         .toList();
@@ -528,11 +561,18 @@ class DiatarMainController extends ChangeNotifier {
             songIndex: e.songIndex,
             verseIndex: _safeVerseIndex(e),
             label: e.label,
+            customTextTitle: e.customTextTitle,
+            customTextBody: e.customTextBody,
+            customImagePath: e.customImagePath,
           ),
         )
         .toList();
     await _orderStore.saveCustomOrderPresets(presets);
   }
+
+  bool isSongOrderEntry(CustomOrderEntry entry) => entry.isSongEntry;
+  bool isCustomTextOrderEntry(CustomOrderEntry entry) => entry.isCustomText;
+  bool isCustomImageOrderEntry(CustomOrderEntry entry) => entry.isCustomImage;
 
   Future<void> deleteCustomOrderPreset(String name) async {
     final String key = name.trim();
@@ -663,6 +703,13 @@ class DiatarMainController extends ChangeNotifier {
         return false;
       }
       final CustomOrderEntry candidate = _customOrder[idx];
+      if (!entry.isSongEntry || !candidate.isSongEntry) {
+        return candidate.fileName == entry.fileName &&
+            candidate.songIndex == entry.songIndex &&
+            candidate.customTextTitle == entry.customTextTitle &&
+            candidate.customTextBody == entry.customTextBody &&
+            candidate.customImagePath == entry.customImagePath;
+      }
       return candidate.fileName == entry.fileName &&
           candidate.songIndex == entry.songIndex &&
           _safeVerseIndex(candidate) == _safeVerseIndex(entry);
@@ -695,6 +742,9 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   CustomOrderEntry normalizeEntry(CustomOrderEntry entry) {
+    if (!entry.isSongEntry) {
+      return entry;
+    }
     final int bIx = books.indexWhere((DtxBook b) => b.fileName == entry.fileName);
     if (bIx < 0) {
       return entry;
@@ -738,9 +788,14 @@ class DiatarMainController extends ChangeNotifier {
         _selectByCustomOrderCursor(_customOrderCursor, sync: false);
       }
       await _persistCurrentCustomOrder();
-      await _syncCurrentDia();
+      if (_customOrderCursor >= 0 && _customOrderCursor < _customOrder.length && !_customOrder[_customOrderCursor].isSongEntry) {
+        await _projectCustomOrderEntry(_customOrder[_customOrderCursor], cursor: _customOrderCursor);
+      } else {
+        await _syncCurrentDia();
+      }
     } else {
       _customOrderCursor = -1;
+      _projectedCustomCursor = -1;
       await _persistCurrentCustomOrder();
       notifyListeners();
     }
@@ -748,6 +803,18 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<void> projectCustomOrderEntry(CustomOrderEntry rawEntry, {int? preferredCursor}) async {
     final CustomOrderEntry entry = normalizeEntry(rawEntry);
+    if (!entry.isSongEntry) {
+      int targetCursor = preferredCursor ?? _customOrder.indexOf(entry);
+      if (targetCursor < 0) {
+        targetCursor = _customOrderCursor;
+      }
+      targetCursor = targetCursor.clamp(0, _customOrder.isEmpty ? 0 : _customOrder.length - 1);
+      _customOrderCursor = targetCursor;
+      _setStatus('statusCustomOrderSelected', <String, String>{'label': entry.label});
+      notifyListeners();
+      await _projectCustomOrderEntry(entry, cursor: targetCursor);
+      return;
+    }
     final int bookIx = books.indexWhere((DtxBook b) => b.fileName == entry.fileName);
     if (bookIx < 0) {
       return;
@@ -778,6 +845,7 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     _setStatus('statusCustomOrderSelected', <String, String>{'label': entry.label});
+    _projectedCustomCursor = -1;
     notifyListeners();
     await _syncCurrentDia();
   }
@@ -790,6 +858,8 @@ class DiatarMainController extends ChangeNotifier {
     if (b == null) {
       return;
     }
+
+    _projectedCustomCursor = -1;
 
     bool matches(int idx) {
       if (idx < 0 || idx >= _customOrder.length) {
@@ -826,6 +896,16 @@ class DiatarMainController extends ChangeNotifier {
     }
     final int safe = cursor.clamp(0, _customOrder.length - 1);
     final CustomOrderEntry entry = _customOrder[safe];
+    if (!entry.isSongEntry) {
+      _customOrderCursor = safe;
+      highPos = 0;
+      _setStatus('statusCustomOrderSelected', <String, String>{'label': entry.label});
+      notifyListeners();
+      if (sync) {
+        unawaited(_projectCustomOrderEntry(entry, cursor: safe));
+      }
+      return;
+    }
     final int bookIx = books.indexWhere((DtxBook b) => b.fileName == entry.fileName);
     if (bookIx < 0) {
       return;
@@ -841,6 +921,7 @@ class DiatarMainController extends ChangeNotifier {
       : _safeVerseIndex(entry).clamp(0, s.verses.length - 1);
     highPos = 0;
     _customOrderCursor = safe;
+    _projectedCustomCursor = -1;
     _setStatus('statusCustomOrderSelected', <String, String>{'label': entry.label});
     notifyListeners();
     if (sync) {
@@ -855,13 +936,44 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<String> exportCustomOrderToDia(String path) async {
     final String safePath = path.toLowerCase().endsWith('.dia') ? path : '$path.dia';
+    final File diaFile = File(safePath);
+    final Directory diaDir = diaFile.parent;
+    final List<CustomOrderEntry> exportable = _customOrder
+        .map(normalizeEntry)
+        .toList();
     final StringBuffer out = StringBuffer();
     out.writeln('[main]');
-    out.writeln('diaszam=${_customOrder.length}');
+    out.writeln('diaszam=${exportable.length}');
     out.writeln('utf8=1');
 
-    for (int i = 0; i < _customOrder.length; i++) {
-      final CustomOrderEntry entry = normalizeEntry(_customOrder[i]);
+    for (int i = 0; i < exportable.length; i++) {
+      final CustomOrderEntry entry = exportable[i];
+      out.writeln();
+      out.writeln('[${i + 1}]');
+
+      if (entry.isCustomImage) {
+        final String rel = _relativeDiaImagePath(entry.customImagePath ?? '', diaDir);
+        out.writeln('kep=$rel');
+        continue;
+      }
+
+      if (entry.isCustomText) {
+        final String caption = (entry.customTextTitle ?? '').trim().isEmpty
+            ? 'Dia'
+            : (entry.customTextTitle ?? '').trim();
+        final List<String> lines = (entry.customTextBody ?? '')
+            .split(RegExp(r'\r?\n'))
+            .map((String line) => line.trimRight())
+            .where((String line) => line.trim().isNotEmpty)
+            .toList();
+        out.writeln('caption=$caption');
+        out.writeln('lines=${lines.length}');
+        for (int li = 0; li < lines.length; li++) {
+          out.writeln('line${li + 1}=${lines[li]}');
+        }
+        continue;
+      }
+
       final DtxBook? book = bookForEntry(entry);
       final DtxSong? song = songForEntry(entry);
       final List<DtxVerse> verses = versesForEntry(entry);
@@ -869,16 +981,13 @@ class DiatarMainController extends ChangeNotifier {
       final String verseName = verses.isEmpty ? '' : verses[verse.clamp(0, verses.length - 1)].name;
       final String idValue = '${entry.fileName}|${entry.songIndex}|$verse';
 
-      out.writeln();
-      out.writeln('[${i + 1}]');
       out.writeln('id=$idValue');
       out.writeln('kotet=${book?.title ?? entry.fileName}');
       out.writeln('enek=${song?.title ?? entry.label}');
       out.writeln('versszak=$verseName');
     }
 
-    final File f = File(safePath);
-    await f.writeAsString(out.toString(), encoding: utf8);
+    await diaFile.writeAsString(out.toString(), encoding: utf8);
     _setStatus('statusOrderSaved', <String, String>{'path': safePath});
     notifyListeners();
     return safePath;
@@ -907,6 +1016,40 @@ class DiatarMainController extends ChangeNotifier {
       if (sec == null) {
         continue;
       }
+
+      final String kep = (sec['kep'] ?? '').trim();
+      if (kep.isNotEmpty) {
+        final String resolved = _resolveDiaImagePath(path, kep);
+        imported.add(
+          CustomOrderEntry(
+            fileName: '__custom_image__',
+            songIndex: -2,
+            verseIndex: 0,
+            label: '[Kep] ${_fileNameFromPath(kep)}',
+            customImagePath: resolved,
+          ),
+        );
+        continue;
+      }
+
+      final String caption = (sec['caption'] ?? '').trim();
+      final int declaredLines = int.tryParse((sec['lines'] ?? '').trim()) ?? -1;
+      final List<String> textLines = _collectDiaLines(sec, declaredLines);
+      if (caption.isNotEmpty || textLines.isNotEmpty) {
+        final String effectiveTitle = caption.isEmpty ? 'Dia' : caption;
+        imported.add(
+          CustomOrderEntry(
+            fileName: '__custom_text__',
+            songIndex: -1,
+            verseIndex: 0,
+            label: '[Szoveg] $effectiveTitle',
+            customTextTitle: effectiveTitle,
+            customTextBody: textLines.join('\n'),
+          ),
+        );
+        continue;
+      }
+
       final String kotet = (sec['kotet'] ?? '').trim();
       final String enek = (sec['enek'] ?? '').trim();
       final String versszak = (sec['versszak'] ?? '').trim();
@@ -942,6 +1085,61 @@ class DiatarMainController extends ChangeNotifier {
     });
     notifyListeners();
     return imported.length;
+  }
+
+  String _relativeDiaImagePath(String rawPath, Directory diaDir) {
+    final String normalized = rawPath.trim().replaceAll('\\', '/');
+    if (normalized.isEmpty) {
+      return '';
+    }
+    if (!normalized.startsWith('/')) {
+      return normalized;
+    }
+    final String diaPrefix = '${diaDir.path.replaceAll('\\', '/')}/';
+    if (normalized.startsWith(diaPrefix)) {
+      return normalized.substring(diaPrefix.length);
+    }
+    return _fileNameFromPath(normalized);
+  }
+
+  String _resolveDiaImagePath(String diaPath, String relOrAbs) {
+    final String normalized = relOrAbs.trim().replaceAll('\\', '/');
+    if (normalized.isEmpty) {
+      return '';
+    }
+    final bool looksWindowsAbs = RegExp(r'^[a-zA-Z]:/').hasMatch(normalized);
+    if (normalized.startsWith('/') || looksWindowsAbs) {
+      return normalized;
+    }
+    final Directory parent = File(diaPath).parent;
+    return '${parent.path}/$normalized';
+  }
+
+  String _fileNameFromPath(String rawPath) {
+    final String normalized = rawPath.replaceAll('\\', '/');
+    final List<String> parts = normalized.split('/').where((String part) => part.isNotEmpty).toList();
+    if (parts.isEmpty) {
+      return normalized;
+    }
+    return parts.last;
+  }
+
+  List<String> _collectDiaLines(Map<String, String> sec, int declaredLines) {
+    if (declaredLines > 0) {
+      final List<String> lines = <String>[];
+      for (int i = 1; i <= declaredLines; i++) {
+        lines.add((sec['line$i'] ?? '').trimRight());
+      }
+      return lines;
+    }
+
+    final List<int> indexes = sec.keys
+        .where((String key) => key.startsWith('line'))
+        .map((String key) => int.tryParse(key.substring(4)) ?? -1)
+        .where((int value) => value > 0)
+        .toList()
+      ..sort();
+    return indexes.map((int i) => (sec['line$i'] ?? '').trimRight()).toList();
   }
 
   Map<String, Map<String, String>> _parseDiaIni(String content) {
@@ -1086,6 +1284,7 @@ class DiatarMainController extends ChangeNotifier {
     songIndex = 0;
     verseIndex = 0;
     highPos = 0;
+    _projectedCustomCursor = -1;
     final DtxBook? selected = currentBook;
     _setStatus('statusBookSelected', <String, String>{'name': selected?.displayName ?? '-'});
     _syncCustomCursorFromCurrentSong();
@@ -1102,6 +1301,7 @@ class DiatarMainController extends ChangeNotifier {
     songIndex = value.clamp(0, max);
     verseIndex = 0;
     highPos = 0;
+    _projectedCustomCursor = -1;
     _setStatus('statusSongPicked', <String, String>{'name': currentSong?.title ?? '-'});
     _syncCustomCursorFromCurrentSong();
     notifyListeners();
@@ -1115,6 +1315,7 @@ class DiatarMainController extends ChangeNotifier {
     }
     verseIndex = value.clamp(0, s.verses.length - 1);
     highPos = 0;
+    _projectedCustomCursor = -1;
     _setStatus('statusVersePicked', <String, String>{'name': currentVerse?.name ?? '-'});
     notifyListeners();
     _syncCurrentDia();
@@ -1166,6 +1367,10 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   int _currentCustomOrderIndex() {
+    if (_projectedCustomCursor >= 0 && _projectedCustomCursor < _customOrder.length) {
+      return _projectedCustomCursor;
+    }
+
     final DtxBook? b = currentBook;
     if (b == null || _customOrder.isEmpty) {
       return -1;
@@ -1302,6 +1507,7 @@ class DiatarMainController extends ChangeNotifier {
     songIndex = song;
     verseIndex = verse;
     highPos = 0;
+    _projectedCustomCursor = -1;
     final String code = includeVerseInStatus ? 'statusSongVerseSelected' : 'statusSongSelected';
     _setStatus(code, <String, String>{'title': songModel.title});
     _syncCustomCursorFromCurrentSong();
@@ -1364,6 +1570,7 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> _syncCurrentDia() async {
+    _projectedCustomCursor = -1;
     globals = globals.copyWith(projecting: showing, wordToHighlight: highPos);
     final DtxSong? song = currentSong;
     final DtxBook? book = currentBook;
@@ -1403,6 +1610,155 @@ class DiatarMainController extends ChangeNotifier {
       senderRunning = _sender.running;
     }
     notifyListeners();
+  }
+
+  Future<void> _projectCustomOrderEntry(CustomOrderEntry entry, {required int cursor}) async {
+    _projectedCustomCursor = cursor;
+
+    if (entry.isCustomText) {
+      highPos = 0;
+      final String title = (entry.customTextTitle ?? '').trim().isEmpty
+          ? 'Dia'
+          : (entry.customTextTitle ?? '').trim();
+      final List<String> lines = (entry.customTextBody ?? '')
+          .split(RegExp(r'\r?\n'))
+          .map((String line) => line.trimRight())
+          .where((String line) => line.trim().isNotEmpty)
+          .toList();
+      final List<String> payloadLines = lines.isEmpty ? const <String>[''] : lines;
+      globals = globals.copyWith(projecting: showing, wordToHighlight: 0);
+      if (mqttActive) {
+        await _mqttSender.sendState(globals, showing: showing, wordToHighlight: 0);
+        await _mqttSender.sendText(title: title, lines: payloadLines);
+        senderRunning = _mqttSender.running;
+      } else {
+        await _sender.sendState(globals, showing: showing, wordToHighlight: 0);
+        await _sender.sendText(title: title, lines: payloadLines, wordToHighlight: 0);
+        await _sender.sendIdle();
+        senderRunning = _sender.running;
+      }
+      _setStatus('statusCustomTextSent', <String, String>{'title': title});
+      notifyListeners();
+      return;
+    }
+
+    if (entry.isCustomImage) {
+      await sendPicFromPath(entry.customImagePath ?? '');
+    }
+  }
+
+  Future<void> _appendCustomOrderEntry(CustomOrderEntry entry) async {
+    _customOrder = <CustomOrderEntry>[..._customOrder, entry];
+    customOrderActive = _customOrder.isNotEmpty;
+    _customOrderCursor = _customOrder.length - 1;
+    await _persistCurrentCustomOrder();
+    notifyListeners();
+  }
+
+  Future<void> addCustomTextSlideToOrder({required String title, required String body}) async {
+    final String normalizedTitle = title.trim();
+    final List<String> lines = body
+        .split(RegExp(r'\r?\n'))
+        .map((String line) => line.trimRight())
+        .where((String line) => line.trim().isNotEmpty)
+        .toList();
+
+    if (normalizedTitle.isEmpty && lines.isEmpty) {
+      _setStatus('statusCustomTextEmpty');
+      notifyListeners();
+      return;
+    }
+
+    final String effectiveTitle = normalizedTitle.isEmpty ? 'Dia' : normalizedTitle;
+    final CustomOrderEntry entry = CustomOrderEntry(
+      fileName: '__custom_text__',
+      songIndex: -1,
+      verseIndex: 0,
+      label: '[Szoveg] $effectiveTitle',
+      customTextTitle: effectiveTitle,
+      customTextBody: lines.join('\n'),
+    );
+
+    await _appendCustomOrderEntry(entry);
+    await _projectCustomOrderEntry(entry, cursor: _customOrderCursor);
+  }
+
+  Future<void> addCustomImageSlideToOrder(String path) async {
+    final String normalized = path.trim();
+    if (normalized.isEmpty) {
+      _setStatus('statusImagePathEmpty');
+      notifyListeners();
+      return;
+    }
+
+    final File file = File(normalized);
+    if (!await file.exists()) {
+      _setStatus('statusImageNotFound', <String, String>{'path': normalized});
+      notifyListeners();
+      return;
+    }
+
+    final String fileName = file.uri.pathSegments.isNotEmpty
+        ? file.uri.pathSegments.last
+        : normalized;
+    final CustomOrderEntry entry = CustomOrderEntry(
+      fileName: '__custom_image__',
+      songIndex: -2,
+      verseIndex: 0,
+      label: '[Kep] $fileName',
+      customImagePath: normalized,
+    );
+
+    await _appendCustomOrderEntry(entry);
+    await _projectCustomOrderEntry(entry, cursor: _customOrderCursor);
+  }
+
+  Future<void> sendCustomTextSlide({required String title, required String body}) async {
+    final String normalizedTitle = title.trim();
+    final List<String> lines = body
+        .split(RegExp(r'\r?\n'))
+        .map((String line) => line.trimRight())
+        .toList();
+    final List<String> nonEmptyLines = lines.where((String line) => line.trim().isNotEmpty).toList();
+
+    if (normalizedTitle.isEmpty && nonEmptyLines.isEmpty) {
+      _setStatus('statusCustomTextEmpty');
+      notifyListeners();
+      return;
+    }
+
+    final String effectiveTitle = normalizedTitle.isEmpty ? 'Dia' : normalizedTitle;
+
+    try {
+      globals = globals.copyWith(projecting: showing, wordToHighlight: highPos);
+      if (mqttActive) {
+        await _mqttSender.sendState(
+          globals,
+          showing: showing,
+          wordToHighlight: highPos,
+        );
+        await _mqttSender.sendText(title: effectiveTitle, lines: nonEmptyLines);
+        senderRunning = _mqttSender.running;
+      } else {
+        await _sender.sendState(
+          globals,
+          showing: showing,
+          wordToHighlight: highPos,
+        );
+        await _sender.sendText(
+          title: effectiveTitle,
+          lines: nonEmptyLines,
+          wordToHighlight: highPos,
+        );
+        await _sender.sendIdle();
+        senderRunning = _sender.running;
+      }
+      _setStatus('statusCustomTextSent', <String, String>{'title': effectiveTitle});
+      notifyListeners();
+    } catch (e) {
+      _setStatus('statusCustomTextError', <String, String>{'error': '$e'});
+      notifyListeners();
+    }
   }
 
   Future<void> sendPicFromPath(String path) async {

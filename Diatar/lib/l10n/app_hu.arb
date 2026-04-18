@@ -10,6 +10,9 @@
   "playlistsTitle": "Enekrendek",
   "playlistsMessage": "Ez a muvelet kesobb visszakaphatja a teljes dialogust.",
   "customOrderTooltip": "Sajat sorrend",
+  "addSlideTooltip": "Dia hozzaadasa",
+  "addTextSlide": "Szoveges dia",
+  "addImageSlide": "Kepes dia",
   "downloadBooksTooltip": "Enektarak letoltese",
   "downloadTitle": "Letoltes",
   "downloadMessage": "A letoltesi parbeszed kesobb visszahelyezheto.",
@@ -199,6 +202,19 @@
   "statusProjectionOn": "Vetites: BE",
   "statusProjectionOff": "Vetites: KI",
   "statusImagePathEmpty": "A kep fajl utvonala ures.",
+  "statusCustomTextEmpty": "Adj meg cimet vagy legalabb egy sort.",
+  "statusCustomTextSent": "Szoveges dia elkuldve: {title}",
+  "@statusCustomTextSent": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "statusCustomTextError": "Szoveges dia kuldesi hiba: {error}",
+  "@statusCustomTextError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "statusImageNotFound": "A kep fajl nem talalhato: {path}",
   "@statusImageNotFound": {
     "placeholders": {
@@ -379,6 +395,9 @@
   "customOrderEditTitle": "Sajat sorrend szerkesztese",
   "addSong": "Enek hozzaadasa",
   "searchSongHint": "Kötet vagy enekcim",
+  "textSlideDialogTitle": "Szoveges dia hozzaadasa",
+  "textSlideTitleLabel": "Cim",
+  "textSlideBodyLabel": "Szoveg (soronként)",
   "loadDia": "Betoltes .DIA",
   "saveDia": "Mentes .DIA",
   "savedPath": "Mentve: {path}",
