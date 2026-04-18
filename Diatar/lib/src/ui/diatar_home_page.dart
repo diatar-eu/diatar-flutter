@@ -896,7 +896,7 @@ class _VersePreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final RecTextRecord previewRecord = RecTextRecord(
       scholaLine: '',
-      title: song.title,
+      title: '',
       lines: verse.lines,
     );
     final ProjectionFrame frame = TextFrame(record: previewRecord);
