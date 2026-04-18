@@ -1036,7 +1036,9 @@ class ProjectorPainter extends CustomPainter {
 
     final List<_KottaRowLayout> rows = <_KottaRowLayout>[];
     final List<_KottaWordLayout> currentWords = <_KottaWordLayout>[];
+    final List<_KottaWordLayout> pendingWord = <_KottaWordLayout>[];
     double currentWidth = 0;
+    double pendingWordWidth = 0;
 
     for (int i = 0; i < line.words.length; i++) {
       final _WordToken w = line.words[i];
@@ -1047,7 +1049,16 @@ class ProjectorPainter extends CustomPainter {
           : _kottaRawWidth(kotta, lineGap, state);
       final double slotWidth = math.max(textWidth, kottaWidth);
 
-      if (currentWords.isNotEmpty && (currentWidth + slotWidth) > wrapWidth) {
+      pendingWord.add(_KottaWordLayout(wordIndex: i, slotWidth: slotWidth));
+      pendingWordWidth += slotWidth;
+
+      final bool endsWord = w.spaceAfter || i == line.words.length - 1;
+      if (!endsWord) {
+        continue;
+      }
+
+      if (currentWords.isNotEmpty &&
+          (currentWidth + pendingWordWidth) > wrapWidth) {
         rows.add(
           _KottaRowLayout(
             words: List<_KottaWordLayout>.from(currentWords),
@@ -1058,8 +1069,10 @@ class ProjectorPainter extends CustomPainter {
         currentWidth = 0;
       }
 
-      currentWords.add(_KottaWordLayout(wordIndex: i, slotWidth: slotWidth));
-      currentWidth += slotWidth;
+      currentWords.addAll(pendingWord);
+      currentWidth += pendingWordWidth;
+      pendingWord.clear();
+      pendingWordWidth = 0;
     }
 
     if (currentWords.isNotEmpty) {
