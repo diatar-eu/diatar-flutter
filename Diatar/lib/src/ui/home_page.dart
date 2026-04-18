@@ -18,7 +18,9 @@ class HomePage extends StatelessWidget {
         builder: (BuildContext context, _) {
           return LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
-              controller.updateViewport(Size(constraints.maxWidth, constraints.maxHeight));
+              controller.updateViewport(
+                Size(constraints.maxWidth, constraints.maxHeight),
+              );
               final double canvasHeight = _estimateCanvasHeight(
                 frame: controller.activeFrame,
                 viewportWidth: constraints.maxWidth,
@@ -51,7 +53,7 @@ class HomePage extends StatelessWidget {
             },
           );
         },
-      )
+      ),
     );
   }
 
@@ -80,41 +82,14 @@ class HomePage extends StatelessWidget {
     required double viewportWidth,
     required double viewportHeight,
   }) {
-    if (frame is! TextFrame) {
-      return viewportHeight;
-    }
-
-    final bool hasTitle = !controller.globals.hideTitle && frame.record.title.isNotEmpty;
-    final int logicalLines = frame.record.lines.length + (hasTitle ? 1 : 0);
-    if (logicalLines <= 0) {
-      return viewportHeight;
-    }
-
-    final double fontSize = controller.globals.fontSize.toDouble();
-    final double titleSize = (controller.globals.titleSize.toDouble() * 2.5).clamp(8.0, 72.0);
-    final double lineSpacing = controller.globals.spacing100 / 100.0;
-
-    final TextPainter normalProbe = TextPainter(
-      text: TextSpan(text: 'Ag', style: TextStyle(fontSize: fontSize, fontWeight: controller.globals.boldText ? FontWeight.bold : FontWeight.normal)),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: viewportWidth);
-    final TextPainter titleProbe = TextPainter(
-      text: TextSpan(text: 'Ag', style: TextStyle(fontSize: titleSize, fontWeight: FontWeight.bold)),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: viewportWidth);
-
-    double estimated = 8;
-    if (hasTitle) {
-      estimated += titleProbe.height * lineSpacing;
-    }
-    estimated += normalProbe.height * lineSpacing * frame.record.lines.length;
-
-    if (controller.globals.useKotta) {
-      estimated += frame.record.lines.length * (fontSize * (controller.globals.kottaArany / 100.0) * 1.35);
-    }
-
-    // Keep enough headroom for wrapped kotta rows so vertical scrolling becomes available when needed.
-    estimated *= 1.25;
-    return estimated > viewportHeight ? estimated : viewportHeight;
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: frame,
+      globals: controller.globals,
+      settings: controller.settings,
+    );
+    final double required = painter.measureRequiredHeight(
+      Size(viewportWidth, viewportHeight),
+    );
+    return required > viewportHeight ? required : viewportHeight;
   }
 }
