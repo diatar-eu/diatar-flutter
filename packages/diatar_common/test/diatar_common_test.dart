@@ -13,7 +13,9 @@ void main() {
 
   test('packet parser rebuilds records from split chunks', () {
     final ProjectionPacketParser parser = ProjectionPacketParser();
-    final Uint8List payload = Uint8List.fromList(utf8.encode('header\rtitle\rline\r'));
+    final Uint8List payload = Uint8List.fromList(
+      utf8.encode('header\rtitle\rline\r'),
+    );
     final Uint8List packet = encodeProjectionPacket(RecTypes.text, payload);
 
     final List<ProjectionPacket> first = parser.addChunk(packet.sublist(0, 5));
@@ -30,7 +32,10 @@ void main() {
 
   test('packet parser skips noise before magic', () {
     final ProjectionPacketParser parser = ProjectionPacketParser();
-    final Uint8List packet = encodeProjectionPacket(RecTypes.askSize, Uint8List(0));
+    final Uint8List packet = encodeProjectionPacket(
+      RecTypes.askSize,
+      Uint8List(0),
+    );
     final Uint8List noisy = Uint8List.fromList(<int>[99, 98, 97, ...packet]);
 
     final List<ProjectionPacket> out = parser.addChunk(noisy);
@@ -78,5 +83,127 @@ void main() {
     expect(lines, hasLength(2));
     expect(lines.first, r'\GAm;Aldd Uram');
     expect(lines.last, r'\KkGu4;Aldd Uram');
+  });
+
+  test('kotta rows repeat clef and key signature on every continuation row', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    final List<String> prefixes = painter.debugKottaRowPrefixesForLine(
+      r'\KkGE2r41a;Alfa \Kr41a;Beta \Kr41a;Gamma \Kr41a;Delta \Kr41a;Epszilon',
+      fontSize: 24,
+      maxWidth: 90,
+    );
+
+    expect(prefixes.length, greaterThanOrEqualTo(3));
+    expect(prefixes.first, isEmpty);
+    expect(prefixes.skip(1), everyElement('kGE2'));
+  });
+
+  test('real eneklo egyhaz sample repeats clef and key signature', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    final List<String> prefixes = painter.debugKottaRowPrefixesForLine(
+      r' \K-5kGE2[?r81f;Ki\K1d;ált\K1f]?;sunk, K\K[?2a;risz\K2a]?;tus \K[?2h;hí\K2g]?;ve\Kr42a|!;i:',
+      fontSize: 24,
+      maxWidth: 120,
+    );
+
+    expect(prefixes.length, greaterThanOrEqualTo(2));
+    expect(prefixes.first, isEmpty);
+    expect(prefixes.skip(1), everyElement('kGE2'));
+  });
+
+  test('real multi-line eneklo egyhaz sample carries clef and key across lines', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    final List<List<String>>
+    linePrefixes = painter.debugKottaRowPrefixesForLines(
+      <String>[
+        r' \K-5kGE2[?r81f;Ki\K1d;ált\K1f]?;sunk, K\K[?2a;risz\K2a]?;tus \K[?2h;hí\K2g]?;ve\Kr42a|!;i:',
+        r' \K-5[?r82a;vi\K2h]?;lág S\K[?2g;zü\K2a;lő\K2g]?;je \K[?1f;add \K1e]?;keg\Kr41f;yed,\K|!;',
+        r' m\K-5[?r82a]?;ely \K[?2g;ér\K1e;ez\K1f]?;zük, h\K[?2g]?;ogy \K[?1f;kö\K1e]?;ze\Kr41d;leg\K|!;,',
+        r' s \K-5[?r81e;fog\K1f]?;add l\K[?2g;egs\K2a]?;zebb \K[?2g;dic\K1f;sé\K1e]?;ret\Kr41f;ünk!\K||;',
+      ],
+      fontSize: 24,
+      maxWidth: 120,
+    );
+
+    expect(linePrefixes, hasLength(4));
+    expect(linePrefixes.first.first, isEmpty);
+    expect(linePrefixes[1].first, 'kGE2');
+    expect(linePrefixes[2].first, 'kGE2');
+    expect(linePrefixes[3].first, 'kGE2');
+  });
+
+  test('wrapped continuation rows keep carried clef and key signature', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    final List<List<String>>
+    linePrefixes = painter.debugKottaRowPrefixesForLines(
+      <String>[
+        r'\KkGE2r41a;Bevezeto',
+        r'\K-5r41a;Alfa \Kr41a;Beta \Kr41a;Gamma \Kr41a;Delta \Kr41a;Epszilon',
+      ],
+      fontSize: 24,
+      maxWidth: 90,
+    );
+
+    expect(linePrefixes, hasLength(2));
+    expect(linePrefixes[1].length, greaterThanOrEqualTo(2));
+    expect(linePrefixes[1], everyElement('kGE2'));
+  });
+
+  test('centered kotta rows share the same left edge after wrapping', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true, hCenter: true),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    final List<double> startXs = painter.debugKottaRowStartXsForLine(
+      r'\KkGE2r41a;Alfa \Kr41a;Beta \Kr41a;Gamma \Kr41a;Delta \Kr41a;Epszilon',
+      fontSize: 24,
+      maxWidth: 90,
+      sizeWidth: 320,
+      horizontalPad: 16,
+    );
+
+    expect(startXs.length, greaterThanOrEqualTo(2));
+    expect(startXs.skip(1), everyElement(startXs.first));
+  });
+
+  test('continuation row prefixes start at the same visible x position', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true, hCenter: true),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    final List<double> visibleStartXs = painter.debugKottaVisibleStartXsForLine(
+      r'\KkGE2r41a;Alfa \Kr41a;Be \Kr41a;Sokkalhosszabb \Kr41a;Ko \Kr41a;Megegy',
+      fontSize: 24,
+      maxWidth: 95,
+      sizeWidth: 320,
+      horizontalPad: 16,
+    );
+
+    expect(visibleStartXs.length, greaterThanOrEqualTo(2));
+    expect(visibleStartXs.skip(1), everyElement(visibleStartXs[1]));
   });
 }
