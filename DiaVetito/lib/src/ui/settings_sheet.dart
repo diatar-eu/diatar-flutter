@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:diatar_common/diatar_common.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
 
 class SettingsSheet extends StatefulWidget {
@@ -79,6 +80,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   late bool _receiverUseAkkord;
   late bool _receiverUseKotta;
   late bool _projectionScrollable;
+  late String _appLanguage;
   late Color _bkColor;
   late Color _txtColor;
   late Color _blankColor;
@@ -105,6 +107,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
     _receiverUseAkkord = s.receiverUseAkkord;
     _receiverUseKotta = s.receiverUseKotta;
     _projectionScrollable = !s.projAutoSize;
+    _appLanguage = _isSupportedLanguage(s.appLanguage) ? s.appLanguage : '';
     _bkColor = s.bkColor;
     _txtColor = s.txtColor;
     _blankColor = s.blankColor;
@@ -281,6 +284,24 @@ class _SettingsSheetState extends State<SettingsSheet> {
               ],
               onChanged: (int? v) => setState(() => _rotate = v ?? 0),
             ),
+            DropdownButtonFormField<String>(
+              value: _appLanguage,
+              decoration: InputDecoration(labelText: l10n.uiLanguage),
+              items: <DropdownMenuItem<String>>[
+                DropdownMenuItem<String>(
+                  value: '',
+                  child: Text(l10n.languageSystem),
+                ),
+                ...AppLocalizations.supportedLocales.map((Locale locale) {
+                  final String code = locale.languageCode;
+                  return DropdownMenuItem<String>(
+                    value: code,
+                    child: Text(_languageLabel(context, code)),
+                  );
+                }),
+              ],
+              onChanged: (String? v) => setState(() => _appLanguage = v ?? ''),
+            ),
             const SizedBox(height: 12),
             Text(l10n.projectionFilteringTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
@@ -387,6 +408,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
       mirror: _mirror,
       boot: _boot,
       rotateQuarterTurns: _rotate,
+      appLanguage: _appLanguage,
       receiverUseServerColors: _receiverUseServerColors,
       receiverShowHighlight: _receiverShowHighlight,
       receiverUseAkkord: _receiverUseAkkord,
@@ -400,6 +422,25 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
     widget.onApply(updated);
     Navigator.of(context).pop();
+  }
+
+  bool _isSupportedLanguage(String code) {
+    if (code.trim().isEmpty) {
+      return true;
+    }
+    return AppLocalizations.supportedLocales.any((Locale locale) => locale.languageCode == code);
+  }
+
+  String _languageLabel(BuildContext context, String code) {
+    final l10n = context.l10n;
+    switch (code) {
+      case 'hu':
+        return l10n.languageHungarian;
+      case 'en':
+        return l10n.languageEnglish;
+      default:
+        return code;
+    }
   }
 
   Widget _colorRow(String label, Color color, ValueChanged<Color> onChanged, {required bool enabled}) {

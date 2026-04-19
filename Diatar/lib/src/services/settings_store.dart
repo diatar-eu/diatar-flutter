@@ -34,6 +34,8 @@ class SettingsStore {
   static const String _kProjBackTrans = 'ProjBackTrans';
   static const String _kProjBlankTrans = 'ProjBlankTrans';
   static const String _kHomeViewMode = 'HomeViewMode';
+  static const String _kAppThemeMode = 'AppThemeMode';
+  static const String _kAppLanguage = 'AppLanguage';
 
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -73,6 +75,8 @@ class SettingsStore {
       projBackTrans: prefs.getInt(_kProjBackTrans) ?? 0,
       projBlankTrans: prefs.getInt(_kProjBlankTrans) ?? 0,
       homeViewMode: prefs.getInt(_kHomeViewMode) ?? 0,
+      appThemeMode: prefs.getInt(_kAppThemeMode) ?? 0,
+      appLanguage: prefs.getString(_kAppLanguage) ?? '',
       bkColor: Color(prefs.getInt(_kBkColor) ?? 0xFF000000),
       txtColor: Color(prefs.getInt(_kTxColor) ?? 0xFFFFFFFF),
       blankColor: Color(prefs.getInt(_kBlankColor) ?? 0xFF000000),
@@ -109,6 +113,8 @@ class SettingsStore {
     await prefs.setInt(_kProjBackTrans, settings.projBackTrans);
     await prefs.setInt(_kProjBlankTrans, settings.projBlankTrans);
     await prefs.setInt(_kHomeViewMode, settings.homeViewMode);
+    await prefs.setInt(_kAppThemeMode, settings.appThemeMode);
+    await prefs.setString(_kAppLanguage, settings.appLanguage);
     await prefs.setInt(_kBkColor, settings.bkColor.toARGB32());
     await prefs.setInt(_kTxColor, settings.txtColor.toARGB32());
     await prefs.setInt(_kBlankColor, settings.blankColor.toARGB32());

@@ -200,6 +200,30 @@ abstract class AppLocalizations {
   /// **'Forgatas'**
   String get rotationLabel;
 
+  /// No description provided for @uiLanguage.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasznaloi felulet nyelve'**
+  String get uiLanguage;
+
+  /// No description provided for @languageSystem.
+  ///
+  /// In hu, this message translates to:
+  /// **'Rendszer alapertelmezett'**
+  String get languageSystem;
+
+  /// No description provided for @languageHungarian.
+  ///
+  /// In hu, this message translates to:
+  /// **'Magyar'**
+  String get languageHungarian;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In hu, this message translates to:
+  /// **'Angol'**
+  String get languageEnglish;
+
   /// No description provided for @projectionFilteringTitle.
   ///
   /// In hu, this message translates to:

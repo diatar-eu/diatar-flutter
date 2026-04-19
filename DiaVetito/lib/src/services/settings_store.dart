@@ -24,6 +24,7 @@ class SettingsStore {
   static const String _kBlankColor = 'BlankColor';
   static const String _kHiColor = 'HiColor';
   static const String _kProjAutoSize = 'ProjAutoSize';
+  static const String _kAppLanguage = 'AppLanguage';
 
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -48,6 +49,7 @@ class SettingsStore {
       blankColor: Color(prefs.getInt(_kBlankColor) ?? 0xFF000000),
       hiColor: Color(prefs.getInt(_kHiColor) ?? 0xFF00FFFF),
       projAutoSize: prefs.getBool(_kProjAutoSize) ?? false,
+      appLanguage: prefs.getString(_kAppLanguage) ?? '',
     );
   }
 
@@ -73,5 +75,6 @@ class SettingsStore {
     await prefs.setInt(_kBlankColor, settings.blankColor.toARGB32());
     await prefs.setInt(_kHiColor, settings.hiColor.toARGB32());
     await prefs.setBool(_kProjAutoSize, settings.projAutoSize);
+    await prefs.setString(_kAppLanguage, settings.appLanguage);
   }
 }

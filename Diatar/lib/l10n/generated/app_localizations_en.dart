@@ -441,6 +441,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mqttChannel => 'MQTT channel';
 
   @override
+  String get uiTheme => 'User interface theme';
+
+  @override
+  String get themeDark => 'Dark';
+
+  @override
+  String get themeLight => 'Light';
+
+  @override
   String get dtxFolderPath => 'DTX folder';
 
   @override
@@ -448,6 +457,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fileChoose => 'Choose file';
+
+  @override
+  String get uiLanguage => 'User interface language';
+
+  @override
+  String get languageSystem => 'System default';
+
+  @override
+  String get languageHungarian => 'Hungarian';
+
+  @override
+  String get languageEnglish => 'English';
 
   @override
   String get projectionSettingsTitle => 'Projection settings';

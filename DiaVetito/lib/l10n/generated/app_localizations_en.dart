@@ -60,6 +60,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rotationLabel => 'Rotation';
 
   @override
+  String get uiLanguage => 'User interface language';
+
+  @override
+  String get languageSystem => 'System default';
+
+  @override
+  String get languageHungarian => 'Hungarian';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
   String get projectionFilteringTitle => 'Projection filters';
 
   @override

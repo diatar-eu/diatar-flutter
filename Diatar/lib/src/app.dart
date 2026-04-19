@@ -19,6 +19,18 @@ class DiatarApp extends StatefulWidget {
 class _DiatarAppState extends State<DiatarApp> with WidgetsBindingObserver {
   final DiatarMainController _controller = DiatarMainController();
 
+  Locale? _resolveAppLocale(String languageCode) {
+    if (languageCode.trim().isEmpty) {
+      return null;
+    }
+    for (final Locale locale in AppLocalizations.supportedLocales) {
+      if (locale.languageCode == languageCode) {
+        return locale;
+      }
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -56,19 +68,31 @@ class _DiatarAppState extends State<DiatarApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      onGenerateTitle: (BuildContext context) =>
-          AppLocalizations.of(context)!.appTitle,
-      localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData.dark(useMaterial3: true),
-      home: DiatarHomePage(controller: _controller),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (BuildContext context, _) {
+        final int themeModeIndex = _controller.settings.appThemeMode.clamp(0, 1);
+        final ThemeMode themeMode =
+            themeModeIndex == 1 ? ThemeMode.light : ThemeMode.dark;
+        final Locale? appLocale = _resolveAppLocale(_controller.settings.appLanguage);
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          onGenerateTitle: (BuildContext context) =>
+              AppLocalizations.of(context)!.appTitle,
+          localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: appLocale,
+          theme: ThemeData.light(useMaterial3: true),
+          darkTheme: ThemeData.dark(useMaterial3: true),
+          themeMode: themeMode,
+          home: DiatarHomePage(controller: _controller),
+        );
+      },
     );
   }
 }

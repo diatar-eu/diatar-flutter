@@ -443,6 +443,15 @@ class AppLocalizationsHu extends AppLocalizations {
   String get mqttChannel => 'MQTT csatorna';
 
   @override
+  String get uiTheme => 'Felhasznaloi felulet temaja';
+
+  @override
+  String get themeDark => 'Sotet';
+
+  @override
+  String get themeLight => 'Vilagos';
+
+  @override
   String get dtxFolderPath => 'DTX mappa';
 
   @override
@@ -450,6 +459,18 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get fileChoose => 'Fajl valasztasa';
+
+  @override
+  String get uiLanguage => 'Felhasznaloi felulet nyelve';
+
+  @override
+  String get languageSystem => 'Rendszer alapertelmezett';
+
+  @override
+  String get languageHungarian => 'Magyar';
+
+  @override
+  String get languageEnglish => 'Angol';
 
   @override
   String get projectionSettingsTitle => 'Vetitesi beallitasok';

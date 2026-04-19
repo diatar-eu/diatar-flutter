@@ -2,6 +2,7 @@ import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
 
 class DiatarSettingsSheet extends StatefulWidget {
@@ -38,6 +39,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late int _projBgMode;
   late int _projBackTrans;
   late int _projBlankTrans;
+  late int _appThemeMode;
+  late String _appLanguage;
   late bool _projAutoSize;
   late bool _projHCenter;
   late bool _projVCenter;
@@ -73,6 +76,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projBgMode = s.projBgMode.clamp(0, 4);
     _projBackTrans = s.projBackTrans.clamp(0, 100);
     _projBlankTrans = s.projBlankTrans.clamp(0, 100);
+    _appThemeMode = s.appThemeMode.clamp(0, 1);
+    _appLanguage = _isSupportedLanguage(s.appLanguage) ? s.appLanguage : '';
     _projAutoSize = s.projAutoSize;
     _projHCenter = s.projHCenter;
     _projVCenter = s.projVCenter;
@@ -140,6 +145,39 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             TextField(
               controller: _mqttChannel,
               decoration: InputDecoration(labelText: l10n.mqttChannel),
+            ),
+            DropdownButtonFormField<int>(
+              value: _appThemeMode,
+              decoration: InputDecoration(labelText: l10n.uiTheme),
+              items: <DropdownMenuItem<int>>[
+                DropdownMenuItem<int>(
+                  value: 0,
+                  child: Text(l10n.themeDark),
+                ),
+                DropdownMenuItem<int>(
+                  value: 1,
+                  child: Text(l10n.themeLight),
+                ),
+              ],
+              onChanged: (int? v) => setState(() => _appThemeMode = v ?? 0),
+            ),
+            DropdownButtonFormField<String>(
+              value: _appLanguage,
+              decoration: InputDecoration(labelText: l10n.uiLanguage),
+              items: <DropdownMenuItem<String>>[
+                DropdownMenuItem<String>(
+                  value: '',
+                  child: Text(l10n.languageSystem),
+                ),
+                ...AppLocalizations.supportedLocales.map((Locale locale) {
+                  final String code = locale.languageCode;
+                  return DropdownMenuItem<String>(
+                    value: code,
+                    child: Text(_languageLabel(context, code)),
+                  );
+                }),
+              ],
+              onChanged: (String? v) => setState(() => _appLanguage = v ?? ''),
             ),
             Row(
               children: <Widget>[
@@ -398,6 +436,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       projBgMode: _projBgMode.clamp(0, 4),
       projBackTrans: _projBackTrans.clamp(0, 100),
       projBlankTrans: _projBlankTrans.clamp(0, 100),
+      appThemeMode: _appThemeMode.clamp(0, 1),
+      appLanguage: _appLanguage,
       projBoldText: _projBoldText,
       bkColor: _bkColor,
       txtColor: _txtColor,
@@ -423,6 +463,25 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   int _parseInt(String raw, int fallback, {required int min, required int max}) {
     final int value = int.tryParse(raw.trim()) ?? fallback;
     return value.clamp(min, max);
+  }
+
+  bool _isSupportedLanguage(String code) {
+    if (code.trim().isEmpty) {
+      return true;
+    }
+    return AppLocalizations.supportedLocales.any((Locale locale) => locale.languageCode == code);
+  }
+
+  String _languageLabel(BuildContext context, String code) {
+    final l10n = context.l10n;
+    switch (code) {
+      case 'hu':
+        return l10n.languageHungarian;
+      case 'en':
+        return l10n.languageEnglish;
+      default:
+        return code;
+    }
   }
 
   Future<void> _pickBlankFile() async {

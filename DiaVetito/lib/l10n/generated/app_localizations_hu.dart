@@ -60,6 +60,18 @@ class AppLocalizationsHu extends AppLocalizations {
   String get rotationLabel => 'Forgatas';
 
   @override
+  String get uiLanguage => 'Felhasznaloi felulet nyelve';
+
+  @override
+  String get languageSystem => 'Rendszer alapertelmezett';
+
+  @override
+  String get languageHungarian => 'Magyar';
+
+  @override
+  String get languageEnglish => 'Angol';
+
+  @override
   String get projectionFilteringTitle => 'Vetites szurese';
 
   @override

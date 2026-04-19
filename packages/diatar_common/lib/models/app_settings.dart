@@ -37,6 +37,8 @@ class AppSettings {
     this.projBackTrans = 0,
     this.projBlankTrans = 0,
     this.homeViewMode = 0,
+    this.appThemeMode = 0,
+    this.appLanguage = '',
     this.receiverUseServerColors = true,
     this.receiverShowHighlight = true,
     this.receiverUseAkkord = true,
@@ -85,6 +87,8 @@ class AppSettings {
   final int projBackTrans;
   final int projBlankTrans;
   final int homeViewMode;
+  final int appThemeMode;
+  final String appLanguage;
   final bool receiverUseServerColors;
   final bool receiverShowHighlight;
   final bool receiverUseAkkord;
@@ -139,6 +143,8 @@ class AppSettings {
     int? projBackTrans,
     int? projBlankTrans,
     int? homeViewMode,
+    int? appThemeMode,
+    String? appLanguage,
     bool? receiverUseServerColors,
     bool? receiverShowHighlight,
     bool? receiverUseAkkord,
@@ -184,6 +190,8 @@ class AppSettings {
       projBackTrans: projBackTrans ?? this.projBackTrans,
       projBlankTrans: projBlankTrans ?? this.projBlankTrans,
       homeViewMode: homeViewMode ?? this.homeViewMode,
+      appThemeMode: appThemeMode ?? this.appThemeMode,
+      appLanguage: appLanguage ?? this.appLanguage,
       receiverUseServerColors: receiverUseServerColors ?? this.receiverUseServerColors,
       receiverShowHighlight: receiverShowHighlight ?? this.receiverShowHighlight,
       receiverUseAkkord: receiverUseAkkord ?? this.receiverUseAkkord,

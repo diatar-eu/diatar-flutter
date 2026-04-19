@@ -17,6 +17,18 @@ class DiaVetitoApp extends StatefulWidget {
 class _DiaVetitoAppState extends State<DiaVetitoApp> {
   final ProjectionController _controller = ProjectionController();
 
+  Locale? _resolveAppLocale(String languageCode) {
+    if (languageCode.trim().isEmpty) {
+      return null;
+    }
+    for (final Locale locale in AppLocalizations.supportedLocales) {
+      if (locale.languageCode == languageCode) {
+        return locale;
+      }
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -36,18 +48,25 @@ class _DiaVetitoAppState extends State<DiaVetitoApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      onGenerateTitle: (BuildContext context) => AppLocalizations.of(context)!.appTitle,
-      localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData.dark(useMaterial3: true),
-      home: HomePage(controller: _controller),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (BuildContext context, _) {
+        final Locale? appLocale = _resolveAppLocale(_controller.settings.appLanguage);
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          onGenerateTitle: (BuildContext context) => AppLocalizations.of(context)!.appTitle,
+          localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: appLocale,
+          theme: ThemeData.dark(useMaterial3: true),
+          home: HomePage(controller: _controller),
+        );
+      },
     );
   }
 }

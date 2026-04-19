@@ -797,6 +797,24 @@ abstract class AppLocalizations {
   /// **'MQTT csatorna'**
   String get mqttChannel;
 
+  /// No description provided for @uiTheme.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasznaloi felulet temaja'**
+  String get uiTheme;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In hu, this message translates to:
+  /// **'Sotet'**
+  String get themeDark;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vilagos'**
+  String get themeLight;
+
   /// No description provided for @dtxFolderPath.
   ///
   /// In hu, this message translates to:
@@ -814,6 +832,30 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Fajl valasztasa'**
   String get fileChoose;
+
+  /// No description provided for @uiLanguage.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasznaloi felulet nyelve'**
+  String get uiLanguage;
+
+  /// No description provided for @languageSystem.
+  ///
+  /// In hu, this message translates to:
+  /// **'Rendszer alapertelmezett'**
+  String get languageSystem;
+
+  /// No description provided for @languageHungarian.
+  ///
+  /// In hu, this message translates to:
+  /// **'Magyar'**
+  String get languageHungarian;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In hu, this message translates to:
+  /// **'Angol'**
+  String get languageEnglish;
 
   /// No description provided for @projectionSettingsTitle.
   ///
