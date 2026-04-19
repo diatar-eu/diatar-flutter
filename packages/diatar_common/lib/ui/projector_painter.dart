@@ -319,8 +319,8 @@ class ProjectorPainter extends CustomPainter {
     final Color bg = _colorWithTransparency(globals.bkColor, globals.backTrans);
     canvas.drawRect(Offset.zero & size, Paint()..color = bg);
 
-    final double horizontalPad = globals.leftIndent.toDouble() * 4;
-    final double maxWidth = math.max(40, size.width - horizontalPad * 2);
+    const double horizontalPad = 0;
+    final double maxWidth = math.max(40, size.width);
 
     final bool hasTitleLine =
         !globals.hideTitle && frame.record.title.isNotEmpty;
@@ -515,6 +515,12 @@ class ProjectorPainter extends CustomPainter {
         final double ledgerReserve = _kottaLedgerReserve(lineGap);
         final double staffToTextGap = _kottaStaffToTextGap(lineGap);
         final double rowStep = _kottaRowBlockHeight(lineFontSize);
+        final double continuationIndent = globals.hCenter
+            ? 0
+            : _textContinuationIndent(
+                lineFontSize,
+                TextPainter(textDirection: TextDirection.ltr),
+              );
         final double firstTextY =
             y + ledgerReserve + staffHeight + staffToTextGap;
         _paintKotta(
@@ -525,7 +531,7 @@ class ProjectorPainter extends CustomPainter {
           lineFontSize,
           maxWidth,
           size.width,
-          horizontalPad,
+          continuationIndent,
           lineKottaRows,
         );
 
@@ -538,14 +544,15 @@ class ProjectorPainter extends CustomPainter {
           final double kottaBlockX = _kottaRowsStartX(
             lineKottaRows,
             size.width,
-            horizontalPad,
+            continuationIndent,
           );
           for (int rowIndex = 0; rowIndex < lineKottaRows.length; rowIndex++) {
             final _KottaRowLayout row = lineKottaRows[rowIndex];
             final _KottaRowPrefix rowPrefix = rowPrefixes[rowIndex];
             final double rowY = firstTextY + rowIndex * rowStep;
             final double rowX =
-                kottaBlockX + _kottaContinuationIndent(rowIndex, horizontalPad);
+                kottaBlockX +
+                _kottaContinuationIndent(rowIndex, continuationIndent);
             _paintKottaAlignedTextRow(
               canvas,
               rline,
@@ -565,7 +572,10 @@ class ProjectorPainter extends CustomPainter {
               lineKottaRows[lineKottaRows.length - 1];
           final double lastRowX =
               kottaBlockX +
-              _kottaContinuationIndent(lineKottaRows.length - 1, horizontalPad);
+              _kottaContinuationIndent(
+                lineKottaRows.length - 1,
+                continuationIndent,
+              );
           _paintChords(
             canvas,
             rline,
@@ -606,7 +616,7 @@ class ProjectorPainter extends CustomPainter {
         );
         final double rowX = globals.hCenter
             ? (size.width - row.width) / 2
-            : horizontalPad;
+            : horizontalPad + row.indentWidth;
         final double textY = y + rowChordBand;
         _paintTextRow(
           canvas,
@@ -646,8 +656,8 @@ class ProjectorPainter extends CustomPainter {
     TextFrame frame,
     double fontSize,
   ) {
-    final double horizontalPad = globals.leftIndent.toDouble() * 4;
-    final double maxWidth = math.max(40, size.width - horizontalPad * 2);
+    const double horizontalPad = 0;
+    final double maxWidth = math.max(40, size.width);
 
     final bool hasTitleLine =
         !globals.hideTitle && frame.record.title.isNotEmpty;
@@ -1025,7 +1035,7 @@ class ProjectorPainter extends CustomPainter {
     double fontSize,
     double maxWidth,
     double sizeWidth,
-    double horizontalPad,
+    double continuationIndent,
     List<_KottaRowLayout>? precomputedRows,
   ) {
     if (line.words.isEmpty || !globals.useKotta) {
@@ -1051,13 +1061,17 @@ class ProjectorPainter extends CustomPainter {
       line,
       lineGap,
     );
-    final double blockStartX = _kottaRowsStartX(rows, sizeWidth, horizontalPad);
+    final double blockStartX = _kottaRowsStartX(
+      rows,
+      sizeWidth,
+      continuationIndent,
+    );
     final double baseTop = firstTextY - staffHeight - staffToTextGap;
     for (int rowIndex = 0; rowIndex < rows.length; rowIndex++) {
       final _KottaRowLayout row = rows[rowIndex];
       final _KottaRowPrefix rowPrefix = rowPrefixes[rowIndex];
       final double rowX =
-          blockStartX + _kottaContinuationIndent(rowIndex, horizontalPad);
+          blockStartX + _kottaContinuationIndent(rowIndex, continuationIndent);
       final double rowTop = baseTop + rowIndex * rowStep;
       for (int i = 0; i < 5; i++) {
         final double ly = rowTop + i * lineGap;
@@ -1132,7 +1146,7 @@ class ProjectorPainter extends CustomPainter {
       final _KottaRowLayout last = rows.last;
       final double lastX =
           blockStartX +
-          _kottaContinuationIndent(rows.length - 1, horizontalPad);
+          _kottaContinuationIndent(rows.length - 1, continuationIndent);
       final double lastTop = baseTop + (rows.length - 1) * rowStep;
       _drawForcedClosingBarline(canvas, lastX + last.width, lastTop, lineGap);
     }
@@ -1203,7 +1217,7 @@ class ProjectorPainter extends CustomPainter {
     double horizontalPad,
   ) {
     if (!globals.hCenter) {
-      return horizontalPad;
+      return 0;
     }
     return (sizeWidth - rowWidth) / 2.0;
   }
@@ -1300,6 +1314,9 @@ class ProjectorPainter extends CustomPainter {
     final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
     final double lineGap = _kottaLineGap(fontSize);
     final double wrapWidth = math.max(8.0, maxWidth);
+    final double continuationIndent = globals.hCenter
+        ? 0
+        : _textContinuationIndent(fontSize, measure);
     final _KottaDrawState state = inheritedState?.copy() ?? _KottaDrawState();
     state.deferFinalDoubleBarAtEnd = _lineEndsWithDoubleBar(line);
 
@@ -1331,8 +1348,11 @@ class ProjectorPainter extends CustomPainter {
         continue;
       }
 
+      final double currentRowLimit = rows.isEmpty
+          ? wrapWidth
+          : math.max(8.0, wrapWidth - continuationIndent);
       if (currentWords.isNotEmpty &&
-          (currentWidth + pendingWordWidth) > wrapWidth) {
+          (currentWidth + pendingWordWidth) > currentRowLimit) {
         rows.add(
           _KottaRowLayout(
             words: List<_KottaWordLayout>.from(currentWords),
@@ -1341,10 +1361,7 @@ class ProjectorPainter extends CustomPainter {
           ),
         );
         currentWords.clear();
-        currentPrefix = _kottaRowPrefixForState(
-          pendingWordStartState,
-          lineGap,
-        );
+        currentPrefix = _kottaRowPrefixForState(pendingWordStartState, lineGap);
         currentWidth = currentPrefix.width;
       }
 
@@ -1484,7 +1501,11 @@ class ProjectorPainter extends CustomPainter {
   }
 
   bool _isLeadingKottaVisiblePrefixCommand(String kind) {
-    return kind == 'k' || kind == 'e' || kind == 'E' || kind == 'u' || kind == 'U';
+    return kind == 'k' ||
+        kind == 'e' ||
+        kind == 'E' ||
+        kind == 'u' ||
+        kind == 'U';
   }
 
   List<_KottaRowPrefix> _resolveKottaRowPrefixes(
@@ -1556,6 +1577,9 @@ class ProjectorPainter extends CustomPainter {
 
     final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
     final double wrapWidth = math.max(8.0, maxWidth);
+    final double continuationIndent = globals.hCenter
+        ? 0
+        : _textContinuationIndent(fontSize, measure);
     final List<_TextRowLayout> rows = <_TextRowLayout>[];
     final List<int> currentWordIndices = <int>[];
     double currentWidth = 0;
@@ -1563,12 +1587,16 @@ class ProjectorPainter extends CustomPainter {
     for (int i = 0; i < line.words.length; i++) {
       final _WordToken w = line.words[i];
       final double slotWidth = _measureWordDisplayWidth(w, fontSize, measure);
+      final double currentRowLimit = rows.isEmpty
+          ? wrapWidth
+          : math.max(8.0, wrapWidth - continuationIndent);
       if (currentWordIndices.isNotEmpty &&
-          (currentWidth + slotWidth) > wrapWidth) {
+          (currentWidth + slotWidth) > currentRowLimit) {
         rows.add(
           _TextRowLayout(
             wordIndices: List<int>.from(currentWordIndices),
             width: currentWidth,
+            indentWidth: rows.isEmpty ? 0 : continuationIndent,
           ),
         );
         currentWordIndices.clear();
@@ -1584,11 +1612,28 @@ class ProjectorPainter extends CustomPainter {
         _TextRowLayout(
           wordIndices: List<int>.from(currentWordIndices),
           width: currentWidth,
+          indentWidth: rows.isEmpty ? 0 : continuationIndent,
         ),
       );
     }
 
     return rows;
+  }
+
+  double _textContinuationIndent(double fontSize, TextPainter measure) {
+    if (globals.leftIndent <= 0) {
+      return 0;
+    }
+
+    measure.text = TextSpan(
+      text: ' ' * globals.leftIndent,
+      style: TextStyle(
+        fontSize: fontSize,
+        fontWeight: globals.boldText ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
+    measure.layout();
+    return measure.width;
   }
 
   double _measureWordDisplayWidth(
@@ -3120,9 +3165,14 @@ class _KottaRowLayout {
 }
 
 class _TextRowLayout {
-  const _TextRowLayout({required this.wordIndices, required this.width});
+  const _TextRowLayout({
+    required this.wordIndices,
+    required this.width,
+    this.indentWidth = 0,
+  });
   final List<int> wordIndices;
   final double width;
+  final double indentWidth;
 }
 
 const double _kcGkulcsW = 102.0;

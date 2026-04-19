@@ -352,7 +352,7 @@
   "projectionSettingsTitle": "Projection settings",
   "fontSize": "Font size",
   "titleSize": "Title size",
-  "leftMargin": "Left margin",
+  "leftMargin": "Indentation",
   "borderLeft": "Border L",
   "borderTop": "Border T",
   "borderRight": "Border R",

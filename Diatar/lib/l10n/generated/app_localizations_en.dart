@@ -459,7 +459,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get titleSize => 'Title size';
 
   @override
-  String get leftMargin => 'Left margin';
+  String get leftMargin => 'Indentation';
 
   @override
   String get borderLeft => 'Border L';

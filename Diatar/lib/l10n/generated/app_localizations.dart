@@ -836,7 +836,7 @@ abstract class AppLocalizations {
   /// No description provided for @leftMargin.
   ///
   /// In hu, this message translates to:
-  /// **'Bal margo'**
+  /// **'Bal behuzas'**
   String get leftMargin;
 
   /// No description provided for @borderLeft.

@@ -461,7 +461,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get titleSize => 'Cim meret';
 
   @override
-  String get leftMargin => 'Bal margo';
+  String get leftMargin => 'Bal behuzas';
 
   @override
   String get borderLeft => 'Border L';
