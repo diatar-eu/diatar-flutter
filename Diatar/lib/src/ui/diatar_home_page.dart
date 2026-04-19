@@ -677,7 +677,7 @@ class _BookDropdown extends StatelessWidget {
       controller.books,
     );
     return DropdownButtonFormField<int>(
-      value: controller.bookIndex,
+      initialValue: controller.bookIndex,
       decoration: InputDecoration(
         labelText: context.l10n.bookLabel,
         border: const OutlineInputBorder(),
@@ -747,7 +747,7 @@ class _SongDropdown extends StatelessWidget {
       return const SizedBox.shrink();
     }
     return DropdownButtonFormField<int>(
-      value: controller.songIndex.clamp(0, songs.length - 1),
+      initialValue: controller.songIndex.clamp(0, songs.length - 1),
       decoration: InputDecoration(
         labelText: context.l10n.songLabel,
         border: const OutlineInputBorder(),
@@ -787,7 +787,7 @@ class _VerseDropdown extends StatelessWidget {
       return const SizedBox.shrink();
     }
     return DropdownButtonFormField<int>(
-      value: controller.verseIndex.clamp(0, verses.length - 1),
+      initialValue: controller.verseIndex.clamp(0, verses.length - 1),
       decoration: InputDecoration(
         labelText: context.l10n.verseLabel,
         border: const OutlineInputBorder(),
@@ -965,9 +965,11 @@ class _VersePreview extends StatelessWidget {
     final String songTitle = song.title.trim().isNotEmpty
         ? song.title.trim()
         : (controller.songIndex + 1).toString();
-    final String versePart = verse.name.trim().isNotEmpty
-        ? '/${verse.name}'
-        : '';
+    final String verseName = verse.name.trim();
+    final bool hideVersePart =
+      verseName.isEmpty ||
+      ((song.verses.length == 1) && verseName == '---');
+    final String versePart = hideVersePart ? '' : '/$verseName';
 
     return '$bookShortName: $songTitle$versePart';
   }

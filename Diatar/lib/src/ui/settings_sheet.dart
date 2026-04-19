@@ -183,7 +183,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   ),
                 ),
               DropdownButtonFormField<String>(
-                value: _channel,
+                initialValue: _channel,
                 decoration: InputDecoration(labelText: l10n.channelLabel),
                 items: <DropdownMenuItem<String>>[
                   const DropdownMenuItem<String>(value: '1', child: Text('1.')),
@@ -269,7 +269,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
               ],
             ),
             DropdownButtonFormField<int>(
-              value: _rotate,
+              initialValue: _rotate,
               decoration: InputDecoration(labelText: l10n.rotationLabel),
               items: const <DropdownMenuItem<int>>[
                 DropdownMenuItem<int>(value: 0, child: Text('0°')),

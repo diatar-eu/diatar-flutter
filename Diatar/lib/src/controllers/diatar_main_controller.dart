@@ -638,10 +638,19 @@ class DiatarMainController extends ChangeNotifier {
     }
     final int safeSong = songIndex.clamp(0, b.songs.length - 1);
     final DtxSong song = b.songs[safeSong];
-    final String verseName = song.verses.isEmpty
-        ? '-'
-      : song.verses[verseIndex.clamp(0, song.verses.length - 1)].name;
-    return '${b.displayName}: ${song.title} / $verseName';
+    if (song.verses.isEmpty) {
+      return '${b.displayName}: ${song.title}';
+    }
+    final String verseName = song
+        .verses[verseIndex.clamp(0, song.verses.length - 1)]
+        .name
+        .trim();
+    final bool hideVersePart =
+        verseName.isEmpty ||
+        ((song.verses.length == 1) && verseName == '---');
+    return hideVersePart
+        ? '${b.displayName}: ${song.title}'
+        : '${b.displayName}: ${song.title} / $verseName';
   }
 
   String _normalizeDiaText(String text) {
@@ -1579,11 +1588,12 @@ class DiatarMainController extends ChangeNotifier {
 
     final String bookNick = book?.displayName ?? '';
     final String songTitle = song?.title ?? '';
-    final String verseTitle = verse?.name ?? '';
+    final String verseTitle = (verse?.name ?? '').trim();
     final bool hasOnlyDefaultVerse = (song?.verses.length ?? 0) == 1 && verseTitle == '---';
+    final bool hideVerseInTitle = verseTitle.isEmpty || hasOnlyDefaultVerse;
     final String title = bookNick.isEmpty
         ? songTitle
-        : hasOnlyDefaultVerse
+      : hideVerseInTitle
             ? '$bookNick: $songTitle'
             : '$bookNick: $songTitle/$verseTitle';
 

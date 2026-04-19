@@ -147,7 +147,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               decoration: InputDecoration(labelText: l10n.mqttChannel),
             ),
             DropdownButtonFormField<int>(
-              value: _appThemeMode,
+              initialValue: _appThemeMode,
               decoration: InputDecoration(labelText: l10n.uiTheme),
               items: <DropdownMenuItem<int>>[
                 DropdownMenuItem<int>(
@@ -162,7 +162,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               onChanged: (int? v) => setState(() => _appThemeMode = v ?? 0),
             ),
             DropdownButtonFormField<String>(
-              value: _appLanguage,
+              initialValue: _appLanguage,
               decoration: InputDecoration(labelText: l10n.uiLanguage),
               items: <DropdownMenuItem<String>>[
                 DropdownMenuItem<String>(
@@ -226,7 +226,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               ],
             ),
             DropdownButtonFormField<int>(
-              value: _projSpacingStep,
+              initialValue: _projSpacingStep,
               decoration: InputDecoration(labelText: l10n.lineSpacing),
               items: List<DropdownMenuItem<int>>.generate(
                 11,
@@ -238,7 +238,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               onChanged: (int? v) => setState(() => _projSpacingStep = v ?? 0),
             ),
             DropdownButtonFormField<int>(
-              value: _projKottaArany,
+              initialValue: _projKottaArany,
               decoration: InputDecoration(labelText: l10n.kottaScale),
               items: List<DropdownMenuItem<int>>.generate(
                 20,
@@ -250,7 +250,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               onChanged: (int? v) => setState(() => _projKottaArany = v ?? 100),
             ),
             DropdownButtonFormField<int>(
-              value: _projAkkordArany,
+              initialValue: _projAkkordArany,
               decoration: InputDecoration(labelText: l10n.chordScale),
               items: List<DropdownMenuItem<int>>.generate(
                 20,
@@ -262,7 +262,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               onChanged: (int? v) => setState(() => _projAkkordArany = v ?? 100),
             ),
             DropdownButtonFormField<int>(
-              value: _projBgMode,
+              initialValue: _projBgMode,
               decoration: InputDecoration(labelText: l10n.backgroundMode),
               items: <DropdownMenuItem<int>>[
                 DropdownMenuItem<int>(value: 0, child: Text(l10n.bgModeCenter)),
@@ -274,7 +274,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               onChanged: (int? v) => setState(() => _projBgMode = v ?? 0),
             ),
             DropdownButtonFormField<int>(
-              value: _projBackTrans,
+              initialValue: _projBackTrans,
               decoration: InputDecoration(labelText: l10n.backgroundOpacity),
               items: List<DropdownMenuItem<int>>.generate(
                 11,
@@ -286,7 +286,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               onChanged: (int? v) => setState(() => _projBackTrans = v ?? 0),
             ),
             DropdownButtonFormField<int>(
-              value: _projBlankTrans,
+              initialValue: _projBlankTrans,
               decoration: InputDecoration(labelText: l10n.blankOpacity),
               items: List<DropdownMenuItem<int>>.generate(
                 11,
