@@ -9,57 +9,57 @@ class AppLocalizationsHu extends AppLocalizations {
   AppLocalizationsHu([String locale = 'hu']) : super(locale);
 
   @override
-  String get appTitle => 'Diatar';
+  String get appTitle => 'Diatár';
 
   @override
-  String get viewTooltip => 'Nezet';
+  String get viewTooltip => 'Nézet';
 
   @override
   String get viewSimple => 'Szimpla';
 
   @override
-  String get viewSpontaneous => 'Spontan';
+  String get viewSpontaneous => 'Spontán';
 
   @override
   String get viewOrder => 'Sorrend';
 
   @override
-  String get settingsTooltip => 'Beallitasok';
+  String get settingsTooltip => 'Beállítások';
 
   @override
-  String get playlistsTooltip => 'Enekrendek';
+  String get playlistsTooltip => 'Énekrendek';
 
   @override
-  String get playlistsTitle => 'Enekrendek';
+  String get playlistsTitle => 'Énekrendek';
 
   @override
   String get playlistsMessage =>
-      'Ez a muvelet kesobb visszakaphatja a teljes dialogust.';
+      'Ez a művelet később visszakaphatja a teljes dialógust.';
 
   @override
-  String get customOrderTooltip => 'Sajat sorrend';
+  String get customOrderTooltip => 'Saját sorrend';
 
   @override
-  String get addSlideTooltip => 'Dia hozzaadasa';
+  String get addSlideTooltip => 'Dia hozzáadása';
 
   @override
-  String get addTextSlide => 'Szoveges dia';
+  String get addTextSlide => 'Szöveges dia';
 
   @override
-  String get addImageSlide => 'Kepes dia';
+  String get addImageSlide => 'Képes dia';
 
   @override
-  String get downloadBooksTooltip => 'Enektarak letoltese';
+  String get downloadBooksTooltip => 'Énektárak letöltése';
 
   @override
-  String get downloadTitle => 'Letoltes';
+  String get downloadTitle => 'Letöltés';
 
   @override
   String get downloadMessage =>
-      'A letoltesi parbeszed kesobb visszahelyezheto.';
+      'A letöltési párbeszéd később visszahelyezhető.';
 
   @override
-  String get refreshTooltip => 'Frissites';
+  String get refreshTooltip => 'Frissítés';
 
   @override
   String get ok => 'Rendben';
@@ -71,16 +71,16 @@ class AppLocalizationsHu extends AppLocalizations {
   String get songNext => 'Ének +';
 
   @override
-  String get projectionOn => 'Vetites BE';
+  String get projectionOn => 'Vetítés BE';
 
   @override
-  String get projectionOff => 'Vetites KI';
+  String get projectionOff => 'Vetítés KI';
 
   @override
-  String get previous => 'Elozo';
+  String get previous => 'Előző';
 
   @override
-  String get next => 'Kovetkezo';
+  String get next => 'Következő';
 
   @override
   String get highlightPrev => 'Highlight -';
@@ -90,16 +90,16 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String positionLabel(int current, int total) {
-    return 'Pozicio: $current/$total';
+    return 'Pozíció: $current/$total';
   }
 
   @override
   String statusLabel(Object status) {
-    return 'Statusz: $status';
+    return 'Státusz: $status';
   }
 
   @override
-  String get statusStarting => 'Inditas...';
+  String get statusStarting => 'Indítás...';
 
   @override
   String statusSenderError(Object message) {
@@ -113,12 +113,12 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String statusSenderOpenPortFailed(int port, Object error) {
-    return 'Nem sikerult portot nyitni ($port): $error';
+    return 'Nem sikerült portot nyitni ($port): $error';
   }
 
   @override
   String get statusSenderMqttConnectFailed =>
-      'MQTT sender kapcsolodas sikertelen.';
+      'MQTT sender kapcsolódás sikertelen.';
 
   @override
   String statusSenderMqttError(Object error) {
@@ -127,36 +127,36 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String statusMqttSending(Object user, Object channel) {
-    return 'MQTT kuldes: $user/$channel';
+    return 'MQTT küldés: $user/$channel';
   }
 
   @override
   String statusTcpSending(int port) {
-    return 'TCP kuldes: $port';
+    return 'TCP küldés: $port';
   }
 
   @override
   String statusNoDtxFiles(Object path) {
-    return 'Nincs .dtx fajl: $path';
+    return 'Nincs .dtx fájl: $path';
   }
 
   @override
   String get statusAllSongbooksDisabled =>
-      'Minden enektar le van tiltva az enekrendben.';
+      'Minden énektár le van tiltva az énekrendben.';
 
   @override
   String statusSongbooksLoaded(int count) {
-    return '$count kotet betoltve';
+    return '$count kötet betöltve';
   }
 
   @override
   String statusLoadError(Object error) {
-    return 'Betoltesi hiba: $error';
+    return 'Betöltési hiba: $error';
   }
 
   @override
   String statusCustomOrderSelected(Object label) {
-    return 'Sajat sorrend: $label';
+    return 'Saját sorrend: $label';
   }
 
   @override
@@ -166,16 +166,16 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String statusDiaFileMissing(Object path) {
-    return 'Nincs ilyen .DIA fajl: $path';
+    return 'Nincs ilyen .DIA fájl: $path';
   }
 
   @override
   String statusOrderLoaded(int count, Object path) {
-    return 'Sorrend betoltve ($count elem): $path';
+    return 'Sorrend betöltve ($count elem): $path';
   }
 
   @override
-  String get statusDownloadListLoading => 'Enektar lista letoltese...';
+  String get statusDownloadListLoading => 'Énektár lista letöltése...';
 
   @override
   String statusDownloadProgress(
@@ -184,30 +184,30 @@ class AppLocalizationsHu extends AppLocalizations {
     Object name,
     int percent,
   ) {
-    return 'Letoltes: $current/$total $name $percent%';
+    return 'Letöltés: $current/$total $name $percent%';
   }
 
   @override
-  String get statusDownloadSummaryNone => 'Nincs uj enektar frissites.';
+  String get statusDownloadSummaryNone => 'Nincs új énektár frissítés.';
 
   @override
   String statusDownloadSummary(int downloaded, int skipped) {
-    return '$downloaded fajl letoltve, $skipped valtozatlan.';
+    return '$downloaded fájl letöltve, $skipped változatlan.';
   }
 
   @override
   String statusDownloadError(Object error) {
-    return 'Letoltesi hiba: $error';
+    return 'Letöltési hiba: $error';
   }
 
   @override
   String statusBookSelected(Object name) {
-    return 'Kotet: $name';
+    return 'Kötet: $name';
   }
 
   @override
   String statusSongPicked(Object name) {
-    return 'Enek: $name';
+    return 'Ének: $name';
   }
 
   @override
@@ -217,86 +217,86 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String statusSongSelected(Object title) {
-    return 'Enek: $title';
+    return 'Ének: $title';
   }
 
   @override
   String statusSongVerseSelected(Object title) {
-    return 'Enek/versszak: $title';
+    return 'Ének/versszak: $title';
   }
 
   @override
-  String get statusProjectionOn => 'Vetites: BE';
+  String get statusProjectionOn => 'Vetítés: BE';
 
   @override
-  String get statusProjectionOff => 'Vetites: KI';
+  String get statusProjectionOff => 'Vetítés: KI';
 
   @override
-  String get statusImagePathEmpty => 'A kep fajl utvonala ures.';
+  String get statusImagePathEmpty => 'A kép fájl útvonala üres.';
 
   @override
-  String get statusCustomTextEmpty => 'Adj meg cimet vagy legalabb egy sort.';
+  String get statusCustomTextEmpty => 'Adj meg címet vagy legalább egy sort.';
 
   @override
   String statusCustomTextSent(Object title) {
-    return 'Szoveges dia elkuldve: $title';
+    return 'Szöveges dia elküldve: $title';
   }
 
   @override
   String statusCustomTextError(Object error) {
-    return 'Szoveges dia kuldesi hiba: $error';
+    return 'Szöveges dia küldési hiba: $error';
   }
 
   @override
   String statusImageNotFound(Object path) {
-    return 'A kep fajl nem talalhato: $path';
+    return 'A kép fájl nem található: $path';
   }
 
   @override
   String statusImageSent(Object name) {
-    return 'Kep elkuldve: $name';
+    return 'Kép elküldve: $name';
   }
 
   @override
   String statusImageSendError(Object error) {
-    return 'Kep kuldesi hiba: $error';
+    return 'Kép küldési hiba: $error';
   }
 
   @override
-  String get statusBlankPathEmpty => 'A blank kep fajl utvonala ures.';
+  String get statusBlankPathEmpty => 'A blank kép fájl útvonala üres.';
 
   @override
   String statusBlankNotFound(Object path) {
-    return 'A blank kep fajl nem talalhato: $path';
+    return 'A blank kép fájl nem található: $path';
   }
 
   @override
   String statusBlankSet(Object name) {
-    return 'Blank kep beallitva: $name';
+    return 'Blank kép beállítva: $name';
   }
 
   @override
   String statusBlankSendError(Object error) {
-    return 'Blank kep kuldesi hiba: $error';
+    return 'Blank kép küldési hiba: $error';
   }
 
   @override
-  String get statusBlankCleared => 'Blank kep torolve.';
+  String get statusBlankCleared => 'Blank kép törölve.';
 
   @override
   String statusBlankClearError(Object error) {
-    return 'Blank kep torlesi hiba: $error';
+    return 'Blank kép törlési hiba: $error';
   }
 
   @override
-  String get statusShutdownCommandSent => 'Lezaras utasitas elkuldve.';
+  String get statusShutdownCommandSent => 'Lezárás utasitas elküldve.';
 
   @override
-  String get statusStopCommandSent => 'Megallitas utasitas elkuldve.';
+  String get statusStopCommandSent => 'Megállítás utasitas elküldve.';
 
   @override
   String statusCommandSendError(Object error) {
-    return 'Utasitas kuldesi hiba: $error';
+    return 'Utasítás küldési hiba: $error';
   }
 
   @override
@@ -305,7 +305,7 @@ class AppLocalizationsHu extends AppLocalizations {
     Object senderState,
     Object clientState,
   ) {
-    return 'Kuldes ($protocol): $senderState, kliens: $clientState';
+    return 'Küldés ($protocol): $senderState, kliens: $clientState';
   }
 
   @override
@@ -315,7 +315,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get protocolTcp => 'TCP';
 
   @override
-  String get senderStateActive => 'aktiv';
+  String get senderStateActive => 'aktív';
 
   @override
   String get senderStateOff => 'kikapcsolva';
@@ -324,7 +324,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get clientStateConnected => 'csatlakozva';
 
   @override
-  String get clientStateWaiting => 'varakozik';
+  String get clientStateWaiting => 'várakozik';
 
   @override
   String tcpPortLabel(int port) {
@@ -333,17 +333,17 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String downloadProgress(int current, int total, Object name) {
-    return 'Letoltes: $current/$total $name';
+    return 'Letöltés: $current/$total $name';
   }
 
   @override
-  String get noLoadedSlide => 'Nincs betoltott dia.';
+  String get noLoadedSlide => 'Nincs betöltött dia.';
 
   @override
   String get bookLabel => 'Kötet';
 
   @override
-  String get songLabel => 'Enek';
+  String get songLabel => 'Ének';
 
   @override
   String get verseLabel => 'Versszak';
@@ -354,39 +354,39 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
-  String get searchLabel => 'Diakereso';
+  String get searchLabel => 'Diakereső';
 
   @override
-  String get searchHint => 'Kötet vagy enekcim';
+  String get searchHint => 'Kötet vagy enekcím';
 
   @override
-  String get noResults => 'Nincs talalat.';
+  String get noResults => 'Nincs találat.';
 
   @override
   String customOrderStatus(Object state) {
-    return 'Sajat sorrend: $state';
+    return 'Saját sorrend: $state';
   }
 
   @override
-  String get stateActive => 'Aktiv';
+  String get stateActive => 'Aktív';
 
   @override
-  String get stateInactive => 'Inaktiv';
+  String get stateInactive => 'Inaktív';
 
   @override
   String get nextShort => 'Kov.';
 
   @override
-  String get previewTitle => 'Dia elonezet';
+  String get previewTitle => 'Dia előnézet';
 
   @override
-  String get projectedImage => 'Vetitett kep:';
+  String get projectedImage => 'Vetített kép:';
 
   @override
-  String get settingsTitle => 'Diatar beallitasok';
+  String get settingsTitle => 'Diatár beállítások';
 
   @override
-  String get settingsTitleReceiver => 'Beallitasok';
+  String get settingsTitleReceiver => 'Beállítások';
 
   @override
   String get modeIp => 'IP';
@@ -395,13 +395,13 @@ class AppLocalizationsHu extends AppLocalizations {
   String get modeInternet => 'Internet';
 
   @override
-  String get senderLabel => 'Kuldo';
+  String get senderLabel => 'Küldő';
 
   @override
   String get senderHelper => 'MQTT sender neve';
 
   @override
-  String get senderRefreshTooltip => 'Kuldo lista frissites';
+  String get senderRefreshTooltip => 'Küldő lista frissítés';
 
   @override
   String get channelLabel => 'Csatorna';
@@ -410,61 +410,61 @@ class AppLocalizationsHu extends AppLocalizations {
   String get clipLeft => 'Bal';
 
   @override
-  String get clipTop => 'Felso';
+  String get clipTop => 'Felső';
 
   @override
   String get clipRight => 'Jobb';
 
   @override
-  String get clipBottom => 'Also';
+  String get clipBottom => 'Alsó';
 
   @override
-  String get borderToClip => 'Margok a vezerlotol (Border2Clip)';
+  String get borderToClip => 'Margok a vezérlőtől (Border2Clip)';
 
   @override
-  String get mirror => 'Tukrozes';
+  String get mirror => 'Tükrözés';
 
   @override
-  String get autoBootIndicator => 'Automatikus inditas (jelzo)';
+  String get autoBootIndicator => 'Automatikus indítás (jelző)';
 
   @override
-  String get rotationLabel => 'Forgatas';
+  String get rotationLabel => 'Forgatás';
 
   @override
   String get tcpPortRange => 'TCP port (0..65535)';
 
   @override
-  String get mqttUserHint => 'MQTT user (ures = TCP mod)';
+  String get mqttUserHint => 'MQTT user (üres = TCP mód)';
 
   @override
-  String get mqttPassword => 'MQTT jelszo';
+  String get mqttPassword => 'MQTT jelszó';
 
   @override
   String get mqttChannel => 'MQTT csatorna';
 
   @override
-  String get uiTheme => 'Felhasznaloi felulet temaja';
+  String get uiTheme => 'Felhasználói felület témája';
 
   @override
-  String get themeDark => 'Sotet';
+  String get themeDark => 'Sötét';
 
   @override
-  String get themeLight => 'Vilagos';
+  String get themeLight => 'Világos';
 
   @override
   String get dtxFolderPath => 'DTX mappa';
 
   @override
-  String get blankImagePath => 'Blank kep utvonal';
+  String get blankImagePath => 'Blank kép útvonal';
 
   @override
-  String get fileChoose => 'Fajl valasztasa';
+  String get fileChoose => 'Fájl választása';
 
   @override
-  String get uiLanguage => 'Felhasznaloi felulet nyelve';
+  String get uiLanguage => 'Felhasználói felület nyelve';
 
   @override
-  String get languageSystem => 'Rendszer alapertelmezett';
+  String get languageSystem => 'Rendszer alapértelmezett';
 
   @override
   String get languageHungarian => 'Magyar';
@@ -473,16 +473,16 @@ class AppLocalizationsHu extends AppLocalizations {
   String get languageEnglish => 'Angol';
 
   @override
-  String get projectionSettingsTitle => 'Vetitesi beallitasok';
+  String get projectionSettingsTitle => 'Vetítési beállítások';
 
   @override
-  String get fontSize => 'Betumeret';
+  String get fontSize => 'Betűméret';
 
   @override
-  String get titleSize => 'Cim meret';
+  String get titleSize => 'Cím méret';
 
   @override
-  String get leftMargin => 'Bal behuzas';
+  String get leftMargin => 'Bal behúzás';
 
   @override
   String get borderLeft => 'Border L';
@@ -497,16 +497,16 @@ class AppLocalizationsHu extends AppLocalizations {
   String get borderBottom => 'Border B';
 
   @override
-  String get lineSpacing => 'Sorkoz';
+  String get lineSpacing => 'Sorköz';
 
   @override
-  String get kottaScale => 'Kotta meret arany';
+  String get kottaScale => 'Kotta méret arány';
 
   @override
-  String get chordScale => 'Akkord meret arany';
+  String get chordScale => 'Akkord méret arány';
 
   @override
-  String get backgroundMode => 'Hatters kep mod';
+  String get backgroundMode => 'Háttér kép mód';
 
   @override
   String get bgModeCenter => 'Center';
@@ -524,113 +524,113 @@ class AppLocalizationsHu extends AppLocalizations {
   String get bgModeMirror => 'Mirror';
 
   @override
-  String get backgroundOpacity => 'Hatter atszosag';
+  String get backgroundOpacity => 'Háttér átlátszóság';
 
   @override
-  String get blankOpacity => 'Blank atszosag';
+  String get blankOpacity => 'Blank átlátszóság';
 
   @override
-  String get autoSize => 'Automatikus meretezes';
+  String get autoSize => 'Automatikus méretezés';
 
   @override
-  String get scrollableProjection => 'Gorgetheto vetites';
+  String get scrollableProjection => 'Görgethető vetítés';
 
   @override
   String get scrollableProjectionHint =>
-      'Ha ki van kapcsolva, a szoveg automatikusan a vetitesi terulethez igazodik.';
+      'Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.';
 
   @override
-  String get showTitle => 'Cim mutatasa';
+  String get showTitle => 'Cím mutatása';
 
   @override
-  String get hCenter => 'Vizszintes kozepre igazitas';
+  String get hCenter => 'Vízszintes középre igazítás';
 
   @override
-  String get vCenter => 'Fuggoleges kozepre igazitas';
+  String get vCenter => 'Függőleges középre igazítás';
 
   @override
-  String get showChords => 'Akkordok mutatasa';
+  String get showChords => 'Akkordok mutatása';
 
   @override
-  String get showKotta => 'Kotta mutatasa';
+  String get showKotta => 'Kotta mutatása';
 
   @override
-  String get boldText => 'Felkover szoveg';
+  String get boldText => 'Félkövér szöveg';
 
   @override
-  String get colorsTitle => 'Szinek';
+  String get colorsTitle => 'Színek';
 
   @override
-  String get backgroundColor => 'Hatter';
+  String get backgroundColor => 'Háttér';
 
   @override
-  String get textColor => 'Szoveg';
+  String get textColor => 'Szöveg';
 
   @override
-  String get emptySlideColor => 'Ures dia';
+  String get emptySlideColor => 'Üres dia';
 
   @override
-  String get highlightColor => 'Kiemeles';
+  String get highlightColor => 'Kiemelés';
 
   @override
-  String get backgroundColorTitle => 'Hatter szine';
+  String get backgroundColorTitle => 'Háttér színe';
 
   @override
-  String get textColorTitle => 'Szoveg szine';
+  String get textColorTitle => 'Szöveg színe';
 
   @override
-  String get emptySlideColorTitle => 'Ures dia szine';
+  String get emptySlideColorTitle => 'Üres dia színe';
 
   @override
-  String get highlightColorTitle => 'Kiemeles szine';
+  String get highlightColorTitle => 'Kiemelés színe';
 
   @override
-  String get cancel => 'Megse';
+  String get cancel => 'Mégse';
 
   @override
   String get save => 'Ment';
 
   @override
-  String get invalidPortRange => 'A port 0..65535 kozott legyen.';
+  String get invalidPortRange => 'A port 0..65535 között legyen.';
 
   @override
-  String get hexColorHint => 'Hex szin (#AARRGGBB vagy #RRGGBB)';
+  String get hexColorHint => 'Hex szín (#AARRGGBB vagy #RRGGBB)';
 
   @override
-  String get close => 'Bezaras';
+  String get close => 'Bezárás';
 
   @override
-  String get imagesFileTypeLabel => 'kepek';
+  String get imagesFileTypeLabel => 'képek';
 
   @override
-  String get diatarPlaylistFileTypeLabel => 'Diatar playlist';
+  String get diatarPlaylistFileTypeLabel => 'Diatár playlist';
 
   @override
   String get customOrderSuggestedFileName => 'sorrend.dia';
 
   @override
-  String get customOrderEditTitle => 'Sajat sorrend szerkesztese';
+  String get customOrderEditTitle => 'Saját sorrend szerkesztése';
 
   @override
-  String get addSong => 'Enek hozzaadasa';
+  String get addSong => 'Ének hozzáadása';
 
   @override
-  String get searchSongHint => 'Kötet vagy enekcim';
+  String get searchSongHint => 'Kötet vagy énekcím';
 
   @override
-  String get textSlideDialogTitle => 'Szoveges dia hozzaadasa';
+  String get textSlideDialogTitle => 'Szöveges dia hozzáadása';
 
   @override
-  String get textSlideTitleLabel => 'Cim';
+  String get textSlideTitleLabel => 'Cím';
 
   @override
-  String get textSlideBodyLabel => 'Szoveg (soronként)';
+  String get textSlideBodyLabel => 'Szöveg (soronként)';
 
   @override
-  String get loadDia => 'Betoltes .DIA';
+  String get loadDia => 'Betöltés .DIA';
 
   @override
-  String get saveDia => 'Mentes .DIA';
+  String get saveDia => 'Mentés .DIA';
 
   @override
   String savedPath(Object path) {
@@ -639,21 +639,21 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String loadedCount(int count) {
-    return 'Betoltve: $count elem';
+    return 'Betöltve: $count elem';
   }
 
   @override
   String get customOrderEmpty =>
-      'A sorrend ures.\nKeress enekeket a szerkeszteshez.';
+      'A sorrend üres.\nKeress énekeket a szerkesztéshez.';
 
   @override
   String get versePicker => 'Versszak';
 
   @override
-  String get selectedVersesTitle => 'Kivalasztott versszakok';
+  String get selectedVersesTitle => 'Kiválasztott versszakok';
 
   @override
-  String get selectedVersesSubtitle => 'Tobbet is kijelolhetsz.';
+  String get selectedVersesSubtitle => 'Többet is kijelölhetsz.';
 
   @override
   String get apply => 'Alkalmaz';

@@ -101,13 +101,13 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Diatar'**
+  /// **'Diatár'**
   String get appTitle;
 
   /// No description provided for @viewTooltip.
   ///
   /// In hu, this message translates to:
-  /// **'Nezet'**
+  /// **'Nézet'**
   String get viewTooltip;
 
   /// No description provided for @viewSimple.
@@ -119,7 +119,7 @@ abstract class AppLocalizations {
   /// No description provided for @viewSpontaneous.
   ///
   /// In hu, this message translates to:
-  /// **'Spontan'**
+  /// **'Spontán'**
   String get viewSpontaneous;
 
   /// No description provided for @viewOrder.
@@ -131,73 +131,73 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTooltip.
   ///
   /// In hu, this message translates to:
-  /// **'Beallitasok'**
+  /// **'Beállítások'**
   String get settingsTooltip;
 
   /// No description provided for @playlistsTooltip.
   ///
   /// In hu, this message translates to:
-  /// **'Enekrendek'**
+  /// **'Énekrendek'**
   String get playlistsTooltip;
 
   /// No description provided for @playlistsTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Enekrendek'**
+  /// **'Énekrendek'**
   String get playlistsTitle;
 
   /// No description provided for @playlistsMessage.
   ///
   /// In hu, this message translates to:
-  /// **'Ez a muvelet kesobb visszakaphatja a teljes dialogust.'**
+  /// **'Ez a művelet később visszakaphatja a teljes dialógust.'**
   String get playlistsMessage;
 
   /// No description provided for @customOrderTooltip.
   ///
   /// In hu, this message translates to:
-  /// **'Sajat sorrend'**
+  /// **'Saját sorrend'**
   String get customOrderTooltip;
 
   /// No description provided for @addSlideTooltip.
   ///
   /// In hu, this message translates to:
-  /// **'Dia hozzaadasa'**
+  /// **'Dia hozzáadása'**
   String get addSlideTooltip;
 
   /// No description provided for @addTextSlide.
   ///
   /// In hu, this message translates to:
-  /// **'Szoveges dia'**
+  /// **'Szöveges dia'**
   String get addTextSlide;
 
   /// No description provided for @addImageSlide.
   ///
   /// In hu, this message translates to:
-  /// **'Kepes dia'**
+  /// **'Képes dia'**
   String get addImageSlide;
 
   /// No description provided for @downloadBooksTooltip.
   ///
   /// In hu, this message translates to:
-  /// **'Enektarak letoltese'**
+  /// **'Énektárak letöltése'**
   String get downloadBooksTooltip;
 
   /// No description provided for @downloadTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Letoltes'**
+  /// **'Letöltés'**
   String get downloadTitle;
 
   /// No description provided for @downloadMessage.
   ///
   /// In hu, this message translates to:
-  /// **'A letoltesi parbeszed kesobb visszahelyezheto.'**
+  /// **'A letöltési párbeszéd később visszahelyezhető.'**
   String get downloadMessage;
 
   /// No description provided for @refreshTooltip.
   ///
   /// In hu, this message translates to:
-  /// **'Frissites'**
+  /// **'Frissítés'**
   String get refreshTooltip;
 
   /// No description provided for @ok.
@@ -221,25 +221,25 @@ abstract class AppLocalizations {
   /// No description provided for @projectionOn.
   ///
   /// In hu, this message translates to:
-  /// **'Vetites BE'**
+  /// **'Vetítés BE'**
   String get projectionOn;
 
   /// No description provided for @projectionOff.
   ///
   /// In hu, this message translates to:
-  /// **'Vetites KI'**
+  /// **'Vetítés KI'**
   String get projectionOff;
 
   /// No description provided for @previous.
   ///
   /// In hu, this message translates to:
-  /// **'Elozo'**
+  /// **'Előző'**
   String get previous;
 
   /// No description provided for @next.
   ///
   /// In hu, this message translates to:
-  /// **'Kovetkezo'**
+  /// **'Következő'**
   String get next;
 
   /// No description provided for @highlightPrev.
@@ -257,19 +257,19 @@ abstract class AppLocalizations {
   /// No description provided for @positionLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Pozicio: {current}/{total}'**
+  /// **'Pozíció: {current}/{total}'**
   String positionLabel(int current, int total);
 
   /// No description provided for @statusLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Statusz: {status}'**
+  /// **'Státusz: {status}'**
   String statusLabel(Object status);
 
   /// No description provided for @statusStarting.
   ///
   /// In hu, this message translates to:
-  /// **'Inditas...'**
+  /// **'Indítás...'**
   String get statusStarting;
 
   /// No description provided for @statusSenderError.
@@ -287,13 +287,13 @@ abstract class AppLocalizations {
   /// No description provided for @statusSenderOpenPortFailed.
   ///
   /// In hu, this message translates to:
-  /// **'Nem sikerult portot nyitni ({port}): {error}'**
+  /// **'Nem sikerült portot nyitni ({port}): {error}'**
   String statusSenderOpenPortFailed(int port, Object error);
 
   /// No description provided for @statusSenderMqttConnectFailed.
   ///
   /// In hu, this message translates to:
-  /// **'MQTT sender kapcsolodas sikertelen.'**
+  /// **'MQTT sender kapcsolódás sikertelen.'**
   String get statusSenderMqttConnectFailed;
 
   /// No description provided for @statusSenderMqttError.
@@ -305,43 +305,43 @@ abstract class AppLocalizations {
   /// No description provided for @statusMqttSending.
   ///
   /// In hu, this message translates to:
-  /// **'MQTT kuldes: {user}/{channel}'**
+  /// **'MQTT küldés: {user}/{channel}'**
   String statusMqttSending(Object user, Object channel);
 
   /// No description provided for @statusTcpSending.
   ///
   /// In hu, this message translates to:
-  /// **'TCP kuldes: {port}'**
+  /// **'TCP küldés: {port}'**
   String statusTcpSending(int port);
 
   /// No description provided for @statusNoDtxFiles.
   ///
   /// In hu, this message translates to:
-  /// **'Nincs .dtx fajl: {path}'**
+  /// **'Nincs .dtx fájl: {path}'**
   String statusNoDtxFiles(Object path);
 
   /// No description provided for @statusAllSongbooksDisabled.
   ///
   /// In hu, this message translates to:
-  /// **'Minden enektar le van tiltva az enekrendben.'**
+  /// **'Minden énektár le van tiltva az énekrendben.'**
   String get statusAllSongbooksDisabled;
 
   /// No description provided for @statusSongbooksLoaded.
   ///
   /// In hu, this message translates to:
-  /// **'{count} kotet betoltve'**
+  /// **'{count} kötet betöltve'**
   String statusSongbooksLoaded(int count);
 
   /// No description provided for @statusLoadError.
   ///
   /// In hu, this message translates to:
-  /// **'Betoltesi hiba: {error}'**
+  /// **'Betöltési hiba: {error}'**
   String statusLoadError(Object error);
 
   /// No description provided for @statusCustomOrderSelected.
   ///
   /// In hu, this message translates to:
-  /// **'Sajat sorrend: {label}'**
+  /// **'Saját sorrend: {label}'**
   String statusCustomOrderSelected(Object label);
 
   /// No description provided for @statusOrderSaved.
@@ -353,25 +353,25 @@ abstract class AppLocalizations {
   /// No description provided for @statusDiaFileMissing.
   ///
   /// In hu, this message translates to:
-  /// **'Nincs ilyen .DIA fajl: {path}'**
+  /// **'Nincs ilyen .DIA fájl: {path}'**
   String statusDiaFileMissing(Object path);
 
   /// No description provided for @statusOrderLoaded.
   ///
   /// In hu, this message translates to:
-  /// **'Sorrend betoltve ({count} elem): {path}'**
+  /// **'Sorrend betöltve ({count} elem): {path}'**
   String statusOrderLoaded(int count, Object path);
 
   /// No description provided for @statusDownloadListLoading.
   ///
   /// In hu, this message translates to:
-  /// **'Enektar lista letoltese...'**
+  /// **'Énektár lista letöltése...'**
   String get statusDownloadListLoading;
 
   /// No description provided for @statusDownloadProgress.
   ///
   /// In hu, this message translates to:
-  /// **'Letoltes: {current}/{total} {name} {percent}%'**
+  /// **'Letöltés: {current}/{total} {name} {percent}%'**
   String statusDownloadProgress(
     int current,
     int total,
@@ -382,31 +382,31 @@ abstract class AppLocalizations {
   /// No description provided for @statusDownloadSummaryNone.
   ///
   /// In hu, this message translates to:
-  /// **'Nincs uj enektar frissites.'**
+  /// **'Nincs új énektár frissítés.'**
   String get statusDownloadSummaryNone;
 
   /// No description provided for @statusDownloadSummary.
   ///
   /// In hu, this message translates to:
-  /// **'{downloaded} fajl letoltve, {skipped} valtozatlan.'**
+  /// **'{downloaded} fájl letöltve, {skipped} változatlan.'**
   String statusDownloadSummary(int downloaded, int skipped);
 
   /// No description provided for @statusDownloadError.
   ///
   /// In hu, this message translates to:
-  /// **'Letoltesi hiba: {error}'**
+  /// **'Letöltési hiba: {error}'**
   String statusDownloadError(Object error);
 
   /// No description provided for @statusBookSelected.
   ///
   /// In hu, this message translates to:
-  /// **'Kotet: {name}'**
+  /// **'Kötet: {name}'**
   String statusBookSelected(Object name);
 
   /// No description provided for @statusSongPicked.
   ///
   /// In hu, this message translates to:
-  /// **'Enek: {name}'**
+  /// **'Ének: {name}'**
   String statusSongPicked(Object name);
 
   /// No description provided for @statusVersePicked.
@@ -418,127 +418,127 @@ abstract class AppLocalizations {
   /// No description provided for @statusSongSelected.
   ///
   /// In hu, this message translates to:
-  /// **'Enek: {title}'**
+  /// **'Ének: {title}'**
   String statusSongSelected(Object title);
 
   /// No description provided for @statusSongVerseSelected.
   ///
   /// In hu, this message translates to:
-  /// **'Enek/versszak: {title}'**
+  /// **'Ének/versszak: {title}'**
   String statusSongVerseSelected(Object title);
 
   /// No description provided for @statusProjectionOn.
   ///
   /// In hu, this message translates to:
-  /// **'Vetites: BE'**
+  /// **'Vetítés: BE'**
   String get statusProjectionOn;
 
   /// No description provided for @statusProjectionOff.
   ///
   /// In hu, this message translates to:
-  /// **'Vetites: KI'**
+  /// **'Vetítés: KI'**
   String get statusProjectionOff;
 
   /// No description provided for @statusImagePathEmpty.
   ///
   /// In hu, this message translates to:
-  /// **'A kep fajl utvonala ures.'**
+  /// **'A kép fájl útvonala üres.'**
   String get statusImagePathEmpty;
 
   /// No description provided for @statusCustomTextEmpty.
   ///
   /// In hu, this message translates to:
-  /// **'Adj meg cimet vagy legalabb egy sort.'**
+  /// **'Adj meg címet vagy legalább egy sort.'**
   String get statusCustomTextEmpty;
 
   /// No description provided for @statusCustomTextSent.
   ///
   /// In hu, this message translates to:
-  /// **'Szoveges dia elkuldve: {title}'**
+  /// **'Szöveges dia elküldve: {title}'**
   String statusCustomTextSent(Object title);
 
   /// No description provided for @statusCustomTextError.
   ///
   /// In hu, this message translates to:
-  /// **'Szoveges dia kuldesi hiba: {error}'**
+  /// **'Szöveges dia küldési hiba: {error}'**
   String statusCustomTextError(Object error);
 
   /// No description provided for @statusImageNotFound.
   ///
   /// In hu, this message translates to:
-  /// **'A kep fajl nem talalhato: {path}'**
+  /// **'A kép fájl nem található: {path}'**
   String statusImageNotFound(Object path);
 
   /// No description provided for @statusImageSent.
   ///
   /// In hu, this message translates to:
-  /// **'Kep elkuldve: {name}'**
+  /// **'Kép elküldve: {name}'**
   String statusImageSent(Object name);
 
   /// No description provided for @statusImageSendError.
   ///
   /// In hu, this message translates to:
-  /// **'Kep kuldesi hiba: {error}'**
+  /// **'Kép küldési hiba: {error}'**
   String statusImageSendError(Object error);
 
   /// No description provided for @statusBlankPathEmpty.
   ///
   /// In hu, this message translates to:
-  /// **'A blank kep fajl utvonala ures.'**
+  /// **'A blank kép fájl útvonala üres.'**
   String get statusBlankPathEmpty;
 
   /// No description provided for @statusBlankNotFound.
   ///
   /// In hu, this message translates to:
-  /// **'A blank kep fajl nem talalhato: {path}'**
+  /// **'A blank kép fájl nem található: {path}'**
   String statusBlankNotFound(Object path);
 
   /// No description provided for @statusBlankSet.
   ///
   /// In hu, this message translates to:
-  /// **'Blank kep beallitva: {name}'**
+  /// **'Blank kép beállítva: {name}'**
   String statusBlankSet(Object name);
 
   /// No description provided for @statusBlankSendError.
   ///
   /// In hu, this message translates to:
-  /// **'Blank kep kuldesi hiba: {error}'**
+  /// **'Blank kép küldési hiba: {error}'**
   String statusBlankSendError(Object error);
 
   /// No description provided for @statusBlankCleared.
   ///
   /// In hu, this message translates to:
-  /// **'Blank kep torolve.'**
+  /// **'Blank kép törölve.'**
   String get statusBlankCleared;
 
   /// No description provided for @statusBlankClearError.
   ///
   /// In hu, this message translates to:
-  /// **'Blank kep torlesi hiba: {error}'**
+  /// **'Blank kép törlési hiba: {error}'**
   String statusBlankClearError(Object error);
 
   /// No description provided for @statusShutdownCommandSent.
   ///
   /// In hu, this message translates to:
-  /// **'Lezaras utasitas elkuldve.'**
+  /// **'Lezárás utasitas elküldve.'**
   String get statusShutdownCommandSent;
 
   /// No description provided for @statusStopCommandSent.
   ///
   /// In hu, this message translates to:
-  /// **'Megallitas utasitas elkuldve.'**
+  /// **'Megállítás utasitas elküldve.'**
   String get statusStopCommandSent;
 
   /// No description provided for @statusCommandSendError.
   ///
   /// In hu, this message translates to:
-  /// **'Utasitas kuldesi hiba: {error}'**
+  /// **'Utasítás küldési hiba: {error}'**
   String statusCommandSendError(Object error);
 
   /// No description provided for @sendStatusLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Kuldes ({protocol}): {senderState}, kliens: {clientState}'**
+  /// **'Küldés ({protocol}): {senderState}, kliens: {clientState}'**
   String sendStatusLabel(
     Object protocol,
     Object senderState,
@@ -560,7 +560,7 @@ abstract class AppLocalizations {
   /// No description provided for @senderStateActive.
   ///
   /// In hu, this message translates to:
-  /// **'aktiv'**
+  /// **'aktív'**
   String get senderStateActive;
 
   /// No description provided for @senderStateOff.
@@ -578,7 +578,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientStateWaiting.
   ///
   /// In hu, this message translates to:
-  /// **'varakozik'**
+  /// **'várakozik'**
   String get clientStateWaiting;
 
   /// No description provided for @tcpPortLabel.
@@ -590,13 +590,13 @@ abstract class AppLocalizations {
   /// No description provided for @downloadProgress.
   ///
   /// In hu, this message translates to:
-  /// **'Letoltes: {current}/{total} {name}'**
+  /// **'Letöltés: {current}/{total} {name}'**
   String downloadProgress(int current, int total, Object name);
 
   /// No description provided for @noLoadedSlide.
   ///
   /// In hu, this message translates to:
-  /// **'Nincs betoltott dia.'**
+  /// **'Nincs betöltött dia.'**
   String get noLoadedSlide;
 
   /// No description provided for @bookLabel.
@@ -608,7 +608,7 @@ abstract class AppLocalizations {
   /// No description provided for @songLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Enek'**
+  /// **'Ének'**
   String get songLabel;
 
   /// No description provided for @verseLabel.
@@ -626,37 +626,37 @@ abstract class AppLocalizations {
   /// No description provided for @searchLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Diakereso'**
+  /// **'Diakereső'**
   String get searchLabel;
 
   /// No description provided for @searchHint.
   ///
   /// In hu, this message translates to:
-  /// **'Kötet vagy enekcim'**
+  /// **'Kötet vagy enekcím'**
   String get searchHint;
 
   /// No description provided for @noResults.
   ///
   /// In hu, this message translates to:
-  /// **'Nincs talalat.'**
+  /// **'Nincs találat.'**
   String get noResults;
 
   /// No description provided for @customOrderStatus.
   ///
   /// In hu, this message translates to:
-  /// **'Sajat sorrend: {state}'**
+  /// **'Saját sorrend: {state}'**
   String customOrderStatus(Object state);
 
   /// No description provided for @stateActive.
   ///
   /// In hu, this message translates to:
-  /// **'Aktiv'**
+  /// **'Aktív'**
   String get stateActive;
 
   /// No description provided for @stateInactive.
   ///
   /// In hu, this message translates to:
-  /// **'Inaktiv'**
+  /// **'Inaktív'**
   String get stateInactive;
 
   /// No description provided for @nextShort.
@@ -668,25 +668,25 @@ abstract class AppLocalizations {
   /// No description provided for @previewTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Dia elonezet'**
+  /// **'Dia előnézet'**
   String get previewTitle;
 
   /// No description provided for @projectedImage.
   ///
   /// In hu, this message translates to:
-  /// **'Vetitett kep:'**
+  /// **'Vetített kép:'**
   String get projectedImage;
 
   /// No description provided for @settingsTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Diatar beallitasok'**
+  /// **'Diatár beállítások'**
   String get settingsTitle;
 
   /// No description provided for @settingsTitleReceiver.
   ///
   /// In hu, this message translates to:
-  /// **'Beallitasok'**
+  /// **'Beállítások'**
   String get settingsTitleReceiver;
 
   /// No description provided for @modeIp.
@@ -704,7 +704,7 @@ abstract class AppLocalizations {
   /// No description provided for @senderLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Kuldo'**
+  /// **'Küldő'**
   String get senderLabel;
 
   /// No description provided for @senderHelper.
@@ -716,7 +716,7 @@ abstract class AppLocalizations {
   /// No description provided for @senderRefreshTooltip.
   ///
   /// In hu, this message translates to:
-  /// **'Kuldo lista frissites'**
+  /// **'Küldő lista frissítés'**
   String get senderRefreshTooltip;
 
   /// No description provided for @channelLabel.
@@ -734,7 +734,7 @@ abstract class AppLocalizations {
   /// No description provided for @clipTop.
   ///
   /// In hu, this message translates to:
-  /// **'Felso'**
+  /// **'Felső'**
   String get clipTop;
 
   /// No description provided for @clipRight.
@@ -746,31 +746,31 @@ abstract class AppLocalizations {
   /// No description provided for @clipBottom.
   ///
   /// In hu, this message translates to:
-  /// **'Also'**
+  /// **'Alsó'**
   String get clipBottom;
 
   /// No description provided for @borderToClip.
   ///
   /// In hu, this message translates to:
-  /// **'Margok a vezerlotol (Border2Clip)'**
+  /// **'Margok a vezérlőtől (Border2Clip)'**
   String get borderToClip;
 
   /// No description provided for @mirror.
   ///
   /// In hu, this message translates to:
-  /// **'Tukrozes'**
+  /// **'Tükrözés'**
   String get mirror;
 
   /// No description provided for @autoBootIndicator.
   ///
   /// In hu, this message translates to:
-  /// **'Automatikus inditas (jelzo)'**
+  /// **'Automatikus indítás (jelző)'**
   String get autoBootIndicator;
 
   /// No description provided for @rotationLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Forgatas'**
+  /// **'Forgatás'**
   String get rotationLabel;
 
   /// No description provided for @tcpPortRange.
@@ -782,13 +782,13 @@ abstract class AppLocalizations {
   /// No description provided for @mqttUserHint.
   ///
   /// In hu, this message translates to:
-  /// **'MQTT user (ures = TCP mod)'**
+  /// **'MQTT user (üres = TCP mód)'**
   String get mqttUserHint;
 
   /// No description provided for @mqttPassword.
   ///
   /// In hu, this message translates to:
-  /// **'MQTT jelszo'**
+  /// **'MQTT jelszó'**
   String get mqttPassword;
 
   /// No description provided for @mqttChannel.
@@ -800,19 +800,19 @@ abstract class AppLocalizations {
   /// No description provided for @uiTheme.
   ///
   /// In hu, this message translates to:
-  /// **'Felhasznaloi felulet temaja'**
+  /// **'Felhasználói felület témája'**
   String get uiTheme;
 
   /// No description provided for @themeDark.
   ///
   /// In hu, this message translates to:
-  /// **'Sotet'**
+  /// **'Sötét'**
   String get themeDark;
 
   /// No description provided for @themeLight.
   ///
   /// In hu, this message translates to:
-  /// **'Vilagos'**
+  /// **'Világos'**
   String get themeLight;
 
   /// No description provided for @dtxFolderPath.
@@ -824,25 +824,25 @@ abstract class AppLocalizations {
   /// No description provided for @blankImagePath.
   ///
   /// In hu, this message translates to:
-  /// **'Blank kep utvonal'**
+  /// **'Blank kép útvonal'**
   String get blankImagePath;
 
   /// No description provided for @fileChoose.
   ///
   /// In hu, this message translates to:
-  /// **'Fajl valasztasa'**
+  /// **'Fájl választása'**
   String get fileChoose;
 
   /// No description provided for @uiLanguage.
   ///
   /// In hu, this message translates to:
-  /// **'Felhasznaloi felulet nyelve'**
+  /// **'Felhasználói felület nyelve'**
   String get uiLanguage;
 
   /// No description provided for @languageSystem.
   ///
   /// In hu, this message translates to:
-  /// **'Rendszer alapertelmezett'**
+  /// **'Rendszer alapértelmezett'**
   String get languageSystem;
 
   /// No description provided for @languageHungarian.
@@ -860,25 +860,25 @@ abstract class AppLocalizations {
   /// No description provided for @projectionSettingsTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Vetitesi beallitasok'**
+  /// **'Vetítési beállítások'**
   String get projectionSettingsTitle;
 
   /// No description provided for @fontSize.
   ///
   /// In hu, this message translates to:
-  /// **'Betumeret'**
+  /// **'Betűméret'**
   String get fontSize;
 
   /// No description provided for @titleSize.
   ///
   /// In hu, this message translates to:
-  /// **'Cim meret'**
+  /// **'Cím méret'**
   String get titleSize;
 
   /// No description provided for @leftMargin.
   ///
   /// In hu, this message translates to:
-  /// **'Bal behuzas'**
+  /// **'Bal behúzás'**
   String get leftMargin;
 
   /// No description provided for @borderLeft.
@@ -908,25 +908,25 @@ abstract class AppLocalizations {
   /// No description provided for @lineSpacing.
   ///
   /// In hu, this message translates to:
-  /// **'Sorkoz'**
+  /// **'Sorköz'**
   String get lineSpacing;
 
   /// No description provided for @kottaScale.
   ///
   /// In hu, this message translates to:
-  /// **'Kotta meret arany'**
+  /// **'Kotta méret arány'**
   String get kottaScale;
 
   /// No description provided for @chordScale.
   ///
   /// In hu, this message translates to:
-  /// **'Akkord meret arany'**
+  /// **'Akkord méret arány'**
   String get chordScale;
 
   /// No description provided for @backgroundMode.
   ///
   /// In hu, this message translates to:
-  /// **'Hatters kep mod'**
+  /// **'Háttér kép mód'**
   String get backgroundMode;
 
   /// No description provided for @bgModeCenter.
@@ -962,127 +962,127 @@ abstract class AppLocalizations {
   /// No description provided for @backgroundOpacity.
   ///
   /// In hu, this message translates to:
-  /// **'Hatter atszosag'**
+  /// **'Háttér átlátszóság'**
   String get backgroundOpacity;
 
   /// No description provided for @blankOpacity.
   ///
   /// In hu, this message translates to:
-  /// **'Blank atszosag'**
+  /// **'Blank átlátszóság'**
   String get blankOpacity;
 
   /// No description provided for @autoSize.
   ///
   /// In hu, this message translates to:
-  /// **'Automatikus meretezes'**
+  /// **'Automatikus méretezés'**
   String get autoSize;
 
   /// No description provided for @scrollableProjection.
   ///
   /// In hu, this message translates to:
-  /// **'Gorgetheto vetites'**
+  /// **'Görgethető vetítés'**
   String get scrollableProjection;
 
   /// No description provided for @scrollableProjectionHint.
   ///
   /// In hu, this message translates to:
-  /// **'Ha ki van kapcsolva, a szoveg automatikusan a vetitesi terulethez igazodik.'**
+  /// **'Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.'**
   String get scrollableProjectionHint;
 
   /// No description provided for @showTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Cim mutatasa'**
+  /// **'Cím mutatása'**
   String get showTitle;
 
   /// No description provided for @hCenter.
   ///
   /// In hu, this message translates to:
-  /// **'Vizszintes kozepre igazitas'**
+  /// **'Vízszintes középre igazítás'**
   String get hCenter;
 
   /// No description provided for @vCenter.
   ///
   /// In hu, this message translates to:
-  /// **'Fuggoleges kozepre igazitas'**
+  /// **'Függőleges középre igazítás'**
   String get vCenter;
 
   /// No description provided for @showChords.
   ///
   /// In hu, this message translates to:
-  /// **'Akkordok mutatasa'**
+  /// **'Akkordok mutatása'**
   String get showChords;
 
   /// No description provided for @showKotta.
   ///
   /// In hu, this message translates to:
-  /// **'Kotta mutatasa'**
+  /// **'Kotta mutatása'**
   String get showKotta;
 
   /// No description provided for @boldText.
   ///
   /// In hu, this message translates to:
-  /// **'Felkover szoveg'**
+  /// **'Félkövér szöveg'**
   String get boldText;
 
   /// No description provided for @colorsTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Szinek'**
+  /// **'Színek'**
   String get colorsTitle;
 
   /// No description provided for @backgroundColor.
   ///
   /// In hu, this message translates to:
-  /// **'Hatter'**
+  /// **'Háttér'**
   String get backgroundColor;
 
   /// No description provided for @textColor.
   ///
   /// In hu, this message translates to:
-  /// **'Szoveg'**
+  /// **'Szöveg'**
   String get textColor;
 
   /// No description provided for @emptySlideColor.
   ///
   /// In hu, this message translates to:
-  /// **'Ures dia'**
+  /// **'Üres dia'**
   String get emptySlideColor;
 
   /// No description provided for @highlightColor.
   ///
   /// In hu, this message translates to:
-  /// **'Kiemeles'**
+  /// **'Kiemelés'**
   String get highlightColor;
 
   /// No description provided for @backgroundColorTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Hatter szine'**
+  /// **'Háttér színe'**
   String get backgroundColorTitle;
 
   /// No description provided for @textColorTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Szoveg szine'**
+  /// **'Szöveg színe'**
   String get textColorTitle;
 
   /// No description provided for @emptySlideColorTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Ures dia szine'**
+  /// **'Üres dia színe'**
   String get emptySlideColorTitle;
 
   /// No description provided for @highlightColorTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Kiemeles szine'**
+  /// **'Kiemelés színe'**
   String get highlightColorTitle;
 
   /// No description provided for @cancel.
   ///
   /// In hu, this message translates to:
-  /// **'Megse'**
+  /// **'Mégse'**
   String get cancel;
 
   /// No description provided for @save.
@@ -1094,31 +1094,31 @@ abstract class AppLocalizations {
   /// No description provided for @invalidPortRange.
   ///
   /// In hu, this message translates to:
-  /// **'A port 0..65535 kozott legyen.'**
+  /// **'A port 0..65535 között legyen.'**
   String get invalidPortRange;
 
   /// No description provided for @hexColorHint.
   ///
   /// In hu, this message translates to:
-  /// **'Hex szin (#AARRGGBB vagy #RRGGBB)'**
+  /// **'Hex szín (#AARRGGBB vagy #RRGGBB)'**
   String get hexColorHint;
 
   /// No description provided for @close.
   ///
   /// In hu, this message translates to:
-  /// **'Bezaras'**
+  /// **'Bezárás'**
   String get close;
 
   /// No description provided for @imagesFileTypeLabel.
   ///
   /// In hu, this message translates to:
-  /// **'kepek'**
+  /// **'képek'**
   String get imagesFileTypeLabel;
 
   /// No description provided for @diatarPlaylistFileTypeLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Diatar playlist'**
+  /// **'Diatár playlist'**
   String get diatarPlaylistFileTypeLabel;
 
   /// No description provided for @customOrderSuggestedFileName.
@@ -1130,49 +1130,49 @@ abstract class AppLocalizations {
   /// No description provided for @customOrderEditTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Sajat sorrend szerkesztese'**
+  /// **'Saját sorrend szerkesztése'**
   String get customOrderEditTitle;
 
   /// No description provided for @addSong.
   ///
   /// In hu, this message translates to:
-  /// **'Enek hozzaadasa'**
+  /// **'Ének hozzáadása'**
   String get addSong;
 
   /// No description provided for @searchSongHint.
   ///
   /// In hu, this message translates to:
-  /// **'Kötet vagy enekcim'**
+  /// **'Kötet vagy énekcím'**
   String get searchSongHint;
 
   /// No description provided for @textSlideDialogTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Szoveges dia hozzaadasa'**
+  /// **'Szöveges dia hozzáadása'**
   String get textSlideDialogTitle;
 
   /// No description provided for @textSlideTitleLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Cim'**
+  /// **'Cím'**
   String get textSlideTitleLabel;
 
   /// No description provided for @textSlideBodyLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Szoveg (soronként)'**
+  /// **'Szöveg (soronként)'**
   String get textSlideBodyLabel;
 
   /// No description provided for @loadDia.
   ///
   /// In hu, this message translates to:
-  /// **'Betoltes .DIA'**
+  /// **'Betöltés .DIA'**
   String get loadDia;
 
   /// No description provided for @saveDia.
   ///
   /// In hu, this message translates to:
-  /// **'Mentes .DIA'**
+  /// **'Mentés .DIA'**
   String get saveDia;
 
   /// No description provided for @savedPath.
@@ -1184,13 +1184,13 @@ abstract class AppLocalizations {
   /// No description provided for @loadedCount.
   ///
   /// In hu, this message translates to:
-  /// **'Betoltve: {count} elem'**
+  /// **'Betöltve: {count} elem'**
   String loadedCount(int count);
 
   /// No description provided for @customOrderEmpty.
   ///
   /// In hu, this message translates to:
-  /// **'A sorrend ures.\nKeress enekeket a szerkeszteshez.'**
+  /// **'A sorrend üres.\nKeress énekeket a szerkesztéshez.'**
   String get customOrderEmpty;
 
   /// No description provided for @versePicker.
@@ -1202,13 +1202,13 @@ abstract class AppLocalizations {
   /// No description provided for @selectedVersesTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Kivalasztott versszakok'**
+  /// **'Kiválasztott versszakok'**
   String get selectedVersesTitle;
 
   /// No description provided for @selectedVersesSubtitle.
   ///
   /// In hu, this message translates to:
-  /// **'Tobbet is kijelolhetsz.'**
+  /// **'Többet is kijelölhetsz.'**
   String get selectedVersesSubtitle;
 
   /// No description provided for @apply.

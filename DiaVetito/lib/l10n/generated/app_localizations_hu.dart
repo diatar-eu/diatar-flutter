@@ -9,10 +9,10 @@ class AppLocalizationsHu extends AppLocalizations {
   AppLocalizationsHu([String locale = 'hu']) : super(locale);
 
   @override
-  String get appTitle => 'DiaVetito';
+  String get appTitle => 'DiaVetítő';
 
   @override
-  String get settingsTitleReceiver => 'Beallitasok';
+  String get settingsTitleReceiver => 'Beállítások';
 
   @override
   String get modeIp => 'IP';
@@ -24,13 +24,13 @@ class AppLocalizationsHu extends AppLocalizations {
   String get tcpPortRange => 'TCP port (0..65535)';
 
   @override
-  String get senderLabel => 'Kuldo';
+  String get senderLabel => 'Küldő';
 
   @override
   String get senderHelper => 'MQTT sender neve';
 
   @override
-  String get senderRefreshTooltip => 'Kuldo lista frissites';
+  String get senderRefreshTooltip => 'Küldő lista frissítés';
 
   @override
   String get channelLabel => 'Csatorna';
@@ -39,31 +39,31 @@ class AppLocalizationsHu extends AppLocalizations {
   String get clipLeft => 'Bal';
 
   @override
-  String get clipTop => 'Felso';
+  String get clipTop => 'Felső';
 
   @override
   String get clipRight => 'Jobb';
 
   @override
-  String get clipBottom => 'Also';
+  String get clipBottom => 'Alsó';
 
   @override
-  String get borderToClip => 'Margok a vezerlotol (Border2Clip)';
+  String get borderToClip => 'Margok a vezérlőtől (Border2Clip)';
 
   @override
-  String get mirror => 'Tukrozes';
+  String get mirror => 'Tükrözés';
 
   @override
-  String get autoBootIndicator => 'Automatikus inditas (jelzo)';
+  String get autoBootIndicator => 'Automatikus indítás (jelző)';
 
   @override
-  String get rotationLabel => 'Forgatas';
+  String get rotationLabel => 'Forgatás';
 
   @override
-  String get uiLanguage => 'Felhasznaloi felulet nyelve';
+  String get uiLanguage => 'Felhasználói felület nyelve';
 
   @override
-  String get languageSystem => 'Rendszer alapertelmezett';
+  String get languageSystem => 'Rendszer alapértelmezett';
 
   @override
   String get languageHungarian => 'Magyar';
@@ -72,63 +72,63 @@ class AppLocalizationsHu extends AppLocalizations {
   String get languageEnglish => 'Angol';
 
   @override
-  String get projectionFilteringTitle => 'Vetites szurese';
+  String get projectionFilteringTitle => 'Vetítés szűrése';
 
   @override
-  String get receiverUseServerColors => 'Szerver szinei';
+  String get receiverUseServerColors => 'Szerver színei';
 
   @override
   String get receiverUseServerColorsHint =>
-      'Ha ki van kapcsolva, a helyi szinek lesznek hasznalva.';
+      'Ha ki van kapcsolva, a helyi színek lesznek használva.';
 
   @override
-  String get receiverShowHighlight => 'Kiemeles megjelenitese';
+  String get receiverShowHighlight => 'Kiemelés megjelenítése';
 
   @override
-  String get showChords => 'Akkordok mutatasa';
+  String get showChords => 'Akkordok mutatása';
 
   @override
-  String get showKotta => 'Kotta mutatasa';
+  String get showKotta => 'Kotta mutatása';
 
   @override
-  String get scrollableProjection => 'Gorgetheto vetites';
+  String get scrollableProjection => 'Görgethető vetítés';
 
   @override
   String get scrollableProjectionHint =>
-      'Ha ki van kapcsolva, a szoveg automatikusan a vetitesi terulethez igazodik.';
+      'Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.';
 
   @override
-  String get localColorsTitle => 'Helyi szinek';
+  String get localColorsTitle => 'Helyi színek';
 
   @override
-  String get backgroundColorLabel => 'Hatterszin';
+  String get backgroundColorLabel => 'Háttérszín';
 
   @override
-  String get textColorLabel => 'Szovegszin';
+  String get textColorLabel => 'Szövegszín';
 
   @override
-  String get blankColorLabel => 'Blank szin';
+  String get blankColorLabel => 'Blank szín';
 
   @override
-  String get highlightColorLabel => 'Kiemeles szin';
+  String get highlightColorLabel => 'Kiemelés szín';
 
   @override
-  String get change => 'Valt';
+  String get change => 'Vált';
 
   @override
-  String get colorPickerTitle => 'Szinvalaszto';
+  String get colorPickerTitle => 'Színválasztó';
 
   @override
-  String get exit => 'Kilepes';
+  String get exit => 'Kilépés';
 
   @override
-  String get shutdown => 'Leallitas';
+  String get shutdown => 'Leállítás';
 
   @override
-  String get reboot => 'Ujrainditas';
+  String get reboot => 'Újraindítás';
 
   @override
-  String get cancel => 'Megse';
+  String get cancel => 'Mégse';
 
   @override
   String get save => 'Ment';
@@ -137,28 +137,28 @@ class AppLocalizationsHu extends AppLocalizations {
   String get ok => 'OK';
 
   @override
-  String get invalidPortRange => 'A port 0..65535 kozott legyen.';
+  String get invalidPortRange => 'A port 0..65535 között legyen.';
 
   @override
-  String get statusStarting => 'Inditas...';
+  String get statusStarting => 'Indítás...';
 
   @override
-  String get statusExitRequested => 'Kilepes...';
+  String get statusExitRequested => 'Kilépés...';
 
   @override
   String get statusShutdownUnsupported =>
-      'Rendszerleallitas Flutteren nem tamogatott.';
+      'Rendszerleállítás Flutteren nem támogatott.';
 
   @override
   String get statusRebootUnsupported =>
-      'Rendszer ujrainditas Flutteren nem tamogatott.';
+      'Rendszer újraindítás Flutteren nem támogatott.';
 
   @override
-  String get statusStopRequested => 'Leallitas kerve (epStop).';
+  String get statusStopRequested => 'Leállítás kérve (epStop).';
 
   @override
   String get statusShutdownRequestedUnsupported =>
-      'Rendszerleallitas kerve (epShutdown), Flutterben nem tamogatott.';
+      'Rendszerleállítás kérve (epShutdown), Flutterben nem támogatott.';
 
   @override
   String statusReceiverError(Object message) {
@@ -170,17 +170,17 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String statusMqttReceiving(Object user, Object channel) {
-    return 'MQTT fogadas: $user/$channel';
+    return 'MQTT fogadás: $user/$channel';
   }
 
   @override
   String statusConnected(int port) {
-    return 'Kapcsolodva ($port)';
+    return 'Kapcsolódva ($port)';
   }
 
   @override
   String statusWaitingForClient(int port) {
-    return 'Varakozas kliensre ($port)';
+    return 'Várakozás kliensre ($port)';
   }
 
   @override
@@ -188,7 +188,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String statusTcpListening(int port) {
-    return 'TCP figyeles: $port';
+    return 'TCP figyelés: $port';
   }
 
   @override
@@ -198,7 +198,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String statusTcpServerOpenPortFailed(int port, Object error) {
-    return 'Nem sikerult portot nyitni ($port): $error';
+    return 'Nem sikerült portot nyitni ($port): $error';
   }
 
   @override
@@ -208,11 +208,11 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String statusTcpServerPacketParseError(Object error) {
-    return 'Csomag feldolgozasi hiba: $error';
+    return 'Csomag feldolgozási hiba: $error';
   }
 
   @override
   String statusTcpServerSendError(Object error) {
-    return 'Kuldesi hiba: $error';
+    return 'Küldési hiba: $error';
   }
 }

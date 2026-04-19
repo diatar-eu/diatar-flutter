@@ -1,32 +1,32 @@
 {
   "@@locale": "hu",
-  "appTitle": "Diatar",
-  "viewTooltip": "Nezet",
+  "appTitle": "Diatár",
+  "viewTooltip": "Nézet",
   "viewSimple": "Szimpla",
-  "viewSpontaneous": "Spontan",
+  "viewSpontaneous": "Spontán",
   "viewOrder": "Sorrend",
-  "settingsTooltip": "Beallitasok",
-  "playlistsTooltip": "Enekrendek",
-  "playlistsTitle": "Enekrendek",
-  "playlistsMessage": "Ez a muvelet kesobb visszakaphatja a teljes dialogust.",
-  "customOrderTooltip": "Sajat sorrend",
-  "addSlideTooltip": "Dia hozzaadasa",
-  "addTextSlide": "Szoveges dia",
-  "addImageSlide": "Kepes dia",
-  "downloadBooksTooltip": "Enektarak letoltese",
-  "downloadTitle": "Letoltes",
-  "downloadMessage": "A letoltesi parbeszed kesobb visszahelyezheto.",
-  "refreshTooltip": "Frissites",
+  "settingsTooltip": "Beállítások",
+  "playlistsTooltip": "Énekrendek",
+  "playlistsTitle": "Énekrendek",
+  "playlistsMessage": "Ez a művelet később visszakaphatja a teljes dialógust.",
+  "customOrderTooltip": "Saját sorrend",
+  "addSlideTooltip": "Dia hozzáadása",
+  "addTextSlide": "Szöveges dia",
+  "addImageSlide": "Képes dia",
+  "downloadBooksTooltip": "Énektárak letöltése",
+  "downloadTitle": "Letöltés",
+  "downloadMessage": "A letöltési párbeszéd később visszahelyezhető.",
+  "refreshTooltip": "Frissítés",
   "ok": "Rendben",
   "songPrev": "Ének -",
   "songNext": "Ének +",
-  "projectionOn": "Vetites BE",
-  "projectionOff": "Vetites KI",
-  "previous": "Elozo",
-  "next": "Kovetkezo",
+  "projectionOn": "Vetítés BE",
+  "projectionOff": "Vetítés KI",
+  "previous": "Előző",
+  "next": "Következő",
   "highlightPrev": "Highlight -",
   "highlightNext": "Highlight +",
-  "positionLabel": "Pozicio: {current}/{total}",
+  "positionLabel": "Pozíció: {current}/{total}",
   "@positionLabel": {
     "placeholders": {
       "current": {
@@ -37,13 +37,13 @@
       }
     }
   },
-  "statusLabel": "Statusz: {status}",
+  "statusLabel": "Státusz: {status}",
   "@statusLabel": {
     "placeholders": {
       "status": {}
     }
   },
-  "statusStarting": "Inditas...",
+  "statusStarting": "Indítás...",
   "statusSenderError": "{message}",
   "@statusSenderError": {
     "placeholders": {
@@ -56,7 +56,7 @@
       "error": {}
     }
   },
-  "statusSenderOpenPortFailed": "Nem sikerult portot nyitni ({port}): {error}",
+  "statusSenderOpenPortFailed": "Nem sikerült portot nyitni ({port}): {error}",
   "@statusSenderOpenPortFailed": {
     "placeholders": {
       "port": {
@@ -65,21 +65,21 @@
       "error": {}
     }
   },
-  "statusSenderMqttConnectFailed": "MQTT sender kapcsolodas sikertelen.",
+  "statusSenderMqttConnectFailed": "MQTT sender kapcsolódás sikertelen.",
   "statusSenderMqttError": "MQTT sender hiba: {error}",
   "@statusSenderMqttError": {
     "placeholders": {
       "error": {}
     }
   },
-  "statusMqttSending": "MQTT kuldes: {user}/{channel}",
+  "statusMqttSending": "MQTT küldés: {user}/{channel}",
   "@statusMqttSending": {
     "placeholders": {
       "user": {},
       "channel": {}
     }
   },
-  "statusTcpSending": "TCP kuldes: {port}",
+  "statusTcpSending": "TCP küldés: {port}",
   "@statusTcpSending": {
     "placeholders": {
       "port": {
@@ -87,14 +87,14 @@
       }
     }
   },
-  "statusNoDtxFiles": "Nincs .dtx fajl: {path}",
+  "statusNoDtxFiles": "Nincs .dtx fájl: {path}",
   "@statusNoDtxFiles": {
     "placeholders": {
       "path": {}
     }
   },
-  "statusAllSongbooksDisabled": "Minden enektar le van tiltva az enekrendben.",
-  "statusSongbooksLoaded": "{count} kotet betoltve",
+  "statusAllSongbooksDisabled": "Minden énektár le van tiltva az énekrendben.",
+  "statusSongbooksLoaded": "{count} kötet betöltve",
   "@statusSongbooksLoaded": {
     "placeholders": {
       "count": {
@@ -102,13 +102,13 @@
       }
     }
   },
-  "statusLoadError": "Betoltesi hiba: {error}",
+  "statusLoadError": "Betöltési hiba: {error}",
   "@statusLoadError": {
     "placeholders": {
       "error": {}
     }
   },
-  "statusCustomOrderSelected": "Sajat sorrend: {label}",
+  "statusCustomOrderSelected": "Saját sorrend: {label}",
   "@statusCustomOrderSelected": {
     "placeholders": {
       "label": {}
@@ -120,13 +120,13 @@
       "path": {}
     }
   },
-  "statusDiaFileMissing": "Nincs ilyen .DIA fajl: {path}",
+  "statusDiaFileMissing": "Nincs ilyen .DIA fájl: {path}",
   "@statusDiaFileMissing": {
     "placeholders": {
       "path": {}
     }
   },
-  "statusOrderLoaded": "Sorrend betoltve ({count} elem): {path}",
+  "statusOrderLoaded": "Sorrend betöltve ({count} elem): {path}",
   "@statusOrderLoaded": {
     "placeholders": {
       "count": {
@@ -135,8 +135,8 @@
       "path": {}
     }
   },
-  "statusDownloadListLoading": "Enektar lista letoltese...",
-  "statusDownloadProgress": "Letoltes: {current}/{total} {name} {percent}%",
+  "statusDownloadListLoading": "Énektár lista letöltése...",
+  "statusDownloadProgress": "Letöltés: {current}/{total} {name} {percent}%",
   "@statusDownloadProgress": {
     "placeholders": {
       "current": {
@@ -151,8 +151,8 @@
       }
     }
   },
-  "statusDownloadSummaryNone": "Nincs uj enektar frissites.",
-  "statusDownloadSummary": "{downloaded} fajl letoltve, {skipped} valtozatlan.",
+  "statusDownloadSummaryNone": "Nincs új énektár frissítés.",
+  "statusDownloadSummary": "{downloaded} fájl letöltve, {skipped} változatlan.",
   "@statusDownloadSummary": {
     "placeholders": {
       "downloaded": {
@@ -163,19 +163,19 @@
       }
     }
   },
-  "statusDownloadError": "Letoltesi hiba: {error}",
+  "statusDownloadError": "Letöltési hiba: {error}",
   "@statusDownloadError": {
     "placeholders": {
       "error": {}
     }
   },
-  "statusBookSelected": "Kotet: {name}",
+  "statusBookSelected": "Kötet: {name}",
   "@statusBookSelected": {
     "placeholders": {
       "name": {}
     }
   },
-  "statusSongPicked": "Enek: {name}",
+  "statusSongPicked": "Ének: {name}",
   "@statusSongPicked": {
     "placeholders": {
       "name": {}
@@ -187,87 +187,87 @@
       "name": {}
     }
   },
-  "statusSongSelected": "Enek: {title}",
+  "statusSongSelected": "Ének: {title}",
   "@statusSongSelected": {
     "placeholders": {
       "title": {}
     }
   },
-  "statusSongVerseSelected": "Enek/versszak: {title}",
+  "statusSongVerseSelected": "Ének/versszak: {title}",
   "@statusSongVerseSelected": {
     "placeholders": {
       "title": {}
     }
   },
-  "statusProjectionOn": "Vetites: BE",
-  "statusProjectionOff": "Vetites: KI",
-  "statusImagePathEmpty": "A kep fajl utvonala ures.",
-  "statusCustomTextEmpty": "Adj meg cimet vagy legalabb egy sort.",
-  "statusCustomTextSent": "Szoveges dia elkuldve: {title}",
+  "statusProjectionOn": "Vetítés: BE",
+  "statusProjectionOff": "Vetítés: KI",
+  "statusImagePathEmpty": "A kép fájl útvonala üres.",
+  "statusCustomTextEmpty": "Adj meg címet vagy legalább egy sort.",
+  "statusCustomTextSent": "Szöveges dia elküldve: {title}",
   "@statusCustomTextSent": {
     "placeholders": {
       "title": {}
     }
   },
-  "statusCustomTextError": "Szoveges dia kuldesi hiba: {error}",
+  "statusCustomTextError": "Szöveges dia küldési hiba: {error}",
   "@statusCustomTextError": {
     "placeholders": {
       "error": {}
     }
   },
-  "statusImageNotFound": "A kep fajl nem talalhato: {path}",
+  "statusImageNotFound": "A kép fájl nem található: {path}",
   "@statusImageNotFound": {
     "placeholders": {
       "path": {}
     }
   },
-  "statusImageSent": "Kep elkuldve: {name}",
+  "statusImageSent": "Kép elküldve: {name}",
   "@statusImageSent": {
     "placeholders": {
       "name": {}
     }
   },
-  "statusImageSendError": "Kep kuldesi hiba: {error}",
+  "statusImageSendError": "Kép küldési hiba: {error}",
   "@statusImageSendError": {
     "placeholders": {
       "error": {}
     }
   },
-  "statusBlankPathEmpty": "A blank kep fajl utvonala ures.",
-  "statusBlankNotFound": "A blank kep fajl nem talalhato: {path}",
+  "statusBlankPathEmpty": "A blank kép fájl útvonala üres.",
+  "statusBlankNotFound": "A blank kép fájl nem található: {path}",
   "@statusBlankNotFound": {
     "placeholders": {
       "path": {}
     }
   },
-  "statusBlankSet": "Blank kep beallitva: {name}",
+  "statusBlankSet": "Blank kép beállítva: {name}",
   "@statusBlankSet": {
     "placeholders": {
       "name": {}
     }
   },
-  "statusBlankSendError": "Blank kep kuldesi hiba: {error}",
+  "statusBlankSendError": "Blank kép küldési hiba: {error}",
   "@statusBlankSendError": {
     "placeholders": {
       "error": {}
     }
   },
-  "statusBlankCleared": "Blank kep torolve.",
-  "statusBlankClearError": "Blank kep torlesi hiba: {error}",
+  "statusBlankCleared": "Blank kép törölve.",
+  "statusBlankClearError": "Blank kép törlési hiba: {error}",
   "@statusBlankClearError": {
     "placeholders": {
       "error": {}
     }
   },
-  "statusShutdownCommandSent": "Lezaras utasitas elkuldve.",
-  "statusStopCommandSent": "Megallitas utasitas elkuldve.",
-  "statusCommandSendError": "Utasitas kuldesi hiba: {error}",
+  "statusShutdownCommandSent": "Lezárás utasitas elküldve.",
+  "statusStopCommandSent": "Megállítás utasitas elküldve.",
+  "statusCommandSendError": "Utasítás küldési hiba: {error}",
   "@statusCommandSendError": {
     "placeholders": {
       "error": {}
     }
   },
-  "sendStatusLabel": "Kuldes ({protocol}): {senderState}, kliens: {clientState}",
+  "sendStatusLabel": "Küldés ({protocol}): {senderState}, kliens: {clientState}",
   "@sendStatusLabel": {
     "placeholders": {
       "protocol": {},
@@ -277,10 +277,10 @@
   },
   "protocolMqtt": "MQTT",
   "protocolTcp": "TCP",
-  "senderStateActive": "aktiv",
+  "senderStateActive": "aktív",
   "senderStateOff": "kikapcsolva",
   "clientStateConnected": "csatlakozva",
-  "clientStateWaiting": "varakozik",
+  "clientStateWaiting": "várakozik",
   "tcpPortLabel": "TCP port: {port}",
   "@tcpPortLabel": {
     "placeholders": {
@@ -289,7 +289,7 @@
       }
     }
   },
-  "downloadProgress": "Letoltes: {current}/{total} {name}",
+  "downloadProgress": "Letöltés: {current}/{total} {name}",
   "@downloadProgress": {
     "placeholders": {
       "current": {
@@ -301,9 +301,9 @@
       "name": {}
     }
   },
-  "noLoadedSlide": "Nincs betoltott dia.",
+  "noLoadedSlide": "Nincs betöltött dia.",
   "bookLabel": "Kötet",
-  "songLabel": "Enek",
+  "songLabel": "Ének",
   "verseLabel": "Versszak",
   "versePanelTitle": "{title}: {verse}",
   "@versePanelTitle": {
@@ -312,110 +312,110 @@
       "verse": {}
     }
   },
-  "searchLabel": "Diakereso",
-  "searchHint": "Kötet vagy enekcim",
-  "noResults": "Nincs talalat.",
-  "customOrderStatus": "Sajat sorrend: {state}",
+  "searchLabel": "Diakereső",
+  "searchHint": "Kötet vagy enekcím",
+  "noResults": "Nincs találat.",
+  "customOrderStatus": "Saját sorrend: {state}",
   "@customOrderStatus": {
     "placeholders": {
       "state": {}
     }
   },
-  "stateActive": "Aktiv",
-  "stateInactive": "Inaktiv",
+  "stateActive": "Aktív",
+  "stateInactive": "Inaktív",
   "nextShort": "Kov.",
-  "previewTitle": "Dia elonezet",
-  "projectedImage": "Vetitett kep:",
-  "settingsTitle": "Diatar beallitasok",
-  "settingsTitleReceiver": "Beallitasok",
+  "previewTitle": "Dia előnézet",
+  "projectedImage": "Vetített kép:",
+  "settingsTitle": "Diatár beállítások",
+  "settingsTitleReceiver": "Beállítások",
   "modeIp": "IP",
   "modeInternet": "Internet",
-  "senderLabel": "Kuldo",
+  "senderLabel": "Küldő",
   "senderHelper": "MQTT sender neve",
-  "senderRefreshTooltip": "Kuldo lista frissites",
+  "senderRefreshTooltip": "Küldő lista frissítés",
   "channelLabel": "Csatorna",
   "clipLeft": "Bal",
-  "clipTop": "Felso",
+  "clipTop": "Felső",
   "clipRight": "Jobb",
-  "clipBottom": "Also",
-  "borderToClip": "Margok a vezerlotol (Border2Clip)",
-  "mirror": "Tukrozes",
-  "autoBootIndicator": "Automatikus inditas (jelzo)",
-  "rotationLabel": "Forgatas",
+  "clipBottom": "Alsó",
+  "borderToClip": "Margok a vezérlőtől (Border2Clip)",
+  "mirror": "Tükrözés",
+  "autoBootIndicator": "Automatikus indítás (jelző)",
+  "rotationLabel": "Forgatás",
   "tcpPortRange": "TCP port (0..65535)",
-  "mqttUserHint": "MQTT user (ures = TCP mod)",
-  "mqttPassword": "MQTT jelszo",
+  "mqttUserHint": "MQTT user (üres = TCP mód)",
+  "mqttPassword": "MQTT jelszó",
   "mqttChannel": "MQTT csatorna",
-  "uiTheme": "Felhasznaloi felulet temaja",
-  "themeDark": "Sotet",
-  "themeLight": "Vilagos",
+  "uiTheme": "Felhasználói felület témája",
+  "themeDark": "Sötét",
+  "themeLight": "Világos",
   "dtxFolderPath": "DTX mappa",
-  "blankImagePath": "Blank kep utvonal",
-  "fileChoose": "Fajl valasztasa",
-  "uiLanguage": "Felhasznaloi felulet nyelve",
-  "languageSystem": "Rendszer alapertelmezett",
+  "blankImagePath": "Blank kép útvonal",
+  "fileChoose": "Fájl választása",
+  "uiLanguage": "Felhasználói felület nyelve",
+  "languageSystem": "Rendszer alapértelmezett",
   "languageHungarian": "Magyar",
   "languageEnglish": "Angol",
-  "projectionSettingsTitle": "Vetitesi beallitasok",
-  "fontSize": "Betumeret",
-  "titleSize": "Cim meret",
-  "leftMargin": "Bal behuzas",
+  "projectionSettingsTitle": "Vetítési beállítások",
+  "fontSize": "Betűméret",
+  "titleSize": "Cím méret",
+  "leftMargin": "Bal behúzás",
   "borderLeft": "Border L",
   "borderTop": "Border T",
   "borderRight": "Border R",
   "borderBottom": "Border B",
-  "lineSpacing": "Sorkoz",
-  "kottaScale": "Kotta meret arany",
-  "chordScale": "Akkord meret arany",
-  "backgroundMode": "Hatters kep mod",
+  "lineSpacing": "Sorköz",
+  "kottaScale": "Kotta méret arány",
+  "chordScale": "Akkord méret arány",
+  "backgroundMode": "Háttér kép mód",
   "bgModeCenter": "Center",
   "bgModeZoom": "Zoom",
   "bgModeFull": "Full",
   "bgModeCascade": "Cascade",
   "bgModeMirror": "Mirror",
-  "backgroundOpacity": "Hatter atszosag",
-  "blankOpacity": "Blank atszosag",
-  "autoSize": "Automatikus meretezes",
-  "scrollableProjection": "Gorgetheto vetites",
-  "scrollableProjectionHint": "Ha ki van kapcsolva, a szoveg automatikusan a vetitesi terulethez igazodik.",
-  "showTitle": "Cim mutatasa",
-  "hCenter": "Vizszintes kozepre igazitas",
-  "vCenter": "Fuggoleges kozepre igazitas",
-  "showChords": "Akkordok mutatasa",
-  "showKotta": "Kotta mutatasa",
-  "boldText": "Felkover szoveg",
-  "colorsTitle": "Szinek",
-  "backgroundColor": "Hatter",
-  "textColor": "Szoveg",
-  "emptySlideColor": "Ures dia",
-  "highlightColor": "Kiemeles",
-  "backgroundColorTitle": "Hatter szine",
-  "textColorTitle": "Szoveg szine",
-  "emptySlideColorTitle": "Ures dia szine",
-  "highlightColorTitle": "Kiemeles szine",
-  "cancel": "Megse",
+  "backgroundOpacity": "Háttér átlátszóság",
+  "blankOpacity": "Blank átlátszóság",
+  "autoSize": "Automatikus méretezés",
+  "scrollableProjection": "Görgethető vetítés",
+  "scrollableProjectionHint": "Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.",
+  "showTitle": "Cím mutatása",
+  "hCenter": "Vízszintes középre igazítás",
+  "vCenter": "Függőleges középre igazítás",
+  "showChords": "Akkordok mutatása",
+  "showKotta": "Kotta mutatása",
+  "boldText": "Félkövér szöveg",
+  "colorsTitle": "Színek",
+  "backgroundColor": "Háttér",
+  "textColor": "Szöveg",
+  "emptySlideColor": "Üres dia",
+  "highlightColor": "Kiemelés",
+  "backgroundColorTitle": "Háttér színe",
+  "textColorTitle": "Szöveg színe",
+  "emptySlideColorTitle": "Üres dia színe",
+  "highlightColorTitle": "Kiemelés színe",
+  "cancel": "Mégse",
   "save": "Ment",
-  "invalidPortRange": "A port 0..65535 kozott legyen.",
-  "hexColorHint": "Hex szin (#AARRGGBB vagy #RRGGBB)",
-  "close": "Bezaras",
-  "imagesFileTypeLabel": "kepek",
-  "diatarPlaylistFileTypeLabel": "Diatar playlist",
+  "invalidPortRange": "A port 0..65535 között legyen.",
+  "hexColorHint": "Hex szín (#AARRGGBB vagy #RRGGBB)",
+  "close": "Bezárás",
+  "imagesFileTypeLabel": "képek",
+  "diatarPlaylistFileTypeLabel": "Diatár playlist",
   "customOrderSuggestedFileName": "sorrend.dia",
-  "customOrderEditTitle": "Sajat sorrend szerkesztese",
-  "addSong": "Enek hozzaadasa",
-  "searchSongHint": "Kötet vagy enekcim",
-  "textSlideDialogTitle": "Szoveges dia hozzaadasa",
-  "textSlideTitleLabel": "Cim",
-  "textSlideBodyLabel": "Szoveg (soronként)",
-  "loadDia": "Betoltes .DIA",
-  "saveDia": "Mentes .DIA",
+  "customOrderEditTitle": "Saját sorrend szerkesztése",
+  "addSong": "Ének hozzáadása",
+  "searchSongHint": "Kötet vagy énekcím",
+  "textSlideDialogTitle": "Szöveges dia hozzáadása",
+  "textSlideTitleLabel": "Cím",
+  "textSlideBodyLabel": "Szöveg (soronként)",
+  "loadDia": "Betöltés .DIA",
+  "saveDia": "Mentés .DIA",
   "savedPath": "Mentve: {path}",
   "@savedPath": {
     "placeholders": {
       "path": {}
     }
   },
-  "loadedCount": "Betoltve: {count} elem",
+  "loadedCount": "Betöltve: {count} elem",
   "@loadedCount": {
     "placeholders": {
       "count": {
@@ -423,9 +423,9 @@
       }
     }
   },
-  "customOrderEmpty": "A sorrend ures.\nKeress enekeket a szerkeszteshez.",
+  "customOrderEmpty": "A sorrend üres.\nKeress énekeket a szerkesztéshez.",
   "versePicker": "Versszak",
-  "selectedVersesTitle": "Kivalasztott versszakok",
-  "selectedVersesSubtitle": "Tobbet is kijelolhetsz.",
+  "selectedVersesTitle": "Kiválasztott versszakok",
+  "selectedVersesSubtitle": "Többet is kijelölhetsz.",
   "apply": "Alkalmaz"
 }

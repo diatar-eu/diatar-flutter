@@ -101,13 +101,13 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In hu, this message translates to:
-  /// **'DiaVetito'**
+  /// **'DiaVetítő'**
   String get appTitle;
 
   /// No description provided for @settingsTitleReceiver.
   ///
   /// In hu, this message translates to:
-  /// **'Beallitasok'**
+  /// **'Beállítások'**
   String get settingsTitleReceiver;
 
   /// No description provided for @modeIp.
@@ -131,7 +131,7 @@ abstract class AppLocalizations {
   /// No description provided for @senderLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Kuldo'**
+  /// **'Küldő'**
   String get senderLabel;
 
   /// No description provided for @senderHelper.
@@ -143,7 +143,7 @@ abstract class AppLocalizations {
   /// No description provided for @senderRefreshTooltip.
   ///
   /// In hu, this message translates to:
-  /// **'Kuldo lista frissites'**
+  /// **'Küldő lista frissítés'**
   String get senderRefreshTooltip;
 
   /// No description provided for @channelLabel.
@@ -161,7 +161,7 @@ abstract class AppLocalizations {
   /// No description provided for @clipTop.
   ///
   /// In hu, this message translates to:
-  /// **'Felso'**
+  /// **'Felső'**
   String get clipTop;
 
   /// No description provided for @clipRight.
@@ -173,43 +173,43 @@ abstract class AppLocalizations {
   /// No description provided for @clipBottom.
   ///
   /// In hu, this message translates to:
-  /// **'Also'**
+  /// **'Alsó'**
   String get clipBottom;
 
   /// No description provided for @borderToClip.
   ///
   /// In hu, this message translates to:
-  /// **'Margok a vezerlotol (Border2Clip)'**
+  /// **'Margok a vezérlőtől (Border2Clip)'**
   String get borderToClip;
 
   /// No description provided for @mirror.
   ///
   /// In hu, this message translates to:
-  /// **'Tukrozes'**
+  /// **'Tükrözés'**
   String get mirror;
 
   /// No description provided for @autoBootIndicator.
   ///
   /// In hu, this message translates to:
-  /// **'Automatikus inditas (jelzo)'**
+  /// **'Automatikus indítás (jelző)'**
   String get autoBootIndicator;
 
   /// No description provided for @rotationLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Forgatas'**
+  /// **'Forgatás'**
   String get rotationLabel;
 
   /// No description provided for @uiLanguage.
   ///
   /// In hu, this message translates to:
-  /// **'Felhasznaloi felulet nyelve'**
+  /// **'Felhasználói felület nyelve'**
   String get uiLanguage;
 
   /// No description provided for @languageSystem.
   ///
   /// In hu, this message translates to:
-  /// **'Rendszer alapertelmezett'**
+  /// **'Rendszer alapértelmezett'**
   String get languageSystem;
 
   /// No description provided for @languageHungarian.
@@ -227,115 +227,115 @@ abstract class AppLocalizations {
   /// No description provided for @projectionFilteringTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Vetites szurese'**
+  /// **'Vetítés szűrése'**
   String get projectionFilteringTitle;
 
   /// No description provided for @receiverUseServerColors.
   ///
   /// In hu, this message translates to:
-  /// **'Szerver szinei'**
+  /// **'Szerver színei'**
   String get receiverUseServerColors;
 
   /// No description provided for @receiverUseServerColorsHint.
   ///
   /// In hu, this message translates to:
-  /// **'Ha ki van kapcsolva, a helyi szinek lesznek hasznalva.'**
+  /// **'Ha ki van kapcsolva, a helyi színek lesznek használva.'**
   String get receiverUseServerColorsHint;
 
   /// No description provided for @receiverShowHighlight.
   ///
   /// In hu, this message translates to:
-  /// **'Kiemeles megjelenitese'**
+  /// **'Kiemelés megjelenítése'**
   String get receiverShowHighlight;
 
   /// No description provided for @showChords.
   ///
   /// In hu, this message translates to:
-  /// **'Akkordok mutatasa'**
+  /// **'Akkordok mutatása'**
   String get showChords;
 
   /// No description provided for @showKotta.
   ///
   /// In hu, this message translates to:
-  /// **'Kotta mutatasa'**
+  /// **'Kotta mutatása'**
   String get showKotta;
 
   /// No description provided for @scrollableProjection.
   ///
   /// In hu, this message translates to:
-  /// **'Gorgetheto vetites'**
+  /// **'Görgethető vetítés'**
   String get scrollableProjection;
 
   /// No description provided for @scrollableProjectionHint.
   ///
   /// In hu, this message translates to:
-  /// **'Ha ki van kapcsolva, a szoveg automatikusan a vetitesi terulethez igazodik.'**
+  /// **'Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.'**
   String get scrollableProjectionHint;
 
   /// No description provided for @localColorsTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Helyi szinek'**
+  /// **'Helyi színek'**
   String get localColorsTitle;
 
   /// No description provided for @backgroundColorLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Hatterszin'**
+  /// **'Háttérszín'**
   String get backgroundColorLabel;
 
   /// No description provided for @textColorLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Szovegszin'**
+  /// **'Szövegszín'**
   String get textColorLabel;
 
   /// No description provided for @blankColorLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Blank szin'**
+  /// **'Blank szín'**
   String get blankColorLabel;
 
   /// No description provided for @highlightColorLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Kiemeles szin'**
+  /// **'Kiemelés szín'**
   String get highlightColorLabel;
 
   /// No description provided for @change.
   ///
   /// In hu, this message translates to:
-  /// **'Valt'**
+  /// **'Vált'**
   String get change;
 
   /// No description provided for @colorPickerTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Szinvalaszto'**
+  /// **'Színválasztó'**
   String get colorPickerTitle;
 
   /// No description provided for @exit.
   ///
   /// In hu, this message translates to:
-  /// **'Kilepes'**
+  /// **'Kilépés'**
   String get exit;
 
   /// No description provided for @shutdown.
   ///
   /// In hu, this message translates to:
-  /// **'Leallitas'**
+  /// **'Leállítás'**
   String get shutdown;
 
   /// No description provided for @reboot.
   ///
   /// In hu, this message translates to:
-  /// **'Ujrainditas'**
+  /// **'Újraindítás'**
   String get reboot;
 
   /// No description provided for @cancel.
   ///
   /// In hu, this message translates to:
-  /// **'Megse'**
+  /// **'Mégse'**
   String get cancel;
 
   /// No description provided for @save.
@@ -353,43 +353,43 @@ abstract class AppLocalizations {
   /// No description provided for @invalidPortRange.
   ///
   /// In hu, this message translates to:
-  /// **'A port 0..65535 kozott legyen.'**
+  /// **'A port 0..65535 között legyen.'**
   String get invalidPortRange;
 
   /// No description provided for @statusStarting.
   ///
   /// In hu, this message translates to:
-  /// **'Inditas...'**
+  /// **'Indítás...'**
   String get statusStarting;
 
   /// No description provided for @statusExitRequested.
   ///
   /// In hu, this message translates to:
-  /// **'Kilepes...'**
+  /// **'Kilépés...'**
   String get statusExitRequested;
 
   /// No description provided for @statusShutdownUnsupported.
   ///
   /// In hu, this message translates to:
-  /// **'Rendszerleallitas Flutteren nem tamogatott.'**
+  /// **'Rendszerleállítás Flutteren nem támogatott.'**
   String get statusShutdownUnsupported;
 
   /// No description provided for @statusRebootUnsupported.
   ///
   /// In hu, this message translates to:
-  /// **'Rendszer ujrainditas Flutteren nem tamogatott.'**
+  /// **'Rendszer újraindítás Flutteren nem támogatott.'**
   String get statusRebootUnsupported;
 
   /// No description provided for @statusStopRequested.
   ///
   /// In hu, this message translates to:
-  /// **'Leallitas kerve (epStop).'**
+  /// **'Leállítás kérve (epStop).'**
   String get statusStopRequested;
 
   /// No description provided for @statusShutdownRequestedUnsupported.
   ///
   /// In hu, this message translates to:
-  /// **'Rendszerleallitas kerve (epShutdown), Flutterben nem tamogatott.'**
+  /// **'Rendszerleállítás kérve (epShutdown), Flutterben nem támogatott.'**
   String get statusShutdownRequestedUnsupported;
 
   /// No description provided for @statusReceiverError.
@@ -407,19 +407,19 @@ abstract class AppLocalizations {
   /// No description provided for @statusMqttReceiving.
   ///
   /// In hu, this message translates to:
-  /// **'MQTT fogadas: {user}/{channel}'**
+  /// **'MQTT fogadás: {user}/{channel}'**
   String statusMqttReceiving(Object user, Object channel);
 
   /// No description provided for @statusConnected.
   ///
   /// In hu, this message translates to:
-  /// **'Kapcsolodva ({port})'**
+  /// **'Kapcsolódva ({port})'**
   String statusConnected(int port);
 
   /// No description provided for @statusWaitingForClient.
   ///
   /// In hu, this message translates to:
-  /// **'Varakozas kliensre ({port})'**
+  /// **'Várakozás kliensre ({port})'**
   String statusWaitingForClient(int port);
 
   /// No description provided for @statusTcpOff.
@@ -431,7 +431,7 @@ abstract class AppLocalizations {
   /// No description provided for @statusTcpListening.
   ///
   /// In hu, this message translates to:
-  /// **'TCP figyeles: {port}'**
+  /// **'TCP figyelés: {port}'**
   String statusTcpListening(int port);
 
   /// No description provided for @statusTcpServerError.
@@ -443,7 +443,7 @@ abstract class AppLocalizations {
   /// No description provided for @statusTcpServerOpenPortFailed.
   ///
   /// In hu, this message translates to:
-  /// **'Nem sikerult portot nyitni ({port}): {error}'**
+  /// **'Nem sikerült portot nyitni ({port}): {error}'**
   String statusTcpServerOpenPortFailed(int port, Object error);
 
   /// No description provided for @statusTcpServerClientError.
@@ -455,13 +455,13 @@ abstract class AppLocalizations {
   /// No description provided for @statusTcpServerPacketParseError.
   ///
   /// In hu, this message translates to:
-  /// **'Csomag feldolgozasi hiba: {error}'**
+  /// **'Csomag feldolgozási hiba: {error}'**
   String statusTcpServerPacketParseError(Object error);
 
   /// No description provided for @statusTcpServerSendError.
   ///
   /// In hu, this message translates to:
-  /// **'Kuldesi hiba: {error}'**
+  /// **'Küldési hiba: {error}'**
   String statusTcpServerSendError(Object error);
 }
 
