@@ -208,6 +208,63 @@ void main() {
     expect(visibleStartXs.skip(1), everyElement(visibleStartXs[1]));
   });
 
+  test('first kotta row text starts after leading clef and key signature', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    final List<double> rowStartXs = painter.debugKottaRowStartXsForLine(
+      r'\KkGE2r41a;Alfa \Kr41a;Beta \Kr41a;Gamma',
+      fontSize: 24,
+      maxWidth: 320,
+      sizeWidth: 360,
+      horizontalPad: 16,
+    );
+    final List<double> textStartXs = painter.debugKottaTextStartXsForLine(
+      r'\KkGE2r41a;Alfa \Kr41a;Beta \Kr41a;Gamma',
+      fontSize: 24,
+      maxWidth: 320,
+      sizeWidth: 360,
+      horizontalPad: 16,
+    );
+
+    expect(rowStartXs, isNotEmpty);
+    expect(textStartXs, isNotEmpty);
+    expect(textStartXs.first, greaterThan(rowStartXs.first));
+  });
+
+  test('real sample first kotta row text starts after prefixed clef and key', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    const String source =
+      r' \K-5kGE2[?r81f;Ki\K1d;ált\K1f]?;sunk, K\K[?2a;risz\K2a]?;tus \K[?2h;hí\K2g]?;ve\Kr42a|!;i:';
+
+    final List<double> rowStartXs = painter.debugKottaRowStartXsForLine(
+      source,
+      fontSize: 24,
+      maxWidth: 320,
+      sizeWidth: 360,
+      horizontalPad: 16,
+    );
+    final List<double> textStartXs = painter.debugKottaTextStartXsForLine(
+      source,
+      fontSize: 24,
+      maxWidth: 320,
+      sizeWidth: 360,
+      horizontalPad: 16,
+    );
+
+    expect(rowStartXs, isNotEmpty);
+    expect(textStartXs, isNotEmpty);
+    expect(textStartXs.first, greaterThan(rowStartXs.first));
+  });
+
   test('continuation rows are indented by the configured left margin', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,

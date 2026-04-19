@@ -169,7 +169,7 @@ class ProjectorPainter extends CustomPainter {
     final double blockStartX = _kottaRowsStartX(rows, sizeWidth, horizontalPad);
     return <double>[
       for (int i = 0; i < rows.length; i++)
-        rowPrefixes[i].kotta.isNotEmpty
+        rowPrefixes[i].kotta.isNotEmpty || rows[i].inlinePrefix.kotta.isNotEmpty
             ? blockStartX + _kottaContinuationIndent(i, horizontalPad)
             : _debugCenteredKottaStartX(
                 rows[i],
@@ -177,6 +177,41 @@ class ProjectorPainter extends CustomPainter {
                 fontSize,
                 blockStartX + _kottaContinuationIndent(i, horizontalPad),
               ),
+    ];
+  }
+
+  List<double> debugKottaTextStartXsForLine(
+    String source, {
+    double fontSize = 24,
+    double maxWidth = 120,
+    double sizeWidth = 400,
+    double horizontalPad = 16,
+  }) {
+    final List<_RenderLine> lines = _parseOneLine(source);
+    if (lines.isEmpty) {
+      return const <double>[];
+    }
+    final List<_KottaRowLayout> rows = _buildKottaRows(
+      lines.first,
+      fontSize,
+      maxWidth,
+      inheritedState: _KottaDrawState(),
+    );
+    if (rows.isEmpty) {
+      return const <double>[];
+    }
+    final List<_KottaRowPrefix> rowPrefixes = _resolveKottaRowPrefixes(
+      rows,
+      lines.first,
+      _kottaLineGap(fontSize),
+    );
+    final double blockStartX = _kottaRowsStartX(rows, sizeWidth, horizontalPad);
+    return <double>[
+      for (int i = 0; i < rows.length; i++)
+        blockStartX +
+            _kottaContinuationIndent(i, horizontalPad) +
+            rowPrefixes[i].width +
+            rows[i].inlinePrefix.width,
     ];
   }
 
@@ -479,7 +514,6 @@ class ProjectorPainter extends CustomPainter {
         final double staffHeight = _kottaStaffHeight(lineGap);
         final double ledgerReserve = _kottaLedgerReserve(lineGap);
         final double staffToTextGap = _kottaStaffToTextGap(lineGap);
-        final double rowTextHeight = _kottaRowTextHeight(lineFontSize);
         final double rowStep = _kottaRowBlockHeight(lineFontSize);
         final double firstTextY =
             y + ledgerReserve + staffHeight + staffToTextGap;
@@ -520,20 +554,22 @@ class ProjectorPainter extends CustomPainter {
               rowX,
               rowY,
               lineFontSize,
-              leadingInset: rowPrefix.width,
+              leadingInset: rowPrefix.width + row.inlinePrefix.width,
             );
           }
           final double chordY =
               firstTextY + (lineKottaRows.length - 1) * rowStep;
           final _KottaRowPrefix lastRowPrefix =
               rowPrefixes[lineKottaRows.length - 1];
+          final _KottaRowLayout lastRow =
+              lineKottaRows[lineKottaRows.length - 1];
           final double lastRowX =
               kottaBlockX +
               _kottaContinuationIndent(lineKottaRows.length - 1, horizontalPad);
           _paintChords(
             canvas,
             rline,
-            lastRowX + lastRowPrefix.width,
+            lastRowX + lastRowPrefix.width + lastRow.inlinePrefix.width,
             chordY,
             lineFontSize,
           );
@@ -1036,7 +1072,7 @@ class ProjectorPainter extends CustomPainter {
       for (int slotIndex = 0; slotIndex < row.words.length; slotIndex++) {
         final _KottaWordLayout slot = row.words[slotIndex];
         final _WordToken w = line.words[slot.wordIndex];
-        final String kotta = (w.kotta ?? '').trim();
+        String kotta = (w.kotta ?? '').trim();
         final bool isFirstSlot = slotIndex == 0;
         if (isFirstSlot && rowPrefix.kotta.isNotEmpty) {
           _drawSimpleKotta(
@@ -1051,6 +1087,23 @@ class ProjectorPainter extends CustomPainter {
             drawStaff: false,
           );
           cx += rowPrefix.width;
+        }
+        if (isFirstSlot && row.inlinePrefix.kotta.isNotEmpty) {
+          _drawSimpleKotta(
+            canvas,
+            row.inlinePrefix.kotta,
+            cx,
+            rowTop + staffHeight + staffToTextGap,
+            row.inlinePrefix.width,
+            fontSize,
+            state: lineState,
+            lineGapOverride: lineGap,
+            drawStaff: false,
+          );
+          cx += row.inlinePrefix.width;
+          if (kotta.startsWith(row.inlinePrefix.kotta)) {
+            kotta = kotta.substring(row.inlinePrefix.kotta.length);
+          }
         }
         if (kotta.isNotEmpty) {
           _drawSimpleKotta(
@@ -1289,7 +1342,7 @@ class ProjectorPainter extends CustomPainter {
         );
         currentWords.clear();
         currentPrefix = _kottaRowPrefixForState(
-          pendingWordStartState ?? state,
+          pendingWordStartState,
           lineGap,
         );
         currentWidth = currentPrefix.width;
@@ -1312,15 +1365,16 @@ class ProjectorPainter extends CustomPainter {
       );
     }
 
-    return _applyKottaRowPrefixes(rows, line, lineGap);
+    return _applyKottaRowPrefixes(rows, line, lineGap, fontSize);
   }
 
   List<_KottaRowLayout> _applyKottaRowPrefixes(
     List<_KottaRowLayout> rows,
     _RenderLine line,
     double lineGap,
+    double fontSize,
   ) {
-    if (rows.length <= 1) {
+    if (rows.isEmpty) {
       return rows;
     }
 
@@ -1330,24 +1384,107 @@ class ProjectorPainter extends CustomPainter {
       lineGap,
     );
     final List<_KottaRowLayout> resolvedRows = <_KottaRowLayout>[];
+    final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
 
     for (int rowIndex = 0; rowIndex < rows.length; rowIndex++) {
       final _KottaRowLayout row = rows[rowIndex];
       final _KottaRowPrefix prefix = prefixes[rowIndex];
-      final double contentWidth = row.words.fold<double>(
+      List<_KottaWordLayout> effectiveWords = row.words;
+      _KottaRowPrefix inlinePrefix = const _KottaRowPrefix.empty();
+
+      if (rowIndex == 0 && prefix.kotta.isEmpty && row.words.isNotEmpty) {
+        final _KottaWordLayout firstSlot = row.words.first;
+        final _WordToken firstWord = line.words[firstSlot.wordIndex];
+        final String firstKotta = (firstWord.kotta ?? '').trim();
+        final String leadingKotta = _leadingInlineKottaPrefix(firstKotta);
+        if (leadingKotta.isNotEmpty) {
+          final double fullKottaWidth = _kottaRawWidth(
+            firstKotta,
+            lineGap,
+            _KottaDrawState(),
+          );
+          final double leadingWidth = _kottaRawWidth(
+            leadingKotta,
+            lineGap,
+            _KottaDrawState(),
+          );
+          final double remainingKottaWidth = math.max(
+            0,
+            fullKottaWidth - leadingWidth,
+          );
+          final double textWidth = _measureWordDisplayWidth(
+            firstWord,
+            fontSize,
+            measure,
+          );
+          final List<_KottaWordLayout> adjustedWords =
+              List<_KottaWordLayout>.from(row.words);
+          adjustedWords[0] = _KottaWordLayout(
+            wordIndex: firstSlot.wordIndex,
+            slotWidth: math.max(textWidth, remainingKottaWidth),
+          );
+          effectiveWords = adjustedWords;
+          inlinePrefix = _KottaRowPrefix(
+            kotta: leadingKotta,
+            width: leadingWidth,
+          );
+        }
+      }
+
+      final double contentWidth = effectiveWords.fold<double>(
         0,
         (double sum, _KottaWordLayout slot) => sum + slot.slotWidth,
       );
       resolvedRows.add(
         _KottaRowLayout(
-          words: row.words,
-          width: prefix.width + contentWidth,
+          words: effectiveWords,
+          width: prefix.width + inlinePrefix.width + contentWidth,
           prefix: prefix,
+          inlinePrefix: inlinePrefix,
         ),
       );
     }
 
     return resolvedRows;
+  }
+
+  String _leadingInlineKottaPrefix(String kotta) {
+    final List<String> commands = _parseKottaCommands(kotta);
+    if (commands.isEmpty) {
+      return '';
+    }
+
+    final StringBuffer prefix = StringBuffer();
+    bool sawVisiblePrefix = false;
+    for (final String command in commands) {
+      final String kind = command[0];
+      if (_isLeadingKottaSetupCommand(kind)) {
+        prefix.write(command);
+        continue;
+      }
+      if (_isLeadingKottaVisiblePrefixCommand(kind)) {
+        sawVisiblePrefix = true;
+        prefix.write(command);
+        continue;
+      }
+      break;
+    }
+    return sawVisiblePrefix ? prefix.toString() : '';
+  }
+
+  bool _isLeadingKottaSetupCommand(String kind) {
+    return kind == '-' ||
+        kind == 'r' ||
+        kind == 'R' ||
+        kind == 'm' ||
+        kind == '[' ||
+        kind == ']' ||
+        kind == '(' ||
+        kind == ')';
+  }
+
+  bool _isLeadingKottaVisiblePrefixCommand(String kind) {
+    return kind == 'k' || kind == 'e' || kind == 'E' || kind == 'u' || kind == 'U';
   }
 
   List<_KottaRowPrefix> _resolveKottaRowPrefixes(
@@ -1406,22 +1543,6 @@ class ProjectorPainter extends CustomPainter {
         _kottaRawWidth(kotta, lineGap, state);
       }
     }
-  }
-
-  _KottaRowPrefix _kottaRowPrefixBeforeWord(
-    _RenderLine line,
-    int firstWordIndex,
-    double lineGap,
-  ) {
-    final _KottaDrawState state = _KottaDrawState();
-    state.deferFinalDoubleBarAtEnd = _lineEndsWithDoubleBar(line);
-    for (int i = 0; i < firstWordIndex && i < line.words.length; i++) {
-      final String kotta = (line.words[i].kotta ?? '').trim();
-      if (kotta.isNotEmpty) {
-        _kottaRawWidth(kotta, lineGap, state);
-      }
-    }
-    return _kottaRowPrefixForState(state, lineGap);
   }
 
   List<_TextRowLayout> _buildTextRows(
@@ -2990,10 +3111,12 @@ class _KottaRowLayout {
     required this.words,
     required this.width,
     this.prefix = const _KottaRowPrefix.empty(),
+    this.inlinePrefix = const _KottaRowPrefix.empty(),
   });
   final List<_KottaWordLayout> words;
   final double width;
   final _KottaRowPrefix prefix;
+  final _KottaRowPrefix inlinePrefix;
 }
 
 class _TextRowLayout {
