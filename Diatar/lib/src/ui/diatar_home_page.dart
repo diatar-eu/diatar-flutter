@@ -151,134 +151,173 @@ class DiatarHomePage extends StatelessWidget {
   }
 
   Widget _buildSimpleView(BuildContext context) {
-    final l10n = context.l10n;
+    final MediaQueryData mq = MediaQuery.of(context);
+    final bool isLandscape = mq.orientation == Orientation.landscape;
+
+    if (isLandscape) {
+      return LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double controlsWidth = (constraints.maxWidth * 0.38).clamp(
+            300.0,
+            460.0,
+          );
+          return Row(
+            children: <Widget>[
+              SizedBox(
+                width: controlsWidth,
+                child: Column(
+                  children: <Widget>[
+                    if (controller.loading)
+                      const LinearProgressIndicator(minHeight: 2),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(12),
+                        child: _buildSimpleControls(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(child: _buildSimplePreviewPane(context)),
+            ],
+          );
+        },
+      );
+    }
 
     return Column(
       children: <Widget>[
         if (controller.loading) const LinearProgressIndicator(minHeight: 2),
         Padding(
           padding: const EdgeInsets.all(12),
-          child: Column(
+          child: _buildSimpleControls(context),
+        ),
+        const Divider(height: 1),
+        Expanded(child: _buildSimplePreviewPane(context)),
+      ],
+    );
+  }
+
+  Widget _buildSimpleControls(BuildContext context) {
+    final l10n = context.l10n;
+
+    return Column(
+      children: <Widget>[
+        _BookDropdown(controller: controller),
+        const SizedBox(height: 8),
+        _SongDropdown(controller: controller),
+        const SizedBox(height: 8),
+        _VerseDropdown(controller: controller),
+        const SizedBox(height: 10),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
             children: <Widget>[
-              _BookDropdown(controller: controller),
-              const SizedBox(height: 8),
-              _SongDropdown(controller: controller),
-              const SizedBox(height: 8),
-              _VerseDropdown(controller: controller),
-              const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: <Widget>[
-                    _actionIconButton(
-                      context,
-                      icon: Icons.keyboard_double_arrow_left,
-                      tooltip: l10n.songPrev,
-                      onPressed: controller.prevSong,
-                    ),
-                    const SizedBox(width: 8),
-                    _actionIconButton(
-                      context,
-                      icon: Icons.skip_previous,
-                      tooltip: l10n.previous,
-                      onPressed: controller.prevVerse,
-                    ),
-                    const SizedBox(width: 8),
-                    _actionIconButton(
-                      context,
-                      icon: controller.showing
-                          ? Icons.cast_connected
-                          : Icons.cast,
-                      tooltip: controller.showing
-                          ? l10n.projectionOff
-                          : l10n.projectionOn,
-                      onPressed: controller.toggleShowing,
-                      backgroundColor: controller.showing
-                          ? const Color(0xFFD32F2F).withValues(alpha: 0.15)
-                          : Theme.of(context).colorScheme.onSurfaceVariant
-                                .withValues(alpha: 0.08),
-                      foregroundColor: controller.showing
-                          ? const Color(0xFFD32F2F)
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 8),
-                    _actionIconButton(
-                      context,
-                      icon: Icons.skip_next,
-                      tooltip: l10n.next,
-                      onPressed: controller.nextVerse,
-                    ),
-                    const SizedBox(width: 8),
-                    _actionIconButton(
-                      context,
-                      icon: Icons.keyboard_double_arrow_right,
-                      tooltip: l10n.songNext,
-                      onPressed: controller.nextSong,
-                    ),
-                    const SizedBox(width: 8),
-                    _actionIconButton(
-                      context,
-                      icon: Icons.light_mode_outlined,
-                      tooltip: l10n.highlightPrev,
-                      onPressed: controller.highlightPrev,
-                    ),
-                    const SizedBox(width: 8),
-                    _actionIconButton(
-                      context,
-                      icon: Icons.light_mode,
-                      tooltip: l10n.highlightNext,
-                      onPressed: controller.highlightNext,
-                    ),
-                  ],
-                ),
+              _actionIconButton(
+                context,
+                icon: Icons.keyboard_double_arrow_left,
+                tooltip: l10n.songPrev,
+                onPressed: controller.prevSong,
               ),
-              if (controller.downloadInProgress) ...<Widget>[
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: controller.downloadCurrentFraction,
-                ),
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    l10n.downloadProgress(
-                      controller.downloadCurrentFile,
-                      controller.downloadTotalFiles,
-                      controller.downloadCurrentName,
-                    ),
-                  ),
-                ),
-              ],
+              const SizedBox(width: 8),
+              _actionIconButton(
+                context,
+                icon: Icons.skip_previous,
+                tooltip: l10n.previous,
+                onPressed: controller.prevVerse,
+              ),
+              const SizedBox(width: 8),
+              _actionIconButton(
+                context,
+                icon: controller.showing ? Icons.cast_connected : Icons.cast,
+                tooltip: controller.showing
+                    ? l10n.projectionOff
+                    : l10n.projectionOn,
+                onPressed: controller.toggleShowing,
+                backgroundColor: controller.showing
+                    ? const Color(0xFFD32F2F).withValues(alpha: 0.15)
+                    : Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
+                foregroundColor: controller.showing
+                    ? const Color(0xFFD32F2F)
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              _actionIconButton(
+                context,
+                icon: Icons.skip_next,
+                tooltip: l10n.next,
+                onPressed: controller.nextVerse,
+              ),
+              const SizedBox(width: 8),
+              _actionIconButton(
+                context,
+                icon: Icons.keyboard_double_arrow_right,
+                tooltip: l10n.songNext,
+                onPressed: controller.nextSong,
+              ),
+              const SizedBox(width: 8),
+              _actionIconButton(
+                context,
+                icon: Icons.light_mode_outlined,
+                tooltip: l10n.highlightPrev,
+                onPressed: controller.highlightPrev,
+              ),
+              const SizedBox(width: 8),
+              _actionIconButton(
+                context,
+                icon: Icons.light_mode,
+                tooltip: l10n.highlightNext,
+                onPressed: controller.highlightNext,
+              ),
             ],
           ),
         ),
-        const Divider(height: 1),
-        Expanded(
-          child: Container(
-            color: controller.globals.bkColor,
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final Widget preview = _buildActivePreview(
-                  context,
-                  panelTitle: l10n.previewTitle,
-                );
-                final bool scrollableProjection =
-                    !controller.settings.projAutoSize;
-                if (scrollableProjection) {
-                  return SingleChildScrollView(child: preview);
-                }
-                return SizedBox(
-                  width: constraints.maxWidth,
-                  height: constraints.maxHeight,
-                  child: preview,
-                );
-              },
+        if (controller.downloadInProgress) ...<Widget>[
+          const SizedBox(height: 8),
+          LinearProgressIndicator(value: controller.downloadCurrentFraction),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              l10n.downloadProgress(
+                controller.downloadCurrentFile,
+                controller.downloadTotalFiles,
+                controller.downloadCurrentName,
+              ),
             ),
           ),
-        ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildSimplePreviewPane(BuildContext context) {
+    final l10n = context.l10n;
+
+    return Container(
+      color: controller.globals.bkColor,
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final Widget preview = _buildActivePreview(
+            context,
+            panelTitle: l10n.previewTitle,
+          );
+          final bool scrollableProjection = !controller.settings.projAutoSize;
+          if (scrollableProjection) {
+            return SingleChildScrollView(child: preview);
+          }
+          return SizedBox(
+            width: constraints.maxWidth,
+            height: constraints.maxHeight,
+            child: preview,
+          );
+        },
+      ),
     );
   }
 
@@ -967,8 +1006,7 @@ class _VersePreview extends StatelessWidget {
         : (controller.songIndex + 1).toString();
     final String verseName = verse.name.trim();
     final bool hideVersePart =
-      verseName.isEmpty ||
-      ((song.verses.length == 1) && verseName == '---');
+        verseName.isEmpty || ((song.verses.length == 1) && verseName == '---');
     final String versePart = hideVersePart ? '' : '/$verseName';
 
     return '$bookShortName: $songTitle$versePart';

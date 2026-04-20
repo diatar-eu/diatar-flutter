@@ -229,7 +229,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   ),
                 ),
               DropdownButtonFormField<String>(
-                value: _channel,
+                initialValue: _channel,
                 decoration: InputDecoration(labelText: l10n.channelLabel),
                 items: <DropdownMenuItem<String>>[
                   const DropdownMenuItem<String>(value: '1', child: Text('1.')),
@@ -274,7 +274,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
               title: Text(l10n.autoBootIndicator),
             ),
             DropdownButtonFormField<int>(
-              value: _rotate,
+              initialValue: _rotate,
               decoration: InputDecoration(labelText: l10n.rotationLabel),
               items: const <DropdownMenuItem<int>>[
                 DropdownMenuItem<int>(value: 0, child: Text('0°')),
@@ -285,7 +285,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
               onChanged: (int? v) => setState(() => _rotate = v ?? 0),
             ),
             DropdownButtonFormField<String>(
-              value: _appLanguage,
+              initialValue: _appLanguage,
               decoration: InputDecoration(labelText: l10n.uiLanguage),
               items: <DropdownMenuItem<String>>[
                 DropdownMenuItem<String>(
