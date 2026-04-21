@@ -39,6 +39,8 @@ class SettingsStore {
 
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String mqttUser = prefs.getString(_kUser) ?? '';
+    final String mqttPassword = mqttUser.trim().isEmpty ? '' : (prefs.getString(_kPassword) ?? '');
     return AppSettings(
       port: prefs.getInt(_kPort) ?? 1024,
       boot: false,
@@ -49,9 +51,9 @@ class SettingsStore {
       clipB: 0,
       mirror: false,
       rotateQuarterTurns: 0,
-      mqttUser: prefs.getString(_kUser) ?? '',
-      mqttPassword: prefs.getString(_kPassword) ?? '',
-      mqttChannel: prefs.getString(_kChannel) ?? '1',
+      mqttUser: mqttUser,
+      mqttPassword: mqttPassword,
+      mqttChannel: '1',
       dtxPath: prefs.getString(_kDtxPath) ?? '',
       blankPicPath: prefs.getString(_kBlankPicPath) ?? '',
       projFontSize: prefs.getInt(_kProjFontSize) ?? 70,
@@ -88,8 +90,8 @@ class SettingsStore {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_kPort, settings.port);
     await prefs.setString(_kUser, settings.mqttUser);
-    await prefs.setString(_kPassword, settings.mqttPassword);
-    await prefs.setString(_kChannel, settings.mqttChannel);
+    await prefs.setString(_kPassword, settings.mqttUser.trim().isEmpty ? '' : settings.mqttPassword);
+    await prefs.setString(_kChannel, '1');
     await prefs.setString(_kDtxPath, settings.dtxPath);
     await prefs.setString(_kBlankPicPath, settings.blankPicPath);
     await prefs.setInt(_kProjFontSize, settings.projFontSize);

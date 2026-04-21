@@ -20,10 +20,10 @@ class DiatarSettingsSheet extends StatefulWidget {
 }
 
 class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
+  late final TextEditingController _search;
   late final TextEditingController _port;
   late final TextEditingController _mqttUser;
   late final TextEditingController _mqttPassword;
-  late final TextEditingController _mqttChannel;
   late final TextEditingController _dtxPath;
   late final TextEditingController _blankPicPath;
   late final TextEditingController _projFontSize;
@@ -48,6 +48,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _projUseKotta;
   late bool _projUseTitle;
   late bool _projBoldText;
+  late bool _internetRelayEnabled;
+  bool _showInternetPassword = false;
   late Color _bkColor;
   late Color _txtColor;
   late Color _blankColor;
@@ -57,10 +59,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   void initState() {
     super.initState();
     final AppSettings s = widget.initialSettings;
+    _search = TextEditingController();
     _port = TextEditingController(text: s.port.toString());
     _mqttUser = TextEditingController(text: s.mqttUser);
     _mqttPassword = TextEditingController(text: s.mqttPassword);
-    _mqttChannel = TextEditingController(text: s.mqttChannel);
     _dtxPath = TextEditingController(text: s.dtxPath);
     _blankPicPath = TextEditingController(text: s.blankPicPath);
     _projFontSize = TextEditingController(text: s.projFontSize.toString());
@@ -85,6 +87,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projUseKotta = s.projUseKotta;
     _projUseTitle = s.projUseTitle;
     _projBoldText = s.projBoldText;
+    _internetRelayEnabled = s.mqttUser.trim().isNotEmpty;
     _bkColor = s.bkColor;
     _txtColor = s.txtColor;
     _blankColor = s.blankColor;
@@ -93,10 +96,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   @override
   void dispose() {
+    _search.dispose();
     _port.dispose();
     _mqttUser.dispose();
     _mqttPassword.dispose();
-    _mqttChannel.dispose();
     _dtxPath.dispose();
     _blankPicPath.dispose();
     _projFontSize.dispose();
@@ -112,6 +115,20 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final String query = _search.text.trim().toLowerCase();
+    final String internetStatus = _internetRelayEnabled ? 'Be' : 'Ki';
+    final String mqttUser = _mqttUser.text.trim().isEmpty ? '-' : _mqttUser.text.trim();
+    final String languageLabel = _appLanguage.trim().isEmpty ? l10n.languageSystem : _languageLabel(context, _appLanguage);
+    final String themeLabel = _appThemeMode == 0 ? l10n.themeDark : l10n.themeLight;
+    final String dtxSummary = _dtxPath.text.trim().isEmpty ? '-' : _shortPath(_dtxPath.text.trim());
+    final String blankSummary = _blankPicPath.text.trim().isEmpty ? '-' : _shortPath(_blankPicPath.text.trim());
+    final bool showInternet = _matches(query, 'internet mqtt kozvetites felhasznalo user');
+    final bool showLan = _matches(query, 'helyi halozat tcp ip port');
+    final bool showColors = _matches(query, 'szinek hatter szoveg highlight');
+    final bool showProjection = _matches(query, 'vetites betu meret cim hatter opacity');
+    final bool showFiles = _matches(query, 'enektar fajlok dtx ures kep blank');
+    final bool showGeneral = _matches(query, 'altalanos tema nyelv language');
+    final bool anyVisible = showInternet || showLan || showColors || showProjection || showFiles || showGeneral;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -127,267 +144,74 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             Text(l10n.settingsTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             TextField(
-              controller: _port,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: l10n.tcpPortRange),
-            ),
-            TextField(
-              controller: _mqttUser,
-              decoration: InputDecoration(
-                labelText: l10n.mqttUserHint,
+              controller: _search,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                labelText: 'Keresés a beállításokban',
               ),
             ),
-            TextField(
-              controller: _mqttPassword,
-              obscureText: true,
-              decoration: InputDecoration(labelText: l10n.mqttPassword),
-            ),
-            TextField(
-              controller: _mqttChannel,
-              decoration: InputDecoration(labelText: l10n.mqttChannel),
-            ),
-            DropdownButtonFormField<int>(
-              initialValue: _appThemeMode,
-              decoration: InputDecoration(labelText: l10n.uiTheme),
-              items: <DropdownMenuItem<int>>[
-                DropdownMenuItem<int>(
-                  value: 0,
-                  child: Text(l10n.themeDark),
-                ),
-                DropdownMenuItem<int>(
-                  value: 1,
-                  child: Text(l10n.themeLight),
-                ),
-              ],
-              onChanged: (int? v) => setState(() => _appThemeMode = v ?? 0),
-            ),
-            DropdownButtonFormField<String>(
-              initialValue: _appLanguage,
-              decoration: InputDecoration(labelText: l10n.uiLanguage),
-              items: <DropdownMenuItem<String>>[
-                DropdownMenuItem<String>(
-                  value: '',
-                  child: Text(l10n.languageSystem),
-                ),
-                ...AppLocalizations.supportedLocales.map((Locale locale) {
-                  final String code = locale.languageCode;
-                  return DropdownMenuItem<String>(
-                    value: code,
-                    child: Text(_languageLabel(context, code)),
-                  );
-                }),
-              ],
-              onChanged: (String? v) => setState(() => _appLanguage = v ?? ''),
-            ),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: TextField(
-                    controller: _dtxPath,
-                    decoration: InputDecoration(labelText: l10n.dtxFolderPath),
-                  ),
-                ),
-                IconButton(
-                  onPressed: _pickDtxFolder,
-                  icon: const Icon(Icons.folder_open),
-                  tooltip: l10n.fileChoose,
-                ),
-              ],
-            ),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: TextField(
-                    controller: _blankPicPath,
-                    decoration: InputDecoration(labelText: l10n.blankImagePath),
-                  ),
-                ),
-                IconButton(
-                  onPressed: _pickBlankFile,
-                  icon: const Icon(Icons.folder_open),
-                  tooltip: l10n.fileChoose,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(l10n.projectionSettingsTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                _projectionNumberField(l10n.fontSize, _projFontSize),
-                _projectionNumberField(l10n.titleSize, _projTitleSize),
-                _projectionNumberField(l10n.leftMargin, _projLeftIndent),
-                _projectionNumberField(l10n.borderLeft, _projBorderL),
-                _projectionNumberField(l10n.borderTop, _projBorderT),
-                _projectionNumberField(l10n.borderRight, _projBorderR),
-                _projectionNumberField(l10n.borderBottom, _projBorderB),
-              ],
-            ),
-            DropdownButtonFormField<int>(
-              initialValue: _projSpacingStep,
-              decoration: InputDecoration(labelText: l10n.lineSpacing),
-              items: List<DropdownMenuItem<int>>.generate(
-                11,
-                (int i) => DropdownMenuItem<int>(
-                  value: i,
-                  child: Text('${100 + i * 10}%'),
-                ),
+            const SizedBox(height: 10),
+            Card(
+              margin: EdgeInsets.zero,
+              elevation: 1,
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: <Widget>[
+                  if (showInternet)
+                    _settingsTile(
+                      leading: const Icon(Icons.public),
+                      title: const Text('Internet'),
+                      subtitle: Text('Internetes közvetítés: $internetStatus, felhasználó: $mqttUser'),
+                      onTap: _openInternetSettings,
+                    ),
+                  if (showInternet && (showLan || showColors || showProjection || showFiles || showGeneral)) const Divider(height: 1),
+                  if (showLan)
+                    _settingsTile(
+                      leading: const Icon(Icons.lan),
+                      title: const Text('Helyi hálózat (TCP/IP)'),
+                      subtitle: Text('TCP port: ${_port.text.trim().isEmpty ? '-' : _port.text.trim()}'),
+                      onTap: _openLocalNetworkSettings,
+                    ),
+                  if (showLan && (showColors || showProjection || showFiles || showGeneral)) const Divider(height: 1),
+                  if (showColors)
+                    _settingsTile(
+                      leading: const Icon(Icons.palette_outlined),
+                      title: Text(l10n.colorsTitle),
+                      subtitle: Text('Háttér: ${_rgbHex(_bkColor)}, Szöveg: ${_rgbHex(_txtColor)}'),
+                      onTap: _openColorSettings,
+                    ),
+                  if (showColors && (showProjection || showFiles || showGeneral)) const Divider(height: 1),
+                  if (showProjection)
+                    _settingsTile(
+                      leading: const Icon(Icons.slideshow),
+                      title: Text(l10n.projectionSettingsTitle),
+                      subtitle: Text('Betű: ${_projFontSize.text.trim()} px, Cím: ${_projTitleSize.text.trim()} px'),
+                      onTap: _openProjectionSettings,
+                    ),
+                  if (showProjection && (showFiles || showGeneral)) const Divider(height: 1),
+                  if (showFiles)
+                    _settingsTile(
+                      leading: const Icon(Icons.folder),
+                      title: const Text('Énektárak és fájlok'),
+                      subtitle: Text('DTX: $dtxSummary, Üres kép: $blankSummary'),
+                      onTap: _openFileSettings,
+                    ),
+                  if (showFiles && showGeneral) const Divider(height: 1),
+                  if (showGeneral)
+                    _settingsTile(
+                      leading: const Icon(Icons.tune),
+                      title: const Text('Általános'),
+                      subtitle: Text('Téma: $themeLabel, Nyelv: $languageLabel'),
+                      onTap: _openGeneralSettings,
+                    ),
+                  if (!anyVisible)
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('Nincs találat a keresésre.'),
+                    ),
+                ],
               ),
-              onChanged: (int? v) => setState(() => _projSpacingStep = v ?? 0),
-            ),
-            DropdownButtonFormField<int>(
-              initialValue: _projKottaArany,
-              decoration: InputDecoration(labelText: l10n.kottaScale),
-              items: List<DropdownMenuItem<int>>.generate(
-                20,
-                (int i) {
-                  final int value = (i + 1) * 10;
-                  return DropdownMenuItem<int>(value: value, child: Text('$value%'));
-                },
-              ),
-              onChanged: (int? v) => setState(() => _projKottaArany = v ?? 100),
-            ),
-            DropdownButtonFormField<int>(
-              initialValue: _projAkkordArany,
-              decoration: InputDecoration(labelText: l10n.chordScale),
-              items: List<DropdownMenuItem<int>>.generate(
-                20,
-                (int i) {
-                  final int value = (i + 1) * 10;
-                  return DropdownMenuItem<int>(value: value, child: Text('$value%'));
-                },
-              ),
-              onChanged: (int? v) => setState(() => _projAkkordArany = v ?? 100),
-            ),
-            DropdownButtonFormField<int>(
-              initialValue: _projBgMode,
-              decoration: InputDecoration(labelText: l10n.backgroundMode),
-              items: <DropdownMenuItem<int>>[
-                DropdownMenuItem<int>(value: 0, child: Text(l10n.bgModeCenter)),
-                DropdownMenuItem<int>(value: 1, child: Text(l10n.bgModeZoom)),
-                DropdownMenuItem<int>(value: 2, child: Text(l10n.bgModeFull)),
-                DropdownMenuItem<int>(value: 3, child: Text(l10n.bgModeCascade)),
-                DropdownMenuItem<int>(value: 4, child: Text(l10n.bgModeMirror)),
-              ],
-              onChanged: (int? v) => setState(() => _projBgMode = v ?? 0),
-            ),
-            DropdownButtonFormField<int>(
-              initialValue: _projBackTrans,
-              decoration: InputDecoration(labelText: l10n.backgroundOpacity),
-              items: List<DropdownMenuItem<int>>.generate(
-                11,
-                (int i) {
-                  final int value = i * 10;
-                  return DropdownMenuItem<int>(value: value, child: Text('$value%'));
-                },
-              ),
-              onChanged: (int? v) => setState(() => _projBackTrans = v ?? 0),
-            ),
-            DropdownButtonFormField<int>(
-              initialValue: _projBlankTrans,
-              decoration: InputDecoration(labelText: l10n.blankOpacity),
-              items: List<DropdownMenuItem<int>>.generate(
-                11,
-                (int i) {
-                  final int value = i * 10;
-                  return DropdownMenuItem<int>(value: value, child: Text('$value%'));
-                },
-              ),
-              onChanged: (int? v) => setState(() => _projBlankTrans = v ?? 0),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: !_projAutoSize,
-              onChanged: (bool v) => setState(() => _projAutoSize = !v),
-              title: Text(l10n.scrollableProjection),
-              subtitle: Text(l10n.scrollableProjectionHint),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _projUseTitle,
-              onChanged: (bool v) => setState(() => _projUseTitle = v),
-              title: Text(l10n.showTitle),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _projHCenter,
-              onChanged: (bool v) => setState(() => _projHCenter = v),
-              title: Text(l10n.hCenter),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _projVCenter,
-              onChanged: (bool v) => setState(() => _projVCenter = v),
-              title: Text(l10n.vCenter),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _projUseAkkord,
-              onChanged: (bool v) => setState(() => _projUseAkkord = v),
-              title: Text(l10n.showChords),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _projUseKotta,
-              onChanged: (bool v) => setState(() => _projUseKotta = v),
-              title: Text(l10n.showKotta),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _projBoldText,
-              onChanged: (bool v) => setState(() => _projBoldText = v),
-              title: Text(l10n.boldText),
-            ),
-            const SizedBox(height: 8),
-            Text(l10n.colorsTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                _colorButton(
-                  label: l10n.backgroundColor,
-                  color: _bkColor,
-                  onPressed: () async {
-                    final Color? picked = await _pickColor(context, _bkColor, title: l10n.backgroundColorTitle);
-                    if (picked != null) {
-                      setState(() => _bkColor = picked);
-                    }
-                  },
-                ),
-                _colorButton(
-                  label: l10n.textColor,
-                  color: _txtColor,
-                  onPressed: () async {
-                    final Color? picked = await _pickColor(context, _txtColor, title: l10n.textColorTitle);
-                    if (picked != null) {
-                      setState(() => _txtColor = picked);
-                    }
-                  },
-                ),
-                _colorButton(
-                  label: l10n.emptySlideColor,
-                  color: _blankColor,
-                  onPressed: () async {
-                    final Color? picked = await _pickColor(context, _blankColor, title: l10n.emptySlideColorTitle);
-                    if (picked != null) {
-                      setState(() => _blankColor = picked);
-                    }
-                  },
-                ),
-                _colorButton(
-                  label: l10n.highlightColor,
-                  color: _hiColor,
-                  onPressed: () async {
-                    final Color? picked = await _pickColor(context, _hiColor, title: l10n.highlightColorTitle);
-                    if (picked != null) {
-                      setState(() => _hiColor = picked);
-                    }
-                  },
-                ),
-              ],
             ),
             const SizedBox(height: 12),
             Row(
@@ -403,8 +227,423 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
+  bool _matches(String query, String haystack) {
+    if (query.isEmpty) {
+      return true;
+    }
+    return haystack.toLowerCase().contains(query);
+  }
+
+  Widget _settingsTile({
+    required Widget leading,
+    required Widget title,
+    required Widget subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+      leading: leading,
+      title: title,
+      subtitle: subtitle,
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+    );
+  }
+
+  Future<void> _openInternetSettings() {
+    return _openSectionSheet(
+      title: 'Internet',
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _internetRelayEnabled,
+            onChanged: (bool v) => setBoth(() => _internetRelayEnabled = v),
+            title: const Text('Internetes közvetítés'),
+          ),
+          TextField(
+            controller: _mqttUser,
+            enabled: _internetRelayEnabled,
+            decoration: const InputDecoration(labelText: 'Felhasználó'),
+          ),
+          TextField(
+            controller: _mqttPassword,
+            enabled: _internetRelayEnabled,
+            obscureText: !_showInternetPassword,
+            decoration: InputDecoration(
+              labelText: 'Jelszó',
+              suffixIcon: IconButton(
+                tooltip: _showInternetPassword ? 'Elrejtés' : 'Megjelenítés',
+                onPressed: _internetRelayEnabled
+                    ? () => setBoth(() => _showInternetPassword = !_showInternetPassword)
+                    : null,
+                icon: Icon(_showInternetPassword ? Icons.visibility_off : Icons.visibility),
+              ),
+            ),
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openLocalNetworkSettings() {
+    return _openSectionSheet(
+      title: 'Helyi hálózat (TCP/IP)',
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          TextField(
+            controller: _port,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: l10n.tcpPortRange),
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openGeneralSettings() {
+    return _openSectionSheet(
+      title: 'Általános',
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          DropdownButtonFormField<int>(
+            initialValue: _appThemeMode,
+            decoration: InputDecoration(labelText: l10n.uiTheme),
+            items: <DropdownMenuItem<int>>[
+              DropdownMenuItem<int>(value: 0, child: Text(l10n.themeDark)),
+              DropdownMenuItem<int>(value: 1, child: Text(l10n.themeLight)),
+            ],
+            onChanged: (int? v) => setBoth(() => _appThemeMode = v ?? 0),
+          ),
+          DropdownButtonFormField<String>(
+            initialValue: _appLanguage,
+            decoration: InputDecoration(labelText: l10n.uiLanguage),
+            items: <DropdownMenuItem<String>>[
+              DropdownMenuItem<String>(value: '', child: Text(l10n.languageSystem)),
+              ...AppLocalizations.supportedLocales.map((Locale locale) {
+                final String code = locale.languageCode;
+                return DropdownMenuItem<String>(value: code, child: Text(_languageLabel(context, code)));
+              }),
+            ],
+            onChanged: (String? v) => setBoth(() => _appLanguage = v ?? ''),
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openFileSettings() {
+    return _openSectionSheet(
+      title: 'Énektárak és fájlok',
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: _dtxPath,
+                  decoration: InputDecoration(labelText: l10n.dtxFolderPath),
+                ),
+              ),
+              IconButton(
+                onPressed: () async {
+                  await _pickDtxFolder();
+                  setBoth(() {});
+                },
+                icon: const Icon(Icons.folder_open),
+                tooltip: l10n.fileChoose,
+              ),
+            ],
+          ),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: _blankPicPath,
+                  decoration: InputDecoration(labelText: l10n.blankImagePath),
+                ),
+              ),
+              IconButton(
+                onPressed: () async {
+                  await _pickBlankFile();
+                  setBoth(() {});
+                },
+                icon: const Icon(Icons.folder_open),
+                tooltip: l10n.fileChoose,
+              ),
+            ],
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openProjectionSettings() {
+    return _openSectionSheet(
+      title: context.l10n.projectionSettingsTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _projectionNumberField(l10n.fontSize, _projFontSize),
+              _projectionNumberField(l10n.titleSize, _projTitleSize),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _projLeftIndent,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: l10n.leftMargin),
+          ),
+          const SizedBox(height: 8),
+          Text('Margók', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _projectionNumberField('Bal margó', _projBorderL),
+              _projectionNumberField('Jobb margó', _projBorderR),
+              _projectionNumberField('Felső margó', _projBorderT),
+              _projectionNumberField('Alsó margó', _projBorderB),
+            ],
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _projSpacingStep,
+            decoration: InputDecoration(labelText: l10n.lineSpacing),
+            items: List<DropdownMenuItem<int>>.generate(
+              11,
+              (int i) => DropdownMenuItem<int>(value: i, child: Text('${100 + i * 10}%')),
+            ),
+            onChanged: (int? v) => setBoth(() => _projSpacingStep = v ?? 0),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _projKottaArany,
+            decoration: InputDecoration(labelText: l10n.kottaScale),
+            items: List<DropdownMenuItem<int>>.generate(
+              20,
+              (int i) {
+                final int value = (i + 1) * 10;
+                return DropdownMenuItem<int>(value: value, child: Text('$value%'));
+              },
+            ),
+            onChanged: (int? v) => setBoth(() => _projKottaArany = v ?? 100),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _projAkkordArany,
+            decoration: InputDecoration(labelText: l10n.chordScale),
+            items: List<DropdownMenuItem<int>>.generate(
+              20,
+              (int i) {
+                final int value = (i + 1) * 10;
+                return DropdownMenuItem<int>(value: value, child: Text('$value%'));
+              },
+            ),
+            onChanged: (int? v) => setBoth(() => _projAkkordArany = v ?? 100),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _projBgMode,
+            decoration: InputDecoration(labelText: l10n.backgroundMode),
+            items: <DropdownMenuItem<int>>[
+              DropdownMenuItem<int>(value: 0, child: Text(l10n.bgModeCenter)),
+              DropdownMenuItem<int>(value: 1, child: Text(l10n.bgModeZoom)),
+              DropdownMenuItem<int>(value: 2, child: Text(l10n.bgModeFull)),
+              DropdownMenuItem<int>(value: 3, child: Text(l10n.bgModeCascade)),
+              DropdownMenuItem<int>(value: 4, child: Text(l10n.bgModeMirror)),
+            ],
+            onChanged: (int? v) => setBoth(() => _projBgMode = v ?? 0),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _projBackTrans,
+            decoration: InputDecoration(labelText: l10n.backgroundOpacity),
+            items: List<DropdownMenuItem<int>>.generate(
+              11,
+              (int i) {
+                final int value = i * 10;
+                return DropdownMenuItem<int>(value: value, child: Text('$value%'));
+              },
+            ),
+            onChanged: (int? v) => setBoth(() => _projBackTrans = v ?? 0),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _projBlankTrans,
+            decoration: InputDecoration(labelText: l10n.blankOpacity),
+            items: List<DropdownMenuItem<int>>.generate(
+              11,
+              (int i) {
+                final int value = i * 10;
+                return DropdownMenuItem<int>(value: value, child: Text('$value%'));
+              },
+            ),
+            onChanged: (int? v) => setBoth(() => _projBlankTrans = v ?? 0),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: !_projAutoSize,
+            onChanged: (bool v) => setBoth(() => _projAutoSize = !v),
+            title: Text(l10n.scrollableProjection),
+            subtitle: Text(l10n.scrollableProjectionHint),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projUseTitle,
+            onChanged: (bool v) => setBoth(() => _projUseTitle = v),
+            title: Text(l10n.showTitle),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projHCenter,
+            onChanged: (bool v) => setBoth(() => _projHCenter = v),
+            title: Text(l10n.hCenter),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projVCenter,
+            onChanged: (bool v) => setBoth(() => _projVCenter = v),
+            title: Text(l10n.vCenter),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projUseAkkord,
+            onChanged: (bool v) => setBoth(() => _projUseAkkord = v),
+            title: Text(l10n.showChords),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projUseKotta,
+            onChanged: (bool v) => setBoth(() => _projUseKotta = v),
+            title: Text(l10n.showKotta),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projBoldText,
+            onChanged: (bool v) => setBoth(() => _projBoldText = v),
+            title: Text(l10n.boldText),
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openColorSettings() {
+    return _openSectionSheet(
+      title: context.l10n.colorsTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _colorButton(
+                label: l10n.backgroundColor,
+                color: _bkColor,
+                onPressed: () async {
+                  final Color? picked = await _pickColor(context, _bkColor, title: l10n.backgroundColorTitle);
+                  if (picked != null) {
+                    setBoth(() => _bkColor = picked);
+                  }
+                },
+              ),
+              _colorButton(
+                label: l10n.textColor,
+                color: _txtColor,
+                onPressed: () async {
+                  final Color? picked = await _pickColor(context, _txtColor, title: l10n.textColorTitle);
+                  if (picked != null) {
+                    setBoth(() => _txtColor = picked);
+                  }
+                },
+              ),
+              _colorButton(
+                label: l10n.emptySlideColor,
+                color: _blankColor,
+                onPressed: () async {
+                  final Color? picked = await _pickColor(context, _blankColor, title: l10n.emptySlideColorTitle);
+                  if (picked != null) {
+                    setBoth(() => _blankColor = picked);
+                  }
+                },
+              ),
+              _colorButton(
+                label: l10n.highlightColor,
+                color: _hiColor,
+                onPressed: () async {
+                  final Color? picked = await _pickColor(context, _hiColor, title: l10n.highlightColorTitle);
+                  if (picked != null) {
+                    setBoth(() => _hiColor = picked);
+                  }
+                },
+              ),
+            ],
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openSectionSheet({
+    required String title,
+    required List<Widget> Function(BuildContext context, void Function(void Function()) setBoth) builder,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, void Function(void Function()) setModalState) {
+            void setBoth(void Function() fn) {
+              if (mounted) {
+                setState(fn);
+              }
+              setModalState(() {});
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 12,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      ...builder(context, setBoth),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(context.l10n.ok),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _save() {
     final int port = int.tryParse(_port.text.trim()) ?? widget.initialSettings.port;
+    final String mqttUser = _internetRelayEnabled ? _mqttUser.text.trim() : '';
+    final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
     if (port < 0 || port > 65535) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.invalidPortRange)));
       return;
@@ -412,9 +651,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
     final AppSettings updated = widget.initialSettings.copyWith(
       port: port,
-      mqttUser: _mqttUser.text.trim(),
-      mqttPassword: _mqttPassword.text,
-      mqttChannel: _mqttChannel.text.trim().isEmpty ? '1' : _mqttChannel.text.trim(),
+      mqttUser: mqttUser,
+      mqttPassword: mqttPassword,
+      mqttChannel: '1',
       dtxPath: _dtxPath.text.trim(),
       blankPicPath: _blankPicPath.text.trim(),
       projFontSize: _parseInt(_projFontSize.text, widget.initialSettings.projFontSize, min: 12, max: 128),
@@ -646,5 +885,17 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       return null;
     }
     return Color(parsed);
+  }
+
+  String _shortPath(String path) {
+    final List<String> normalized = path.replaceAll('\\', '/').split('/').where((String p) => p.isNotEmpty).toList();
+    if (normalized.length <= 2) {
+      return path;
+    }
+    return '.../${normalized[normalized.length - 2]}/${normalized.last}';
+  }
+
+  String _rgbHex(Color color) {
+    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
   }
 }
