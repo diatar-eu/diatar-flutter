@@ -21,7 +21,7 @@ class DiatarSettingsSheet extends StatefulWidget {
 
 class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _search;
-  late final TextEditingController _port;
+  late final TextEditingController _tcpTargets;
   late final TextEditingController _mqttUser;
   late final TextEditingController _mqttPassword;
   late final TextEditingController _dtxPath;
@@ -60,7 +60,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     super.initState();
     final AppSettings s = widget.initialSettings;
     _search = TextEditingController();
-    _port = TextEditingController(text: s.port.toString());
+    _tcpTargets = TextEditingController(text: s.tcpTargets.join('\n'));
     _mqttUser = TextEditingController(text: s.mqttUser);
     _mqttPassword = TextEditingController(text: s.mqttPassword);
     _dtxPath = TextEditingController(text: s.dtxPath);
@@ -97,7 +97,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   @override
   void dispose() {
     _search.dispose();
-    _port.dispose();
+    _tcpTargets.dispose();
     _mqttUser.dispose();
     _mqttPassword.dispose();
     _dtxPath.dispose();
@@ -117,18 +117,44 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final l10n = context.l10n;
     final String query = _search.text.trim().toLowerCase();
     final String internetStatus = _internetRelayEnabled ? 'Be' : 'Ki';
-    final String mqttUser = _mqttUser.text.trim().isEmpty ? '-' : _mqttUser.text.trim();
-    final String languageLabel = _appLanguage.trim().isEmpty ? l10n.languageSystem : _languageLabel(context, _appLanguage);
-    final String themeLabel = _appThemeMode == 0 ? l10n.themeDark : l10n.themeLight;
-    final String dtxSummary = _dtxPath.text.trim().isEmpty ? '-' : _shortPath(_dtxPath.text.trim());
-    final String blankSummary = _blankPicPath.text.trim().isEmpty ? '-' : _shortPath(_blankPicPath.text.trim());
-    final bool showInternet = _matches(query, 'internet mqtt kozvetites felhasznalo user');
+    final String mqttUser = _mqttUser.text.trim().isEmpty
+        ? '-'
+        : _mqttUser.text.trim();
+    final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
+    final String tcpSummary = tcpTargets.isEmpty
+        ? 'Nincs célpont'
+        : '${tcpTargets.length} célpont';
+    final String languageLabel = _appLanguage.trim().isEmpty
+        ? l10n.languageSystem
+        : _languageLabel(context, _appLanguage);
+    final String themeLabel = _appThemeMode == 0
+        ? l10n.themeDark
+        : l10n.themeLight;
+    final String dtxSummary = _dtxPath.text.trim().isEmpty
+        ? '-'
+        : _shortPath(_dtxPath.text.trim());
+    final String blankSummary = _blankPicPath.text.trim().isEmpty
+        ? '-'
+        : _shortPath(_blankPicPath.text.trim());
+    final bool showInternet = _matches(
+      query,
+      'internet mqtt kozvetites felhasznalo user',
+    );
     final bool showLan = _matches(query, 'helyi halozat tcp ip port');
     final bool showColors = _matches(query, 'szinek hatter szoveg highlight');
-    final bool showProjection = _matches(query, 'vetites betu meret cim hatter opacity');
+    final bool showProjection = _matches(
+      query,
+      'vetites betu meret cim hatter opacity',
+    );
     final bool showFiles = _matches(query, 'enektar fajlok dtx ures kep blank');
     final bool showGeneral = _matches(query, 'altalanos tema nyelv language');
-    final bool anyVisible = showInternet || showLan || showColors || showProjection || showFiles || showGeneral;
+    final bool anyVisible =
+        showInternet ||
+        showLan ||
+        showColors ||
+        showProjection ||
+        showFiles ||
+        showGeneral;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -141,7 +167,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(l10n.settingsTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+            Text(
+              l10n.settingsTitle,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _search,
@@ -162,39 +191,61 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     _settingsTile(
                       leading: const Icon(Icons.public),
                       title: const Text('Internet'),
-                      subtitle: Text('Internetes közvetítés: $internetStatus, felhasználó: $mqttUser'),
+                      subtitle: Text(
+                        'Internetes közvetítés: $internetStatus, felhasználó: $mqttUser',
+                      ),
                       onTap: _openInternetSettings,
                     ),
-                  if (showInternet && (showLan || showColors || showProjection || showFiles || showGeneral)) const Divider(height: 1),
+                  if (showInternet &&
+                      (showLan ||
+                          showColors ||
+                          showProjection ||
+                          showFiles ||
+                          showGeneral))
+                    const Divider(height: 1),
                   if (showLan)
                     _settingsTile(
                       leading: const Icon(Icons.lan),
                       title: const Text('Helyi hálózat (TCP/IP)'),
-                      subtitle: Text('TCP port: ${_port.text.trim().isEmpty ? '-' : _port.text.trim()}'),
+                      subtitle: Text('TCP kliens célpontok: $tcpSummary'),
                       onTap: _openLocalNetworkSettings,
                     ),
-                  if (showLan && (showColors || showProjection || showFiles || showGeneral)) const Divider(height: 1),
+                  if (showLan &&
+                      (showColors ||
+                          showProjection ||
+                          showFiles ||
+                          showGeneral))
+                    const Divider(height: 1),
                   if (showColors)
                     _settingsTile(
                       leading: const Icon(Icons.palette_outlined),
                       title: Text(l10n.colorsTitle),
-                      subtitle: Text('Háttér: ${_rgbHex(_bkColor)}, Szöveg: ${_rgbHex(_txtColor)}'),
+                      subtitle: Text(
+                        'Háttér: ${_rgbHex(_bkColor)}, Szöveg: ${_rgbHex(_txtColor)}',
+                      ),
                       onTap: _openColorSettings,
                     ),
-                  if (showColors && (showProjection || showFiles || showGeneral)) const Divider(height: 1),
+                  if (showColors &&
+                      (showProjection || showFiles || showGeneral))
+                    const Divider(height: 1),
                   if (showProjection)
                     _settingsTile(
                       leading: const Icon(Icons.slideshow),
                       title: Text(l10n.projectionSettingsTitle),
-                      subtitle: Text('Betű: ${_projFontSize.text.trim()} px, Cím: ${_projTitleSize.text.trim()} px'),
+                      subtitle: Text(
+                        'Betű: ${_projFontSize.text.trim()} px, Cím: ${_projTitleSize.text.trim()} px',
+                      ),
                       onTap: _openProjectionSettings,
                     ),
-                  if (showProjection && (showFiles || showGeneral)) const Divider(height: 1),
+                  if (showProjection && (showFiles || showGeneral))
+                    const Divider(height: 1),
                   if (showFiles)
                     _settingsTile(
                       leading: const Icon(Icons.folder),
                       title: const Text('Énektárak és fájlok'),
-                      subtitle: Text('DTX: $dtxSummary, Üres kép: $blankSummary'),
+                      subtitle: Text(
+                        'DTX: $dtxSummary, Üres kép: $blankSummary',
+                      ),
                       onTap: _openFileSettings,
                     ),
                   if (showFiles && showGeneral) const Divider(height: 1),
@@ -202,7 +253,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     _settingsTile(
                       leading: const Icon(Icons.tune),
                       title: const Text('Általános'),
-                      subtitle: Text('Téma: $themeLabel, Nyelv: $languageLabel'),
+                      subtitle: Text(
+                        'Téma: $themeLabel, Nyelv: $languageLabel',
+                      ),
                       onTap: _openGeneralSettings,
                     ),
                   if (!anyVisible)
@@ -216,7 +269,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             const SizedBox(height: 12),
             Row(
               children: <Widget>[
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.cancel),
+                ),
                 const Spacer(),
                 FilledButton(onPressed: _save, child: Text(l10n.save)),
               ],
@@ -275,9 +331,15 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               suffixIcon: IconButton(
                 tooltip: _showInternetPassword ? 'Elrejtés' : 'Megjelenítés',
                 onPressed: _internetRelayEnabled
-                    ? () => setBoth(() => _showInternetPassword = !_showInternetPassword)
+                    ? () => setBoth(
+                        () => _showInternetPassword = !_showInternetPassword,
+                      )
                     : null,
-                icon: Icon(_showInternetPassword ? Icons.visibility_off : Icons.visibility),
+                icon: Icon(
+                  _showInternetPassword
+                      ? Icons.visibility_off
+                      : Icons.visibility,
+                ),
               ),
             ),
           ),
@@ -290,13 +352,19 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     return _openSectionSheet(
       title: 'Helyi hálózat (TCP/IP)',
       builder: (BuildContext context, void Function(void Function()) setBoth) {
-        final l10n = context.l10n;
         return <Widget>[
           TextField(
-            controller: _port,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: l10n.tcpPortRange),
+            controller: _tcpTargets,
+            keyboardType: TextInputType.multiline,
+            minLines: 3,
+            maxLines: 8,
+            decoration: const InputDecoration(
+              labelText: 'Célpontok (IP:port soronként)',
+              hintText: '192.168.1.50:1024\n192.168.1.51:1024',
+            ),
           ),
+          const SizedBox(height: 8),
+          const Text('A sender kliensként csatlakozik a fenti címekhez.'),
         ];
       },
     );
@@ -321,10 +389,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             initialValue: _appLanguage,
             decoration: InputDecoration(labelText: l10n.uiLanguage),
             items: <DropdownMenuItem<String>>[
-              DropdownMenuItem<String>(value: '', child: Text(l10n.languageSystem)),
+              DropdownMenuItem<String>(
+                value: '',
+                child: Text(l10n.languageSystem),
+              ),
               ...AppLocalizations.supportedLocales.map((Locale locale) {
                 final String code = locale.languageCode;
-                return DropdownMenuItem<String>(value: code, child: Text(_languageLabel(context, code)));
+                return DropdownMenuItem<String>(
+                  value: code,
+                  child: Text(_languageLabel(context, code)),
+                );
               }),
             ],
             onChanged: (String? v) => setBoth(() => _appLanguage = v ?? ''),
@@ -419,32 +493,35 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             decoration: InputDecoration(labelText: l10n.lineSpacing),
             items: List<DropdownMenuItem<int>>.generate(
               11,
-              (int i) => DropdownMenuItem<int>(value: i, child: Text('${100 + i * 10}%')),
+              (int i) => DropdownMenuItem<int>(
+                value: i,
+                child: Text('${100 + i * 10}%'),
+              ),
             ),
             onChanged: (int? v) => setBoth(() => _projSpacingStep = v ?? 0),
           ),
           DropdownButtonFormField<int>(
             initialValue: _projKottaArany,
             decoration: InputDecoration(labelText: l10n.kottaScale),
-            items: List<DropdownMenuItem<int>>.generate(
-              20,
-              (int i) {
-                final int value = (i + 1) * 10;
-                return DropdownMenuItem<int>(value: value, child: Text('$value%'));
-              },
-            ),
+            items: List<DropdownMenuItem<int>>.generate(20, (int i) {
+              final int value = (i + 1) * 10;
+              return DropdownMenuItem<int>(
+                value: value,
+                child: Text('$value%'),
+              );
+            }),
             onChanged: (int? v) => setBoth(() => _projKottaArany = v ?? 100),
           ),
           DropdownButtonFormField<int>(
             initialValue: _projAkkordArany,
             decoration: InputDecoration(labelText: l10n.chordScale),
-            items: List<DropdownMenuItem<int>>.generate(
-              20,
-              (int i) {
-                final int value = (i + 1) * 10;
-                return DropdownMenuItem<int>(value: value, child: Text('$value%'));
-              },
-            ),
+            items: List<DropdownMenuItem<int>>.generate(20, (int i) {
+              final int value = (i + 1) * 10;
+              return DropdownMenuItem<int>(
+                value: value,
+                child: Text('$value%'),
+              );
+            }),
             onChanged: (int? v) => setBoth(() => _projAkkordArany = v ?? 100),
           ),
           DropdownButtonFormField<int>(
@@ -462,25 +539,25 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           DropdownButtonFormField<int>(
             initialValue: _projBackTrans,
             decoration: InputDecoration(labelText: l10n.backgroundOpacity),
-            items: List<DropdownMenuItem<int>>.generate(
-              11,
-              (int i) {
-                final int value = i * 10;
-                return DropdownMenuItem<int>(value: value, child: Text('$value%'));
-              },
-            ),
+            items: List<DropdownMenuItem<int>>.generate(11, (int i) {
+              final int value = i * 10;
+              return DropdownMenuItem<int>(
+                value: value,
+                child: Text('$value%'),
+              );
+            }),
             onChanged: (int? v) => setBoth(() => _projBackTrans = v ?? 0),
           ),
           DropdownButtonFormField<int>(
             initialValue: _projBlankTrans,
             decoration: InputDecoration(labelText: l10n.blankOpacity),
-            items: List<DropdownMenuItem<int>>.generate(
-              11,
-              (int i) {
-                final int value = i * 10;
-                return DropdownMenuItem<int>(value: value, child: Text('$value%'));
-              },
-            ),
+            items: List<DropdownMenuItem<int>>.generate(11, (int i) {
+              final int value = i * 10;
+              return DropdownMenuItem<int>(
+                value: value,
+                child: Text('$value%'),
+              );
+            }),
             onChanged: (int? v) => setBoth(() => _projBlankTrans = v ?? 0),
           ),
           SwitchListTile(
@@ -545,7 +622,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 label: l10n.backgroundColor,
                 color: _bkColor,
                 onPressed: () async {
-                  final Color? picked = await _pickColor(context, _bkColor, title: l10n.backgroundColorTitle);
+                  final Color? picked = await _pickColor(
+                    context,
+                    _bkColor,
+                    title: l10n.backgroundColorTitle,
+                  );
                   if (picked != null) {
                     setBoth(() => _bkColor = picked);
                   }
@@ -555,7 +636,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 label: l10n.textColor,
                 color: _txtColor,
                 onPressed: () async {
-                  final Color? picked = await _pickColor(context, _txtColor, title: l10n.textColorTitle);
+                  final Color? picked = await _pickColor(
+                    context,
+                    _txtColor,
+                    title: l10n.textColorTitle,
+                  );
                   if (picked != null) {
                     setBoth(() => _txtColor = picked);
                   }
@@ -565,7 +650,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 label: l10n.emptySlideColor,
                 color: _blankColor,
                 onPressed: () async {
-                  final Color? picked = await _pickColor(context, _blankColor, title: l10n.emptySlideColorTitle);
+                  final Color? picked = await _pickColor(
+                    context,
+                    _blankColor,
+                    title: l10n.emptySlideColorTitle,
+                  );
                   if (picked != null) {
                     setBoth(() => _blankColor = picked);
                   }
@@ -575,7 +664,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 label: l10n.highlightColor,
                 color: _hiColor,
                 onPressed: () async {
-                  final Color? picked = await _pickColor(context, _hiColor, title: l10n.highlightColorTitle);
+                  final Color? picked = await _pickColor(
+                    context,
+                    _hiColor,
+                    title: l10n.highlightColorTitle,
+                  );
                   if (picked != null) {
                     setBoth(() => _hiColor = picked);
                   }
@@ -590,79 +683,135 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   Future<void> _openSectionSheet({
     required String title,
-    required List<Widget> Function(BuildContext context, void Function(void Function()) setBoth) builder,
+    required List<Widget> Function(
+      BuildContext context,
+      void Function(void Function()) setBoth,
+    )
+    builder,
   }) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (BuildContext context, void Function(void Function()) setModalState) {
-            void setBoth(void Function() fn) {
-              if (mounted) {
-                setState(fn);
-              }
-              setModalState(() {});
-            }
+          builder:
+              (
+                BuildContext context,
+                void Function(void Function()) setModalState,
+              ) {
+                void setBoth(void Function() fn) {
+                  if (mounted) {
+                    setState(fn);
+                  }
+                  setModalState(() {});
+                }
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 12,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-              ),
-              child: SafeArea(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 8),
-                      ...builder(context, setBoth),
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(context.l10n.ok),
-                        ),
-                      ),
-                    ],
+                return Padding(
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 12,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 16,
                   ),
-                ),
-              ),
-            );
-          },
+                  child: SafeArea(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...builder(context, setBoth),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: FilledButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: Text(context.l10n.ok),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
         );
       },
     );
   }
 
   void _save() {
-    final int port = int.tryParse(_port.text.trim()) ?? widget.initialSettings.port;
     final String mqttUser = _internetRelayEnabled ? _mqttUser.text.trim() : '';
     final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
-    if (port < 0 || port > 65535) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.invalidPortRange)));
+    final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
+    final String? tcpError = _validateTcpTargets(tcpTargets);
+    if (tcpError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tcpError)));
       return;
     }
+    final int firstPort =
+        _firstPortFromTargets(tcpTargets) ?? widget.initialSettings.port;
 
     final AppSettings updated = widget.initialSettings.copyWith(
-      port: port,
+      port: firstPort,
+      tcpClientEnabled: tcpTargets.isNotEmpty,
+      tcpTargets: tcpTargets,
       mqttUser: mqttUser,
       mqttPassword: mqttPassword,
       mqttChannel: '1',
       dtxPath: _dtxPath.text.trim(),
       blankPicPath: _blankPicPath.text.trim(),
-      projFontSize: _parseInt(_projFontSize.text, widget.initialSettings.projFontSize, min: 12, max: 128),
-      projTitleSize: _parseInt(_projTitleSize.text, widget.initialSettings.projTitleSize, min: 12, max: 128),
-      projLeftIndent: _parseInt(_projLeftIndent.text, widget.initialSettings.projLeftIndent, min: 0, max: 10),
-      projBorderL: _parseInt(_projBorderL.text, widget.initialSettings.projBorderL, min: 0, max: 1000),
-      projBorderT: _parseInt(_projBorderT.text, widget.initialSettings.projBorderT, min: 0, max: 1000),
-      projBorderR: _parseInt(_projBorderR.text, widget.initialSettings.projBorderR, min: 0, max: 1000),
-      projBorderB: _parseInt(_projBorderB.text, widget.initialSettings.projBorderB, min: 0, max: 1000),
+      projFontSize: _parseInt(
+        _projFontSize.text,
+        widget.initialSettings.projFontSize,
+        min: 12,
+        max: 128,
+      ),
+      projTitleSize: _parseInt(
+        _projTitleSize.text,
+        widget.initialSettings.projTitleSize,
+        min: 12,
+        max: 128,
+      ),
+      projLeftIndent: _parseInt(
+        _projLeftIndent.text,
+        widget.initialSettings.projLeftIndent,
+        min: 0,
+        max: 10,
+      ),
+      projBorderL: _parseInt(
+        _projBorderL.text,
+        widget.initialSettings.projBorderL,
+        min: 0,
+        max: 1000,
+      ),
+      projBorderT: _parseInt(
+        _projBorderT.text,
+        widget.initialSettings.projBorderT,
+        min: 0,
+        max: 1000,
+      ),
+      projBorderR: _parseInt(
+        _projBorderR.text,
+        widget.initialSettings.projBorderR,
+        min: 0,
+        max: 1000,
+      ),
+      projBorderB: _parseInt(
+        _projBorderB.text,
+        widget.initialSettings.projBorderB,
+        min: 0,
+        max: 1000,
+      ),
       projSpacingStep: _projSpacingStep.clamp(0, 10),
       projAutoSize: _projAutoSize,
       projHCenter: _projHCenter,
@@ -688,7 +837,45 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     Navigator.of(context).pop();
   }
 
-  Widget _projectionNumberField(String label, TextEditingController controller) {
+  List<String> _parseTcpTargets(String raw) {
+    return raw
+        .split(RegExp(r'\r?\n'))
+        .map((String e) => e.trim())
+        .where((String e) => e.isNotEmpty)
+        .toList();
+  }
+
+  String? _validateTcpTargets(List<String> targets) {
+    for (final String target in targets) {
+      final int split = target.lastIndexOf(':');
+      if (split <= 0 || split >= target.length - 1) {
+        return 'Hibás célpont formátum: $target';
+      }
+      final String host = target.substring(0, split).trim();
+      final int? port = int.tryParse(target.substring(split + 1).trim());
+      if (host.isEmpty || port == null || port < 0 || port > 65535) {
+        return 'Hibás célpont formátum: $target';
+      }
+    }
+    return null;
+  }
+
+  int? _firstPortFromTargets(List<String> targets) {
+    if (targets.isEmpty) {
+      return null;
+    }
+    final String first = targets.first;
+    final int split = first.lastIndexOf(':');
+    if (split <= 0 || split >= first.length - 1) {
+      return null;
+    }
+    return int.tryParse(first.substring(split + 1).trim());
+  }
+
+  Widget _projectionNumberField(
+    String label,
+    TextEditingController controller,
+  ) {
     return SizedBox(
       width: 150,
       child: TextField(
@@ -699,7 +886,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
-  int _parseInt(String raw, int fallback, {required int min, required int max}) {
+  int _parseInt(
+    String raw,
+    int fallback, {
+    required int min,
+    required int max,
+  }) {
     final int value = int.tryParse(raw.trim()) ?? fallback;
     return value.clamp(min, max);
   }
@@ -708,7 +900,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     if (code.trim().isEmpty) {
       return true;
     }
-    return AppLocalizations.supportedLocales.any((Locale locale) => locale.languageCode == code);
+    return AppLocalizations.supportedLocales.any(
+      (Locale locale) => locale.languageCode == code,
+    );
   }
 
   String _languageLabel(BuildContext context, String code) {
@@ -728,7 +922,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       label: context.l10n.imagesFileTypeLabel,
       extensions: <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
     );
-    final XFile? file = await openFile(acceptedTypeGroups: <XTypeGroup>[images]);
+    final XFile? file = await openFile(
+      acceptedTypeGroups: <XTypeGroup>[images],
+    );
     if (!mounted || file == null) {
       return;
     }
@@ -747,8 +943,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     });
   }
 
-  Widget _colorButton({required String label, required Color color, required VoidCallback onPressed}) {
-    final Color fg = color.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+  Widget _colorButton({
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    final Color fg = color.computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
     return SizedBox(
       width: 150,
       child: OutlinedButton(
@@ -763,8 +965,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
-  Future<Color?> _pickColor(BuildContext context, Color initial, {required String title}) {
-    final TextEditingController hex = TextEditingController(text: _colorToHex(initial));
+  Future<Color?> _pickColor(
+    BuildContext context,
+    Color initial, {
+    required String title,
+  }) {
+    final TextEditingController hex = TextEditingController(
+      text: _colorToHex(initial),
+    );
     Color temp = initial;
     const List<Color> palette = <Color>[
       Color(0xFF000000),
@@ -789,80 +997,81 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (BuildContext context, void Function(void Function()) setState) {
-            return AlertDialog(
-              title: Text(title),
-              content: SizedBox(
-                width: 360,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Container(
-                      height: 48,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: temp,
-                        border: Border.all(color: Colors.black26),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: hex,
-                      decoration: InputDecoration(
-                        labelText: context.l10n.hexColorHint,
-                        border: const OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      onChanged: (String value) {
-                        final Color? parsed = _parseHexColor(value);
-                        if (parsed != null) {
-                          setState(() => temp = parsed);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: palette
-                          .map(
-                            (Color c) => InkWell(
-                              onTap: () {
-                                setState(() {
-                                  temp = c;
-                                  hex.text = _colorToHex(c);
-                                });
-                              },
-                              child: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: c,
-                                  border: Border.all(color: Colors.black26),
-                                  borderRadius: BorderRadius.circular(6),
+          builder:
+              (BuildContext context, void Function(void Function()) setState) {
+                return AlertDialog(
+                  title: Text(title),
+                  content: SizedBox(
+                    width: 360,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Container(
+                          height: 48,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: temp,
+                            border: Border.all(color: Colors.black26),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: hex,
+                          decoration: InputDecoration(
+                            labelText: context.l10n.hexColorHint,
+                            border: const OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          onChanged: (String value) {
+                            final Color? parsed = _parseHexColor(value);
+                            if (parsed != null) {
+                              setState(() => temp = parsed);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: palette
+                              .map(
+                                (Color c) => InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      temp = c;
+                                      hex.text = _colorToHex(c);
+                                    });
+                                  },
+                                  child: Container(
+                                    width: 30,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color: c,
+                                      border: Border.all(color: Colors.black26),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          )
-                          .toList(),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(context.l10n.cancel),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.of(context).pop(temp),
+                      child: Text(context.l10n.ok),
                     ),
                   ],
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(context.l10n.cancel),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.of(context).pop(temp),
-                  child: Text(context.l10n.ok),
-                ),
-              ],
-            );
-          },
+                );
+              },
         );
       },
     );
@@ -873,7 +1082,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 
   Color? _parseHexColor(String input) {
-    String value = input.trim().replaceAll('#', '').replaceAll('0x', '').replaceAll('0X', '');
+    String value = input
+        .trim()
+        .replaceAll('#', '')
+        .replaceAll('0x', '')
+        .replaceAll('0X', '');
     if (value.length == 6) {
       value = 'FF$value';
     }
@@ -888,7 +1101,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 
   String _shortPath(String path) {
-    final List<String> normalized = path.replaceAll('\\', '/').split('/').where((String p) => p.isNotEmpty).toList();
+    final List<String> normalized = path
+        .replaceAll('\\', '/')
+        .split('/')
+        .where((String p) => p.isNotEmpty)
+        .toList();
     if (normalized.length <= 2) {
       return path;
     }

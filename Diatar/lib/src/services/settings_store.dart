@@ -4,6 +4,8 @@ import 'package:diatar_common/diatar_common.dart';
 
 class SettingsStore {
   static const String _kPort = 'Port';
+  static const String _kTcpClientEnabled = 'TcpClientEnabled';
+  static const String _kTcpTargets = 'TcpTargets';
   static const String _kUser = 'Username';
   static const String _kPassword = 'Password';
   static const String _kChannel = 'Channel';
@@ -40,9 +42,21 @@ class SettingsStore {
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String mqttUser = prefs.getString(_kUser) ?? '';
-    final String mqttPassword = mqttUser.trim().isEmpty ? '' : (prefs.getString(_kPassword) ?? '');
+    final String mqttPassword = mqttUser.trim().isEmpty
+        ? ''
+        : (prefs.getString(_kPassword) ?? '');
+    final int legacyPort = prefs.getInt(_kPort) ?? 1024;
+    final List<String> tcpTargets =
+        (prefs.getStringList(_kTcpTargets) ?? <String>[])
+            .map((String e) => e.trim())
+            .where((String e) => e.isNotEmpty)
+            .toList();
+    final bool tcpClientEnabled =
+        prefs.getBool(_kTcpClientEnabled) ?? tcpTargets.isNotEmpty;
     return AppSettings(
-      port: prefs.getInt(_kPort) ?? 1024,
+      port: legacyPort,
+      tcpClientEnabled: tcpClientEnabled,
+      tcpTargets: tcpTargets,
       boot: false,
       borderToClip: false,
       clipL: 0,
@@ -88,9 +102,18 @@ class SettingsStore {
 
   Future<void> save(AppSettings settings) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final List<String> tcpTargets = settings.tcpTargets
+        .map((String e) => e.trim())
+        .where((String e) => e.isNotEmpty)
+        .toList();
     await prefs.setInt(_kPort, settings.port);
+    await prefs.setBool(_kTcpClientEnabled, settings.tcpClientEnabled);
+    await prefs.setStringList(_kTcpTargets, tcpTargets);
     await prefs.setString(_kUser, settings.mqttUser);
-    await prefs.setString(_kPassword, settings.mqttUser.trim().isEmpty ? '' : settings.mqttPassword);
+    await prefs.setString(
+      _kPassword,
+      settings.mqttUser.trim().isEmpty ? '' : settings.mqttPassword,
+    );
     await prefs.setString(_kChannel, '1');
     await prefs.setString(_kDtxPath, settings.dtxPath);
     await prefs.setString(_kBlankPicPath, settings.blankPicPath);
