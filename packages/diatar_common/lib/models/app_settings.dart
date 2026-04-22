@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 class AppSettings {
   const AppSettings({
     this.port = 1024,
+    this.tcpClientEnabled = true,
+    this.tcpTargets = const <String>[],
     this.boot = false,
     this.borderToClip = false,
     this.clipL = 0,
@@ -47,12 +49,14 @@ class AppSettings {
     Color? txtColor,
     Color? blankColor,
     Color? hiColor,
-  })  : _bkColor = bkColor,
-        _txtColor = txtColor,
-        _blankColor = blankColor,
-        _hiColor = hiColor;
+  }) : _bkColor = bkColor,
+       _txtColor = txtColor,
+       _blankColor = blankColor,
+       _hiColor = hiColor;
 
   final int port;
+  final bool tcpClientEnabled;
+  final List<String> tcpTargets;
   final bool boot;
   final bool borderToClip;
   final double clipL;
@@ -103,12 +107,15 @@ class AppSettings {
   Color get blankColor => _blankColor ?? const Color(0xFF000000);
   Color get hiColor => _hiColor ?? const Color(0xFF00FFFF);
 
-  bool get tcpEnabled => mqttUser.trim().isEmpty && port > 0;
+  bool get tcpEnabled =>
+      mqttUser.trim().isEmpty && tcpClientEnabled && tcpTargets.isNotEmpty;
 
   EdgeInsets get clipInsets => EdgeInsets.fromLTRB(clipL, clipT, clipR, clipB);
 
   AppSettings copyWith({
     int? port,
+    bool? tcpClientEnabled,
+    List<String>? tcpTargets,
     bool? boot,
     bool? borderToClip,
     double? clipL,
@@ -156,6 +163,8 @@ class AppSettings {
   }) {
     return AppSettings(
       port: port ?? this.port,
+      tcpClientEnabled: tcpClientEnabled ?? this.tcpClientEnabled,
+      tcpTargets: tcpTargets ?? this.tcpTargets,
       boot: boot ?? this.boot,
       borderToClip: borderToClip ?? this.borderToClip,
       clipL: clipL ?? this.clipL,
@@ -192,8 +201,10 @@ class AppSettings {
       homeViewMode: homeViewMode ?? this.homeViewMode,
       appThemeMode: appThemeMode ?? this.appThemeMode,
       appLanguage: appLanguage ?? this.appLanguage,
-      receiverUseServerColors: receiverUseServerColors ?? this.receiverUseServerColors,
-      receiverShowHighlight: receiverShowHighlight ?? this.receiverShowHighlight,
+      receiverUseServerColors:
+          receiverUseServerColors ?? this.receiverUseServerColors,
+      receiverShowHighlight:
+          receiverShowHighlight ?? this.receiverShowHighlight,
       receiverUseAkkord: receiverUseAkkord ?? this.receiverUseAkkord,
       receiverUseKotta: receiverUseKotta ?? this.receiverUseKotta,
       bkColor: bkColor ?? this.bkColor,

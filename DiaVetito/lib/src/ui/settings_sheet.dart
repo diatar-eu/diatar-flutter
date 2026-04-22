@@ -63,6 +63,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   ];
 
   late final TextEditingController _port;
+  late final TextEditingController _search;
   late final TextEditingController _clipL;
   late final TextEditingController _clipT;
   late final TextEditingController _clipR;
@@ -90,6 +91,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   void initState() {
     super.initState();
     final AppSettings s = widget.initialSettings;
+    _search = TextEditingController();
     _port = TextEditingController(text: s.port.toString());
     _clipL = TextEditingController(text: s.clipL.toString());
     _clipT = TextEditingController(text: s.clipT.toString());
@@ -123,6 +125,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
   @override
   void dispose() {
+    _search.dispose();
     _port.dispose();
     _clipL.dispose();
     _clipT.dispose();
@@ -135,6 +138,20 @@ class _SettingsSheetState extends State<SettingsSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final String query = _search.text.trim().toLowerCase();
+    final bool internetEnabled = !_ipMode;
+    final String senderSummary = _mqttUser.text.trim().isEmpty ? '-' : _mqttUser.text.trim();
+    final String internetSummary = internetEnabled ? 'Be' : 'Ki';
+    final String languageLabel = _appLanguage.trim().isEmpty ? l10n.languageSystem : _languageLabel(context, _appLanguage);
+    final String filterSummary = _receiverUseServerColors ? 'Szerver színek' : 'Helyi színek';
+    final bool showInternet = _matches(query, 'internet mqtt sender channel kozvetites felhasznalo');
+    final bool showLan = _matches(query, 'helyi halozat tcp ip port');
+    final bool showProjectionImage = _matches(query, 'vetitesi kep forgatas tukrozes clip margok');
+    final bool showProjectionFilter = _matches(query, 'vetitesi szures akkord kotta highlight scroll');
+    final bool showColors = _matches(query, 'szinek hatter szoveg blank');
+    final bool showGeneral = _matches(query, 'altalanos nyelv autostart boot');
+    final bool showSystem = _matches(query, 'rendszer kilepes leallas ujrainditas');
+    final bool anyVisible = showInternet || showLan || showProjectionImage || showProjectionFilter || showColors || showGeneral || showSystem;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -149,219 +166,83 @@ class _SettingsSheetState extends State<SettingsSheet> {
           children: <Widget>[
             Text(l10n.settingsTitleReceiver, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: RadioListTile<bool>(
-                    value: true,
-                    groupValue: _ipMode,
-                    onChanged: (bool? v) {
-                      if (v == true) {
-                        setState(() {
-                          _ipMode = true;
-                          _mqttUser.text = '';
-                        });
-                      }
-                    },
-                    title: Text(l10n.modeIp),
-                    dense: true,
-                  ),
-                ),
-                Expanded(
-                  child: RadioListTile<bool>(
-                    value: false,
-                    groupValue: _ipMode,
-                    onChanged: (bool? v) {
-                      if (v == false) {
-                        setState(() {
-                          _ipMode = false;
-                        });
-                        widget.onRefreshUsers();
-                      }
-                    },
-                    title: Text(l10n.modeInternet),
-                    dense: true,
-                  ),
-                ),
-              ],
-            ),
             TextField(
-              controller: _port,
-              keyboardType: TextInputType.number,
-              enabled: _ipMode,
-              decoration: InputDecoration(labelText: l10n.tcpPortRange),
+              controller: _search,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                labelText: 'Keresés a beállításokban',
+              ),
             ),
-            if (!_ipMode) ...<Widget>[
-              Row(
+            const SizedBox(height: 10),
+            Card(
+              margin: EdgeInsets.zero,
+              elevation: 1,
+              clipBehavior: Clip.antiAlias,
+              child: Column(
                 children: <Widget>[
-                  Expanded(
-                    child: TextField(
-                      controller: _mqttUser,
-                      decoration: InputDecoration(
-                        labelText: l10n.senderLabel,
-                        helperText: l10n.senderHelper,
-                      ),
+                  if (showInternet)
+                    _settingsTile(
+                      leading: const Icon(Icons.public),
+                      title: const Text('Internet'),
+                      subtitle: Text('Internetes közvetítés: $internetSummary, Felhasználó: $senderSummary'),
+                      onTap: _openInternetSettings,
                     ),
-                  ),
-                  IconButton(
-                    onPressed: widget.onRefreshUsers,
-                    icon: const Icon(Icons.refresh),
-                    tooltip: l10n.senderRefreshTooltip,
-                  ),
+                  if (showInternet && (showLan || showProjectionImage || showProjectionFilter || showColors || showGeneral || showSystem)) const Divider(height: 1),
+                  if (showLan)
+                    _settingsTile(
+                      leading: const Icon(Icons.lan),
+                      title: const Text('Helyi hálózat (TCP/IP)'),
+                      subtitle: Text('TCP port: ${_port.text.trim().isEmpty ? '-' : _port.text.trim()}'),
+                      onTap: _openLocalNetworkSettings,
+                    ),
+                  if (showLan && (showProjectionImage || showProjectionFilter || showColors || showGeneral || showSystem)) const Divider(height: 1),
+                  if (showProjectionImage)
+                    _settingsTile(
+                      leading: const Icon(Icons.crop_free),
+                      title: const Text('Vetítési kép'),
+                      subtitle: Text('Forgatás: ${_rotate * 90}°, Tükrözés: ${_mirror ? 'Be' : 'Ki'}'),
+                      onTap: _openProjectionLayoutSettings,
+                    ),
+                  if (showProjectionImage && (showProjectionFilter || showColors || showGeneral || showSystem)) const Divider(height: 1),
+                  if (showProjectionFilter)
+                    _settingsTile(
+                      leading: const Icon(Icons.filter_alt_outlined),
+                      title: Text(l10n.projectionFilteringTitle),
+                      subtitle: Text('Színforrás: $filterSummary, Görgethető: ${_projectionScrollable ? 'Be' : 'Ki'}'),
+                      onTap: _openProjectionFilterSettings,
+                    ),
+                  if (showProjectionFilter && (showColors || showGeneral || showSystem)) const Divider(height: 1),
+                  if (showColors)
+                    _settingsTile(
+                      leading: const Icon(Icons.palette_outlined),
+                      title: Text(l10n.localColorsTitle),
+                      subtitle: Text('Háttér: ${_shortColorHex(_bkColor)}, Szöveg: ${_shortColorHex(_txtColor)}'),
+                      onTap: _openColorSettings,
+                    ),
+                  if (showColors && (showGeneral || showSystem)) const Divider(height: 1),
+                  if (showGeneral)
+                    _settingsTile(
+                      leading: const Icon(Icons.tune),
+                      title: const Text('Általános'),
+                      subtitle: Text('Nyelv: $languageLabel, Autostart: ${_boot ? 'Be' : 'Ki'}'),
+                      onTap: _openGeneralSettings,
+                    ),
+                  if (showGeneral && showSystem) const Divider(height: 1),
+                  if (showSystem)
+                    _settingsTile(
+                      leading: const Icon(Icons.power_settings_new),
+                      title: const Text('Rendszer műveletek'),
+                      subtitle: const Text('Kilépés, leállítás, újraindítás'),
+                      onTap: _openSystemActions,
+                    ),
+                  if (!anyVisible)
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('Nincs találat a keresésre.'),
+                    ),
                 ],
               ),
-              if (widget.senderSuggestions.isNotEmpty)
-                SizedBox(
-                  height: 120,
-                  child: ListView.builder(
-                    itemCount: widget.senderSuggestions.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final String sender = widget.senderSuggestions[index];
-                      return ListTile(
-                        dense: true,
-                        title: Text(sender),
-                        onTap: () {
-                          _mqttUser.text = sender;
-                          widget.onSenderChosen(sender);
-                        },
-                      );
-                    },
-                  ),
-                ),
-              DropdownButtonFormField<String>(
-                initialValue: _channel,
-                decoration: InputDecoration(labelText: l10n.channelLabel),
-                items: <DropdownMenuItem<String>>[
-                  const DropdownMenuItem<String>(value: '1', child: Text('1.')),
-                  ...widget.channelSuggestions.asMap().entries.map((MapEntry<int, String> e) {
-                    final String value = '${e.key + 1}';
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text('${e.key + 1}. ${e.value}'),
-                    );
-                  }),
-                ],
-                onChanged: (String? v) => setState(() => _channel = v ?? '1'),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: <Widget>[
-                _clipField(l10n.clipLeft, _clipL),
-                _clipField(l10n.clipTop, _clipT),
-                _clipField(l10n.clipRight, _clipR),
-                _clipField(l10n.clipBottom, _clipB),
-              ],
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _borderToClip,
-              onChanged: (bool v) => setState(() => _borderToClip = v),
-              title: Text(l10n.borderToClip),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _mirror,
-              onChanged: (bool v) => setState(() => _mirror = v),
-              title: Text(l10n.mirror),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _boot,
-              onChanged: (bool v) => setState(() => _boot = v),
-              title: Text(l10n.autoBootIndicator),
-            ),
-            DropdownButtonFormField<int>(
-              initialValue: _rotate,
-              decoration: InputDecoration(labelText: l10n.rotationLabel),
-              items: const <DropdownMenuItem<int>>[
-                DropdownMenuItem<int>(value: 0, child: Text('0°')),
-                DropdownMenuItem<int>(value: 1, child: Text('90°')),
-                DropdownMenuItem<int>(value: 2, child: Text('180°')),
-                DropdownMenuItem<int>(value: 3, child: Text('270°')),
-              ],
-              onChanged: (int? v) => setState(() => _rotate = v ?? 0),
-            ),
-            DropdownButtonFormField<String>(
-              initialValue: _appLanguage,
-              decoration: InputDecoration(labelText: l10n.uiLanguage),
-              items: <DropdownMenuItem<String>>[
-                DropdownMenuItem<String>(
-                  value: '',
-                  child: Text(l10n.languageSystem),
-                ),
-                ...AppLocalizations.supportedLocales.map((Locale locale) {
-                  final String code = locale.languageCode;
-                  return DropdownMenuItem<String>(
-                    value: code,
-                    child: Text(_languageLabel(context, code)),
-                  );
-                }),
-              ],
-              onChanged: (String? v) => setState(() => _appLanguage = v ?? ''),
-            ),
-            const SizedBox(height: 12),
-            Text(l10n.projectionFilteringTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _receiverUseServerColors,
-              onChanged: (bool v) => setState(() => _receiverUseServerColors = v),
-              title: Text(l10n.receiverUseServerColors),
-              subtitle: Text(l10n.receiverUseServerColorsHint),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _receiverShowHighlight,
-              onChanged: (bool v) => setState(() => _receiverShowHighlight = v),
-              title: Text(l10n.receiverShowHighlight),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _receiverUseAkkord,
-              onChanged: (bool v) => setState(() => _receiverUseAkkord = v),
-              title: Text(l10n.showChords),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _receiverUseKotta,
-              onChanged: (bool v) => setState(() => _receiverUseKotta = v),
-              title: Text(l10n.showKotta),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _projectionScrollable,
-              onChanged: (bool v) => setState(() => _projectionScrollable = v),
-              title: Text(l10n.scrollableProjection),
-              subtitle: Text(l10n.scrollableProjectionHint),
-            ),
-            const SizedBox(height: 12),
-            Text(l10n.localColorsTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            _colorRow(l10n.backgroundColorLabel, _bkColor, (Color c) => setState(() => _bkColor = c), enabled: !_receiverUseServerColors),
-            _colorRow(l10n.textColorLabel, _txtColor, (Color c) => setState(() => _txtColor = c), enabled: !_receiverUseServerColors),
-            _colorRow(l10n.blankColorLabel, _blankColor, (Color c) => setState(() => _blankColor = c), enabled: !_receiverUseServerColors),
-            _colorRow(l10n.highlightColorLabel, _hiColor, (Color c) => setState(() => _hiColor = c), enabled: !_receiverUseServerColors),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                OutlinedButton(
-                  onPressed: widget.onExitRequested,
-                  child: Text(l10n.exit),
-                ),
-                OutlinedButton(
-                  onPressed: widget.onShutdownRequested,
-                  child: Text(l10n.shutdown),
-                ),
-                OutlinedButton(
-                  onPressed: widget.onRebootRequested,
-                  child: Text(l10n.reboot),
-                ),
-              ],
             ),
             const SizedBox(height: 8),
             Row(
@@ -374,6 +255,350 @@ class _SettingsSheetState extends State<SettingsSheet> {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _openInternetSettings() {
+    return _openSectionSheet(
+      title: 'Internet',
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        final bool internetEnabled = !_ipMode;
+        return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: internetEnabled,
+            onChanged: (bool v) {
+              setBoth(() {
+                _ipMode = !v;
+                if (_ipMode) {
+                  _mqttUser.text = '';
+                }
+              });
+              if (v) {
+                widget.onRefreshUsers();
+              }
+            },
+            title: const Text('Internetes közvetítés'),
+          ),
+          if (internetEnabled) ...<Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    controller: _mqttUser,
+                    decoration: const InputDecoration(
+                      labelText: 'Felhasználó',
+                      helperText: 'Internetes közvetítés felhasználóneve',
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: widget.onRefreshUsers,
+                  icon: const Icon(Icons.refresh),
+                  tooltip: l10n.senderRefreshTooltip,
+                ),
+              ],
+            ),
+            if (widget.senderSuggestions.isNotEmpty)
+              SizedBox(
+                height: 120,
+                child: ListView.builder(
+                  itemCount: widget.senderSuggestions.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final String sender = widget.senderSuggestions[index];
+                    return ListTile(
+                      dense: true,
+                      title: Text(sender),
+                      onTap: () {
+                        setBoth(() {
+                          _mqttUser.text = sender;
+                        });
+                        widget.onSenderChosen(sender);
+                      },
+                    );
+                  },
+                ),
+              ),
+            DropdownButtonFormField<String>(
+              initialValue: _channel,
+              decoration: InputDecoration(labelText: l10n.channelLabel),
+              items: <DropdownMenuItem<String>>[
+                const DropdownMenuItem<String>(value: '1', child: Text('1.')),
+                ...widget.channelSuggestions.asMap().entries.map((MapEntry<int, String> e) {
+                  final String value = '${e.key + 1}';
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text('${e.key + 1}. ${e.value}'),
+                  );
+                }),
+              ],
+              onChanged: (String? v) => setBoth(() => _channel = v ?? '1'),
+            ),
+          ],
+        ];
+      },
+    );
+  }
+
+  Future<void> _openLocalNetworkSettings() {
+    return _openSectionSheet(
+      title: 'Helyi hálózat (TCP/IP)',
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        return <Widget>[
+          TextField(
+            controller: _port,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: context.l10n.tcpPortRange),
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openProjectionLayoutSettings() {
+    return _openSectionSheet(
+      title: 'Vetítési kép',
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: <Widget>[
+              _clipField(l10n.clipLeft, _clipL),
+              _clipField(l10n.clipTop, _clipT),
+              _clipField(l10n.clipRight, _clipR),
+              _clipField(l10n.clipBottom, _clipB),
+            ],
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _borderToClip,
+            onChanged: (bool v) => setBoth(() => _borderToClip = v),
+            title: Text(l10n.borderToClip),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _mirror,
+            onChanged: (bool v) => setBoth(() => _mirror = v),
+            title: Text(l10n.mirror),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _rotate,
+            decoration: InputDecoration(labelText: l10n.rotationLabel),
+            items: const <DropdownMenuItem<int>>[
+              DropdownMenuItem<int>(value: 0, child: Text('0°')),
+              DropdownMenuItem<int>(value: 1, child: Text('90°')),
+              DropdownMenuItem<int>(value: 2, child: Text('180°')),
+              DropdownMenuItem<int>(value: 3, child: Text('270°')),
+            ],
+            onChanged: (int? v) => setBoth(() => _rotate = v ?? 0),
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openProjectionFilterSettings() {
+    return _openSectionSheet(
+      title: context.l10n.projectionFilteringTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _receiverUseServerColors,
+            onChanged: (bool v) => setBoth(() => _receiverUseServerColors = v),
+            title: Text(l10n.receiverUseServerColors),
+            subtitle: Text(l10n.receiverUseServerColorsHint),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _receiverShowHighlight,
+            onChanged: (bool v) => setBoth(() => _receiverShowHighlight = v),
+            title: Text(l10n.receiverShowHighlight),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _receiverUseAkkord,
+            onChanged: (bool v) => setBoth(() => _receiverUseAkkord = v),
+            title: Text(l10n.showChords),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _receiverUseKotta,
+            onChanged: (bool v) => setBoth(() => _receiverUseKotta = v),
+            title: Text(l10n.showKotta),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projectionScrollable,
+            onChanged: (bool v) => setBoth(() => _projectionScrollable = v),
+            title: Text(l10n.scrollableProjection),
+            subtitle: Text(l10n.scrollableProjectionHint),
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openColorSettings() {
+    return _openSectionSheet(
+      title: context.l10n.localColorsTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          _colorRow(
+            l10n.backgroundColorLabel,
+            _bkColor,
+            (Color c) => setBoth(() => _bkColor = c),
+            enabled: !_receiverUseServerColors,
+          ),
+          _colorRow(
+            l10n.textColorLabel,
+            _txtColor,
+            (Color c) => setBoth(() => _txtColor = c),
+            enabled: !_receiverUseServerColors,
+          ),
+          _colorRow(
+            l10n.blankColorLabel,
+            _blankColor,
+            (Color c) => setBoth(() => _blankColor = c),
+            enabled: !_receiverUseServerColors,
+          ),
+          _colorRow(
+            l10n.highlightColorLabel,
+            _hiColor,
+            (Color c) => setBoth(() => _hiColor = c),
+            enabled: !_receiverUseServerColors,
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openGeneralSettings() {
+    return _openSectionSheet(
+      title: 'Általános',
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _boot,
+            onChanged: (bool v) => setBoth(() => _boot = v),
+            title: Text(l10n.autoBootIndicator),
+          ),
+          DropdownButtonFormField<String>(
+            initialValue: _appLanguage,
+            decoration: InputDecoration(labelText: l10n.uiLanguage),
+            items: <DropdownMenuItem<String>>[
+              DropdownMenuItem<String>(value: '', child: Text(l10n.languageSystem)),
+              ...AppLocalizations.supportedLocales.map((Locale locale) {
+                final String code = locale.languageCode;
+                return DropdownMenuItem<String>(value: code, child: Text(_languageLabel(context, code)));
+              }),
+            ],
+            onChanged: (String? v) => setBoth(() => _appLanguage = v ?? ''),
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openSystemActions() {
+    return _openSectionSheet(
+      title: 'Rendszer műveletek',
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              OutlinedButton(onPressed: widget.onExitRequested, child: Text(l10n.exit)),
+              OutlinedButton(onPressed: widget.onShutdownRequested, child: Text(l10n.shutdown)),
+              OutlinedButton(onPressed: widget.onRebootRequested, child: Text(l10n.reboot)),
+            ],
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openSectionSheet({
+    required String title,
+    required List<Widget> Function(BuildContext context, void Function(void Function()) setBoth) builder,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, void Function(void Function()) setModalState) {
+            void setBoth(void Function() fn) {
+              if (mounted) {
+                setState(fn);
+              }
+              setModalState(() {});
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 12,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      ...builder(context, setBoth),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(context.l10n.ok),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  bool _matches(String query, String haystack) {
+    if (query.isEmpty) {
+      return true;
+    }
+    return haystack.toLowerCase().contains(query);
+  }
+
+  Widget _settingsTile({
+    required Widget leading,
+    required Widget title,
+    required Widget subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+      leading: leading,
+      title: title,
+      subtitle: subtitle,
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
     );
   }
 
@@ -520,5 +745,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
     if (selected != null) {
       onChanged(selected);
     }
+  }
+
+  String _shortColorHex(Color color) {
+    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
   }
 }
