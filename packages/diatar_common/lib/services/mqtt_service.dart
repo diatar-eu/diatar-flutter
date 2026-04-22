@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -34,16 +35,10 @@ class MqttService {
 
   static const String _host = 'mqtt.diatar.eu';
   static const int _port = 1883;
-
-  static const String _dynSecSuperUser = 'GMfnGLDMCLFLOLlmqm';
-  static const String _dynSecSuperPsw = 'ekhnenjmQLAPLKMdmaCIBIcjhi';
-  static const String _dynSecTopic = r'$CONTROL/dynamic-security/v1';
-  static const String _dynSecTopicResp = r'$CONTROL/dynamic-security/v1/response';
+  static const String _apiBase = 'http://mqtt.diatar.eu';
 
   MqttServerClient? _receiverClient;
-  MqttServerClient? _adminClient;
   StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? _receiverSub;
-  StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? _adminSub;
 
   String _username = '';
   String _channel = '1';
@@ -110,12 +105,7 @@ class MqttService {
   }
 
   Future<void> fillUserList() async {
-    await _openAdmin();
-    if (_adminClient == null) {
-      return;
-    }
-    _users = <MqttUser>[];
-    _publishAdmin('{"commands": [{"command": "listClients"}]}');
+    await _fillUserList();
   }
 
   List<MqttUser> usersLike(String mask) {
@@ -147,7 +137,64 @@ class MqttService {
 
   Future<void> dispose() async {
     await closeReceiver();
-    await _closeAdmin();
+  }
+
+  Future<void> _fillUserList() async {
+    final Uri uri = Uri.parse('$_apiBase/api/v1/users/list');
+    final HttpClient client = HttpClient();
+    try {
+      final HttpClientRequest request = await client
+          .getUrl(uri)
+          .timeout(const Duration(seconds: 12));
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      final HttpClientResponse response = await request
+          .close()
+          .timeout(const Duration(seconds: 12));
+      if (response.statusCode != HttpStatus.ok) {
+        onError('Felhasznalolista lekerdezesi hiba: HTTP ${response.statusCode}.');
+        return;
+      }
+
+      final String body = await utf8.decoder.bind(response).join();
+      final dynamic decoded = jsonDecode(body);
+      final List<String> usernames = _extractUsernames(decoded);
+      _users = usernames
+          .where((String u) => u.trim().isNotEmpty)
+          .toSet()
+          .map((String u) => MqttUser(username: u.trim(), sendersGroup: true))
+          .toList();
+      onUsers(List<MqttUser>.unmodifiable(_users));
+    } catch (e) {
+      onError('Felhasznalolista lekerdezesi hiba: $e');
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  List<String> _extractUsernames(dynamic payload) {
+    final List<dynamic> rawList = <dynamic>[];
+    if (payload is List<dynamic>) {
+      rawList.addAll(payload);
+    } else if (payload is Map<String, dynamic>) {
+      final dynamic users =
+          payload['users'] ?? payload['data'] ?? payload['items'] ?? payload['result'];
+      if (users is List<dynamic>) {
+        rawList.addAll(users);
+      }
+    }
+
+    final List<String> result = <String>[];
+    for (final dynamic item in rawList) {
+      if (item is String) {
+        result.add(item);
+      } else if (item is Map<String, dynamic>) {
+        final dynamic uname = item['username'] ?? item['userName'] ?? item['name'];
+        if (uname is String) {
+          result.add(uname);
+        }
+      }
+    }
+    return result;
   }
 
   void _onReceiverMessages(List<MqttReceivedMessage<MqttMessage>> event) {
@@ -174,199 +221,6 @@ class MqttService {
         }
       }
     }
-  }
-
-  Future<void> _openAdmin() async {
-    await _closeAdmin();
-    final String clientId = 'admin-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(10000)}';
-    final MqttServerClient client = MqttServerClient(_host, clientId)
-      ..port = _port
-      ..logging(on: false)
-      ..keepAlivePeriod = 15
-      ..autoReconnect = false
-      ..connectionMessage = MqttConnectMessage()
-          .authenticateAs(_decodePsw(_dynSecSuperUser), _decodePsw(_dynSecSuperPsw))
-          .withClientIdentifier(clientId)
-          .withWillQos(MqttQos.atMostOnce);
-    try {
-      final MqttClientConnectionStatus? status = await client.connect();
-      if (status?.state != MqttConnectionState.connected) {
-        onError('MQTT admin kapcsolodas sikertelen.');
-        try {
-          client.disconnect();
-        } catch (_) {}
-        return;
-      }
-      client.subscribe(_dynSecTopicResp, MqttQos.atLeastOnce);
-      _adminSub = client.updates?.listen(_onAdminMessages);
-      _adminClient = client;
-    } catch (e) {
-      onError('MQTT admin hiba: $e');
-      try {
-        client.disconnect();
-      } catch (_) {}
-    }
-  }
-
-  Future<void> _closeAdmin() async {
-    await _adminSub?.cancel();
-    _adminSub = null;
-    try {
-      _adminClient?.disconnect();
-    } catch (_) {}
-    _adminClient = null;
-  }
-
-  void _publishAdmin(String jsonPayload) {
-    final MqttServerClient? client = _adminClient;
-    if (client == null) {
-      return;
-    }
-    final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder()..addString(jsonPayload);
-    client.publishMessage(_dynSecTopic, MqttQos.atLeastOnce, builder.payload!, retain: true);
-  }
-
-  void _onAdminMessages(List<MqttReceivedMessage<MqttMessage>> event) {
-    for (final MqttReceivedMessage<MqttMessage> e in event) {
-      final MqttPublishMessage msg = e.payload as MqttPublishMessage;
-      final String txt = MqttPublishPayload.bytesToStringAsString(msg.payload.message);
-      _messageReceived(txt);
-    }
-  }
-
-  void _messageReceived(String txt) {
-    try {
-      final dynamic all = jsonDecode(txt);
-      final List<dynamic> responses = (all['responses'] as List<dynamic>? ?? <dynamic>[]);
-      bool isCont = false;
-      for (final dynamic resp in responses) {
-        isCont = _processResponse(resp as Map<String, dynamic>, isCont) || isCont;
-      }
-      if (!isCont) {
-        onUsers(List<MqttUser>.unmodifiable(_users));
-        _closeAdmin();
-      }
-    } catch (e) {
-      onError('MQTT admin valasz hiba: $e');
-      _closeAdmin();
-    }
-  }
-
-  bool _processResponse(Map<String, dynamic> resp, bool isCont) {
-    if (resp['error'] != null) {
-      onError('Adminisztracios hiba: ${resp['error']}');
-      return false;
-    }
-    final String cmd = (resp['command']?.toString() ?? '').toUpperCase();
-    if (cmd == 'LISTCLIENTS') {
-      return _processListClients(resp, isCont);
-    }
-    if (cmd == 'GETCLIENT') {
-      return _processGetClient(resp, isCont);
-    }
-    return false;
-  }
-
-  bool _processListClients(Map<String, dynamic> resp, bool isCont) {
-    final List<dynamic> clients = ((resp['data'] as Map<String, dynamic>?)?['clients'] as List<dynamic>?) ?? <dynamic>[];
-    _users = clients.map((dynamic c) => MqttUser(username: c.toString())).toList();
-    return isCont || _sendUserDetails();
-  }
-
-  bool _processGetClient(Map<String, dynamic> resp, bool isCont) {
-    final Map<String, dynamic>? client = (resp['data'] as Map<String, dynamic>?)?['client'] as Map<String, dynamic>?;
-    if (client == null) {
-      return isCont || _sendUserDetails();
-    }
-    final String uname = client['username']?.toString() ?? '';
-    if (uname.isEmpty) {
-      return isCont || _sendUserDetails();
-    }
-    MqttUser? user;
-    for (final MqttUser u in _users) {
-      if (u.username == uname) {
-        user = u;
-        break;
-      }
-    }
-    user ??= MqttUser(username: uname);
-    if (!_users.contains(user)) {
-      _users.add(user);
-    }
-
-    user.email = client['textname']?.toString() ?? '';
-    _fillChannels(user, client['textdescription']?.toString() ?? '');
-    final List<dynamic> roles = client['roles'] as List<dynamic>? ?? <dynamic>[];
-    user.sendersGroup = roles.any((dynamic r) => ((r as Map<String, dynamic>)['rolename']?.toString() ?? '').startsWith('s-'));
-    return isCont || _sendUserDetails();
-  }
-
-  bool _sendUserDetails() {
-    final List<String> cmds = <String>[];
-    for (final MqttUser u in _users) {
-      if (u.sentForDetails) {
-        continue;
-      }
-      u.sentForDetails = true;
-      cmds.add('{"command": "getClient", "username": "${u.username}"}');
-      if (cmds.length >= 5) {
-        break;
-      }
-    }
-    if (cmds.isEmpty) {
-      return false;
-    }
-    _publishAdmin('{"commands": [${cmds.join(', ')}]}');
-    return true;
-  }
-
-  void _fillChannels(MqttUser user, String txt) {
-    user.channels.fillRange(0, user.channels.length, '');
-    int idx = 0;
-    final StringBuffer sb = StringBuffer();
-    for (int i = 0; i < txt.length; i++) {
-      final String ch = txt[i];
-      if (ch == '|') {
-        if (i + 1 < txt.length && txt[i + 1] == '|') {
-          sb.write('|');
-          i++;
-          continue;
-        }
-        if (idx < user.channels.length) {
-          user.channels[idx] = sb.toString().trim();
-          idx++;
-        }
-        sb.clear();
-        continue;
-      }
-      sb.write(ch);
-    }
-    if (idx < user.channels.length && sb.isNotEmpty) {
-      user.channels[idx] = sb.toString().trim();
-    }
-  }
-
-  String _decodePsw(String secret) {
-    if (secret.isEmpty) {
-      return secret;
-    }
-    final List<int> input = utf8.encode(secret);
-    final List<int> out = <int>[];
-    int i = 0;
-    while (i < input.length) {
-      int b1 = input[i++];
-      if (b1 == 'A'.codeUnitAt(0) || b1 == 'a'.codeUnitAt(0)) {
-        continue;
-      }
-      if (i >= input.length) {
-        break;
-      }
-      final int b2 = input[i++];
-      final int c1 = b1 >= 'c'.codeUnitAt(0) ? b1 - 'c'.codeUnitAt(0) : b1 - 'B'.codeUnitAt(0);
-      final int c2 = b2 >= 'c'.codeUnitAt(0) ? b2 - 'c'.codeUnitAt(0) - 4 : b2 - 'B'.codeUnitAt(0) - 4;
-      out.add((c1 & 15) + ((c2 & 15) << 4));
-    }
-    return utf8.decode(out, allowMalformed: true);
   }
 
   String _unaccent(String txt) {
