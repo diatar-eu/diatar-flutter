@@ -541,6 +541,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get showTitle => 'Show title';
 
   @override
+  String get projectionLock => 'Lock projection';
+
+  @override
+  String get projectionUnlock => 'Unlock projection';
+
+  @override
   String get hCenter => 'Horizontal center align';
 
   @override

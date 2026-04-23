@@ -543,6 +543,12 @@ class AppLocalizationsHu extends AppLocalizations {
   String get showTitle => 'Cím mutatása';
 
   @override
+  String get projectionLock => 'Vetítés zárolása';
+
+  @override
+  String get projectionUnlock => 'Vetítés feloldása';
+
+  @override
   String get hCenter => 'Vízszintes középre igazítás';
 
   @override

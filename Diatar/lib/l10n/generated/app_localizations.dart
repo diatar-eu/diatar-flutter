@@ -995,6 +995,18 @@ abstract class AppLocalizations {
   /// **'Cím mutatása'**
   String get showTitle;
 
+  /// No description provided for @projectionLock.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vetítés zárolása'**
+  String get projectionLock;
+
+  /// No description provided for @projectionUnlock.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vetítés feloldása'**
+  String get projectionUnlock;
+
   /// No description provided for @hCenter.
   ///
   /// In hu, this message translates to:

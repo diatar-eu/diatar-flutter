@@ -156,10 +156,32 @@ class DiatarHomePage extends StatelessWidget {
     if (isLandscape) {
       return LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
-          final double controlsWidth = (constraints.maxWidth * 0.38).clamp(
-            300.0,
-            460.0,
+          const double minPreviewWidth = 320.0;
+          const double minControlsWidth = 300.0;
+          const double preferredControlsWidth = 460.0;
+          // 9 circle buttons (with lock toggle) + 8 gaps + side paddings.
+          const double controlsRowMinWidthForButtons = 538.0;
+
+          final double maxControlsWidth = math.max(
+            minControlsWidth,
+            constraints.maxWidth - minPreviewWidth - 1,
           );
+
+          double controlsWidth = (constraints.maxWidth * 0.38).clamp(
+            minControlsWidth,
+            preferredControlsWidth,
+          );
+
+          if (maxControlsWidth >= controlsRowMinWidthForButtons &&
+              controlsWidth < controlsRowMinWidthForButtons) {
+            controlsWidth = controlsRowMinWidthForButtons;
+          }
+
+          controlsWidth = controlsWidth.clamp(
+            minControlsWidth,
+            maxControlsWidth,
+          );
+
           return Row(
             children: <Widget>[
               SizedBox(
@@ -244,6 +266,24 @@ class DiatarHomePage extends StatelessWidget {
                     : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 8),
+                _actionIconButton(
+                context,
+                icon: controller.settings.projectionLocked
+                  ? Icons.lock
+                  : Icons.lock_open,
+                tooltip: controller.settings.projectionLocked
+                  ? l10n.projectionUnlock
+                  : l10n.projectionLock,
+                onPressed: () => unawaited(controller.toggleProjectionLock()),
+                backgroundColor: controller.settings.projectionLocked
+                  ? const Color(0xFFF9A825).withValues(alpha: 0.15)
+                  : Theme.of(context).colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.08),
+                foregroundColor: controller.settings.projectionLocked
+                  ? const Color(0xFFF9A825)
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
               _actionIconButton(
                 context,
                 icon: Icons.skip_next,

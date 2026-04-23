@@ -41,6 +41,7 @@ class AppSettings {
     this.homeViewMode = 0,
     this.appThemeMode = 0,
     this.appLanguage = '',
+    this.projectionLocked = false,
     this.desktopActionHotkeys = const <String, String>{},
     this.desktopSongHotkeys = const <String, String>{},
     this.receiverUseServerColors = true,
@@ -95,6 +96,7 @@ class AppSettings {
   final int homeViewMode;
   final int appThemeMode;
   final String appLanguage;
+  final bool projectionLocked;
   final Map<String, String> desktopActionHotkeys;
   final Map<String, String> desktopSongHotkeys;
   final bool receiverUseServerColors;
@@ -156,6 +158,7 @@ class AppSettings {
     int? homeViewMode,
     int? appThemeMode,
     String? appLanguage,
+    bool? projectionLocked,
     Map<String, String>? desktopActionHotkeys,
     Map<String, String>? desktopSongHotkeys,
     bool? receiverUseServerColors,
@@ -207,9 +210,9 @@ class AppSettings {
       homeViewMode: homeViewMode ?? this.homeViewMode,
       appThemeMode: appThemeMode ?? this.appThemeMode,
       appLanguage: appLanguage ?? this.appLanguage,
-        desktopActionHotkeys:
-          desktopActionHotkeys ?? this.desktopActionHotkeys,
-        desktopSongHotkeys: desktopSongHotkeys ?? this.desktopSongHotkeys,
+      projectionLocked: projectionLocked ?? this.projectionLocked,
+      desktopActionHotkeys: desktopActionHotkeys ?? this.desktopActionHotkeys,
+      desktopSongHotkeys: desktopSongHotkeys ?? this.desktopSongHotkeys,
       receiverUseServerColors:
           receiverUseServerColors ?? this.receiverUseServerColors,
       receiverShowHighlight:

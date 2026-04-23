@@ -379,6 +379,8 @@
   "scrollableProjection": "Görgethető vetítés",
   "scrollableProjectionHint": "Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.",
   "showTitle": "Cím mutatása",
+  "projectionLock": "Vetítés zárolása",
+  "projectionUnlock": "Vetítés feloldása",
   "hCenter": "Vízszintes középre igazítás",
   "vCenter": "Függőleges középre igazítás",
   "showChords": "Akkordok mutatása",

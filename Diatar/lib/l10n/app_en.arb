@@ -379,6 +379,8 @@
   "scrollableProjection": "Scrollable projection",
   "scrollableProjectionHint": "If turned off, text is auto-sized to fit the projection area.",
   "showTitle": "Show title",
+  "projectionLock": "Lock projection",
+  "projectionUnlock": "Unlock projection",
   "hCenter": "Horizontal center align",
   "vCenter": "Vertical center align",
   "showChords": "Show chords",

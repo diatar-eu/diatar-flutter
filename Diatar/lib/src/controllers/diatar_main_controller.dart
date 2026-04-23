@@ -355,6 +355,8 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
+  bool get _projectionOutputLocked => settings.projectionLocked;
+
   String _tcpTargetsStatusLabel(AppSettings value) {
     if (!value.tcpEnabled || value.tcpTargets.isEmpty) {
       return '-';
@@ -384,7 +386,7 @@ class DiatarMainController extends ChangeNotifier {
     _screenWidth = normalizedW;
     _screenHeight = normalizedH;
 
-    if (!mqttActive) {
+    if (!mqttActive && !_projectionOutputLocked) {
       await _sender.sendScreenSize(width: _screenWidth, height: _screenHeight);
     }
   }
@@ -1739,8 +1741,21 @@ class DiatarMainController extends ChangeNotifier {
     _syncProjectionOnly();
   }
 
+  Future<void> toggleProjectionLock() async {
+    final bool wasLocked = settings.projectionLocked;
+    settings = settings.copyWith(projectionLocked: !wasLocked);
+    await _settingsStore.save(settings);
+    notifyListeners();
+    if (wasLocked && !settings.projectionLocked) {
+      await _syncCurrentDia();
+    }
+  }
+
   Future<void> _syncProjectionOnly() async {
     globals = globals.copyWith(projecting: showing, wordToHighlight: highPos);
+    if (_projectionOutputLocked) {
+      return;
+    }
     if (mqttActive) {
       await _mqttSender.sendState(
         globals,
@@ -1771,6 +1786,9 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<void> _syncHighlightOnly() async {
     globals = globals.copyWith(projecting: showing, wordToHighlight: highPos);
+    if (_projectionOutputLocked) {
+      return;
+    }
     if (mqttActive) {
       await _mqttSender.sendState(
         globals,
@@ -1789,6 +1807,10 @@ class DiatarMainController extends ChangeNotifier {
   Future<void> _syncCurrentDia() async {
     _projectedCustomCursor = -1;
     globals = globals.copyWith(projecting: showing, wordToHighlight: highPos);
+    if (_projectionOutputLocked) {
+      notifyListeners();
+      return;
+    }
     final DtxSong? song = currentSong;
     final DtxBook? book = currentBook;
     final DtxVerse? verse = currentVerse;
@@ -1851,6 +1873,11 @@ class DiatarMainController extends ChangeNotifier {
           ? const <String>['']
           : lines;
       globals = globals.copyWith(projecting: showing, wordToHighlight: 0);
+      if (_projectionOutputLocked) {
+        _setStatus('statusCustomTextSent', <String, String>{'title': title});
+        notifyListeners();
+        return;
+      }
       if (mqttActive) {
         await _mqttSender.sendState(
           globals,
@@ -1975,6 +2002,13 @@ class DiatarMainController extends ChangeNotifier {
 
     try {
       globals = globals.copyWith(projecting: showing, wordToHighlight: highPos);
+      if (_projectionOutputLocked) {
+        _setStatus('statusCustomTextSent', <String, String>{
+          'title': effectiveTitle,
+        });
+        notifyListeners();
+        return;
+      }
       if (mqttActive) {
         await _mqttSender.sendState(
           globals,
@@ -2025,6 +2059,16 @@ class DiatarMainController extends ChangeNotifier {
 
       final Uint8List bytes = await file.readAsBytes();
       final String ext = _fileExtension(normalized);
+      if (_projectionOutputLocked) {
+        lastPicPath = normalized;
+        _setStatus('statusImageSent', <String, String>{
+          'name': file.uri.pathSegments.isNotEmpty
+              ? file.uri.pathSegments.last
+              : normalized,
+        });
+        notifyListeners();
+        return;
+      }
       if (mqttActive) {
         await _mqttSender.sendPic(bytes, ext: ext);
       } else {
@@ -2062,6 +2106,18 @@ class DiatarMainController extends ChangeNotifier {
       final Uint8List bytes = await file.readAsBytes();
       final String ext = _fileExtension(normalized);
       globals = globals.copyWith(isBlankPic: true, showBlankPic: true);
+      if (_projectionOutputLocked) {
+        lastBlankPath = normalized;
+        settings = settings.copyWith(blankPicPath: normalized);
+        await _settingsStore.save(settings);
+        _setStatus('statusBlankSet', <String, String>{
+          'name': file.uri.pathSegments.isNotEmpty
+              ? file.uri.pathSegments.last
+              : normalized,
+        });
+        notifyListeners();
+        return;
+      }
       if (mqttActive) {
         await _mqttSender.sendBlank(bytes, ext: ext);
         await _mqttSender.sendState(
@@ -2095,6 +2151,11 @@ class DiatarMainController extends ChangeNotifier {
   Future<void> clearBlankImage() async {
     try {
       globals = globals.copyWith(isBlankPic: false, showBlankPic: false);
+      if (_projectionOutputLocked) {
+        _setStatus('statusBlankCleared');
+        notifyListeners();
+        return;
+      }
       if (mqttActive) {
         await _mqttSender.sendBlank(Uint8List(0), ext: '');
         await _mqttSender.sendState(
