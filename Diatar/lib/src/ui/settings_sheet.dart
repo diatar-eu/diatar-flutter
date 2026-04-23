@@ -1,20 +1,33 @@
+import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
 import '../services/mqtt_user_api_service.dart';
+
+class SongHotkeyOption {
+  const SongHotkeyOption({required this.id, required this.label});
+
+  final String id;
+  final String label;
+}
 
 class DiatarSettingsSheet extends StatefulWidget {
   const DiatarSettingsSheet({
     super.key,
     required this.initialSettings,
     required this.onApply,
+    this.availableSongs = const <SongHotkeyOption>[],
+    this.availableSongsLoader,
   });
 
   final AppSettings initialSettings;
   final ValueChanged<AppSettings> onApply;
+  final List<SongHotkeyOption> availableSongs;
+  final List<SongHotkeyOption> Function()? availableSongsLoader;
 
   @override
   State<DiatarSettingsSheet> createState() => _DiatarSettingsSheetState();
@@ -50,6 +63,13 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _projUseTitle;
   late bool _projBoldText;
   late bool _internetRelayEnabled;
+  late Map<String, String> _desktopActionHotkeys;
+  late Map<String, String> _desktopSongHotkeys;
+  late List<SongHotkeyOption> _availableSongs;
+  bool _availableSongsResolved = false;
+  String _selectedSongHotkeyOptionId = '';
+  late final FocusNode _focusNodeForHotkey;
+  String _capturedSongHotkey = '';
   bool _showInternetPassword = false;
   bool _internetActionRunning = false;
   final MqttUserApiService _userApi = MqttUserApiService();
@@ -66,6 +86,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _tcpTargets = TextEditingController(text: s.tcpTargets.join('\n'));
     _mqttUser = TextEditingController(text: s.mqttUser);
     _mqttPassword = TextEditingController(text: s.mqttPassword);
+    _focusNodeForHotkey = FocusNode(debugLabel: 'hotkey-capture');
     _dtxPath = TextEditingController(text: s.dtxPath);
     _blankPicPath = TextEditingController(text: s.blankPicPath);
     _projFontSize = TextEditingController(text: s.projFontSize.toString());
@@ -91,6 +112,13 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projUseTitle = s.projUseTitle;
     _projBoldText = s.projBoldText;
     _internetRelayEnabled = s.mqttUser.trim().isNotEmpty;
+    _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
+    _desktopSongHotkeys = Map<String, String>.from(s.desktopSongHotkeys);
+    _availableSongs = List<SongHotkeyOption>.from(widget.availableSongs);
+    _availableSongsResolved = widget.availableSongs.isNotEmpty;
+    if (_availableSongs.isNotEmpty) {
+      _selectedSongHotkeyOptionId = _availableSongs.first.id;
+    }
     _bkColor = s.bkColor;
     _txtColor = s.txtColor;
     _blankColor = s.blankColor;
@@ -103,6 +131,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _tcpTargets.dispose();
     _mqttUser.dispose();
     _mqttPassword.dispose();
+    _focusNodeForHotkey.dispose();
     _dtxPath.dispose();
     _blankPicPath.dispose();
     _projFontSize.dispose();
@@ -141,6 +170,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final String blankSummary = _blankPicPath.text.trim().isEmpty
       ? l10n.valueNotSet
         : _shortPath(_blankPicPath.text.trim());
+    final bool desktopHotkeysAvailable = _isDesktopPlatform();
     final bool showInternet = _matches(
       query,
       'internet mqtt kozvetites felhasznalo user',
@@ -153,13 +183,17 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
     final bool showFiles = _matches(query, 'enektar fajlok dtx ures kep blank');
     final bool showGeneral = _matches(query, 'altalanos tema nyelv language');
+    final bool showHotkeys =
+      desktopHotkeysAvailable &&
+      _matches(query, 'gyorsbillentyu hotkey billentyu shortcut vezerles enek');
     final bool anyVisible =
         showInternet ||
         showLan ||
         showColors ||
         showProjection ||
-        showFiles ||
-        showGeneral;
+      showFiles ||
+      showGeneral ||
+      showHotkeys;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -248,7 +282,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       ),
                       onTap: _openProjectionSettings,
                     ),
-                  if (showProjection && (showFiles || showGeneral))
+                  if (showProjection && (showFiles || showGeneral || showHotkeys))
                     const Divider(height: 1),
                   if (showFiles)
                     _settingsTile(
@@ -259,7 +293,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       ),
                       onTap: _openFileSettings,
                     ),
-                  if (showFiles && showGeneral) const Divider(height: 1),
+                  if (showFiles && (showGeneral || showHotkeys))
+                    const Divider(height: 1),
                   if (showGeneral)
                     _settingsTile(
                       leading: const Icon(Icons.tune),
@@ -268,6 +303,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                         l10n.settingsGeneralSummary(themeLabel, languageLabel),
                       ),
                       onTap: _openGeneralSettings,
+                    ),
+                  if (showGeneral && showHotkeys) const Divider(height: 1),
+                  if (showHotkeys)
+                    _settingsTile(
+                      leading: const Icon(Icons.keyboard_alt_outlined),
+                      title: Text(l10n.settingsHotkeysTitle),
+                      subtitle: Text(l10n.settingsHotkeysSummary),
+                      onTap: _openDesktopHotkeySettings,
                     ),
                   if (!anyVisible)
                     Padding(
@@ -820,6 +863,515 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
+  Future<void> _openDesktopHotkeySettings() {
+    return _openSectionSheet(
+      title: context.l10n.settingsDesktopHotkeysTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final AppLocalizations l10n = context.l10n;
+        final List<MapEntry<String, String>> actions = <MapEntry<String, String>>[
+          MapEntry<String, String>('prevSong', l10n.settingsHotkeyActionPrevSong),
+          MapEntry<String, String>('prevVerse', l10n.settingsHotkeyActionPrevVerse),
+          MapEntry<String, String>('toggleProjection', l10n.settingsHotkeyActionToggleProjection),
+          MapEntry<String, String>('nextVerse', l10n.settingsHotkeyActionNextVerse),
+          MapEntry<String, String>('nextSong', l10n.settingsHotkeyActionNextSong),
+          MapEntry<String, String>('highlightPrev', l10n.settingsHotkeyActionHighlightPrev),
+          MapEntry<String, String>('highlightNext', l10n.settingsHotkeyActionHighlightNext),
+        ];
+
+        return <Widget>[
+          Text(
+            l10n.settingsHotkeysActionsSectionTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 8),
+          ...actions.map((MapEntry<String, String> entry) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.value,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(context).hintColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Theme.of(context).dividerColor,
+                            ),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: Text(
+                            _desktopActionHotkeys[entry.key] ?? '(${l10n.valueNotSet})',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.icon(
+                        onPressed: () async {
+                          final String? captured = await _showHotkeyCaptureDialog(context);
+                          if (captured != null) {
+                            setBoth(() {
+                              _desktopActionHotkeys[entry.key] = captured;
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.keyboard),
+                        label: Text(l10n.settingsHotkeyCapture),
+                      ),
+                      const SizedBox(width: 8),
+                      if (_desktopActionHotkeys[entry.key] != null)
+                        IconButton(
+                          icon: const Icon(Icons.clear),
+                          tooltip: l10n.settingsHotkeyClear,
+                          onPressed: () {
+                            setBoth(() {
+                              _desktopActionHotkeys.remove(entry.key);
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+          const Divider(height: 20),
+          Text(
+            l10n.settingsHotkeysSongsSectionTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 8),
+          if (_availableSongsResolved && _availableSongs.isEmpty)
+            Text(l10n.settingsHotkeysNoSongs),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.music_note_outlined),
+            title: Text(l10n.songLabel),
+            subtitle: Text(
+              _selectedSongHotkeyOptionId.isEmpty
+                  ? l10n.valueNotSet
+                  : _songLabelForId(_selectedSongHotkeyOptionId),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: FilledButton.tonalIcon(
+              onPressed: () async {
+                final SongHotkeyOption? selected = await _pickSongHotkeyOption(
+                  context,
+                );
+                if (selected == null) {
+                  return;
+                }
+                setBoth(() {
+                  _selectedSongHotkeyOptionId = selected.id;
+                });
+              },
+              icon: const Icon(Icons.search),
+              label: Text(l10n.fileChoose),
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...<Widget>[
+            if (_capturedSongHotkey.isEmpty) ...<Widget>[
+              Focus(
+                focusNode: _focusNodeForHotkey,
+                autofocus: true,
+                onKeyEvent: (FocusNode node, KeyEvent event) {
+                  if (event is KeyDownEvent) {
+                    final String combo = _eventToCombo(event);
+                    if (combo.isNotEmpty) {
+                      setBoth(() {
+                        _capturedSongHotkey = combo;
+                      });
+                    }
+                  }
+                  return KeyEventResult.handled;
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Theme.of(context).primaryColor),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Text(
+                        l10n.settingsHotkeyPressAnyKey,
+                        style: const TextStyle(fontSize: 14),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (_capturedSongHotkey.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: 12),
+                        Text(
+                          _capturedSongHotkey,
+                          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ] else ...<Widget>[
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.green),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Text(
+                      _capturedSongHotkey,
+                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            setBoth(() {
+                              _capturedSongHotkey = '';
+                              _focusNodeForHotkey.requestFocus();
+                            });
+                          },
+                          child: Text(l10n.cancel),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: () {
+                            if (_selectedSongHotkeyOptionId.isNotEmpty) {
+                              setBoth(() {
+                                _desktopSongHotkeys[_capturedSongHotkey] = _selectedSongHotkeyOptionId;
+                                _capturedSongHotkey = '';
+                              });
+                            }
+                          },
+                          child: Text(l10n.settingsHotkeyAssign),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.tonalIcon(
+                onPressed: () {
+                  setBoth(() {
+                    _capturedSongHotkey = '';
+                  });
+                  _focusNodeForHotkey.requestFocus();
+                },
+                icon: const Icon(Icons.clear),
+                label: Text(l10n.settingsHotkeyClearCapture),
+              ),
+            ),
+          ],
+          if (_desktopSongHotkeys.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            ..._desktopSongHotkeys.entries.map((MapEntry<String, String> entry) {
+              final String label = _songLabelForId(entry.value);
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(entry.key),
+                subtitle: Text(label),
+                trailing: IconButton(
+                  tooltip: l10n.settingsHotkeyDelete,
+                  onPressed: () {
+                    setBoth(() {
+                      _desktopSongHotkeys.remove(entry.key);
+                    });
+                  },
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              );
+            }),
+          ],
+        ];
+      },
+    );
+  }
+
+  void _ensureAvailableSongsLoaded() {
+    if (_availableSongsResolved) {
+      return;
+    }
+    _availableSongsResolved = true;
+    final List<SongHotkeyOption> loaded =
+        widget.availableSongsLoader?.call() ?? const <SongHotkeyOption>[];
+    _availableSongs = loaded;
+    if (_selectedSongHotkeyOptionId.isEmpty && _availableSongs.isNotEmpty) {
+      _selectedSongHotkeyOptionId = _availableSongs.first.id;
+    }
+  }
+
+  Future<SongHotkeyOption?> _pickSongHotkeyOption(BuildContext context) async {
+    _ensureAvailableSongsLoaded();
+    if (_availableSongs.isEmpty) {
+      return null;
+    }
+
+    final AppLocalizations l10n = context.l10n;
+    final TextEditingController search = TextEditingController();
+    final List<String> lowerLabels = _availableSongs
+        .map((SongHotkeyOption option) => option.label.toLowerCase())
+        .toList(growable: false);
+    List<int> filteredIndexes = List<int>.generate(
+      _availableSongs.length,
+      (int i) => i,
+      growable: true,
+    );
+
+    final SongHotkeyOption? selected = await showDialog<SongHotkeyOption>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (
+            BuildContext context,
+            void Function(void Function()) setStateDialog,
+          ) {
+            void applyFilter(String query) {
+              final String normalized = query.trim().toLowerCase();
+              if (normalized.isEmpty) {
+                setStateDialog(() {
+                  filteredIndexes = List<int>.generate(
+                    _availableSongs.length,
+                    (int i) => i,
+                    growable: true,
+                  );
+                });
+                return;
+              }
+              setStateDialog(() {
+                final List<int> matches = <int>[];
+                for (int i = 0; i < lowerLabels.length; i++) {
+                  if (lowerLabels[i].contains(normalized)) {
+                    matches.add(i);
+                  }
+                }
+                filteredIndexes = matches;
+              });
+            }
+
+            return AlertDialog(
+              title: Text(l10n.songLabel),
+              content: SizedBox(
+                width: 520,
+                height: 420,
+                child: Column(
+                  children: <Widget>[
+                    TextField(
+                      controller: search,
+                      autofocus: true,
+                      decoration: InputDecoration(labelText: l10n.settingsSearchLabel),
+                      onChanged: applyFilter,
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.builder(
+                        itemExtent: 40,
+                        itemCount: filteredIndexes.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final SongHotkeyOption option =
+                              _availableSongs[filteredIndexes[index]];
+                          return InkWell(
+                            onTap: () => Navigator.of(context).pop(option),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                child: Text(
+                                  option.label,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.cancel),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    search.dispose();
+    return selected;
+  }
+
+  bool _isDesktopPlatform() {
+    if (kIsWeb) {
+      return false;
+    }
+    return defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
+  }
+
+  String _eventToCombo(KeyEvent event) {
+    final LogicalKeyboardKey key = event.logicalKey;
+    if (_isModifierKey(key)) {
+      return '';
+    }
+
+    final List<String> parts = <String>[];
+    if (HardwareKeyboard.instance.isControlPressed) {
+      parts.add('Ctrl');
+    }
+    if (HardwareKeyboard.instance.isAltPressed) {
+      parts.add('Alt');
+    }
+    if (HardwareKeyboard.instance.isShiftPressed) {
+      parts.add('Shift');
+    }
+    if (HardwareKeyboard.instance.isMetaPressed) {
+      parts.add('Meta');
+    }
+
+    final String keyPart = _normalizeKeyPart(key);
+    if (keyPart.isEmpty) {
+      return '';
+    }
+    parts.add(keyPart);
+    return parts.join('+');
+  }
+
+  bool _isModifierKey(LogicalKeyboardKey key) {
+    return key == LogicalKeyboardKey.shiftLeft ||
+        key == LogicalKeyboardKey.shiftRight ||
+        key == LogicalKeyboardKey.controlLeft ||
+        key == LogicalKeyboardKey.controlRight ||
+        key == LogicalKeyboardKey.altLeft ||
+        key == LogicalKeyboardKey.altRight ||
+        key == LogicalKeyboardKey.metaLeft ||
+        key == LogicalKeyboardKey.metaRight;
+  }
+
+  String _normalizeKeyPart(LogicalKeyboardKey key) {
+    final String label = key.keyLabel.trim();
+    if (label.isNotEmpty) {
+      if (label.length == 1) {
+        return label.toUpperCase();
+      }
+      return _capitalize(label);
+    }
+
+    final String debugName = key.debugName ?? '';
+    if (debugName.isEmpty) {
+      return '';
+    }
+    if (debugName.startsWith('F')) {
+      return debugName.toUpperCase();
+    }
+    return _capitalize(debugName.replaceAll(' ', ''));
+  }
+
+  String _capitalize(String value) {
+    if (value.isEmpty) {
+      return value;
+    }
+    return value[0].toUpperCase() + value.substring(1);
+  }
+
+  Future<String?> _showHotkeyCaptureDialog(BuildContext context) {
+    final l10n = context.l10n;
+    String capturedCombo = '';
+    return showDialog<String?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (BuildContext context, void Function(void Function()) setState) {
+            return Focus(
+              autofocus: true,
+              onKeyEvent: (FocusNode node, KeyEvent event) {
+                if (event is KeyDownEvent) {
+                  final String combo = _eventToCombo(event);
+                  if (combo.isNotEmpty) {
+                    setState(() {
+                      capturedCombo = combo;
+                    });
+                  }
+                }
+                return KeyEventResult.handled;
+              },
+              child: AlertDialog(
+                title: Text(l10n.settingsHotkeyDialogTitle),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.settingsHotkeyPressAnyKey,
+                      style: const TextStyle(fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (capturedCombo.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 16),
+                      Text(
+                        capturedCombo,
+                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(l10n.cancel),
+                  ),
+                  FilledButton(
+                    onPressed: capturedCombo.isEmpty
+                        ? null
+                        : () => Navigator.pop(context, capturedCombo),
+                    child: Text(l10n.settingsHotkeyConfirm),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _openProjectionSettings() {
     return _openSectionSheet(
       title: context.l10n.projectionSettingsTitle,
@@ -1126,6 +1678,30 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final int firstPort =
         _firstPortFromTargets(tcpTargets) ?? widget.initialSettings.port;
 
+    final Set<String> usedHotkeys = <String>{};
+    for (final String hotkey in _desktopActionHotkeys.values) {
+      if (usedHotkeys.contains(hotkey)) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(
+          SnackBar(content: Text(context.l10n.settingsHotkeyConflict(hotkey))),
+        );
+        return;
+      }
+      usedHotkeys.add(hotkey);
+    }
+    for (final String hotkey in _desktopSongHotkeys.keys) {
+      if (usedHotkeys.contains(hotkey)) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(
+          SnackBar(content: Text(context.l10n.settingsHotkeyConflict(hotkey))),
+        );
+        return;
+      }
+      usedHotkeys.add(hotkey);
+    }
+
     final AppSettings updated = widget.initialSettings.copyWith(
       port: firstPort,
       tcpClientEnabled: tcpTargets.isNotEmpty,
@@ -1191,6 +1767,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       projBlankTrans: _projBlankTrans.clamp(0, 100),
       appThemeMode: _appThemeMode.clamp(0, 1),
       appLanguage: _appLanguage,
+      desktopActionHotkeys: Map<String, String>.from(_desktopActionHotkeys),
+      desktopSongHotkeys: Map<String, String>.from(_desktopSongHotkeys),
       projBoldText: _projBoldText,
       bkColor: _bkColor,
       txtColor: _txtColor,
@@ -1480,5 +2058,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   String _rgbHex(Color color) {
     return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+  }
+
+  String _songLabelForId(String id) {
+    for (final SongHotkeyOption option in _availableSongs) {
+      if (option.id == id) {
+        return option.label;
+      }
+    }
+    return id;
   }
 }

@@ -722,6 +722,67 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get settingsHotkeysTitle => 'Hotkeys';
+
+  @override
+  String get settingsHotkeysSummary =>
+      'Controller actions and song assignment to keys';
+
+  @override
+  String get settingsDesktopHotkeysTitle => 'Hotkeys (desktop)';
+
+  @override
+  String get settingsHotkeysActionsSectionTitle => 'Controller actions';
+
+  @override
+  String get settingsHotkeysSongsSectionTitle => 'Song to hotkey';
+
+  @override
+  String get settingsHotkeysNoSongs =>
+      'No songs loaded, so assignment is not available.';
+
+  @override
+  String get settingsHotkeyActionHint => 'e.g. Ctrl+Right or F8';
+
+  @override
+  String get settingsHotkeyFieldLabel => 'Hotkey';
+
+  @override
+  String get settingsHotkeySongHint => 'e.g. Ctrl+1 or F2';
+
+  @override
+  String get settingsHotkeyAssign => 'Assign';
+
+  @override
+  String get settingsHotkeyDelete => 'Delete';
+
+  @override
+  String get settingsHotkeyActionPrevSong => 'Previous song';
+
+  @override
+  String get settingsHotkeyActionPrevVerse => 'Previous verse';
+
+  @override
+  String get settingsHotkeyActionToggleProjection => 'Toggle projection';
+
+  @override
+  String get settingsHotkeyActionNextVerse => 'Next verse';
+
+  @override
+  String get settingsHotkeyActionNextSong => 'Next song';
+
+  @override
+  String get settingsHotkeyActionHighlightPrev => 'Highlight previous word';
+
+  @override
+  String get settingsHotkeyActionHighlightNext => 'Highlight next word';
+
+  @override
+  String settingsHotkeyConflict(Object hotkey) {
+    return 'Conflicting hotkey: $hotkey';
+  }
+
+  @override
   String get settingsNoResults => 'No results for the search.';
 
   @override
@@ -840,4 +901,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String userApiError(Object error) {
     return 'API error: $error';
   }
+
+  @override
+  String get settingsHotkeyPressAnyKey => 'Press any key combination...';
+
+  @override
+  String get settingsHotkeyDialogTitle => 'Capture Hotkey';
+
+  @override
+  String get settingsHotkeyConfirm => 'Confirm';
+
+  @override
+  String get settingsHotkeyClearCapture => 'Clear';
+
+  @override
+  String get settingsHotkeyClear => 'Clear';
+
+  @override
+  String get settingsHotkeyCapture => 'Capture';
 }

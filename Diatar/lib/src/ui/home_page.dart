@@ -384,6 +384,24 @@ class DiatarHomePage extends StatelessWidget {
       builder: (BuildContext context) {
         return DiatarSettingsSheet(
           initialSettings: controller.settings,
+          availableSongsLoader: () {
+            final List<SongHotkeyOption> songOptions = <SongHotkeyOption>[];
+            for (final DtxBook book in controller.books) {
+              for (int songIdx = 0; songIdx < book.songs.length; songIdx++) {
+                final DtxSong song = book.songs[songIdx];
+                if (song.separator) {
+                  continue;
+                }
+                songOptions.add(
+                  SongHotkeyOption(
+                    id: '${book.fileName}::$songIdx',
+                    label: '${book.displayName} / ${song.title}',
+                  ),
+                );
+              }
+            }
+            return songOptions;
+          },
           onApply: (AppSettings settings) => controller.applySettings(settings),
         );
       },

@@ -724,6 +724,67 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
+  String get settingsHotkeysTitle => 'Gyorsbillentyűk';
+
+  @override
+  String get settingsHotkeysSummary =>
+      'Vezérlő műveletek és ének-hozzárendelés billentyűhöz';
+
+  @override
+  String get settingsDesktopHotkeysTitle => 'Gyorsbillentyűk (asztali)';
+
+  @override
+  String get settingsHotkeysActionsSectionTitle => 'Vezérlő műveletek';
+
+  @override
+  String get settingsHotkeysSongsSectionTitle => 'Ének gyorsbillentyűhöz';
+
+  @override
+  String get settingsHotkeysNoSongs =>
+      'Nincs betöltött ének, ezért nem lehet hozzárendelni.';
+
+  @override
+  String get settingsHotkeyActionHint => 'pl. Ctrl+Right vagy F8';
+
+  @override
+  String get settingsHotkeyFieldLabel => 'Gyorsbillentyű';
+
+  @override
+  String get settingsHotkeySongHint => 'pl. Ctrl+1 vagy F2';
+
+  @override
+  String get settingsHotkeyAssign => 'Hozzárendelés';
+
+  @override
+  String get settingsHotkeyDelete => 'Törlés';
+
+  @override
+  String get settingsHotkeyActionPrevSong => 'Előző ének';
+
+  @override
+  String get settingsHotkeyActionPrevVerse => 'Előző versszak';
+
+  @override
+  String get settingsHotkeyActionToggleProjection => 'Vetítés ki/be';
+
+  @override
+  String get settingsHotkeyActionNextVerse => 'Következő versszak';
+
+  @override
+  String get settingsHotkeyActionNextSong => 'Következő ének';
+
+  @override
+  String get settingsHotkeyActionHighlightPrev => 'Kiemelés előző szó';
+
+  @override
+  String get settingsHotkeyActionHighlightNext => 'Kiemelés következő szó';
+
+  @override
+  String settingsHotkeyConflict(Object hotkey) {
+    return 'Ütköző gyorsbillentyű: $hotkey';
+  }
+
+  @override
   String get settingsNoResults => 'Nincs találat a keresésre.';
 
   @override
@@ -842,4 +903,23 @@ class AppLocalizationsHu extends AppLocalizations {
   String userApiError(Object error) {
     return 'API hiba: $error';
   }
+
+  @override
+  String get settingsHotkeyPressAnyKey =>
+      'Nyomj meg bármelyik billentyű kombinációt...';
+
+  @override
+  String get settingsHotkeyDialogTitle => 'Gyorsbillentyű rögzítése';
+
+  @override
+  String get settingsHotkeyConfirm => 'Megerősítés';
+
+  @override
+  String get settingsHotkeyClearCapture => 'Törlés';
+
+  @override
+  String get settingsHotkeyClear => 'Törlés';
+
+  @override
+  String get settingsHotkeyCapture => 'Rögzítés';
 }

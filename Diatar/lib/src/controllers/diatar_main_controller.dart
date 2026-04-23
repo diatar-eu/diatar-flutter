@@ -1472,6 +1472,34 @@ class DiatarMainController extends ChangeNotifier {
     _syncCurrentDia();
   }
 
+  void activateSongHotkeyBinding(String bindingId) {
+    final List<String> parts = bindingId.split('::');
+    if (parts.length != 2) {
+      return;
+    }
+    final String fileName = parts[0].trim();
+    final int? targetSong = int.tryParse(parts[1].trim());
+    if (fileName.isEmpty || targetSong == null || targetSong < 0) {
+      return;
+    }
+
+    final int bookIdx = books.indexWhere((DtxBook b) => b.fileName == fileName);
+    if (bookIdx < 0) {
+      return;
+    }
+
+    final DtxBook book = books[bookIdx];
+    if (book.songs.isEmpty || targetSong >= book.songs.length) {
+      return;
+    }
+    if (book.songs[targetSong].separator) {
+      return;
+    }
+
+    setBookIndex(bookIdx);
+    setSongIndex(targetSong);
+  }
+
   void setVerseIndex(int value) {
     final DtxSong? s = currentSong;
     if (s == null || s.verses.isEmpty) {

@@ -7,6 +7,7 @@ import 'package:diatar_common/diatar_common.dart';
 
 import '../l10n/generated/app_localizations.dart';
 import 'controllers/diatar_main_controller.dart';
+import 'ui/desktop_hotkeys_layer.dart';
 import 'ui/home_page.dart';
 
 class DiatarApp extends StatefulWidget {
@@ -90,7 +91,10 @@ class _DiatarAppState extends State<DiatarApp> with WidgetsBindingObserver {
           theme: ThemeData.light(useMaterial3: true),
           darkTheme: ThemeData.dark(useMaterial3: true),
           themeMode: themeMode,
-          home: DiatarHomePage(controller: _controller),
+          home: DesktopHotkeysLayer(
+            controller: _controller,
+            child: DiatarHomePage(controller: _controller),
+          ),
         );
       },
     );

@@ -487,6 +487,30 @@
       "language": {}
     }
   },
+  "settingsHotkeysTitle": "Gyorsbillentyűk",
+  "settingsHotkeysSummary": "Vezérlő műveletek és ének-hozzárendelés billentyűhöz",
+  "settingsDesktopHotkeysTitle": "Gyorsbillentyűk (asztali)",
+  "settingsHotkeysActionsSectionTitle": "Vezérlő műveletek",
+  "settingsHotkeysSongsSectionTitle": "Ének gyorsbillentyűhöz",
+  "settingsHotkeysNoSongs": "Nincs betöltött ének, ezért nem lehet hozzárendelni.",
+  "settingsHotkeyActionHint": "pl. Ctrl+Right vagy F8",
+  "settingsHotkeyFieldLabel": "Gyorsbillentyű",
+  "settingsHotkeySongHint": "pl. Ctrl+1 vagy F2",
+  "settingsHotkeyAssign": "Hozzárendelés",
+  "settingsHotkeyDelete": "Törlés",
+  "settingsHotkeyActionPrevSong": "Előző ének",
+  "settingsHotkeyActionPrevVerse": "Előző versszak",
+  "settingsHotkeyActionToggleProjection": "Vetítés ki/be",
+  "settingsHotkeyActionNextVerse": "Következő versszak",
+  "settingsHotkeyActionNextSong": "Következő ének",
+  "settingsHotkeyActionHighlightPrev": "Kiemelés előző szó",
+  "settingsHotkeyActionHighlightNext": "Kiemelés következő szó",
+  "settingsHotkeyConflict": "Ütköző gyorsbillentyű: {hotkey}",
+  "@settingsHotkeyConflict": {
+    "placeholders": {
+      "hotkey": {}
+    }
+  },
   "settingsNoResults": "Nincs találat a keresésre.",
   "internetRelaySwitchTitle": "Internetes közvetítés",
   "passwordHideTooltip": "Elrejtés",
@@ -533,5 +557,11 @@
     "placeholders": {
       "error": {}
     }
-  }
+  },
+  "settingsHotkeyPressAnyKey": "Nyomj meg bármelyik billentyű kombinációt...",
+  "settingsHotkeyDialogTitle": "Gyorsbillentyű rögzítése",
+  "settingsHotkeyConfirm": "Megerősítés",
+  "settingsHotkeyClearCapture": "Törlés",
+  "settingsHotkeyClear": "Törlés",
+  "settingsHotkeyCapture": "Rögzítés"
 }

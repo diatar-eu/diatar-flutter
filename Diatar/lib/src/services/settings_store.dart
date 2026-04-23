@@ -38,6 +38,8 @@ class SettingsStore {
   static const String _kHomeViewMode = 'HomeViewMode';
   static const String _kAppThemeMode = 'AppThemeMode';
   static const String _kAppLanguage = 'AppLanguage';
+  static const String _kDesktopActionHotkeys = 'DesktopActionHotkeys';
+  static const String _kDesktopSongHotkeys = 'DesktopSongHotkeys';
 
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -93,6 +95,12 @@ class SettingsStore {
       homeViewMode: prefs.getInt(_kHomeViewMode) ?? 0,
       appThemeMode: prefs.getInt(_kAppThemeMode) ?? 0,
       appLanguage: prefs.getString(_kAppLanguage) ?? '',
+      desktopActionHotkeys: _decodeStringMap(
+        prefs.getStringList(_kDesktopActionHotkeys),
+      ),
+      desktopSongHotkeys: _decodeStringMap(
+        prefs.getStringList(_kDesktopSongHotkeys),
+      ),
       bkColor: Color(prefs.getInt(_kBkColor) ?? 0xFF000000),
       txtColor: Color(prefs.getInt(_kTxColor) ?? 0xFFFFFFFF),
       blankColor: Color(prefs.getInt(_kBlankColor) ?? 0xFF000000),
@@ -140,9 +148,50 @@ class SettingsStore {
     await prefs.setInt(_kHomeViewMode, settings.homeViewMode);
     await prefs.setInt(_kAppThemeMode, settings.appThemeMode);
     await prefs.setString(_kAppLanguage, settings.appLanguage);
+    await prefs.setStringList(
+      _kDesktopActionHotkeys,
+      _encodeStringMap(settings.desktopActionHotkeys),
+    );
+    await prefs.setStringList(
+      _kDesktopSongHotkeys,
+      _encodeStringMap(settings.desktopSongHotkeys),
+    );
     await prefs.setInt(_kBkColor, settings.bkColor.toARGB32());
     await prefs.setInt(_kTxColor, settings.txtColor.toARGB32());
     await prefs.setInt(_kBlankColor, settings.blankColor.toARGB32());
     await prefs.setInt(_kHiColor, settings.hiColor.toARGB32());
+  }
+
+  Map<String, String> _decodeStringMap(List<String>? raw) {
+    if (raw == null || raw.isEmpty) {
+      return <String, String>{};
+    }
+    final Map<String, String> result = <String, String>{};
+    for (final String entry in raw) {
+      final int split = entry.indexOf('\t');
+      if (split <= 0 || split >= entry.length - 1) {
+        continue;
+      }
+      final String key = entry.substring(0, split).trim();
+      final String value = entry.substring(split + 1).trim();
+      if (key.isEmpty || value.isEmpty) {
+        continue;
+      }
+      result[key] = value;
+    }
+    return result;
+  }
+
+  List<String> _encodeStringMap(Map<String, String> source) {
+    final List<String> output = <String>[];
+    source.forEach((String key, String value) {
+      final String normalizedKey = key.trim();
+      final String normalizedValue = value.trim();
+      if (normalizedKey.isEmpty || normalizedValue.isEmpty) {
+        return;
+      }
+      output.add('$normalizedKey\t$normalizedValue');
+    });
+    return output;
   }
 }

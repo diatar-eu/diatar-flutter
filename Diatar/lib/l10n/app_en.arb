@@ -487,6 +487,30 @@
       "language": {}
     }
   },
+  "settingsHotkeysTitle": "Hotkeys",
+  "settingsHotkeysSummary": "Controller actions and song assignment to keys",
+  "settingsDesktopHotkeysTitle": "Hotkeys (desktop)",
+  "settingsHotkeysActionsSectionTitle": "Controller actions",
+  "settingsHotkeysSongsSectionTitle": "Song to hotkey",
+  "settingsHotkeysNoSongs": "No songs loaded, so assignment is not available.",
+  "settingsHotkeyActionHint": "e.g. Ctrl+Right or F8",
+  "settingsHotkeyFieldLabel": "Hotkey",
+  "settingsHotkeySongHint": "e.g. Ctrl+1 or F2",
+  "settingsHotkeyAssign": "Assign",
+  "settingsHotkeyDelete": "Delete",
+  "settingsHotkeyActionPrevSong": "Previous song",
+  "settingsHotkeyActionPrevVerse": "Previous verse",
+  "settingsHotkeyActionToggleProjection": "Toggle projection",
+  "settingsHotkeyActionNextVerse": "Next verse",
+  "settingsHotkeyActionNextSong": "Next song",
+  "settingsHotkeyActionHighlightPrev": "Highlight previous word",
+  "settingsHotkeyActionHighlightNext": "Highlight next word",
+  "settingsHotkeyConflict": "Conflicting hotkey: {hotkey}",
+  "@settingsHotkeyConflict": {
+    "placeholders": {
+      "hotkey": {}
+    }
+  },
   "settingsNoResults": "No results for the search.",
   "internetRelaySwitchTitle": "Internet relay",
   "passwordHideTooltip": "Hide",
@@ -533,5 +557,11 @@
     "placeholders": {
       "error": {}
     }
-  }
+  },
+  "settingsHotkeyPressAnyKey": "Press any key combination...",
+  "settingsHotkeyDialogTitle": "Capture Hotkey",
+  "settingsHotkeyConfirm": "Confirm",
+  "settingsHotkeyClearCapture": "Clear",
+  "settingsHotkeyClear": "Clear",
+  "settingsHotkeyCapture": "Capture"
 }

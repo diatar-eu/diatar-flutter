@@ -1319,6 +1319,120 @@ abstract class AppLocalizations {
   /// **'Téma: {theme}, Nyelv: {language}'**
   String settingsGeneralSummary(Object theme, Object language);
 
+  /// No description provided for @settingsHotkeysTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Gyorsbillentyűk'**
+  String get settingsHotkeysTitle;
+
+  /// No description provided for @settingsHotkeysSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vezérlő műveletek és ének-hozzárendelés billentyűhöz'**
+  String get settingsHotkeysSummary;
+
+  /// No description provided for @settingsDesktopHotkeysTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Gyorsbillentyűk (asztali)'**
+  String get settingsDesktopHotkeysTitle;
+
+  /// No description provided for @settingsHotkeysActionsSectionTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vezérlő műveletek'**
+  String get settingsHotkeysActionsSectionTitle;
+
+  /// No description provided for @settingsHotkeysSongsSectionTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ének gyorsbillentyűhöz'**
+  String get settingsHotkeysSongsSectionTitle;
+
+  /// No description provided for @settingsHotkeysNoSongs.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nincs betöltött ének, ezért nem lehet hozzárendelni.'**
+  String get settingsHotkeysNoSongs;
+
+  /// No description provided for @settingsHotkeyActionHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'pl. Ctrl+Right vagy F8'**
+  String get settingsHotkeyActionHint;
+
+  /// No description provided for @settingsHotkeyFieldLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Gyorsbillentyű'**
+  String get settingsHotkeyFieldLabel;
+
+  /// No description provided for @settingsHotkeySongHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'pl. Ctrl+1 vagy F2'**
+  String get settingsHotkeySongHint;
+
+  /// No description provided for @settingsHotkeyAssign.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hozzárendelés'**
+  String get settingsHotkeyAssign;
+
+  /// No description provided for @settingsHotkeyDelete.
+  ///
+  /// In hu, this message translates to:
+  /// **'Törlés'**
+  String get settingsHotkeyDelete;
+
+  /// No description provided for @settingsHotkeyActionPrevSong.
+  ///
+  /// In hu, this message translates to:
+  /// **'Előző ének'**
+  String get settingsHotkeyActionPrevSong;
+
+  /// No description provided for @settingsHotkeyActionPrevVerse.
+  ///
+  /// In hu, this message translates to:
+  /// **'Előző versszak'**
+  String get settingsHotkeyActionPrevVerse;
+
+  /// No description provided for @settingsHotkeyActionToggleProjection.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vetítés ki/be'**
+  String get settingsHotkeyActionToggleProjection;
+
+  /// No description provided for @settingsHotkeyActionNextVerse.
+  ///
+  /// In hu, this message translates to:
+  /// **'Következő versszak'**
+  String get settingsHotkeyActionNextVerse;
+
+  /// No description provided for @settingsHotkeyActionNextSong.
+  ///
+  /// In hu, this message translates to:
+  /// **'Következő ének'**
+  String get settingsHotkeyActionNextSong;
+
+  /// No description provided for @settingsHotkeyActionHighlightPrev.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kiemelés előző szó'**
+  String get settingsHotkeyActionHighlightPrev;
+
+  /// No description provided for @settingsHotkeyActionHighlightNext.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kiemelés következő szó'**
+  String get settingsHotkeyActionHighlightNext;
+
+  /// No description provided for @settingsHotkeyConflict.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ütköző gyorsbillentyű: {hotkey}'**
+  String settingsHotkeyConflict(Object hotkey);
+
   /// No description provided for @settingsNoResults.
   ///
   /// In hu, this message translates to:
@@ -1540,6 +1654,42 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'API hiba: {error}'**
   String userApiError(Object error);
+
+  /// No description provided for @settingsHotkeyPressAnyKey.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nyomj meg bármelyik billentyű kombinációt...'**
+  String get settingsHotkeyPressAnyKey;
+
+  /// No description provided for @settingsHotkeyDialogTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Gyorsbillentyű rögzítése'**
+  String get settingsHotkeyDialogTitle;
+
+  /// No description provided for @settingsHotkeyConfirm.
+  ///
+  /// In hu, this message translates to:
+  /// **'Megerősítés'**
+  String get settingsHotkeyConfirm;
+
+  /// No description provided for @settingsHotkeyClearCapture.
+  ///
+  /// In hu, this message translates to:
+  /// **'Törlés'**
+  String get settingsHotkeyClearCapture;
+
+  /// No description provided for @settingsHotkeyClear.
+  ///
+  /// In hu, this message translates to:
+  /// **'Törlés'**
+  String get settingsHotkeyClear;
+
+  /// No description provided for @settingsHotkeyCapture.
+  ///
+  /// In hu, this message translates to:
+  /// **'Rögzítés'**
+  String get settingsHotkeyCapture;
 }
 
 class _AppLocalizationsDelegate

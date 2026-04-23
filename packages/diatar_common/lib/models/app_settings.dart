@@ -41,6 +41,8 @@ class AppSettings {
     this.homeViewMode = 0,
     this.appThemeMode = 0,
     this.appLanguage = '',
+    this.desktopActionHotkeys = const <String, String>{},
+    this.desktopSongHotkeys = const <String, String>{},
     this.receiverUseServerColors = true,
     this.receiverShowHighlight = true,
     this.receiverUseAkkord = true,
@@ -93,6 +95,8 @@ class AppSettings {
   final int homeViewMode;
   final int appThemeMode;
   final String appLanguage;
+  final Map<String, String> desktopActionHotkeys;
+  final Map<String, String> desktopSongHotkeys;
   final bool receiverUseServerColors;
   final bool receiverShowHighlight;
   final bool receiverUseAkkord;
@@ -152,6 +156,8 @@ class AppSettings {
     int? homeViewMode,
     int? appThemeMode,
     String? appLanguage,
+    Map<String, String>? desktopActionHotkeys,
+    Map<String, String>? desktopSongHotkeys,
     bool? receiverUseServerColors,
     bool? receiverShowHighlight,
     bool? receiverUseAkkord,
@@ -201,6 +207,9 @@ class AppSettings {
       homeViewMode: homeViewMode ?? this.homeViewMode,
       appThemeMode: appThemeMode ?? this.appThemeMode,
       appLanguage: appLanguage ?? this.appLanguage,
+        desktopActionHotkeys:
+          desktopActionHotkeys ?? this.desktopActionHotkeys,
+        desktopSongHotkeys: desktopSongHotkeys ?? this.desktopSongHotkeys,
       receiverUseServerColors:
           receiverUseServerColors ?? this.receiverUseServerColors,
       receiverShowHighlight:
