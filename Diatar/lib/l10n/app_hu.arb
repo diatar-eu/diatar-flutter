@@ -427,5 +427,111 @@
   "versePicker": "Versszak",
   "selectedVersesTitle": "Kiválasztott versszakok",
   "selectedVersesSubtitle": "Többet is kijelölhetsz.",
-  "apply": "Alkalmaz"
+  "apply": "Alkalmaz",
+  "internetUserActionsTitle": "Felhasználói műveletek (API)",
+  "internetStatusOn": "Be",
+  "internetStatusOff": "Ki",
+  "valueNotSet": "-",
+  "tcpNoTargets": "Nincs célpont",
+  "tcpTargetsCount": "{count} célpont",
+  "@tcpTargetsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSearchLabel": "Keresés a beállításokban",
+  "settingsInternetTitle": "Internet",
+  "settingsInternetSubtitle": "Internetes közvetítés: {status}, felhasználó: {user}",
+  "@settingsInternetSubtitle": {
+    "placeholders": {
+      "status": {},
+      "user": {}
+    }
+  },
+  "settingsLocalNetworkTitle": "Helyi hálózat (TCP/IP)",
+  "settingsLocalNetworkSubtitle": "TCP kliens célpontok: {summary}",
+  "@settingsLocalNetworkSubtitle": {
+    "placeholders": {
+      "summary": {}
+    }
+  },
+  "settingsColorSummary": "Háttér: {background}, Szöveg: {text}",
+  "@settingsColorSummary": {
+    "placeholders": {
+      "background": {},
+      "text": {}
+    }
+  },
+  "settingsProjectionSummary": "Betű: {font}px, Cím: {title}px",
+  "@settingsProjectionSummary": {
+    "placeholders": {
+      "font": {},
+      "title": {}
+    }
+  },
+  "settingsFilesTitle": "Énektárak és fájlok",
+  "settingsFilesSummary": "DTX: {dtx}, Üres kép: {blank}",
+  "@settingsFilesSummary": {
+    "placeholders": {
+      "dtx": {},
+      "blank": {}
+    }
+  },
+  "settingsGeneralTitle": "Általános",
+  "settingsGeneralSummary": "Téma: {theme}, Nyelv: {language}",
+  "@settingsGeneralSummary": {
+    "placeholders": {
+      "theme": {},
+      "language": {}
+    }
+  },
+  "settingsNoResults": "Nincs találat a keresésre.",
+  "internetRelaySwitchTitle": "Internetes közvetítés",
+  "passwordHideTooltip": "Elrejtés",
+  "passwordShowTooltip": "Megjelenítés",
+  "tcpTargetsLabel": "Célpontok (IP:port soronként)",
+  "tcpTargetsHint": "192.168.1.50:1024\\n192.168.1.51:1024",
+  "tcpTargetsHelp": "A sender kliensként csatlakozik a fenti címekhez.",
+  "projectionMarginsTitle": "Margók",
+  "projectionMarginLeft": "Bal margó",
+  "projectionMarginRight": "Jobb margó",
+  "projectionMarginTop": "Felső margó",
+  "projectionMarginBottom": "Alsó margó",
+  "tcpInvalidTargetFormat": "Hibás célpont formátum: {target}",
+  "@tcpInvalidTargetFormat": {
+    "placeholders": {
+      "target": {}
+    }
+  },
+  "userActionRegister": "Regisztráció",
+  "userActionResendVerification": "E-mail újraküldés",
+  "userActionDeleteUser": "Felhasználó törlése",
+  "userActionChangePassword": "Jelszóváltoztatás",
+  "userActionChangeEmail": "E-mail-változtatás",
+  "userActionChangeUsername": "Felhasználónév-változtatás",
+  "userFieldUsername": "Felhasználónév",
+  "userFieldPassword": "Jelszó",
+  "userFieldEmail": "E-mail",
+  "userFieldCurrentPassword": "Jelenlegi jelszó",
+  "userFieldNewPassword": "Új jelszó",
+  "userFieldNewEmail": "Új e-mail",
+  "userFieldCurrentUsername": "Jelenlegi felhasználónév",
+  "userFieldNewUsername": "Új felhasználónév",
+  "userActionRegisterSuccess": "Sikeres regisztráció. Ellenőrizd az e-mail fiókot a megerősítéshez.",
+  "userActionResendVerificationSuccess": "Megerősítő e-mail újraküldve.",
+  "userActionDeleteUserSuccess": "Felhasználó törölve.",
+  "userActionChangePasswordSuccess": "Jelszó sikeresen módosítva.",
+  "userActionChangeEmailSuccess": "E-mail-cím módosítási kérés elküldve.",
+  "userActionChangeUsernameSuccess": "Felhasználónév módosítva.",
+  "userDeleteConfirmTitle": "Megerősítés",
+  "userDeleteConfirmMessage": "Biztosan törölni szeretnéd ezt a felhasználót? Ez a művelet nem visszavonható.",
+  "userDeleteConfirmButton": "Törlés",
+  "userApiError": "API hiba: {error}",
+  "@userApiError": {
+    "placeholders": {
+      "error": {}
+    }
+  }
 }

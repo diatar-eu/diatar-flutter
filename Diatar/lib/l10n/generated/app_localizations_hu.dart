@@ -657,4 +657,189 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get apply => 'Alkalmaz';
+
+  @override
+  String get internetUserActionsTitle => 'Felhasználói műveletek (API)';
+
+  @override
+  String get internetStatusOn => 'Be';
+
+  @override
+  String get internetStatusOff => 'Ki';
+
+  @override
+  String get valueNotSet => '-';
+
+  @override
+  String get tcpNoTargets => 'Nincs célpont';
+
+  @override
+  String tcpTargetsCount(int count) {
+    return '$count célpont';
+  }
+
+  @override
+  String get settingsSearchLabel => 'Keresés a beállításokban';
+
+  @override
+  String get settingsInternetTitle => 'Internet';
+
+  @override
+  String settingsInternetSubtitle(Object status, Object user) {
+    return 'Internetes közvetítés: $status, felhasználó: $user';
+  }
+
+  @override
+  String get settingsLocalNetworkTitle => 'Helyi hálózat (TCP/IP)';
+
+  @override
+  String settingsLocalNetworkSubtitle(Object summary) {
+    return 'TCP kliens célpontok: $summary';
+  }
+
+  @override
+  String settingsColorSummary(Object background, Object text) {
+    return 'Háttér: $background, Szöveg: $text';
+  }
+
+  @override
+  String settingsProjectionSummary(Object font, Object title) {
+    return 'Betű: ${font}px, Cím: ${title}px';
+  }
+
+  @override
+  String get settingsFilesTitle => 'Énektárak és fájlok';
+
+  @override
+  String settingsFilesSummary(Object dtx, Object blank) {
+    return 'DTX: $dtx, Üres kép: $blank';
+  }
+
+  @override
+  String get settingsGeneralTitle => 'Általános';
+
+  @override
+  String settingsGeneralSummary(Object theme, Object language) {
+    return 'Téma: $theme, Nyelv: $language';
+  }
+
+  @override
+  String get settingsNoResults => 'Nincs találat a keresésre.';
+
+  @override
+  String get internetRelaySwitchTitle => 'Internetes közvetítés';
+
+  @override
+  String get passwordHideTooltip => 'Elrejtés';
+
+  @override
+  String get passwordShowTooltip => 'Megjelenítés';
+
+  @override
+  String get tcpTargetsLabel => 'Célpontok (IP:port soronként)';
+
+  @override
+  String get tcpTargetsHint => '192.168.1.50:1024\\n192.168.1.51:1024';
+
+  @override
+  String get tcpTargetsHelp =>
+      'A sender kliensként csatlakozik a fenti címekhez.';
+
+  @override
+  String get projectionMarginsTitle => 'Margók';
+
+  @override
+  String get projectionMarginLeft => 'Bal margó';
+
+  @override
+  String get projectionMarginRight => 'Jobb margó';
+
+  @override
+  String get projectionMarginTop => 'Felső margó';
+
+  @override
+  String get projectionMarginBottom => 'Alsó margó';
+
+  @override
+  String tcpInvalidTargetFormat(Object target) {
+    return 'Hibás célpont formátum: $target';
+  }
+
+  @override
+  String get userActionRegister => 'Regisztráció';
+
+  @override
+  String get userActionResendVerification => 'E-mail újraküldés';
+
+  @override
+  String get userActionDeleteUser => 'Felhasználó törlése';
+
+  @override
+  String get userActionChangePassword => 'Jelszóváltoztatás';
+
+  @override
+  String get userActionChangeEmail => 'E-mail-változtatás';
+
+  @override
+  String get userActionChangeUsername => 'Felhasználónév-változtatás';
+
+  @override
+  String get userFieldUsername => 'Felhasználónév';
+
+  @override
+  String get userFieldPassword => 'Jelszó';
+
+  @override
+  String get userFieldEmail => 'E-mail';
+
+  @override
+  String get userFieldCurrentPassword => 'Jelenlegi jelszó';
+
+  @override
+  String get userFieldNewPassword => 'Új jelszó';
+
+  @override
+  String get userFieldNewEmail => 'Új e-mail';
+
+  @override
+  String get userFieldCurrentUsername => 'Jelenlegi felhasználónév';
+
+  @override
+  String get userFieldNewUsername => 'Új felhasználónév';
+
+  @override
+  String get userActionRegisterSuccess =>
+      'Sikeres regisztráció. Ellenőrizd az e-mail fiókot a megerősítéshez.';
+
+  @override
+  String get userActionResendVerificationSuccess =>
+      'Megerősítő e-mail újraküldve.';
+
+  @override
+  String get userActionDeleteUserSuccess => 'Felhasználó törölve.';
+
+  @override
+  String get userActionChangePasswordSuccess => 'Jelszó sikeresen módosítva.';
+
+  @override
+  String get userActionChangeEmailSuccess =>
+      'E-mail-cím módosítási kérés elküldve.';
+
+  @override
+  String get userActionChangeUsernameSuccess => 'Felhasználónév módosítva.';
+
+  @override
+  String get userDeleteConfirmTitle => 'Megerősítés';
+
+  @override
+  String get userDeleteConfirmMessage =>
+      'Biztosan törölni szeretnéd ezt a felhasználót? Ez a művelet nem visszavonható.';
+
+  @override
+  String get userDeleteConfirmButton => 'Törlés';
+
+  @override
+  String userApiError(Object error) {
+    return 'API hiba: $error';
+  }
 }

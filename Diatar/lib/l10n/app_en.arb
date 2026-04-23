@@ -427,5 +427,111 @@
   "versePicker": "Verse",
   "selectedVersesTitle": "Selected verses",
   "selectedVersesSubtitle": "You can select multiple.",
-  "apply": "Apply"
+  "apply": "Apply",
+  "internetUserActionsTitle": "User actions (API)",
+  "internetStatusOn": "On",
+  "internetStatusOff": "Off",
+  "valueNotSet": "-",
+  "tcpNoTargets": "No targets",
+  "tcpTargetsCount": "{count} targets",
+  "@tcpTargetsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSearchLabel": "Search in settings",
+  "settingsInternetTitle": "Internet",
+  "settingsInternetSubtitle": "Internet relay: {status}, user: {user}",
+  "@settingsInternetSubtitle": {
+    "placeholders": {
+      "status": {},
+      "user": {}
+    }
+  },
+  "settingsLocalNetworkTitle": "Local network (TCP/IP)",
+  "settingsLocalNetworkSubtitle": "TCP client targets: {summary}",
+  "@settingsLocalNetworkSubtitle": {
+    "placeholders": {
+      "summary": {}
+    }
+  },
+  "settingsColorSummary": "Background: {background}, Text: {text}",
+  "@settingsColorSummary": {
+    "placeholders": {
+      "background": {},
+      "text": {}
+    }
+  },
+  "settingsProjectionSummary": "Font: {font}px, Title: {title}px",
+  "@settingsProjectionSummary": {
+    "placeholders": {
+      "font": {},
+      "title": {}
+    }
+  },
+  "settingsFilesTitle": "Songbooks and files",
+  "settingsFilesSummary": "DTX: {dtx}, Blank image: {blank}",
+  "@settingsFilesSummary": {
+    "placeholders": {
+      "dtx": {},
+      "blank": {}
+    }
+  },
+  "settingsGeneralTitle": "General",
+  "settingsGeneralSummary": "Theme: {theme}, Language: {language}",
+  "@settingsGeneralSummary": {
+    "placeholders": {
+      "theme": {},
+      "language": {}
+    }
+  },
+  "settingsNoResults": "No results for the search.",
+  "internetRelaySwitchTitle": "Internet relay",
+  "passwordHideTooltip": "Hide",
+  "passwordShowTooltip": "Show",
+  "tcpTargetsLabel": "Targets (IP:port per line)",
+  "tcpTargetsHint": "192.168.1.50:1024\\n192.168.1.51:1024",
+  "tcpTargetsHelp": "The sender connects as a client to the addresses above.",
+  "projectionMarginsTitle": "Margins",
+  "projectionMarginLeft": "Left margin",
+  "projectionMarginRight": "Right margin",
+  "projectionMarginTop": "Top margin",
+  "projectionMarginBottom": "Bottom margin",
+  "tcpInvalidTargetFormat": "Invalid target format: {target}",
+  "@tcpInvalidTargetFormat": {
+    "placeholders": {
+      "target": {}
+    }
+  },
+  "userActionRegister": "Register",
+  "userActionResendVerification": "Resend e-mail",
+  "userActionDeleteUser": "Delete user",
+  "userActionChangePassword": "Change password",
+  "userActionChangeEmail": "Change e-mail",
+  "userActionChangeUsername": "Change username",
+  "userFieldUsername": "Username",
+  "userFieldPassword": "Password",
+  "userFieldEmail": "E-mail",
+  "userFieldCurrentPassword": "Current password",
+  "userFieldNewPassword": "New password",
+  "userFieldNewEmail": "New e-mail",
+  "userFieldCurrentUsername": "Current username",
+  "userFieldNewUsername": "New username",
+  "userActionRegisterSuccess": "Registration successful. Check your e-mail inbox for verification.",
+  "userActionResendVerificationSuccess": "Verification e-mail resent.",
+  "userActionDeleteUserSuccess": "User deleted.",
+  "userActionChangePasswordSuccess": "Password changed successfully.",
+  "userActionChangeEmailSuccess": "E-mail change request sent.",
+  "userActionChangeUsernameSuccess": "Username changed.",
+  "userDeleteConfirmTitle": "Confirmation",
+  "userDeleteConfirmMessage": "Are you sure you want to delete this user? This action cannot be undone.",
+  "userDeleteConfirmButton": "Delete",
+  "userApiError": "API error: {error}",
+  "@userApiError": {
+    "placeholders": {
+      "error": {}
+    }
+  }
 }

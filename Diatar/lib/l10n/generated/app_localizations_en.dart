@@ -655,4 +655,189 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get apply => 'Apply';
+
+  @override
+  String get internetUserActionsTitle => 'User actions (API)';
+
+  @override
+  String get internetStatusOn => 'On';
+
+  @override
+  String get internetStatusOff => 'Off';
+
+  @override
+  String get valueNotSet => '-';
+
+  @override
+  String get tcpNoTargets => 'No targets';
+
+  @override
+  String tcpTargetsCount(int count) {
+    return '$count targets';
+  }
+
+  @override
+  String get settingsSearchLabel => 'Search in settings';
+
+  @override
+  String get settingsInternetTitle => 'Internet';
+
+  @override
+  String settingsInternetSubtitle(Object status, Object user) {
+    return 'Internet relay: $status, user: $user';
+  }
+
+  @override
+  String get settingsLocalNetworkTitle => 'Local network (TCP/IP)';
+
+  @override
+  String settingsLocalNetworkSubtitle(Object summary) {
+    return 'TCP client targets: $summary';
+  }
+
+  @override
+  String settingsColorSummary(Object background, Object text) {
+    return 'Background: $background, Text: $text';
+  }
+
+  @override
+  String settingsProjectionSummary(Object font, Object title) {
+    return 'Font: ${font}px, Title: ${title}px';
+  }
+
+  @override
+  String get settingsFilesTitle => 'Songbooks and files';
+
+  @override
+  String settingsFilesSummary(Object dtx, Object blank) {
+    return 'DTX: $dtx, Blank image: $blank';
+  }
+
+  @override
+  String get settingsGeneralTitle => 'General';
+
+  @override
+  String settingsGeneralSummary(Object theme, Object language) {
+    return 'Theme: $theme, Language: $language';
+  }
+
+  @override
+  String get settingsNoResults => 'No results for the search.';
+
+  @override
+  String get internetRelaySwitchTitle => 'Internet relay';
+
+  @override
+  String get passwordHideTooltip => 'Hide';
+
+  @override
+  String get passwordShowTooltip => 'Show';
+
+  @override
+  String get tcpTargetsLabel => 'Targets (IP:port per line)';
+
+  @override
+  String get tcpTargetsHint => '192.168.1.50:1024\\n192.168.1.51:1024';
+
+  @override
+  String get tcpTargetsHelp =>
+      'The sender connects as a client to the addresses above.';
+
+  @override
+  String get projectionMarginsTitle => 'Margins';
+
+  @override
+  String get projectionMarginLeft => 'Left margin';
+
+  @override
+  String get projectionMarginRight => 'Right margin';
+
+  @override
+  String get projectionMarginTop => 'Top margin';
+
+  @override
+  String get projectionMarginBottom => 'Bottom margin';
+
+  @override
+  String tcpInvalidTargetFormat(Object target) {
+    return 'Invalid target format: $target';
+  }
+
+  @override
+  String get userActionRegister => 'Register';
+
+  @override
+  String get userActionResendVerification => 'Resend e-mail';
+
+  @override
+  String get userActionDeleteUser => 'Delete user';
+
+  @override
+  String get userActionChangePassword => 'Change password';
+
+  @override
+  String get userActionChangeEmail => 'Change e-mail';
+
+  @override
+  String get userActionChangeUsername => 'Change username';
+
+  @override
+  String get userFieldUsername => 'Username';
+
+  @override
+  String get userFieldPassword => 'Password';
+
+  @override
+  String get userFieldEmail => 'E-mail';
+
+  @override
+  String get userFieldCurrentPassword => 'Current password';
+
+  @override
+  String get userFieldNewPassword => 'New password';
+
+  @override
+  String get userFieldNewEmail => 'New e-mail';
+
+  @override
+  String get userFieldCurrentUsername => 'Current username';
+
+  @override
+  String get userFieldNewUsername => 'New username';
+
+  @override
+  String get userActionRegisterSuccess =>
+      'Registration successful. Check your e-mail inbox for verification.';
+
+  @override
+  String get userActionResendVerificationSuccess =>
+      'Verification e-mail resent.';
+
+  @override
+  String get userActionDeleteUserSuccess => 'User deleted.';
+
+  @override
+  String get userActionChangePasswordSuccess =>
+      'Password changed successfully.';
+
+  @override
+  String get userActionChangeEmailSuccess => 'E-mail change request sent.';
+
+  @override
+  String get userActionChangeUsernameSuccess => 'Username changed.';
+
+  @override
+  String get userDeleteConfirmTitle => 'Confirmation';
+
+  @override
+  String get userDeleteConfirmMessage =>
+      'Are you sure you want to delete this user? This action cannot be undone.';
+
+  @override
+  String get userDeleteConfirmButton => 'Delete';
+
+  @override
+  String userApiError(Object error) {
+    return 'API error: $error';
+  }
 }

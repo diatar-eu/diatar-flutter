@@ -7,7 +7,7 @@ import 'package:diatar_common/diatar_common.dart';
 
 import '../l10n/generated/app_localizations.dart';
 import 'controllers/diatar_main_controller.dart';
-import 'ui/diatar_home_page.dart';
+import 'ui/home_page.dart';
 
 class DiatarApp extends StatefulWidget {
   const DiatarApp({super.key});

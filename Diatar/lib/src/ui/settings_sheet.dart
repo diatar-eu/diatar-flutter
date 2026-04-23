@@ -1,46 +1,58 @@
-import 'package:flutter/material.dart';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:file_selector/file_selector.dart';
+import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
+import '../services/mqtt_user_api_service.dart';
 
-class SettingsSheet extends StatefulWidget {
-  const SettingsSheet({
+class DiatarSettingsSheet extends StatefulWidget {
+  const DiatarSettingsSheet({
     super.key,
     required this.initialSettings,
-    required this.senderSuggestions,
-    required this.channelSuggestions,
     required this.onApply,
-    required this.onRefreshUsers,
-    required this.onSenderFilterChanged,
-    required this.onSenderChosen,
   });
 
   final AppSettings initialSettings;
-  final List<String> senderSuggestions;
-  final List<String> channelSuggestions;
   final ValueChanged<AppSettings> onApply;
-  final VoidCallback onRefreshUsers;
-  final ValueChanged<String> onSenderFilterChanged;
-  final ValueChanged<String> onSenderChosen;
 
   @override
-  State<SettingsSheet> createState() => _SettingsSheetState();
+  State<DiatarSettingsSheet> createState() => _DiatarSettingsSheetState();
 }
 
-class _SettingsSheetState extends State<SettingsSheet> {
-  late final TextEditingController _port;
-  late final TextEditingController _clipL;
-  late final TextEditingController _clipT;
-  late final TextEditingController _clipR;
-  late final TextEditingController _clipB;
+class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
+  late final TextEditingController _search;
+  late final TextEditingController _tcpTargets;
   late final TextEditingController _mqttUser;
-  late bool _ipMode;
-
-  late bool _borderToClip;
-  late bool _mirror;
-  late bool _boot;
-  late int _rotate;
-  late String _channel;
+  late final TextEditingController _mqttPassword;
+  late final TextEditingController _dtxPath;
+  late final TextEditingController _blankPicPath;
+  late final TextEditingController _projFontSize;
+  late final TextEditingController _projTitleSize;
+  late final TextEditingController _projLeftIndent;
+  late final TextEditingController _projBorderL;
+  late final TextEditingController _projBorderT;
+  late final TextEditingController _projBorderR;
+  late final TextEditingController _projBorderB;
+  late int _projSpacingStep;
+  late int _projKottaArany;
+  late int _projAkkordArany;
+  late int _projBgMode;
+  late int _projBackTrans;
+  late int _projBlankTrans;
+  late int _appThemeMode;
+  late String _appLanguage;
+  late bool _projAutoSize;
+  late bool _projHCenter;
+  late bool _projVCenter;
+  late bool _projUseAkkord;
+  late bool _projUseKotta;
+  late bool _projUseTitle;
+  late bool _projBoldText;
+  late bool _internetRelayEnabled;
+  bool _showInternetPassword = false;
+  bool _internetActionRunning = false;
+  final MqttUserApiService _userApi = MqttUserApiService();
   late Color _bkColor;
   late Color _txtColor;
   late Color _blankColor;
@@ -50,45 +62,104 @@ class _SettingsSheetState extends State<SettingsSheet> {
   void initState() {
     super.initState();
     final AppSettings s = widget.initialSettings;
-    _port = TextEditingController(text: s.port.toString());
-    _clipL = TextEditingController(text: s.clipL.toString());
-    _clipT = TextEditingController(text: s.clipT.toString());
-    _clipR = TextEditingController(text: s.clipR.toString());
-    _clipB = TextEditingController(text: s.clipB.toString());
+    _search = TextEditingController();
+    _tcpTargets = TextEditingController(text: s.tcpTargets.join('\n'));
     _mqttUser = TextEditingController(text: s.mqttUser);
-    _ipMode = s.mqttUser.trim().isEmpty;
-    _borderToClip = s.borderToClip;
-    _mirror = s.mirror;
-    _boot = s.boot;
-    _rotate = s.rotateQuarterTurns;
-    _channel = s.mqttChannel;
+    _mqttPassword = TextEditingController(text: s.mqttPassword);
+    _dtxPath = TextEditingController(text: s.dtxPath);
+    _blankPicPath = TextEditingController(text: s.blankPicPath);
+    _projFontSize = TextEditingController(text: s.projFontSize.toString());
+    _projTitleSize = TextEditingController(text: s.projTitleSize.toString());
+    _projLeftIndent = TextEditingController(text: s.projLeftIndent.toString());
+    _projBorderL = TextEditingController(text: s.projBorderL.toString());
+    _projBorderT = TextEditingController(text: s.projBorderT.toString());
+    _projBorderR = TextEditingController(text: s.projBorderR.toString());
+    _projBorderB = TextEditingController(text: s.projBorderB.toString());
+    _projSpacingStep = s.projSpacingStep.clamp(0, 10);
+    _projKottaArany = s.projKottaArany.clamp(10, 200);
+    _projAkkordArany = s.projAkkordArany.clamp(10, 200);
+    _projBgMode = s.projBgMode.clamp(0, 4);
+    _projBackTrans = s.projBackTrans.clamp(0, 100);
+    _projBlankTrans = s.projBlankTrans.clamp(0, 100);
+    _appThemeMode = s.appThemeMode.clamp(0, 1);
+    _appLanguage = _isSupportedLanguage(s.appLanguage) ? s.appLanguage : '';
+    _projAutoSize = s.projAutoSize;
+    _projHCenter = s.projHCenter;
+    _projVCenter = s.projVCenter;
+    _projUseAkkord = s.projUseAkkord;
+    _projUseKotta = s.projUseKotta;
+    _projUseTitle = s.projUseTitle;
+    _projBoldText = s.projBoldText;
+    _internetRelayEnabled = s.mqttUser.trim().isNotEmpty;
     _bkColor = s.bkColor;
     _txtColor = s.txtColor;
     _blankColor = s.blankColor;
     _hiColor = s.hiColor;
-
-    _mqttUser.addListener(() {
-      widget.onSenderFilterChanged(_mqttUser.text);
-      setState(() {
-        _ipMode = _mqttUser.text.trim().isEmpty;
-      });
-    });
   }
 
   @override
   void dispose() {
-    _port.dispose();
-    _clipL.dispose();
-    _clipT.dispose();
-    _clipR.dispose();
-    _clipB.dispose();
+    _search.dispose();
+    _tcpTargets.dispose();
     _mqttUser.dispose();
+    _mqttPassword.dispose();
+    _dtxPath.dispose();
+    _blankPicPath.dispose();
+    _projFontSize.dispose();
+    _projTitleSize.dispose();
+    _projLeftIndent.dispose();
+    _projBorderL.dispose();
+    _projBorderT.dispose();
+    _projBorderR.dispose();
+    _projBorderB.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final String query = _search.text.trim().toLowerCase();
+    final String internetStatus = _internetRelayEnabled
+      ? l10n.internetStatusOn
+      : l10n.internetStatusOff;
+    final String mqttUser = _mqttUser.text.trim().isEmpty
+      ? l10n.valueNotSet
+        : _mqttUser.text.trim();
+    final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
+    final String tcpSummary = tcpTargets.isEmpty
+      ? l10n.tcpNoTargets
+      : l10n.tcpTargetsCount(tcpTargets.length);
+    final String languageLabel = _appLanguage.trim().isEmpty
+        ? l10n.languageSystem
+        : _languageLabel(context, _appLanguage);
+    final String themeLabel = _appThemeMode == 0
+        ? l10n.themeDark
+        : l10n.themeLight;
+    final String dtxSummary = _dtxPath.text.trim().isEmpty
+      ? l10n.valueNotSet
+        : _shortPath(_dtxPath.text.trim());
+    final String blankSummary = _blankPicPath.text.trim().isEmpty
+      ? l10n.valueNotSet
+        : _shortPath(_blankPicPath.text.trim());
+    final bool showInternet = _matches(
+      query,
+      'internet mqtt kozvetites felhasznalo user',
+    );
+    final bool showLan = _matches(query, 'helyi halozat tcp ip port');
+    final bool showColors = _matches(query, 'szinek hatter szoveg highlight');
+    final bool showProjection = _matches(
+      query,
+      'vetites betu meret cim hatter opacity',
+    );
+    final bool showFiles = _matches(query, 'enektar fajlok dtx ures kep blank');
+    final bool showGeneral = _matches(query, 'altalanos tema nyelv language');
+    final bool anyVisible =
+        showInternet ||
+        showLan ||
+        showColors ||
+        showProjection ||
+        showFiles ||
+        showGeneral;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -101,188 +172,118 @@ class _SettingsSheetState extends State<SettingsSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(l10n.settingsTitleReceiver, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: RadioListTile<bool>(
-                    value: true,
-                    groupValue: _ipMode,
-                    onChanged: (bool? v) {
-                      if (v == true) {
-                        setState(() {
-                          _ipMode = true;
-                          _mqttUser.text = '';
-                        });
-                      }
-                    },
-                    title: Text(l10n.modeIp),
-                    dense: true,
-                  ),
-                ),
-                Expanded(
-                  child: RadioListTile<bool>(
-                    value: false,
-                    groupValue: _ipMode,
-                    onChanged: (bool? v) {
-                      if (v == false) {
-                        setState(() {
-                          _ipMode = false;
-                        });
-                        widget.onRefreshUsers();
-                      }
-                    },
-                    title: Text(l10n.modeInternet),
-                    dense: true,
-                  ),
-                ),
-              ],
+            Text(
+              l10n.settingsTitle,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
+            const SizedBox(height: 8),
             TextField(
-              controller: _port,
-              keyboardType: TextInputType.number,
-              enabled: _ipMode,
-              decoration: InputDecoration(labelText: l10n.tcpPortRange),
+              controller: _search,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                labelText: l10n.settingsSearchLabel,
+              ),
             ),
-            if (!_ipMode) ...<Widget>[
-              Row(
+            const SizedBox(height: 10),
+            Card(
+              margin: EdgeInsets.zero,
+              elevation: 1,
+              clipBehavior: Clip.antiAlias,
+              child: Column(
                 children: <Widget>[
-                  Expanded(
-                    child: TextField(
-                      controller: _mqttUser,
-                      decoration: InputDecoration(
-                        labelText: l10n.senderLabel,
-                        helperText: l10n.senderHelper,
+                  if (showInternet)
+                    _settingsTile(
+                      leading: const Icon(Icons.public),
+                      title: Text(l10n.settingsInternetTitle),
+                      subtitle: Text(
+                        l10n.settingsInternetSubtitle(internetStatus, mqttUser),
                       ),
+                      onTap: _openInternetSettings,
                     ),
-                  ),
-                  IconButton(
-                    onPressed: widget.onRefreshUsers,
-                    icon: const Icon(Icons.refresh),
-                    tooltip: l10n.senderRefreshTooltip,
-                  ),
+                  if (showInternet &&
+                      (showLan ||
+                          showColors ||
+                          showProjection ||
+                          showFiles ||
+                          showGeneral))
+                    const Divider(height: 1),
+                  if (showLan)
+                    _settingsTile(
+                      leading: const Icon(Icons.lan),
+                      title: Text(l10n.settingsLocalNetworkTitle),
+                      subtitle: Text(l10n.settingsLocalNetworkSubtitle(tcpSummary)),
+                      onTap: _openLocalNetworkSettings,
+                    ),
+                  if (showLan &&
+                      (showColors ||
+                          showProjection ||
+                          showFiles ||
+                          showGeneral))
+                    const Divider(height: 1),
+                  if (showColors)
+                    _settingsTile(
+                      leading: const Icon(Icons.palette_outlined),
+                      title: Text(l10n.colorsTitle),
+                      subtitle: Text(
+                        l10n.settingsColorSummary(
+                          _rgbHex(_bkColor),
+                          _rgbHex(_txtColor),
+                        ),
+                      ),
+                      onTap: _openColorSettings,
+                    ),
+                  if (showColors &&
+                      (showProjection || showFiles || showGeneral))
+                    const Divider(height: 1),
+                  if (showProjection)
+                    _settingsTile(
+                      leading: const Icon(Icons.slideshow),
+                      title: Text(l10n.projectionSettingsTitle),
+                      subtitle: Text(
+                        l10n.settingsProjectionSummary(
+                          _projFontSize.text.trim(),
+                          _projTitleSize.text.trim(),
+                        ),
+                      ),
+                      onTap: _openProjectionSettings,
+                    ),
+                  if (showProjection && (showFiles || showGeneral))
+                    const Divider(height: 1),
+                  if (showFiles)
+                    _settingsTile(
+                      leading: const Icon(Icons.folder),
+                      title: Text(l10n.settingsFilesTitle),
+                      subtitle: Text(
+                        l10n.settingsFilesSummary(dtxSummary, blankSummary),
+                      ),
+                      onTap: _openFileSettings,
+                    ),
+                  if (showFiles && showGeneral) const Divider(height: 1),
+                  if (showGeneral)
+                    _settingsTile(
+                      leading: const Icon(Icons.tune),
+                      title: Text(l10n.settingsGeneralTitle),
+                      subtitle: Text(
+                        l10n.settingsGeneralSummary(themeLabel, languageLabel),
+                      ),
+                      onTap: _openGeneralSettings,
+                    ),
+                  if (!anyVisible)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(l10n.settingsNoResults),
+                    ),
                 ],
               ),
-              if (widget.senderSuggestions.isNotEmpty)
-                SizedBox(
-                  height: 120,
-                  child: ListView.builder(
-                    itemCount: widget.senderSuggestions.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final String sender = widget.senderSuggestions[index];
-                      return ListTile(
-                        dense: true,
-                        title: Text(sender),
-                        onTap: () {
-                          _mqttUser.text = sender;
-                          widget.onSenderChosen(sender);
-                        },
-                      );
-                    },
-                  ),
-                ),
-              DropdownButtonFormField<String>(
-                initialValue: _channel,
-                decoration: InputDecoration(labelText: l10n.channelLabel),
-                items: <DropdownMenuItem<String>>[
-                  const DropdownMenuItem<String>(value: '1', child: Text('1.')),
-                  ...widget.channelSuggestions.asMap().entries.map((MapEntry<int, String> e) {
-                    final String value = '${e.key + 1}';
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text('${e.key + 1}. ${e.value}'),
-                    );
-                  }),
-                ],
-                onChanged: (String? v) => setState(() => _channel = v ?? '1'),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: <Widget>[
-                _clipField(l10n.clipLeft, _clipL),
-                _clipField(l10n.clipTop, _clipT),
-                _clipField(l10n.clipRight, _clipR),
-                _clipField(l10n.clipBottom, _clipB),
-              ],
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _borderToClip,
-              onChanged: (bool v) => setState(() => _borderToClip = v),
-              title: Text(l10n.borderToClip),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _mirror,
-              onChanged: (bool v) => setState(() => _mirror = v),
-              title: Text(l10n.mirror),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _boot,
-              onChanged: (bool v) => setState(() => _boot = v),
-              title: Text(l10n.autoBootIndicator),
-            ),
-            const SizedBox(height: 8),
-            Text(l10n.colorsTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                _colorButton(
-                  label: l10n.backgroundColor,
-                  color: _bkColor,
-                  onPressed: () async {
-                    final Color? picked = await _pickColor(context, _bkColor, title: l10n.backgroundColorTitle);
-                    if (picked != null) setState(() => _bkColor = picked);
-                  },
-                ),
-                _colorButton(
-                  label: l10n.textColor,
-                  color: _txtColor,
-                  onPressed: () async {
-                    final Color? picked = await _pickColor(context, _txtColor, title: l10n.textColorTitle);
-                    if (picked != null) setState(() => _txtColor = picked);
-                  },
-                ),
-                _colorButton(
-                  label: l10n.emptySlideColor,
-                  color: _blankColor,
-                  onPressed: () async {
-                    final Color? picked = await _pickColor(context, _blankColor, title: l10n.emptySlideColorTitle);
-                    if (picked != null) setState(() => _blankColor = picked);
-                  },
-                ),
-                _colorButton(
-                  label: l10n.highlightColor,
-                  color: _hiColor,
-                  onPressed: () async {
-                    final Color? picked = await _pickColor(context, _hiColor, title: l10n.highlightColorTitle);
-                    if (picked != null) setState(() => _hiColor = picked);
-                  },
-                ),
-              ],
-            ),
-            DropdownButtonFormField<int>(
-              initialValue: _rotate,
-              decoration: InputDecoration(labelText: l10n.rotationLabel),
-              items: const <DropdownMenuItem<int>>[
-                DropdownMenuItem<int>(value: 0, child: Text('0°')),
-                DropdownMenuItem<int>(value: 1, child: Text('90°')),
-                DropdownMenuItem<int>(value: 2, child: Text('180°')),
-                DropdownMenuItem<int>(value: 3, child: Text('270°')),
-              ],
-              onChanged: (int? v) => setState(() => _rotate = v ?? 0),
             ),
             const SizedBox(height: 12),
             Row(
               children: <Widget>[
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.cancel),
+                ),
                 const Spacer(),
                 FilledButton(onPressed: _save, child: Text(l10n.save)),
               ],
@@ -293,37 +294,904 @@ class _SettingsSheetState extends State<SettingsSheet> {
     );
   }
 
-  Widget _clipField(String label, TextEditingController controller) {
-    return SizedBox(
-      width: 120,
-      child: TextField(
-        controller: controller,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        enabled: !_borderToClip,
-        decoration: InputDecoration(labelText: label),
+  bool _matches(String query, String haystack) {
+    if (query.isEmpty) {
+      return true;
+    }
+    return haystack.toLowerCase().contains(query);
+  }
+
+  Widget _settingsTile({
+    required Widget leading,
+    required Widget title,
+    required Widget subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+      leading: leading,
+      title: title,
+      subtitle: subtitle,
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+    );
+  }
+
+  Future<void> _openInternetSettings() {
+    return _openSectionSheet(
+      title: context.l10n.settingsInternetTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _internetRelayEnabled,
+            onChanged: (bool v) => setBoth(() => _internetRelayEnabled = v),
+            title: Text(l10n.internetRelaySwitchTitle),
+          ),
+          TextField(
+            controller: _mqttUser,
+            enabled: _internetRelayEnabled,
+            decoration: InputDecoration(labelText: l10n.userFieldUsername),
+          ),
+          TextField(
+            controller: _mqttPassword,
+            enabled: _internetRelayEnabled,
+            obscureText: !_showInternetPassword,
+            decoration: InputDecoration(
+              labelText: l10n.userFieldPassword,
+              suffixIcon: IconButton(
+                tooltip: _showInternetPassword
+                    ? l10n.passwordHideTooltip
+                    : l10n.passwordShowTooltip,
+                onPressed: _internetRelayEnabled
+                    ? () => setBoth(
+                        () => _showInternetPassword = !_showInternetPassword,
+                      )
+                    : null,
+                icon: Icon(
+                  _showInternetPassword
+                      ? Icons.visibility_off
+                      : Icons.visibility,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1),
+          const SizedBox(height: 10),
+          Text(
+            l10n.internetUserActionsTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              OutlinedButton.icon(
+                onPressed: _internetActionRunning ? null : _registerUser,
+                icon: const Icon(Icons.person_add_alt_1),
+                label: Text(l10n.userActionRegister),
+              ),
+              OutlinedButton.icon(
+                onPressed: _internetActionRunning ? null : _resendVerification,
+                icon: const Icon(Icons.mark_email_unread_outlined),
+                label: Text(l10n.userActionResendVerification),
+              ),
+              OutlinedButton.icon(
+                onPressed: _internetActionRunning ? null : _deleteUser,
+                icon: const Icon(Icons.person_remove_alt_1),
+                label: Text(l10n.userActionDeleteUser),
+              ),
+              OutlinedButton.icon(
+                onPressed: _internetActionRunning ? null : _changePassword,
+                icon: const Icon(Icons.password),
+                label: Text(l10n.userActionChangePassword),
+              ),
+              OutlinedButton.icon(
+                onPressed: _internetActionRunning ? null : _changeEmail,
+                icon: const Icon(Icons.alternate_email),
+                label: Text(l10n.userActionChangeEmail),
+              ),
+              OutlinedButton.icon(
+                onPressed: _internetActionRunning ? null : _changeUsername,
+                icon: const Icon(Icons.manage_accounts),
+                label: Text(l10n.userActionChangeUsername),
+              ),
+            ],
+          ),
+          if (_internetActionRunning) ...<Widget>[
+            const SizedBox(height: 10),
+            const LinearProgressIndicator(minHeight: 2),
+          ],
+        ];
+      },
+    );
+  }
+
+  Future<void> _registerUser() async {
+    final l10n = context.l10n;
+    final String? email = await _askText(
+      title: l10n.userActionRegister,
+      label: l10n.userFieldEmail,
+      keyboardType: TextInputType.emailAddress,
+    );
+    if (email == null) {
+      return;
+    }
+    final String? username = await _askText(
+      title: l10n.userActionRegister,
+      label: l10n.userFieldUsername,
+      initialValue: _mqttUser.text.trim(),
+    );
+    if (username == null) {
+      return;
+    }
+    final String? password = await _askText(
+      title: l10n.userActionRegister,
+      label: l10n.userFieldPassword,
+      obscure: true,
+    );
+    if (password == null) {
+      return;
+    }
+    await _runUserApiAction(
+      successMessage: l10n.userActionRegisterSuccess,
+      action: () => _userApi.createUser(
+        username: username,
+        password: password,
+        email: email,
       ),
     );
   }
 
-  void _save() {
-    final int port = int.tryParse(_port.text.trim()) ?? widget.initialSettings.port;
-    if (port < 0 || port > 65535) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.invalidPortRange)));
+  Future<void> _resendVerification() async {
+    final l10n = context.l10n;
+    final String? username = await _askText(
+      title: l10n.userActionResendVerification,
+      label: l10n.userFieldUsername,
+      initialValue: _mqttUser.text.trim(),
+    );
+    if (username == null) {
+      return;
+    }
+    final String? email = await _askText(
+      title: l10n.userActionResendVerification,
+      label: l10n.userFieldEmail,
+      keyboardType: TextInputType.emailAddress,
+    );
+    if (email == null) {
+      return;
+    }
+    await _runUserApiAction(
+      successMessage: l10n.userActionResendVerificationSuccess,
+      action: () => _userApi.resendVerification(username: username, email: email),
+    );
+  }
+
+  Future<void> _deleteUser() async {
+    final l10n = context.l10n;
+    final String? username = await _askText(
+      title: l10n.userActionDeleteUser,
+      label: l10n.userFieldUsername,
+      initialValue: _mqttUser.text.trim(),
+    );
+    if (username == null) {
+      return;
+    }
+    final String? password = await _askText(
+      title: l10n.userActionDeleteUser,
+      label: l10n.userFieldPassword,
+      obscure: true,
+    );
+    if (password == null) {
       return;
     }
 
+    if (!mounted) {
+      return;
+    }
+    final bool confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text(l10n.userDeleteConfirmTitle),
+              content: Text(l10n.userDeleteConfirmMessage),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: Text(l10n.userDeleteConfirmButton),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+    if (!confirmed) {
+      return;
+    }
+
+    await _runUserApiAction(
+      successMessage: l10n.userActionDeleteUserSuccess,
+      action: () => _userApi.deleteUser(username: username, password: password),
+    );
+  }
+
+  Future<void> _changePassword() async {
+    final l10n = context.l10n;
+    final String? username = await _askText(
+      title: l10n.userActionChangePassword,
+      label: l10n.userFieldUsername,
+      initialValue: _mqttUser.text.trim(),
+    );
+    if (username == null) {
+      return;
+    }
+    final String? password = await _askText(
+      title: l10n.userActionChangePassword,
+      label: l10n.userFieldCurrentPassword,
+      obscure: true,
+    );
+    if (password == null) {
+      return;
+    }
+    final String? newPassword = await _askText(
+      title: l10n.userActionChangePassword,
+      label: l10n.userFieldNewPassword,
+      obscure: true,
+    );
+    if (newPassword == null) {
+      return;
+    }
+    await _runUserApiAction(
+      successMessage: l10n.userActionChangePasswordSuccess,
+      action: () => _userApi.changePassword(
+        username: username,
+        password: password,
+        newPassword: newPassword,
+      ),
+    );
+  }
+
+  Future<void> _changeEmail() async {
+    final l10n = context.l10n;
+    final String? username = await _askText(
+      title: l10n.userActionChangeEmail,
+      label: l10n.userFieldUsername,
+      initialValue: _mqttUser.text.trim(),
+    );
+    if (username == null) {
+      return;
+    }
+    final String? password = await _askText(
+      title: l10n.userActionChangeEmail,
+      label: l10n.userFieldPassword,
+      obscure: true,
+    );
+    if (password == null) {
+      return;
+    }
+    final String? newEmail = await _askText(
+      title: l10n.userActionChangeEmail,
+      label: l10n.userFieldNewEmail,
+      keyboardType: TextInputType.emailAddress,
+    );
+    if (newEmail == null) {
+      return;
+    }
+    await _runUserApiAction(
+      successMessage: l10n.userActionChangeEmailSuccess,
+      action: () => _userApi.changeEmail(
+        username: username,
+        password: password,
+        newEmail: newEmail,
+      ),
+    );
+  }
+
+  Future<void> _changeUsername() async {
+    final l10n = context.l10n;
+    final String? username = await _askText(
+      title: l10n.userActionChangeUsername,
+      label: l10n.userFieldCurrentUsername,
+      initialValue: _mqttUser.text.trim(),
+    );
+    if (username == null) {
+      return;
+    }
+    final String? password = await _askText(
+      title: l10n.userActionChangeUsername,
+      label: l10n.userFieldCurrentPassword,
+      obscure: true,
+    );
+    if (password == null) {
+      return;
+    }
+    final String? newUsername = await _askText(
+      title: l10n.userActionChangeUsername,
+      label: l10n.userFieldNewUsername,
+    );
+    if (newUsername == null) {
+      return;
+    }
+    final String? newPassword = await _askText(
+      title: l10n.userActionChangeUsername,
+      label: l10n.userFieldNewPassword,
+      obscure: true,
+    );
+    if (newPassword == null) {
+      return;
+    }
+    await _runUserApiAction(
+      successMessage: l10n.userActionChangeUsernameSuccess,
+      action: () => _userApi.changeUsername(
+        username: username,
+        password: password,
+        newUsername: newUsername,
+        newPassword: newPassword,
+      ),
+    );
+  }
+
+  Future<String?> _askText({
+    required String title,
+    required String label,
+    String initialValue = '',
+    bool obscure = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) async {
+    final TextEditingController controller = TextEditingController(
+      text: initialValue,
+    );
+    final String? result = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            obscureText: obscure,
+            keyboardType: keyboardType,
+            autofocus: true,
+            decoration: InputDecoration(labelText: label),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(context.l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+              child: Text(context.l10n.ok),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+    if (result == null || result.trim().isEmpty) {
+      return null;
+    }
+    return result.trim();
+  }
+
+  Future<void> _runUserApiAction({
+    required String successMessage,
+    required Future<void> Function() action,
+  }) async {
+    if (_internetActionRunning) {
+      return;
+    }
+    setState(() => _internetActionRunning = true);
+    try {
+      await action();
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(successMessage)));
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
+        SnackBar(content: Text(context.l10n.userApiError('$e'))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _internetActionRunning = false);
+      }
+    }
+  }
+
+  Future<void> _openLocalNetworkSettings() {
+    return _openSectionSheet(
+      title: context.l10n.settingsLocalNetworkTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        return <Widget>[
+          TextField(
+            controller: _tcpTargets,
+            keyboardType: TextInputType.multiline,
+            minLines: 3,
+            maxLines: 8,
+            decoration: InputDecoration(
+              labelText: context.l10n.tcpTargetsLabel,
+              hintText: context.l10n.tcpTargetsHint,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(context.l10n.tcpTargetsHelp),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openGeneralSettings() {
+    return _openSectionSheet(
+      title: context.l10n.settingsGeneralTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          DropdownButtonFormField<int>(
+            initialValue: _appThemeMode,
+            decoration: InputDecoration(labelText: l10n.uiTheme),
+            items: <DropdownMenuItem<int>>[
+              DropdownMenuItem<int>(value: 0, child: Text(l10n.themeDark)),
+              DropdownMenuItem<int>(value: 1, child: Text(l10n.themeLight)),
+            ],
+            onChanged: (int? v) => setBoth(() => _appThemeMode = v ?? 0),
+          ),
+          DropdownButtonFormField<String>(
+            initialValue: _appLanguage,
+            decoration: InputDecoration(labelText: l10n.uiLanguage),
+            items: <DropdownMenuItem<String>>[
+              DropdownMenuItem<String>(
+                value: '',
+                child: Text(l10n.languageSystem),
+              ),
+              ...AppLocalizations.supportedLocales.map((Locale locale) {
+                final String code = locale.languageCode;
+                return DropdownMenuItem<String>(
+                  value: code,
+                  child: Text(_languageLabel(context, code)),
+                );
+              }),
+            ],
+            onChanged: (String? v) => setBoth(() => _appLanguage = v ?? ''),
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openFileSettings() {
+    return _openSectionSheet(
+      title: context.l10n.settingsFilesTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: _dtxPath,
+                  decoration: InputDecoration(labelText: l10n.dtxFolderPath),
+                ),
+              ),
+              IconButton(
+                onPressed: () async {
+                  await _pickDtxFolder();
+                  setBoth(() {});
+                },
+                icon: const Icon(Icons.folder_open),
+                tooltip: l10n.fileChoose,
+              ),
+            ],
+          ),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: _blankPicPath,
+                  decoration: InputDecoration(labelText: l10n.blankImagePath),
+                ),
+              ),
+              IconButton(
+                onPressed: () async {
+                  await _pickBlankFile();
+                  setBoth(() {});
+                },
+                icon: const Icon(Icons.folder_open),
+                tooltip: l10n.fileChoose,
+              ),
+            ],
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openProjectionSettings() {
+    return _openSectionSheet(
+      title: context.l10n.projectionSettingsTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _projectionNumberField(l10n.fontSize, _projFontSize),
+              _projectionNumberField(l10n.titleSize, _projTitleSize),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _projLeftIndent,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: l10n.leftMargin),
+          ),
+          const SizedBox(height: 8),
+          Text(l10n.projectionMarginsTitle, style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _projectionNumberField(l10n.projectionMarginLeft, _projBorderL),
+              _projectionNumberField(l10n.projectionMarginRight, _projBorderR),
+              _projectionNumberField(l10n.projectionMarginTop, _projBorderT),
+              _projectionNumberField(l10n.projectionMarginBottom, _projBorderB),
+            ],
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _projSpacingStep,
+            decoration: InputDecoration(labelText: l10n.lineSpacing),
+            items: List<DropdownMenuItem<int>>.generate(
+              11,
+              (int i) => DropdownMenuItem<int>(
+                value: i,
+                child: Text('${100 + i * 10}%'),
+              ),
+            ),
+            onChanged: (int? v) => setBoth(() => _projSpacingStep = v ?? 0),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _projKottaArany,
+            decoration: InputDecoration(labelText: l10n.kottaScale),
+            items: List<DropdownMenuItem<int>>.generate(20, (int i) {
+              final int value = (i + 1) * 10;
+              return DropdownMenuItem<int>(
+                value: value,
+                child: Text('$value%'),
+              );
+            }),
+            onChanged: (int? v) => setBoth(() => _projKottaArany = v ?? 100),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _projAkkordArany,
+            decoration: InputDecoration(labelText: l10n.chordScale),
+            items: List<DropdownMenuItem<int>>.generate(20, (int i) {
+              final int value = (i + 1) * 10;
+              return DropdownMenuItem<int>(
+                value: value,
+                child: Text('$value%'),
+              );
+            }),
+            onChanged: (int? v) => setBoth(() => _projAkkordArany = v ?? 100),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _projBgMode,
+            decoration: InputDecoration(labelText: l10n.backgroundMode),
+            items: <DropdownMenuItem<int>>[
+              DropdownMenuItem<int>(value: 0, child: Text(l10n.bgModeCenter)),
+              DropdownMenuItem<int>(value: 1, child: Text(l10n.bgModeZoom)),
+              DropdownMenuItem<int>(value: 2, child: Text(l10n.bgModeFull)),
+              DropdownMenuItem<int>(value: 3, child: Text(l10n.bgModeCascade)),
+              DropdownMenuItem<int>(value: 4, child: Text(l10n.bgModeMirror)),
+            ],
+            onChanged: (int? v) => setBoth(() => _projBgMode = v ?? 0),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _projBackTrans,
+            decoration: InputDecoration(labelText: l10n.backgroundOpacity),
+            items: List<DropdownMenuItem<int>>.generate(11, (int i) {
+              final int value = i * 10;
+              return DropdownMenuItem<int>(
+                value: value,
+                child: Text('$value%'),
+              );
+            }),
+            onChanged: (int? v) => setBoth(() => _projBackTrans = v ?? 0),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: _projBlankTrans,
+            decoration: InputDecoration(labelText: l10n.blankOpacity),
+            items: List<DropdownMenuItem<int>>.generate(11, (int i) {
+              final int value = i * 10;
+              return DropdownMenuItem<int>(
+                value: value,
+                child: Text('$value%'),
+              );
+            }),
+            onChanged: (int? v) => setBoth(() => _projBlankTrans = v ?? 0),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: !_projAutoSize,
+            onChanged: (bool v) => setBoth(() => _projAutoSize = !v),
+            title: Text(l10n.scrollableProjection),
+            subtitle: Text(l10n.scrollableProjectionHint),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projUseTitle,
+            onChanged: (bool v) => setBoth(() => _projUseTitle = v),
+            title: Text(l10n.showTitle),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projHCenter,
+            onChanged: (bool v) => setBoth(() => _projHCenter = v),
+            title: Text(l10n.hCenter),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projVCenter,
+            onChanged: (bool v) => setBoth(() => _projVCenter = v),
+            title: Text(l10n.vCenter),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projUseAkkord,
+            onChanged: (bool v) => setBoth(() => _projUseAkkord = v),
+            title: Text(l10n.showChords),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projUseKotta,
+            onChanged: (bool v) => setBoth(() => _projUseKotta = v),
+            title: Text(l10n.showKotta),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projBoldText,
+            onChanged: (bool v) => setBoth(() => _projBoldText = v),
+            title: Text(l10n.boldText),
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openColorSettings() {
+    return _openSectionSheet(
+      title: context.l10n.colorsTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _colorButton(
+                label: l10n.backgroundColor,
+                color: _bkColor,
+                onPressed: () async {
+                  final Color? picked = await _pickColor(
+                    context,
+                    _bkColor,
+                    title: l10n.backgroundColorTitle,
+                  );
+                  if (picked != null) {
+                    setBoth(() => _bkColor = picked);
+                  }
+                },
+              ),
+              _colorButton(
+                label: l10n.textColor,
+                color: _txtColor,
+                onPressed: () async {
+                  final Color? picked = await _pickColor(
+                    context,
+                    _txtColor,
+                    title: l10n.textColorTitle,
+                  );
+                  if (picked != null) {
+                    setBoth(() => _txtColor = picked);
+                  }
+                },
+              ),
+              _colorButton(
+                label: l10n.emptySlideColor,
+                color: _blankColor,
+                onPressed: () async {
+                  final Color? picked = await _pickColor(
+                    context,
+                    _blankColor,
+                    title: l10n.emptySlideColorTitle,
+                  );
+                  if (picked != null) {
+                    setBoth(() => _blankColor = picked);
+                  }
+                },
+              ),
+              _colorButton(
+                label: l10n.highlightColor,
+                color: _hiColor,
+                onPressed: () async {
+                  final Color? picked = await _pickColor(
+                    context,
+                    _hiColor,
+                    title: l10n.highlightColorTitle,
+                  );
+                  if (picked != null) {
+                    setBoth(() => _hiColor = picked);
+                  }
+                },
+              ),
+            ],
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openSectionSheet({
+    required String title,
+    required List<Widget> Function(
+      BuildContext context,
+      void Function(void Function()) setBoth,
+    )
+    builder,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder:
+              (
+                BuildContext context,
+                void Function(void Function()) setModalState,
+              ) {
+                void setBoth(void Function() fn) {
+                  if (mounted) {
+                    setState(fn);
+                  }
+                  setModalState(() {});
+                }
+
+                return Padding(
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 12,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                  ),
+                  child: SafeArea(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...builder(context, setBoth),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: FilledButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: Text(context.l10n.ok),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+        );
+      },
+    );
+  }
+
+  void _save() {
+    final String mqttUser = _internetRelayEnabled ? _mqttUser.text.trim() : '';
+    final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
+    final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
+    final String? tcpError = _validateTcpTargets(tcpTargets);
+    if (tcpError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tcpError)));
+      return;
+    }
+    final int firstPort =
+        _firstPortFromTargets(tcpTargets) ?? widget.initialSettings.port;
+
     final AppSettings updated = widget.initialSettings.copyWith(
-      port: port,
-      mqttUser: _ipMode ? '' : _mqttUser.text.trim(),
-      mqttChannel: _channel,
-      clipL: double.tryParse(_clipL.text.trim()) ?? widget.initialSettings.clipL,
-      clipT: double.tryParse(_clipT.text.trim()) ?? widget.initialSettings.clipT,
-      clipR: double.tryParse(_clipR.text.trim()) ?? widget.initialSettings.clipR,
-      clipB: double.tryParse(_clipB.text.trim()) ?? widget.initialSettings.clipB,
-      borderToClip: _borderToClip,
-      mirror: _mirror,
-      boot: _boot,
-      rotateQuarterTurns: _rotate,
+      port: firstPort,
+      tcpClientEnabled: tcpTargets.isNotEmpty,
+      tcpTargets: tcpTargets,
+      mqttUser: mqttUser,
+      mqttPassword: mqttPassword,
+      mqttChannel: '1',
+      dtxPath: _dtxPath.text.trim(),
+      blankPicPath: _blankPicPath.text.trim(),
+      projFontSize: _parseInt(
+        _projFontSize.text,
+        widget.initialSettings.projFontSize,
+        min: 12,
+        max: 128,
+      ),
+      projTitleSize: _parseInt(
+        _projTitleSize.text,
+        widget.initialSettings.projTitleSize,
+        min: 12,
+        max: 128,
+      ),
+      projLeftIndent: _parseInt(
+        _projLeftIndent.text,
+        widget.initialSettings.projLeftIndent,
+        min: 0,
+        max: 10,
+      ),
+      projBorderL: _parseInt(
+        _projBorderL.text,
+        widget.initialSettings.projBorderL,
+        min: 0,
+        max: 1000,
+      ),
+      projBorderT: _parseInt(
+        _projBorderT.text,
+        widget.initialSettings.projBorderT,
+        min: 0,
+        max: 1000,
+      ),
+      projBorderR: _parseInt(
+        _projBorderR.text,
+        widget.initialSettings.projBorderR,
+        min: 0,
+        max: 1000,
+      ),
+      projBorderB: _parseInt(
+        _projBorderB.text,
+        widget.initialSettings.projBorderB,
+        min: 0,
+        max: 1000,
+      ),
+      projSpacingStep: _projSpacingStep.clamp(0, 10),
+      projAutoSize: _projAutoSize,
+      projHCenter: _projHCenter,
+      projVCenter: _projVCenter,
+      projUseAkkord: _projUseAkkord,
+      projUseKotta: _projUseKotta,
+      projUseTitle: _projUseTitle,
+      projKottaArany: _projKottaArany.clamp(10, 200),
+      projAkkordArany: _projAkkordArany.clamp(10, 200),
+      projBgMode: _projBgMode.clamp(0, 4),
+      projBackTrans: _projBackTrans.clamp(0, 100),
+      projBlankTrans: _projBlankTrans.clamp(0, 100),
+      appThemeMode: _appThemeMode.clamp(0, 1),
+      appLanguage: _appLanguage,
+      projBoldText: _projBoldText,
       bkColor: _bkColor,
       txtColor: _txtColor,
       blankColor: _blankColor,
@@ -334,8 +1202,121 @@ class _SettingsSheetState extends State<SettingsSheet> {
     Navigator.of(context).pop();
   }
 
-  Widget _colorButton({required String label, required Color color, required VoidCallback onPressed}) {
-    final Color fg = color.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+  List<String> _parseTcpTargets(String raw) {
+    return raw
+        .split(RegExp(r'\r?\n'))
+        .map((String e) => e.trim())
+        .where((String e) => e.isNotEmpty)
+        .toList();
+  }
+
+  String? _validateTcpTargets(List<String> targets) {
+    final l10n = context.l10n;
+    for (final String target in targets) {
+      final int split = target.lastIndexOf(':');
+      if (split <= 0 || split >= target.length - 1) {
+        return l10n.tcpInvalidTargetFormat(target);
+      }
+      final String host = target.substring(0, split).trim();
+      final int? port = int.tryParse(target.substring(split + 1).trim());
+      if (host.isEmpty || port == null || port < 0 || port > 65535) {
+        return l10n.tcpInvalidTargetFormat(target);
+      }
+    }
+    return null;
+  }
+
+  int? _firstPortFromTargets(List<String> targets) {
+    if (targets.isEmpty) {
+      return null;
+    }
+    final String first = targets.first;
+    final int split = first.lastIndexOf(':');
+    if (split <= 0 || split >= first.length - 1) {
+      return null;
+    }
+    return int.tryParse(first.substring(split + 1).trim());
+  }
+
+  Widget _projectionNumberField(
+    String label,
+    TextEditingController controller,
+  ) {
+    return SizedBox(
+      width: 150,
+      child: TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(labelText: label),
+      ),
+    );
+  }
+
+  int _parseInt(
+    String raw,
+    int fallback, {
+    required int min,
+    required int max,
+  }) {
+    final int value = int.tryParse(raw.trim()) ?? fallback;
+    return value.clamp(min, max);
+  }
+
+  bool _isSupportedLanguage(String code) {
+    if (code.trim().isEmpty) {
+      return true;
+    }
+    return AppLocalizations.supportedLocales.any(
+      (Locale locale) => locale.languageCode == code,
+    );
+  }
+
+  String _languageLabel(BuildContext context, String code) {
+    final l10n = context.l10n;
+    switch (code) {
+      case 'hu':
+        return l10n.languageHungarian;
+      case 'en':
+        return l10n.languageEnglish;
+      default:
+        return code;
+    }
+  }
+
+  Future<void> _pickBlankFile() async {
+    final XTypeGroup images = XTypeGroup(
+      label: context.l10n.imagesFileTypeLabel,
+      extensions: <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
+    );
+    final XFile? file = await openFile(
+      acceptedTypeGroups: <XTypeGroup>[images],
+    );
+    if (!mounted || file == null) {
+      return;
+    }
+    setState(() {
+      _blankPicPath.text = file.path;
+    });
+  }
+
+  Future<void> _pickDtxFolder() async {
+    final String? folderPath = await getDirectoryPath();
+    if (!mounted || folderPath == null) {
+      return;
+    }
+    setState(() {
+      _dtxPath.text = folderPath;
+    });
+  }
+
+  Widget _colorButton({
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    final Color fg = color.computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
     return SizedBox(
       width: 150,
       child: OutlinedButton(
@@ -350,8 +1331,14 @@ class _SettingsSheetState extends State<SettingsSheet> {
     );
   }
 
-  Future<Color?> _pickColor(BuildContext context, Color initial, {required String title}) {
-    final TextEditingController hex = TextEditingController(text: _colorToHex(initial));
+  Future<Color?> _pickColor(
+    BuildContext context,
+    Color initial, {
+    required String title,
+  }) {
+    final TextEditingController hex = TextEditingController(
+      text: _colorToHex(initial),
+    );
     Color temp = initial;
     const List<Color> palette = <Color>[
       Color(0xFF000000),
@@ -376,85 +1363,122 @@ class _SettingsSheetState extends State<SettingsSheet> {
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (BuildContext context, void Function(void Function()) setState) {
-            return AlertDialog(
-              title: Text(title),
-              content: SizedBox(
-                width: 360,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Container(
-                      height: 48,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: temp,
-                        border: Border.all(color: Colors.black26),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: hex,
-                      decoration: InputDecoration(
-                        labelText: context.l10n.hexColorHint,
-                        border: const OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      onChanged: (String value) {
-                        final Color? parsed = _parseHexColor(value);
-                        if (parsed != null) setState(() => temp = parsed);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: palette
-                          .map(
-                            (Color c) => InkWell(
-                              onTap: () {
-                                setState(() {
-                                  temp = c;
-                                  hex.text = _colorToHex(c);
-                                });
-                              },
-                              child: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: c,
-                                  border: Border.all(color: Colors.black26),
-                                  borderRadius: BorderRadius.circular(6),
+          builder:
+              (BuildContext context, void Function(void Function()) setState) {
+                return AlertDialog(
+                  title: Text(title),
+                  content: SizedBox(
+                    width: 360,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Container(
+                          height: 48,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: temp,
+                            border: Border.all(color: Colors.black26),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: hex,
+                          decoration: InputDecoration(
+                            labelText: context.l10n.hexColorHint,
+                            border: const OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          onChanged: (String value) {
+                            final Color? parsed = _parseHexColor(value);
+                            if (parsed != null) {
+                              setState(() => temp = parsed);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: palette
+                              .map(
+                                (Color c) => InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      temp = c;
+                                      hex.text = _colorToHex(c);
+                                    });
+                                  },
+                                  child: Container(
+                                    width: 30,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color: c,
+                                      border: Border.all(color: Colors.black26),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          )
-                          .toList(),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(context.l10n.cancel),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.of(context).pop(temp),
+                      child: Text(context.l10n.ok),
                     ),
                   ],
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.cancel)),
-                FilledButton(onPressed: () => Navigator.of(context).pop(temp), child: Text(context.l10n.ok)),
-              ],
-            );
-          },
+                );
+              },
         );
       },
     );
   }
 
-  String _colorToHex(Color color) => '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
+  String _colorToHex(Color color) {
+    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
+  }
 
   Color? _parseHexColor(String input) {
-    String value = input.trim().replaceAll('#', '').replaceAll('0x', '').replaceAll('0X', '');
-    if (value.length == 6) value = 'FF$value';
-    if (value.length != 8) return null;
+    String value = input
+        .trim()
+        .replaceAll('#', '')
+        .replaceAll('0x', '')
+        .replaceAll('0X', '');
+    if (value.length == 6) {
+      value = 'FF$value';
+    }
+    if (value.length != 8) {
+      return null;
+    }
     final int? parsed = int.tryParse(value, radix: 16);
-    if (parsed == null) return null;
+    if (parsed == null) {
+      return null;
+    }
     return Color(parsed);
+  }
+
+  String _shortPath(String path) {
+    final List<String> normalized = path
+        .replaceAll('\\', '/')
+        .split('/')
+        .where((String p) => p.isNotEmpty)
+        .toList();
+    if (normalized.length <= 2) {
+      return path;
+    }
+    return '.../${normalized[normalized.length - 2]}/${normalized.last}';
+  }
+
+  String _rgbHex(Color color) {
+    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
   }
 }

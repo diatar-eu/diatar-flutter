@@ -1216,6 +1216,330 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Alkalmaz'**
   String get apply;
+
+  /// No description provided for @internetUserActionsTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasználói műveletek (API)'**
+  String get internetUserActionsTitle;
+
+  /// No description provided for @internetStatusOn.
+  ///
+  /// In hu, this message translates to:
+  /// **'Be'**
+  String get internetStatusOn;
+
+  /// No description provided for @internetStatusOff.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ki'**
+  String get internetStatusOff;
+
+  /// No description provided for @valueNotSet.
+  ///
+  /// In hu, this message translates to:
+  /// **'-'**
+  String get valueNotSet;
+
+  /// No description provided for @tcpNoTargets.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nincs célpont'**
+  String get tcpNoTargets;
+
+  /// No description provided for @tcpTargetsCount.
+  ///
+  /// In hu, this message translates to:
+  /// **'{count} célpont'**
+  String tcpTargetsCount(int count);
+
+  /// No description provided for @settingsSearchLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Keresés a beállításokban'**
+  String get settingsSearchLabel;
+
+  /// No description provided for @settingsInternetTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Internet'**
+  String get settingsInternetTitle;
+
+  /// No description provided for @settingsInternetSubtitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Internetes közvetítés: {status}, felhasználó: {user}'**
+  String settingsInternetSubtitle(Object status, Object user);
+
+  /// No description provided for @settingsLocalNetworkTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Helyi hálózat (TCP/IP)'**
+  String get settingsLocalNetworkTitle;
+
+  /// No description provided for @settingsLocalNetworkSubtitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'TCP kliens célpontok: {summary}'**
+  String settingsLocalNetworkSubtitle(Object summary);
+
+  /// No description provided for @settingsColorSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Háttér: {background}, Szöveg: {text}'**
+  String settingsColorSummary(Object background, Object text);
+
+  /// No description provided for @settingsProjectionSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Betű: {font}px, Cím: {title}px'**
+  String settingsProjectionSummary(Object font, Object title);
+
+  /// No description provided for @settingsFilesTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Énektárak és fájlok'**
+  String get settingsFilesTitle;
+
+  /// No description provided for @settingsFilesSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'DTX: {dtx}, Üres kép: {blank}'**
+  String settingsFilesSummary(Object dtx, Object blank);
+
+  /// No description provided for @settingsGeneralTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Általános'**
+  String get settingsGeneralTitle;
+
+  /// No description provided for @settingsGeneralSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Téma: {theme}, Nyelv: {language}'**
+  String settingsGeneralSummary(Object theme, Object language);
+
+  /// No description provided for @settingsNoResults.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nincs találat a keresésre.'**
+  String get settingsNoResults;
+
+  /// No description provided for @internetRelaySwitchTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Internetes közvetítés'**
+  String get internetRelaySwitchTitle;
+
+  /// No description provided for @passwordHideTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Elrejtés'**
+  String get passwordHideTooltip;
+
+  /// No description provided for @passwordShowTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Megjelenítés'**
+  String get passwordShowTooltip;
+
+  /// No description provided for @tcpTargetsLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Célpontok (IP:port soronként)'**
+  String get tcpTargetsLabel;
+
+  /// No description provided for @tcpTargetsHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'192.168.1.50:1024\\n192.168.1.51:1024'**
+  String get tcpTargetsHint;
+
+  /// No description provided for @tcpTargetsHelp.
+  ///
+  /// In hu, this message translates to:
+  /// **'A sender kliensként csatlakozik a fenti címekhez.'**
+  String get tcpTargetsHelp;
+
+  /// No description provided for @projectionMarginsTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Margók'**
+  String get projectionMarginsTitle;
+
+  /// No description provided for @projectionMarginLeft.
+  ///
+  /// In hu, this message translates to:
+  /// **'Bal margó'**
+  String get projectionMarginLeft;
+
+  /// No description provided for @projectionMarginRight.
+  ///
+  /// In hu, this message translates to:
+  /// **'Jobb margó'**
+  String get projectionMarginRight;
+
+  /// No description provided for @projectionMarginTop.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felső margó'**
+  String get projectionMarginTop;
+
+  /// No description provided for @projectionMarginBottom.
+  ///
+  /// In hu, this message translates to:
+  /// **'Alsó margó'**
+  String get projectionMarginBottom;
+
+  /// No description provided for @tcpInvalidTargetFormat.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hibás célpont formátum: {target}'**
+  String tcpInvalidTargetFormat(Object target);
+
+  /// No description provided for @userActionRegister.
+  ///
+  /// In hu, this message translates to:
+  /// **'Regisztráció'**
+  String get userActionRegister;
+
+  /// No description provided for @userActionResendVerification.
+  ///
+  /// In hu, this message translates to:
+  /// **'E-mail újraküldés'**
+  String get userActionResendVerification;
+
+  /// No description provided for @userActionDeleteUser.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasználó törlése'**
+  String get userActionDeleteUser;
+
+  /// No description provided for @userActionChangePassword.
+  ///
+  /// In hu, this message translates to:
+  /// **'Jelszóváltoztatás'**
+  String get userActionChangePassword;
+
+  /// No description provided for @userActionChangeEmail.
+  ///
+  /// In hu, this message translates to:
+  /// **'E-mail-változtatás'**
+  String get userActionChangeEmail;
+
+  /// No description provided for @userActionChangeUsername.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasználónév-változtatás'**
+  String get userActionChangeUsername;
+
+  /// No description provided for @userFieldUsername.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasználónév'**
+  String get userFieldUsername;
+
+  /// No description provided for @userFieldPassword.
+  ///
+  /// In hu, this message translates to:
+  /// **'Jelszó'**
+  String get userFieldPassword;
+
+  /// No description provided for @userFieldEmail.
+  ///
+  /// In hu, this message translates to:
+  /// **'E-mail'**
+  String get userFieldEmail;
+
+  /// No description provided for @userFieldCurrentPassword.
+  ///
+  /// In hu, this message translates to:
+  /// **'Jelenlegi jelszó'**
+  String get userFieldCurrentPassword;
+
+  /// No description provided for @userFieldNewPassword.
+  ///
+  /// In hu, this message translates to:
+  /// **'Új jelszó'**
+  String get userFieldNewPassword;
+
+  /// No description provided for @userFieldNewEmail.
+  ///
+  /// In hu, this message translates to:
+  /// **'Új e-mail'**
+  String get userFieldNewEmail;
+
+  /// No description provided for @userFieldCurrentUsername.
+  ///
+  /// In hu, this message translates to:
+  /// **'Jelenlegi felhasználónév'**
+  String get userFieldCurrentUsername;
+
+  /// No description provided for @userFieldNewUsername.
+  ///
+  /// In hu, this message translates to:
+  /// **'Új felhasználónév'**
+  String get userFieldNewUsername;
+
+  /// No description provided for @userActionRegisterSuccess.
+  ///
+  /// In hu, this message translates to:
+  /// **'Sikeres regisztráció. Ellenőrizd az e-mail fiókot a megerősítéshez.'**
+  String get userActionRegisterSuccess;
+
+  /// No description provided for @userActionResendVerificationSuccess.
+  ///
+  /// In hu, this message translates to:
+  /// **'Megerősítő e-mail újraküldve.'**
+  String get userActionResendVerificationSuccess;
+
+  /// No description provided for @userActionDeleteUserSuccess.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasználó törölve.'**
+  String get userActionDeleteUserSuccess;
+
+  /// No description provided for @userActionChangePasswordSuccess.
+  ///
+  /// In hu, this message translates to:
+  /// **'Jelszó sikeresen módosítva.'**
+  String get userActionChangePasswordSuccess;
+
+  /// No description provided for @userActionChangeEmailSuccess.
+  ///
+  /// In hu, this message translates to:
+  /// **'E-mail-cím módosítási kérés elküldve.'**
+  String get userActionChangeEmailSuccess;
+
+  /// No description provided for @userActionChangeUsernameSuccess.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasználónév módosítva.'**
+  String get userActionChangeUsernameSuccess;
+
+  /// No description provided for @userDeleteConfirmTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Megerősítés'**
+  String get userDeleteConfirmTitle;
+
+  /// No description provided for @userDeleteConfirmMessage.
+  ///
+  /// In hu, this message translates to:
+  /// **'Biztosan törölni szeretnéd ezt a felhasználót? Ez a művelet nem visszavonható.'**
+  String get userDeleteConfirmMessage;
+
+  /// No description provided for @userDeleteConfirmButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Törlés'**
+  String get userDeleteConfirmButton;
+
+  /// No description provided for @userApiError.
+  ///
+  /// In hu, this message translates to:
+  /// **'API hiba: {error}'**
+  String userApiError(Object error);
 }
 
 class _AppLocalizationsDelegate
