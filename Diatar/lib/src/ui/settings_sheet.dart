@@ -40,6 +40,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _mqttPassword;
   late final TextEditingController _dtxPath;
   late final TextEditingController _blankPicPath;
+  late final TextEditingController _diaExportPath;
   late final TextEditingController _projFontSize;
   late final TextEditingController _projTitleSize;
   late final TextEditingController _projLeftIndent;
@@ -89,6 +90,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _focusNodeForHotkey = FocusNode(debugLabel: 'hotkey-capture');
     _dtxPath = TextEditingController(text: s.dtxPath);
     _blankPicPath = TextEditingController(text: s.blankPicPath);
+    _diaExportPath = TextEditingController(text: s.diaExportPath);
     _projFontSize = TextEditingController(text: s.projFontSize.toString());
     _projTitleSize = TextEditingController(text: s.projTitleSize.toString());
     _projLeftIndent = TextEditingController(text: s.projLeftIndent.toString());
@@ -134,6 +136,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _focusNodeForHotkey.dispose();
     _dtxPath.dispose();
     _blankPicPath.dispose();
+    _diaExportPath.dispose();
     _projFontSize.dispose();
     _projTitleSize.dispose();
     _projLeftIndent.dispose();
@@ -851,6 +854,26 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               IconButton(
                 onPressed: () async {
                   await _pickBlankFile();
+                  setBoth(() {});
+                },
+                icon: const Icon(Icons.folder_open),
+                tooltip: l10n.fileChoose,
+              ),
+            ],
+          ),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: _diaExportPath,
+                  decoration: InputDecoration(
+                    labelText: l10n.diaExportFolderPath,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () async {
+                  await _pickDiaExportFolder();
                   setBoth(() {});
                 },
                 icon: const Icon(Icons.folder_open),
@@ -1711,6 +1734,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       mqttChannel: '1',
       dtxPath: _dtxPath.text.trim(),
       blankPicPath: _blankPicPath.text.trim(),
+      diaExportPath: _diaExportPath.text.trim(),
       projFontSize: _parseInt(
         _projFontSize.text,
         widget.initialSettings.projFontSize,
@@ -1884,6 +1908,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     }
     setState(() {
       _dtxPath.text = folderPath;
+    });
+  }
+
+  Future<void> _pickDiaExportFolder() async {
+    final String? folderPath = await getDirectoryPath();
+    if (!mounted || folderPath == null) {
+      return;
+    }
+    setState(() {
+      _diaExportPath.text = folderPath;
     });
   }
 

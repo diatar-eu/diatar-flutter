@@ -827,6 +827,12 @@ abstract class AppLocalizations {
   /// **'Blank kép útvonal'**
   String get blankImagePath;
 
+  /// No description provided for @diaExportFolderPath.
+  ///
+  /// In hu, this message translates to:
+  /// **'DIA mentési mappa'**
+  String get diaExportFolderPath;
+
   /// No description provided for @fileChoose.
   ///
   /// In hu, this message translates to:

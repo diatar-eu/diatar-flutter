@@ -351,6 +351,7 @@
   "themeLight": "Világos",
   "dtxFolderPath": "DTX mappa",
   "blankImagePath": "Blank kép útvonal",
+  "diaExportFolderPath": "DIA mentési mappa",
   "fileChoose": "Fájl választása",
   "uiLanguage": "Felhasználói felület nyelve",
   "languageSystem": "Rendszer alapértelmezett",

@@ -355,6 +355,7 @@
   "languageEnglish": "English",
   "dtxFolderPath": "DTX folder",
   "blankImagePath": "Blank image path",
+  "diaExportFolderPath": "DIA export folder",
   "fileChoose": "Choose file",
   "projectionSettingsTitle": "Projection settings",
   "fontSize": "Font size",

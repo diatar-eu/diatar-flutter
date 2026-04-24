@@ -18,6 +18,7 @@ class AppSettings {
     this.mqttChannel = '1',
     this.dtxPath = '',
     this.blankPicPath = '',
+    this.diaExportPath = '',
     this.projFontSize = 70,
     this.projTitleSize = 12,
     this.projLeftIndent = 2,
@@ -73,6 +74,7 @@ class AppSettings {
   final String mqttChannel;
   final String dtxPath;
   final String blankPicPath;
+  final String diaExportPath;
   final int projFontSize;
   final int projTitleSize;
   final int projLeftIndent;
@@ -135,6 +137,7 @@ class AppSettings {
     String? mqttChannel,
     String? dtxPath,
     String? blankPicPath,
+    String? diaExportPath,
     int? projFontSize,
     int? projTitleSize,
     int? projLeftIndent,
@@ -187,6 +190,7 @@ class AppSettings {
       mqttChannel: mqttChannel ?? this.mqttChannel,
       dtxPath: dtxPath ?? this.dtxPath,
       blankPicPath: blankPicPath ?? this.blankPicPath,
+      diaExportPath: diaExportPath ?? this.diaExportPath,
       projFontSize: projFontSize ?? this.projFontSize,
       projTitleSize: projTitleSize ?? this.projTitleSize,
       projLeftIndent: projLeftIndent ?? this.projLeftIndent,

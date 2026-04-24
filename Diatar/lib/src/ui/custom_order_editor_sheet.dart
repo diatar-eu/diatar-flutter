@@ -178,9 +178,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       label: context.l10n.diatarPlaylistFileTypeLabel,
       extensions: <String>['dia'],
     );
+    final String initialDir = controller.settings.diaExportPath.trim();
     final FileSaveLocation? target = await getSaveLocation(
       suggestedName: context.l10n.customOrderSuggestedFileName,
       acceptedTypeGroups: <XTypeGroup>[diaType],
+      initialDirectory: initialDir.isEmpty ? null : initialDir,
     );
     if (target == null) {
       return;

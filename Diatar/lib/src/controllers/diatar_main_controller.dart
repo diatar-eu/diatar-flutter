@@ -206,7 +206,52 @@ class DiatarMainController extends ChangeNotifier {
     _configureSender();
     await _applyTransport();
     await reloadBooks();
+    await _tryAutoLoadTodayDia();
     await _syncCurrentDia();
+  }
+
+  Future<void> _tryAutoLoadTodayDia() async {
+    final String basePath = settings.diaExportPath.trim();
+    if (basePath.isEmpty) {
+      return;
+    }
+
+    final Directory dir = Directory(basePath);
+    if (!await dir.exists()) {
+      return;
+    }
+
+    final DateTime now = DateTime.now();
+    final int year4 = now.year;
+    final int year2 = now.year % 100;
+    final int month = now.month;
+    final int day = now.day;
+
+    final String yyyy = year4.toString().padLeft(4, '0');
+    final String yy = year2.toString().padLeft(2, '0');
+    final String mm = month.toString().padLeft(2, '0');
+    final String dd = day.toString().padLeft(2, '0');
+    final String m = month.toString();
+    final String d = day.toString();
+
+    final List<String> baseNames = <String>[
+      '$yyyy-$mm-$dd',
+      '$yy-$mm-$dd',
+      '$yyyy-$m-$d',
+      '$yy-$m-$d',
+      '$yyyy.$mm.$dd',
+      '$yy.$mm.$dd',
+      '$yyyy.$m.$d',
+      '$yy.$m.$d',
+    ];
+
+    for (final String name in baseNames) {
+      final File candidate = File('${dir.path}/$name.dia');
+      if (await candidate.exists()) {
+        await importCustomOrderFromDia(candidate.path, activate: true);
+        return;
+      }
+    }
   }
 
   DiatarHomeViewMode get viewMode {

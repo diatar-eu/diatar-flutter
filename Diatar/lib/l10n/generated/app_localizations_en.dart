@@ -456,6 +456,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get blankImagePath => 'Blank image path';
 
   @override
+  String get diaExportFolderPath => 'DIA export folder';
+
+  @override
   String get fileChoose => 'Choose file';
 
   @override

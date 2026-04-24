@@ -458,6 +458,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get blankImagePath => 'Blank kép útvonal';
 
   @override
+  String get diaExportFolderPath => 'DIA mentési mappa';
+
+  @override
   String get fileChoose => 'Fájl választása';
 
   @override
