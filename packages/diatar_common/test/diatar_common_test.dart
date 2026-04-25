@@ -243,7 +243,7 @@ void main() {
     );
 
     const String source =
-      r' \K-5kGE2[?r81f;Ki\K1d;ált\K1f]?;sunk, K\K[?2a;risz\K2a]?;tus \K[?2h;hí\K2g]?;ve\Kr42a|!;i:';
+        r' \K-5kGE2[?r81f;Ki\K1d;ált\K1f]?;sunk, K\K[?2a;risz\K2a]?;tus \K[?2h;hí\K2g]?;ve\Kr42a|!;i:';
 
     final List<double> rowStartXs = painter.debugKottaRowStartXsForLine(
       source,
@@ -283,5 +283,34 @@ void main() {
     expect(startXs.length, greaterThanOrEqualTo(2));
     expect(startXs.first, 16);
     expect(startXs.skip(1), everyElement(32));
+  });
+
+  test('logo background stays green between fade in and fade out', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: const LogoFrame(0),
+      globals: const ProjectionGlobals(),
+      settings: const AppSettings(),
+    );
+
+    expect(
+      painter.debugLogoBackgroundColorForPhase(31),
+      const Color(0xFF46E887),
+    );
+    expect(
+      painter.debugLogoBackgroundColorForPhase(32),
+      const Color(0xFF4BEF96),
+    );
+    expect(
+      painter.debugLogoBackgroundColorForPhase(40),
+      const Color(0xFF4BEF96),
+    );
+    expect(
+      painter.debugLogoBackgroundColorForPhase(48),
+      const Color(0xFF4BEF96),
+    );
+    expect(
+      painter.debugLogoBackgroundColorForPhase(63),
+      const Color(0xFF040E09),
+    );
   });
 }

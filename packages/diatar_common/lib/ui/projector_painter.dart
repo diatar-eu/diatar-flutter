@@ -240,24 +240,7 @@ class ProjectorPainter extends CustomPainter {
   }
 
   void _drawLogo(Canvas canvas, Size size, int phase) {
-    Color bk = Colors.black;
-    if (phase >= 16 && phase < 32) {
-      final int i = phase - 16;
-      bk = Color.fromARGB(
-        255,
-        (0x4B * i ~/ 16),
-        (0xEF * i ~/ 16),
-        (0x96 * i ~/ 16),
-      );
-    } else if (phase >= 48 && phase < 64) {
-      final int i = 64 - phase;
-      bk = Color.fromARGB(
-        255,
-        (0x4B * i ~/ 16),
-        (0xEF * i ~/ 16),
-        (0x96 * i ~/ 16),
-      );
-    }
+    final Color bk = debugLogoBackgroundColorForPhase(phase);
     canvas.drawRect(Offset.zero & size, Paint()..color = bk);
 
     if (globals.hideTitle) {
@@ -313,6 +296,30 @@ class ProjectorPainter extends CustomPainter {
     );
     titlePainter.paint(canvas, titlePos);
     verPainter.paint(canvas, verPos);
+  }
+
+  Color debugLogoBackgroundColorForPhase(int phase) {
+    const int maxRed = 0x4B;
+    const int maxGreen = 0xEF;
+    const int maxBlue = 0x96;
+
+    int intensity;
+    if (phase < 16 || phase >= 64) {
+      intensity = 0;
+    } else if (phase < 32) {
+      intensity = phase - 16;
+    } else if (phase < 48) {
+      intensity = 16;
+    } else {
+      intensity = 64 - phase;
+    }
+
+    return Color.fromARGB(
+      255,
+      maxRed * intensity ~/ 16,
+      maxGreen * intensity ~/ 16,
+      maxBlue * intensity ~/ 16,
+    );
   }
 
   void _drawText(Canvas canvas, Size size, TextFrame frame) {
