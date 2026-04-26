@@ -141,16 +141,16 @@ class _SettingsSheetState extends State<SettingsSheet> {
     final String query = _search.text.trim().toLowerCase();
     final bool internetEnabled = !_ipMode;
     final String senderSummary = _mqttUser.text.trim().isEmpty ? '-' : _mqttUser.text.trim();
-    final String internetSummary = internetEnabled ? 'Be' : 'Ki';
+    final String internetSummary = internetEnabled ? l10n.valueOn : l10n.valueOff;
     final String languageLabel = _appLanguage.trim().isEmpty ? l10n.languageSystem : _languageLabel(context, _appLanguage);
-    final String filterSummary = _receiverUseServerColors ? 'Szerver színek' : 'Helyi színek';
-    final bool showInternet = _matches(query, 'internet mqtt sender channel kozvetites felhasznalo');
-    final bool showLan = _matches(query, 'helyi halozat tcp ip port');
-    final bool showProjectionImage = _matches(query, 'vetitesi kep forgatas tukrozes clip margok');
-    final bool showProjectionFilter = _matches(query, 'vetitesi szures akkord kotta highlight scroll');
-    final bool showColors = _matches(query, 'szinek hatter szoveg blank');
-    final bool showGeneral = _matches(query, 'altalanos nyelv autostart boot');
-    final bool showSystem = _matches(query, 'rendszer kilepes leallas ujrainditas');
+    final String filterSummary = _receiverUseServerColors ? l10n.projectionColorSourceServer : l10n.projectionColorSourceLocal;
+    final bool showInternet = _matches(query, l10n.settingsSearchKeywordsInternet);
+    final bool showLan = _matches(query, l10n.settingsSearchKeywordsLan);
+    final bool showProjectionImage = _matches(query, l10n.settingsSearchKeywordsProjectionImage);
+    final bool showProjectionFilter = _matches(query, l10n.settingsSearchKeywordsProjectionFilter);
+    final bool showColors = _matches(query, l10n.settingsSearchKeywordsColors);
+    final bool showGeneral = _matches(query, l10n.settingsSearchKeywordsGeneral);
+    final bool showSystem = _matches(query, l10n.settingsSearchKeywordsSystem);
     final bool anyVisible = showInternet || showLan || showProjectionImage || showProjectionFilter || showColors || showGeneral || showSystem;
     return Padding(
       padding: EdgeInsets.only(
@@ -169,9 +169,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
             TextField(
               controller: _search,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                labelText: 'Keresés a beállításokban',
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                labelText: l10n.settingsSearchLabel,
               ),
             ),
             const SizedBox(height: 10),
@@ -184,24 +184,24 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   if (showInternet)
                     _settingsTile(
                       leading: const Icon(Icons.public),
-                      title: const Text('Internet'),
-                      subtitle: Text('Internetes közvetítés: $internetSummary, Felhasználó: $senderSummary'),
+                      title: Text(l10n.settingsInternetTitle),
+                      subtitle: Text(l10n.settingsInternetSubtitle(internetSummary, senderSummary)),
                       onTap: _openInternetSettings,
                     ),
                   if (showInternet && (showLan || showProjectionImage || showProjectionFilter || showColors || showGeneral || showSystem)) const Divider(height: 1),
                   if (showLan)
                     _settingsTile(
                       leading: const Icon(Icons.lan),
-                      title: const Text('Helyi hálózat (TCP/IP)'),
-                      subtitle: Text('TCP port: ${_port.text.trim().isEmpty ? '-' : _port.text.trim()}'),
+                      title: Text(l10n.settingsLocalNetworkTitle),
+                      subtitle: Text(l10n.settingsLocalNetworkSubtitle(_port.text.trim().isEmpty ? '-' : _port.text.trim())),
                       onTap: _openLocalNetworkSettings,
                     ),
                   if (showLan && (showProjectionImage || showProjectionFilter || showColors || showGeneral || showSystem)) const Divider(height: 1),
                   if (showProjectionImage)
                     _settingsTile(
                       leading: const Icon(Icons.crop_free),
-                      title: const Text('Vetítési kép'),
-                      subtitle: Text('Forgatás: ${_rotate * 90}°, Tükrözés: ${_mirror ? 'Be' : 'Ki'}'),
+                      title: Text(l10n.projectionImageTitle),
+                      subtitle: Text(l10n.projectionImageSummary('${_rotate * 90}°', _mirror ? l10n.valueOn : l10n.valueOff)),
                       onTap: _openProjectionLayoutSettings,
                     ),
                   if (showProjectionImage && (showProjectionFilter || showColors || showGeneral || showSystem)) const Divider(height: 1),
@@ -209,7 +209,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     _settingsTile(
                       leading: const Icon(Icons.filter_alt_outlined),
                       title: Text(l10n.projectionFilteringTitle),
-                      subtitle: Text('Színforrás: $filterSummary, Görgethető: ${_projectionScrollable ? 'Be' : 'Ki'}'),
+                      subtitle: Text(l10n.projectionFilterSummary(filterSummary, _projectionScrollable ? l10n.valueOn : l10n.valueOff)),
                       onTap: _openProjectionFilterSettings,
                     ),
                   if (showProjectionFilter && (showColors || showGeneral || showSystem)) const Divider(height: 1),
@@ -217,29 +217,29 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     _settingsTile(
                       leading: const Icon(Icons.palette_outlined),
                       title: Text(l10n.localColorsTitle),
-                      subtitle: Text('Háttér: ${_shortColorHex(_bkColor)}, Szöveg: ${_shortColorHex(_txtColor)}'),
+                      subtitle: Text(l10n.localColorsSummary(_shortColorHex(_bkColor), _shortColorHex(_txtColor))),
                       onTap: _openColorSettings,
                     ),
                   if (showColors && (showGeneral || showSystem)) const Divider(height: 1),
                   if (showGeneral)
                     _settingsTile(
                       leading: const Icon(Icons.tune),
-                      title: const Text('Általános'),
-                      subtitle: Text('Nyelv: $languageLabel, Autostart: ${_boot ? 'Be' : 'Ki'}'),
+                      title: Text(l10n.settingsGeneralTitle),
+                      subtitle: Text(l10n.settingsGeneralSubtitle(languageLabel, _boot ? l10n.valueOn : l10n.valueOff)),
                       onTap: _openGeneralSettings,
                     ),
                   if (showGeneral && showSystem) const Divider(height: 1),
                   if (showSystem)
                     _settingsTile(
                       leading: const Icon(Icons.power_settings_new),
-                      title: const Text('Rendszer műveletek'),
-                      subtitle: const Text('Kilépés, leállítás, újraindítás'),
+                      title: Text(l10n.systemActionsTitle),
+                      subtitle: Text(l10n.systemActionsSummary),
                       onTap: _openSystemActions,
                     ),
                   if (!anyVisible)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.all(16),
-                      child: Text('Nincs találat a keresésre.'),
+                      child: Text(l10n.settingsNoResults),
                     ),
                 ],
               ),
@@ -260,7 +260,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
   Future<void> _openInternetSettings() {
     return _openSectionSheet(
-      title: 'Internet',
+      title: context.l10n.settingsInternetTitle,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         final bool internetEnabled = !_ipMode;
@@ -279,7 +279,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 widget.onRefreshUsers();
               }
             },
-            title: const Text('Internetes közvetítés'),
+            title: Text(l10n.internetBroadcastTitle),
           ),
           if (internetEnabled) ...<Widget>[
             Row(
@@ -287,9 +287,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 Expanded(
                   child: TextField(
                     controller: _mqttUser,
-                    decoration: const InputDecoration(
-                      labelText: 'Felhasználó',
-                      helperText: 'Internetes közvetítés felhasználóneve',
+                    decoration: InputDecoration(
+                      labelText: l10n.senderLabel,
+                      helperText: l10n.senderHelper,
                     ),
                   ),
                 ),
@@ -343,7 +343,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
   Future<void> _openLocalNetworkSettings() {
     return _openSectionSheet(
-      title: 'Helyi hálózat (TCP/IP)',
+      title: context.l10n.settingsLocalNetworkTitle,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         return <Widget>[
           TextField(
@@ -358,7 +358,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
   Future<void> _openProjectionLayoutSettings() {
     return _openSectionSheet(
-      title: 'Vetítési kép',
+      title: context.l10n.projectionImageTitle,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         return <Widget>[
@@ -387,11 +387,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
           DropdownButtonFormField<int>(
             initialValue: _rotate,
             decoration: InputDecoration(labelText: l10n.rotationLabel),
-            items: const <DropdownMenuItem<int>>[
-              DropdownMenuItem<int>(value: 0, child: Text('0°')),
-              DropdownMenuItem<int>(value: 1, child: Text('90°')),
-              DropdownMenuItem<int>(value: 2, child: Text('180°')),
-              DropdownMenuItem<int>(value: 3, child: Text('270°')),
+            items: <DropdownMenuItem<int>>[
+              for (int i = 0; i < 4; i++) DropdownMenuItem<int>(value: i, child: Text('${i * 90}°')),
             ],
             onChanged: (int? v) => setBoth(() => _rotate = v ?? 0),
           ),
@@ -480,7 +477,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
   Future<void> _openGeneralSettings() {
     return _openSectionSheet(
-      title: 'Általános',
+      title: context.l10n.settingsGeneralTitle,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         return <Widget>[
@@ -509,7 +506,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
   Future<void> _openSystemActions() {
     return _openSectionSheet(
-      title: 'Rendszer műveletek',
+      title: context.l10n.systemActionsTitle,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         return <Widget>[

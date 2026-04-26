@@ -104,11 +104,173 @@ abstract class AppLocalizations {
   /// **'DiaVetítő'**
   String get appTitle;
 
+  /// No description provided for @logoTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Diatár Vetítő'**
+  String get logoTitle;
+
   /// No description provided for @settingsTitleReceiver.
   ///
   /// In hu, this message translates to:
   /// **'Beállítások'**
   String get settingsTitleReceiver;
+
+  /// No description provided for @settingsSearchLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Keresés a beállításokban'**
+  String get settingsSearchLabel;
+
+  /// No description provided for @settingsNoResults.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nincs találat a keresésre.'**
+  String get settingsNoResults;
+
+  /// No description provided for @settingsInternetTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Internet'**
+  String get settingsInternetTitle;
+
+  /// No description provided for @settingsInternetSubtitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Internetes közvetítés: {internet}, Felhasználó: {sender}'**
+  String settingsInternetSubtitle(Object internet, Object sender);
+
+  /// No description provided for @settingsLocalNetworkTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Helyi hálózat (TCP/IP)'**
+  String get settingsLocalNetworkTitle;
+
+  /// No description provided for @settingsLocalNetworkSubtitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'TCP port: {port}'**
+  String settingsLocalNetworkSubtitle(Object port);
+
+  /// No description provided for @projectionImageTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vetítési kép'**
+  String get projectionImageTitle;
+
+  /// No description provided for @projectionImageSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Forgatás: {rotation}, Tükrözés: {mirror}'**
+  String projectionImageSummary(Object rotation, Object mirror);
+
+  /// No description provided for @projectionColorSourceServer.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szerver színek'**
+  String get projectionColorSourceServer;
+
+  /// No description provided for @projectionColorSourceLocal.
+  ///
+  /// In hu, this message translates to:
+  /// **'Helyi színek'**
+  String get projectionColorSourceLocal;
+
+  /// No description provided for @projectionFilterSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Színforrás: {source}, Görgethető: {scrollable}'**
+  String projectionFilterSummary(Object source, Object scrollable);
+
+  /// No description provided for @localColorsSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Háttér: {background}, Szöveg: {text}'**
+  String localColorsSummary(Object background, Object text);
+
+  /// No description provided for @settingsGeneralTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Általános'**
+  String get settingsGeneralTitle;
+
+  /// No description provided for @settingsGeneralSubtitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nyelv: {language}, Autostart: {autostart}'**
+  String settingsGeneralSubtitle(Object language, Object autostart);
+
+  /// No description provided for @systemActionsTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Rendszer műveletek'**
+  String get systemActionsTitle;
+
+  /// No description provided for @systemActionsSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kilépés, leállítás, újraindítás'**
+  String get systemActionsSummary;
+
+  /// No description provided for @internetBroadcastTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Internetes közvetítés'**
+  String get internetBroadcastTitle;
+
+  /// No description provided for @valueOn.
+  ///
+  /// In hu, this message translates to:
+  /// **'Be'**
+  String get valueOn;
+
+  /// No description provided for @valueOff.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ki'**
+  String get valueOff;
+
+  /// No description provided for @settingsSearchKeywordsInternet.
+  ///
+  /// In hu, this message translates to:
+  /// **'internet mqtt sender channel kozvetites felhasznalo'**
+  String get settingsSearchKeywordsInternet;
+
+  /// No description provided for @settingsSearchKeywordsLan.
+  ///
+  /// In hu, this message translates to:
+  /// **'helyi halozat tcp ip port'**
+  String get settingsSearchKeywordsLan;
+
+  /// No description provided for @settingsSearchKeywordsProjectionImage.
+  ///
+  /// In hu, this message translates to:
+  /// **'vetitesi kep forgatas tukrozes clip margok'**
+  String get settingsSearchKeywordsProjectionImage;
+
+  /// No description provided for @settingsSearchKeywordsProjectionFilter.
+  ///
+  /// In hu, this message translates to:
+  /// **'vetitesi szures akkord kotta highlight scroll'**
+  String get settingsSearchKeywordsProjectionFilter;
+
+  /// No description provided for @settingsSearchKeywordsColors.
+  ///
+  /// In hu, this message translates to:
+  /// **'szinek hatter szoveg blank'**
+  String get settingsSearchKeywordsColors;
+
+  /// No description provided for @settingsSearchKeywordsGeneral.
+  ///
+  /// In hu, this message translates to:
+  /// **'altalanos nyelv autostart boot'**
+  String get settingsSearchKeywordsGeneral;
+
+  /// No description provided for @settingsSearchKeywordsSystem.
+  ///
+  /// In hu, this message translates to:
+  /// **'rendszer kilepes leallas ujrainditas'**
+  String get settingsSearchKeywordsSystem;
 
   /// No description provided for @modeIp.
   ///

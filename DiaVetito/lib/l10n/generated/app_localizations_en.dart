@@ -12,7 +12,103 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'DiaVetito';
 
   @override
+  String get logoTitle => 'Diatar Vetito';
+
+  @override
   String get settingsTitleReceiver => 'Settings';
+
+  @override
+  String get settingsSearchLabel => 'Search in settings';
+
+  @override
+  String get settingsNoResults => 'No results for your search.';
+
+  @override
+  String get settingsInternetTitle => 'Internet';
+
+  @override
+  String settingsInternetSubtitle(Object internet, Object sender) {
+    return 'Internet relay: $internet, User: $sender';
+  }
+
+  @override
+  String get settingsLocalNetworkTitle => 'Local network (TCP/IP)';
+
+  @override
+  String settingsLocalNetworkSubtitle(Object port) {
+    return 'TCP port: $port';
+  }
+
+  @override
+  String get projectionImageTitle => 'Projection image';
+
+  @override
+  String projectionImageSummary(Object rotation, Object mirror) {
+    return 'Rotation: $rotation, Mirroring: $mirror';
+  }
+
+  @override
+  String get projectionColorSourceServer => 'Server colors';
+
+  @override
+  String get projectionColorSourceLocal => 'Local colors';
+
+  @override
+  String projectionFilterSummary(Object source, Object scrollable) {
+    return 'Color source: $source, Scrollable: $scrollable';
+  }
+
+  @override
+  String localColorsSummary(Object background, Object text) {
+    return 'Background: $background, Text: $text';
+  }
+
+  @override
+  String get settingsGeneralTitle => 'General';
+
+  @override
+  String settingsGeneralSubtitle(Object language, Object autostart) {
+    return 'Language: $language, Autostart: $autostart';
+  }
+
+  @override
+  String get systemActionsTitle => 'System actions';
+
+  @override
+  String get systemActionsSummary => 'Exit, shutdown, reboot';
+
+  @override
+  String get internetBroadcastTitle => 'Internet relay';
+
+  @override
+  String get valueOn => 'On';
+
+  @override
+  String get valueOff => 'Off';
+
+  @override
+  String get settingsSearchKeywordsInternet =>
+      'internet mqtt sender channel relay user';
+
+  @override
+  String get settingsSearchKeywordsLan => 'local network tcp ip port';
+
+  @override
+  String get settingsSearchKeywordsProjectionImage =>
+      'projection image rotation mirror clip margins';
+
+  @override
+  String get settingsSearchKeywordsProjectionFilter =>
+      'projection filters chords notation highlight scroll';
+
+  @override
+  String get settingsSearchKeywordsColors => 'colors background text blank';
+
+  @override
+  String get settingsSearchKeywordsGeneral => 'general language autostart boot';
+
+  @override
+  String get settingsSearchKeywordsSystem => 'system exit shutdown reboot';
 
   @override
   String get modeIp => 'IP';

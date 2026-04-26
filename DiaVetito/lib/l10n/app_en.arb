@@ -1,7 +1,69 @@
 {
   "@@locale": "en",
   "appTitle": "DiaVetito",
+  "logoTitle": "Diatar Vetito",
   "settingsTitleReceiver": "Settings",
+  "settingsSearchLabel": "Search in settings",
+  "settingsNoResults": "No results for your search.",
+  "settingsInternetTitle": "Internet",
+  "settingsInternetSubtitle": "Internet relay: {internet}, User: {sender}",
+  "@settingsInternetSubtitle": {
+    "placeholders": {
+      "internet": {},
+      "sender": {}
+    }
+  },
+  "settingsLocalNetworkTitle": "Local network (TCP/IP)",
+  "settingsLocalNetworkSubtitle": "TCP port: {port}",
+  "@settingsLocalNetworkSubtitle": {
+    "placeholders": {
+      "port": {}
+    }
+  },
+  "projectionImageTitle": "Projection image",
+  "projectionImageSummary": "Rotation: {rotation}, Mirroring: {mirror}",
+  "@projectionImageSummary": {
+    "placeholders": {
+      "rotation": {},
+      "mirror": {}
+    }
+  },
+  "projectionColorSourceServer": "Server colors",
+  "projectionColorSourceLocal": "Local colors",
+  "projectionFilterSummary": "Color source: {source}, Scrollable: {scrollable}",
+  "@projectionFilterSummary": {
+    "placeholders": {
+      "source": {},
+      "scrollable": {}
+    }
+  },
+  "localColorsSummary": "Background: {background}, Text: {text}",
+  "@localColorsSummary": {
+    "placeholders": {
+      "background": {},
+      "text": {}
+    }
+  },
+  "settingsGeneralTitle": "General",
+  "settingsGeneralSubtitle": "Language: {language}, Autostart: {autostart}",
+  "@settingsGeneralSubtitle": {
+    "placeholders": {
+      "language": {},
+      "autostart": {}
+    }
+  },
+  "systemActionsTitle": "System actions",
+  "systemActionsSummary": "Exit, shutdown, reboot",
+  "internetBroadcastTitle": "Internet relay",
+  "valueOn": "On",
+  "valueOff": "Off",
+  "settingsSearchKeywordsInternet": "internet mqtt sender channel relay user",
+  "settingsSearchKeywordsLan": "local network tcp ip port",
+  "settingsSearchKeywordsProjectionImage": "projection image rotation mirror clip margins",
+  "settingsSearchKeywordsProjectionFilter": "projection filters chords notation highlight scroll",
+  "settingsSearchKeywordsColors": "colors background text blank",
+  "settingsSearchKeywordsGeneral": "general language autostart boot",
+  "settingsSearchKeywordsSystem": "system exit shutdown reboot",
   "modeIp": "IP",
   "modeInternet": "Internet",
   "tcpPortRange": "TCP port (0..65535)",

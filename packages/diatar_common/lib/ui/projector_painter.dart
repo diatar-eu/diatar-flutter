@@ -14,11 +14,13 @@ class ProjectorPainter extends CustomPainter {
     required this.frame,
     required this.globals,
     required this.settings,
+    this.logoTitle = '',
   });
 
   final ProjectionFrame? frame;
   final ProjectionGlobals globals;
   final AppSettings settings;
+  final String logoTitle;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -260,7 +262,7 @@ class ProjectorPainter extends CustomPainter {
 
     final TextPainter titlePainter = TextPainter(
       text: TextSpan(
-        text: 'Diatar Vetito',
+        text: logoTitle,
         style: TextStyle(
           color: const Color(0xFF434ECE),
           fontSize: titleFontSize,
@@ -663,7 +665,6 @@ class ProjectorPainter extends CustomPainter {
     TextFrame frame,
     double fontSize,
   ) {
-    const double horizontalPad = 0;
     final double maxWidth = math.max(40, size.width);
 
     final bool hasTitleLine =

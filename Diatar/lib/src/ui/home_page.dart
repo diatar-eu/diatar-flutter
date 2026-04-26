@@ -940,6 +940,7 @@ class _VersePreview extends StatelessWidget {
       frame: frame,
       globals: globals,
       settings: controller.settings,
+      logoTitle: context.l10n.appTitle,
     );
     final String verseTitle = _buildVerseTitle(controller, song, verse);
 
@@ -1139,6 +1140,7 @@ class _CustomTextPreview extends StatelessWidget {
                   frame: frame,
                   globals: globals,
                   settings: controller.settings,
+                  logoTitle: context.l10n.appTitle,
                 ),
               ),
             ),
@@ -1546,6 +1548,7 @@ class _SongSearchDashboardState extends State<_SongSearchDashboard> {
             frame: frame,
             globals: globals,
             settings: controller.settings,
+            logoTitle: context.l10n.appTitle,
           ),
         );
       },

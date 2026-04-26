@@ -1,7 +1,69 @@
 {
   "@@locale": "hu",
   "appTitle": "DiaVetítő",
+  "logoTitle": "Diatár Vetítő",
   "settingsTitleReceiver": "Beállítások",
+  "settingsSearchLabel": "Keresés a beállításokban",
+  "settingsNoResults": "Nincs találat a keresésre.",
+  "settingsInternetTitle": "Internet",
+  "settingsInternetSubtitle": "Internetes közvetítés: {internet}, Felhasználó: {sender}",
+  "@settingsInternetSubtitle": {
+    "placeholders": {
+      "internet": {},
+      "sender": {}
+    }
+  },
+  "settingsLocalNetworkTitle": "Helyi hálózat (TCP/IP)",
+  "settingsLocalNetworkSubtitle": "TCP port: {port}",
+  "@settingsLocalNetworkSubtitle": {
+    "placeholders": {
+      "port": {}
+    }
+  },
+  "projectionImageTitle": "Vetítési kép",
+  "projectionImageSummary": "Forgatás: {rotation}, Tükrözés: {mirror}",
+  "@projectionImageSummary": {
+    "placeholders": {
+      "rotation": {},
+      "mirror": {}
+    }
+  },
+  "projectionColorSourceServer": "Szerver színek",
+  "projectionColorSourceLocal": "Helyi színek",
+  "projectionFilterSummary": "Színforrás: {source}, Görgethető: {scrollable}",
+  "@projectionFilterSummary": {
+    "placeholders": {
+      "source": {},
+      "scrollable": {}
+    }
+  },
+  "localColorsSummary": "Háttér: {background}, Szöveg: {text}",
+  "@localColorsSummary": {
+    "placeholders": {
+      "background": {},
+      "text": {}
+    }
+  },
+  "settingsGeneralTitle": "Általános",
+  "settingsGeneralSubtitle": "Nyelv: {language}, Autostart: {autostart}",
+  "@settingsGeneralSubtitle": {
+    "placeholders": {
+      "language": {},
+      "autostart": {}
+    }
+  },
+  "systemActionsTitle": "Rendszer műveletek",
+  "systemActionsSummary": "Kilépés, leállítás, újraindítás",
+  "internetBroadcastTitle": "Internetes közvetítés",
+  "valueOn": "Be",
+  "valueOff": "Ki",
+  "settingsSearchKeywordsInternet": "internet mqtt sender channel kozvetites felhasznalo",
+  "settingsSearchKeywordsLan": "helyi halozat tcp ip port",
+  "settingsSearchKeywordsProjectionImage": "vetitesi kep forgatas tukrozes clip margok",
+  "settingsSearchKeywordsProjectionFilter": "vetitesi szures akkord kotta highlight scroll",
+  "settingsSearchKeywordsColors": "szinek hatter szoveg blank",
+  "settingsSearchKeywordsGeneral": "altalanos nyelv autostart boot",
+  "settingsSearchKeywordsSystem": "rendszer kilepes leallas ujrainditas",
   "modeIp": "IP",
   "modeInternet": "Internet",
   "tcpPortRange": "TCP port (0..65535)",

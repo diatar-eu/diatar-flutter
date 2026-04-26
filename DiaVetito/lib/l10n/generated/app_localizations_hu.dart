@@ -12,7 +12,104 @@ class AppLocalizationsHu extends AppLocalizations {
   String get appTitle => 'DiaVetítő';
 
   @override
+  String get logoTitle => 'Diatár Vetítő';
+
+  @override
   String get settingsTitleReceiver => 'Beállítások';
+
+  @override
+  String get settingsSearchLabel => 'Keresés a beállításokban';
+
+  @override
+  String get settingsNoResults => 'Nincs találat a keresésre.';
+
+  @override
+  String get settingsInternetTitle => 'Internet';
+
+  @override
+  String settingsInternetSubtitle(Object internet, Object sender) {
+    return 'Internetes közvetítés: $internet, Felhasználó: $sender';
+  }
+
+  @override
+  String get settingsLocalNetworkTitle => 'Helyi hálózat (TCP/IP)';
+
+  @override
+  String settingsLocalNetworkSubtitle(Object port) {
+    return 'TCP port: $port';
+  }
+
+  @override
+  String get projectionImageTitle => 'Vetítési kép';
+
+  @override
+  String projectionImageSummary(Object rotation, Object mirror) {
+    return 'Forgatás: $rotation, Tükrözés: $mirror';
+  }
+
+  @override
+  String get projectionColorSourceServer => 'Szerver színek';
+
+  @override
+  String get projectionColorSourceLocal => 'Helyi színek';
+
+  @override
+  String projectionFilterSummary(Object source, Object scrollable) {
+    return 'Színforrás: $source, Görgethető: $scrollable';
+  }
+
+  @override
+  String localColorsSummary(Object background, Object text) {
+    return 'Háttér: $background, Szöveg: $text';
+  }
+
+  @override
+  String get settingsGeneralTitle => 'Általános';
+
+  @override
+  String settingsGeneralSubtitle(Object language, Object autostart) {
+    return 'Nyelv: $language, Autostart: $autostart';
+  }
+
+  @override
+  String get systemActionsTitle => 'Rendszer műveletek';
+
+  @override
+  String get systemActionsSummary => 'Kilépés, leállítás, újraindítás';
+
+  @override
+  String get internetBroadcastTitle => 'Internetes közvetítés';
+
+  @override
+  String get valueOn => 'Be';
+
+  @override
+  String get valueOff => 'Ki';
+
+  @override
+  String get settingsSearchKeywordsInternet =>
+      'internet mqtt sender channel kozvetites felhasznalo';
+
+  @override
+  String get settingsSearchKeywordsLan => 'helyi halozat tcp ip port';
+
+  @override
+  String get settingsSearchKeywordsProjectionImage =>
+      'vetitesi kep forgatas tukrozes clip margok';
+
+  @override
+  String get settingsSearchKeywordsProjectionFilter =>
+      'vetitesi szures akkord kotta highlight scroll';
+
+  @override
+  String get settingsSearchKeywordsColors => 'szinek hatter szoveg blank';
+
+  @override
+  String get settingsSearchKeywordsGeneral => 'altalanos nyelv autostart boot';
+
+  @override
+  String get settingsSearchKeywordsSystem =>
+      'rendszer kilepes leallas ujrainditas';
 
   @override
   String get modeIp => 'IP';

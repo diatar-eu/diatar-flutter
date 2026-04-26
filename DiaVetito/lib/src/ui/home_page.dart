@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:diatar_common/diatar_common.dart';
 
 import '../controllers/projection_controller.dart';
+import '../l10n/l10n.dart';
 import 'settings_sheet.dart';
 
 class HomePage extends StatefulWidget {
@@ -60,6 +61,7 @@ class _HomePageState extends State<HomePage> {
                                   frame: controller.activeFrame,
                                   globals: controller.globals,
                                   settings: controller.settings,
+                                  logoTitle: context.l10n.logoTitle,
                                 ),
                               ),
                             )
@@ -74,6 +76,7 @@ class _HomePageState extends State<HomePage> {
                                     frame: controller.activeFrame,
                                     globals: controller.globals,
                                     settings: controller.settings,
+                                    logoTitle: context.l10n.logoTitle,
                                   ),
                                 ),
                               ),
@@ -163,6 +166,7 @@ class _HomePageState extends State<HomePage> {
       frame: frame,
       globals: controller.globals,
       settings: controller.settings,
+      logoTitle: context.l10n.logoTitle,
     );
     final double required = painter.measureRequiredHeight(Size(viewportWidth, viewportHeight));
     return required > viewportHeight ? required : viewportHeight;
