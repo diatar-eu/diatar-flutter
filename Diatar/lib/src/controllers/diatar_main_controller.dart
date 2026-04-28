@@ -1125,6 +1125,9 @@ class DiatarMainController extends ChangeNotifier {
         : '$path.dia';
     final File diaFile = File(safePath);
     final Directory diaDir = diaFile.parent;
+    if (!await diaDir.exists()) {
+      await diaDir.create(recursive: true);
+    }
     final List<CustomOrderEntry> exportable = _customOrder
         .map(normalizeEntry)
         .toList();

@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
@@ -147,12 +149,6 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                       icon: const Icon(Icons.save_alt),
                       label: Text(l10n.saveDia),
                     ),
-                    if (!widget.embedded)
-                      OutlinedButton.icon(
-                        onPressed: widget.onClose,
-                        icon: const Icon(Icons.cancel_outlined),
-                        label: Text(l10n.cancel),
-                      ),
                   ],
                 ),
               ),
@@ -174,27 +170,128 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<void> _exportDia() async {
+    final l10n = context.l10n;
     final XTypeGroup diaType = XTypeGroup(
-      label: context.l10n.diatarPlaylistFileTypeLabel,
+      label: l10n.diatarPlaylistFileTypeLabel,
       extensions: <String>['dia'],
     );
-    final String initialDir = controller.settings.diaExportPath.trim();
-    final FileSaveLocation? target = await getSaveLocation(
-      suggestedName: context.l10n.customOrderSuggestedFileName,
-      acceptedTypeGroups: <XTypeGroup>[diaType],
-      initialDirectory: initialDir.isEmpty ? null : initialDir,
-    );
-    if (target == null) {
-      return;
+    try {
+      await _commitEntries();
+
+      String? targetPath;
+      bool nativeSaveDialogAvailable = true;
+      final String defaultFileName = _normalizeDiaFileName(
+        l10n.customOrderSuggestedFileName,
+        fallback: 'sorrend.dia',
+      );
+      final String configuredDir = controller.settings.diaExportPath.trim();
+      final String? initialDir = configuredDir.isNotEmpty && Directory(configuredDir).existsSync()
+          ? configuredDir
+          : null;
+
+      try {
+        final FileSaveLocation? target = await getSaveLocation(
+          suggestedName: defaultFileName,
+          acceptedTypeGroups: <XTypeGroup>[diaType],
+          initialDirectory: initialDir,
+        );
+        targetPath = target?.path;
+      } on UnimplementedError {
+        nativeSaveDialogAvailable = false;
+      }
+
+      if (!nativeSaveDialogAvailable) {
+        final String baseDir = await _resolveDiaExportDirectory();
+        final String? chosenName = await _askDiaFileName(defaultFileName);
+        if (chosenName == null) {
+          return;
+        }
+        final String fileName = _normalizeDiaFileName(
+          chosenName,
+          fallback: defaultFileName,
+        );
+        targetPath = '$baseDir${Platform.pathSeparator}$fileName';
+      }
+
+      if (targetPath == null || targetPath.trim().isEmpty) {
+        return;
+      }
+
+      final String outPath = await controller.exportCustomOrderToDia(targetPath);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.savedPath(outPath))),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.statusLoadError('$e'))),
+      );
     }
-    await _commitEntries();
-    final String outPath = await controller.exportCustomOrderToDia(target.path);
-    if (!mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.l10n.savedPath(outPath))),
+  }
+
+  String _normalizeDiaFileName(String raw, {required String fallback}) {
+    final String trimmed = raw.trim();
+    final String cleaned = trimmed.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    final String base = cleaned.isEmpty ? fallback : cleaned;
+    return base.toLowerCase().endsWith('.dia') ? base : '$base.dia';
+  }
+
+  Future<String?> _askDiaFileName(String initialName) async {
+    String enteredName = initialName;
+    final String? result = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        final l10n = dialogContext.l10n;
+        return AlertDialog(
+          title: Text(l10n.saveDia),
+          content: TextFormField(
+            initialValue: initialName,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'sorrend.dia'),
+            onChanged: (String value) => enteredName = value,
+            onFieldSubmitted: (String value) {
+              Navigator.of(dialogContext).pop(value);
+            },
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(enteredName),
+              child: Text(l10n.saveDia),
+            ),
+          ],
+        );
+      },
     );
+    return result;
+  }
+
+  Future<String> _resolveDiaExportDirectory() async {
+    final String configured = controller.settings.diaExportPath.trim();
+    if (configured.isNotEmpty) {
+      final Directory dir = Directory(configured);
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      return dir.path;
+    }
+
+    final Directory docs = await getApplicationDocumentsDirectory();
+    final Directory exportDir = Directory(
+      '${docs.path}${Platform.pathSeparator}dia',
+    );
+    if (!await exportDir.exists()) {
+      await exportDir.create(recursive: true);
+    }
+    return exportDir.path;
   }
 
   Future<void> _importDia() async {
