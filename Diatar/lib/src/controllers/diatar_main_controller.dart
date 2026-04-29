@@ -130,9 +130,13 @@ class DiatarMainController extends ChangeNotifier {
   bool customOrderActive = false;
   int _customOrderCursor = -1;
   int _projectedCustomCursor = -1;
+  String? _lastImportedCustomOrderBaseName;
 
   Map<String, String> get statusParams =>
       Map<String, String>.unmodifiable(_statusParams);
+
+    String? get lastImportedCustomOrderBaseName =>
+      _lastImportedCustomOrderBaseName;
 
   void _setStatus(
     String code, [
@@ -1183,6 +1187,10 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     await diaFile.writeAsString(out.toString(), encoding: utf8);
+    final String savedName = _stripFileExtension(_fileNameFromPath(safePath));
+    _lastImportedCustomOrderBaseName = savedName.trim().isEmpty
+      ? null
+      : savedName;
     _setStatus('statusOrderSaved', <String, String>{'path': safePath});
     notifyListeners();
     return safePath;
@@ -1191,6 +1199,7 @@ class DiatarMainController extends ChangeNotifier {
   Future<int> importCustomOrderFromDia(
     String path, {
     bool activate = true,
+    String? sourceFileName,
   }) async {
     final File f = File(path);
     if (!await f.exists()) {
@@ -1283,6 +1292,12 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     await applyCustomOrder(imported, activate: activate);
+    final String importedName = _stripFileExtension(
+      (sourceFileName ?? _fileNameFromPath(path)).trim(),
+    );
+    _lastImportedCustomOrderBaseName = importedName.trim().isEmpty
+        ? null
+        : importedName;
     _setStatus('statusOrderLoaded', <String, String>{
       'count': '${imported.length}',
       'path': path,
@@ -1329,6 +1344,15 @@ class DiatarMainController extends ChangeNotifier {
       return normalized;
     }
     return parts.last;
+  }
+
+  String _stripFileExtension(String fileName) {
+    final String trimmed = fileName.trim();
+    final int dotIndex = trimmed.lastIndexOf('.');
+    if (dotIndex <= 0) {
+      return trimmed;
+    }
+    return trimmed.substring(0, dotIndex);
   }
 
   List<String> _collectDiaLines(Map<String, String> sec, int declaredLines) {

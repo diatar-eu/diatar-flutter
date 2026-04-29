@@ -180,10 +180,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
       String? targetPath;
       bool nativeSaveDialogAvailable = true;
-      final String defaultFileName = _normalizeDiaFileName(
-        l10n.customOrderSuggestedFileName,
-        fallback: 'sorrend.dia',
+      final String defaultBaseName = _normalizeDiaBaseName(
+        controller.lastImportedCustomOrderBaseName ??
+            l10n.customOrderSuggestedFileName,
+        fallback: 'sorrend',
       );
+      final String defaultFileName = '$defaultBaseName.dia';
       final String configuredDir = controller.settings.diaExportPath.trim();
       final String? initialDir = configuredDir.isNotEmpty && Directory(configuredDir).existsSync()
           ? configuredDir
@@ -202,15 +204,15 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
       if (!nativeSaveDialogAvailable) {
         final String baseDir = await _resolveDiaExportDirectory();
-        final String? chosenName = await _askDiaFileName(defaultFileName);
+        final String? chosenName = await _askDiaFileName(defaultBaseName);
         if (chosenName == null) {
           return;
         }
-        final String fileName = _normalizeDiaFileName(
+        final String fileBaseName = _normalizeDiaBaseName(
           chosenName,
-          fallback: defaultFileName,
+          fallback: defaultBaseName,
         );
-        targetPath = '$baseDir${Platform.pathSeparator}$fileName';
+        targetPath = '$baseDir${Platform.pathSeparator}$fileBaseName.dia';
       }
 
       if (targetPath == null || targetPath.trim().isEmpty) {
@@ -234,11 +236,14 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
   }
 
-  String _normalizeDiaFileName(String raw, {required String fallback}) {
+  String _normalizeDiaBaseName(String raw, {required String fallback}) {
     final String trimmed = raw.trim();
     final String cleaned = trimmed.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     final String base = cleaned.isEmpty ? fallback : cleaned;
-    return base.toLowerCase().endsWith('.dia') ? base : '$base.dia';
+    final String normalized = base.toLowerCase().endsWith('.dia')
+        ? base.substring(0, base.length - 4)
+        : base;
+    return normalized.trim().isEmpty ? fallback : normalized;
   }
 
   Future<String?> _askDiaFileName(String initialName) async {
@@ -252,7 +257,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           content: TextFormField(
             initialValue: initialName,
             autofocus: true,
-            decoration: const InputDecoration(hintText: 'sorrend.dia'),
+            decoration: const InputDecoration(hintText: 'sorrend'),
             onChanged: (String value) => enteredName = value,
             onFieldSubmitted: (String value) {
               Navigator.of(dialogContext).pop(value);
@@ -303,7 +308,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     if (file == null) {
       return;
     }
-    final int count = await controller.importCustomOrderFromDia(file.path, activate: true);
+    final int count = await controller.importCustomOrderFromDia(
+      file.path,
+      activate: true,
+      sourceFileName: file.name,
+    );
     if (!mounted) {
       return;
     }

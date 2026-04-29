@@ -82,15 +82,6 @@ class DiatarHomePage extends StatelessWidget {
             icon: const Icon(Icons.settings),
           ),
           IconButton(
-            tooltip: l10n.playlistsTooltip,
-            onPressed: () => _showPlaceholder(
-              context,
-              l10n.playlistsTitle,
-              l10n.playlistsMessage,
-            ),
-            icon: const Icon(Icons.playlist_play),
-          ),
-          IconButton(
             tooltip: l10n.customOrderTooltip,
             onPressed: () => _openCustomOrderEditor(context),
             icon: const Icon(Icons.queue_music),
@@ -497,28 +488,6 @@ class DiatarHomePage extends StatelessWidget {
       return;
     }
     await controller.addCustomImageSlideToOrder(file.path);
-  }
-
-  Future<void> _showPlaceholder(
-    BuildContext context,
-    String title,
-    String message,
-  ) {
-    return showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(context.l10n.ok),
-            ),
-          ],
-        );
-      },
-    );
   }
 }
 
