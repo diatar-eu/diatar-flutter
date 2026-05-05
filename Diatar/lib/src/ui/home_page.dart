@@ -235,7 +235,7 @@ class DiatarHomePage extends StatelessWidget {
               const SizedBox(width: 8),
               _actionIconButton(
                 context,
-                icon: Icons.skip_previous,
+                icon: Icons.chevron_left,
                 tooltip: l10n.previous,
                 onPressed: controller.prevVerse,
               ),
@@ -277,7 +277,7 @@ class DiatarHomePage extends StatelessWidget {
                 const SizedBox(width: 8),
               _actionIconButton(
                 context,
-                icon: Icons.skip_next,
+                icon: Icons.chevron_right,
                 tooltip: l10n.next,
                 onPressed: controller.nextVerse,
               ),
@@ -1589,7 +1589,7 @@ class _OrderDashboard extends StatelessWidget {
                     const SizedBox(width: 8),
                     _actionIconButton(
                       context,
-                      icon: Icons.skip_previous,
+                      icon: Icons.chevron_left,
                       tooltip: context.l10n.previous,
                       onPressed: controller.prevVerse,
                     ),
@@ -1614,7 +1614,7 @@ class _OrderDashboard extends StatelessWidget {
                     const SizedBox(width: 8),
                     _actionIconButton(
                       context,
-                      icon: Icons.skip_next,
+                      icon: Icons.chevron_right,
                       tooltip: context.l10n.next,
                       onPressed: controller.nextVerse,
                     ),
