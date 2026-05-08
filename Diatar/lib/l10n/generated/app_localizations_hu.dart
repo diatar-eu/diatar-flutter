@@ -627,6 +627,22 @@ class AppLocalizationsHu extends AppLocalizations {
   String get searchSongHint => 'Kötet vagy énekcím';
 
   @override
+  String get customOrderInsertBookLabel => 'Kötet';
+
+  @override
+  String get customOrderInsertSongLabel => 'Ének';
+
+  @override
+  String get customOrderInsertVersesAction => 'Versszakok beszúrása';
+
+  @override
+  String get customOrderInsertVersesTitle => 'Beszúrandó versszakok';
+
+  @override
+  String get customOrderInsertVersesSubtitle =>
+      'Jelöld ki, mely versszakok kerüljenek az énekrendbe.';
+
+  @override
   String get textSlideDialogTitle => 'Szöveges dia hozzáadása';
 
   @override
@@ -663,6 +679,12 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get selectedVersesSubtitle => 'Többet is kijelölhetsz.';
+
+  @override
+  String get customOrderSelectAllVerses => 'Összes';
+
+  @override
+  String get customOrderClearVerseSelection => 'Egyik sem';
 
   @override
   String get apply => 'Alkalmaz';
@@ -702,8 +724,8 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsLocalNetworkTitle => 'Helyi hálózat (TCP/IP)';
 
   @override
-  String settingsLocalNetworkSubtitle(Object summary) {
-    return 'TCP kliens célpontok: $summary';
+  String settingsLocalNetworkSubtitle(Object status, Object summary) {
+    return 'TCP kliens: $status, célpontok: $summary';
   }
 
   @override
@@ -798,6 +820,9 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get internetRelaySwitchTitle => 'Internetes közvetítés';
+
+  @override
+  String get localNetworkRelaySwitchTitle => 'Helyi hálózat (TCP/IP)';
 
   @override
   String get passwordHideTooltip => 'Elrejtés';

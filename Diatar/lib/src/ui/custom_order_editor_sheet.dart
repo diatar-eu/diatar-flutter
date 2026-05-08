@@ -17,7 +17,6 @@ class CustomOrderEditorPanel extends StatefulWidget {
     this.embedded = false,
     this.onClose,
   });
-
   final DiatarMainController controller;
   final bool embedded;
   final VoidCallback? onClose;
@@ -30,6 +29,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   late List<CustomOrderEntry> _entries;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String? _selectedInsertBookFileName;
+  int? _selectedInsertSongIndex;
 
   int _safeEntryVerseIndex(CustomOrderEntry entry, {int fallback = 0}) {
     try {
@@ -70,6 +71,52 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     _entries = source;
   }
 
+  bool _bookHasSongs(DtxBook book) {
+    return book.songs.any((DtxSong song) => !song.separator);
+  }
+
+  List<_SongOption> _songOptionsForBook(DtxBook book) {
+    final List<_SongOption> options = <_SongOption>[];
+    for (int i = 0; i < book.songs.length; i++) {
+      final DtxSong song = book.songs[i];
+      if (song.separator) {
+        continue;
+      }
+      options.add(_SongOption(songIndex: i, songTitle: song.title));
+    }
+    return options;
+  }
+
+  void _ensureInsertSelectionValid() {
+    final List<DtxBook> books = controller.books.where(_bookHasSongs).toList(growable: false);
+    if (books.isEmpty) {
+      _selectedInsertBookFileName = null;
+      _selectedInsertSongIndex = null;
+      return;
+    }
+
+    final DtxBook selectedBook = books.firstWhere(
+      (DtxBook b) => b.fileName == _selectedInsertBookFileName,
+      orElse: () => books.first,
+    );
+    if (_selectedInsertBookFileName != selectedBook.fileName) {
+      _selectedInsertBookFileName = selectedBook.fileName;
+    }
+
+    final List<_SongOption> songOptions = _songOptionsForBook(selectedBook);
+    if (songOptions.isEmpty) {
+      _selectedInsertSongIndex = null;
+      return;
+    }
+
+    final bool songStillValid = songOptions.any(
+      (_SongOption option) => option.songIndex == _selectedInsertSongIndex,
+    );
+    if (!songStillValid) {
+      _selectedInsertSongIndex = songOptions.first.songIndex;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -89,6 +136,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       animation: controller,
       builder: (BuildContext context, Widget? child) {
         _syncEntriesFromControllerIfNeeded();
+        _ensureInsertSelectionValid();
         return Material(
           color: widget.embedded ? Colors.transparent : Theme.of(context).scaffoldBackgroundColor,
           child: Column(
@@ -117,15 +165,21 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
               const Divider(height: 1),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    labelText: l10n.addSong,
-                    hintText: l10n.searchSongHint,
-                    prefixIcon: const Icon(Icons.search),
-                    border: const OutlineInputBorder(),
-                  ),
-                  onChanged: (String value) => setState(() => _searchQuery = value.trim()),
+                child: Column(
+                  children: <Widget>[
+                    TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        labelText: l10n.addSong,
+                        hintText: l10n.searchSongHint,
+                        prefixIcon: const Icon(Icons.search),
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: (String value) => setState(() => _searchQuery = value.trim()),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildPrimaryInsertControls(),
+                  ],
                 ),
               ),
               Expanded(
@@ -154,6 +208,254 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPrimaryInsertControls() {
+    final l10n = context.l10n;
+    final List<DtxBook> books = controller.books.where(_bookHasSongs).toList(growable: false);
+    if (books.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final DtxBook selectedBook = books.firstWhere(
+      (DtxBook b) => b.fileName == _selectedInsertBookFileName,
+      orElse: () => books.first,
+    );
+    final List<_SongOption> songs = _songOptionsForBook(selectedBook);
+    final int? selectedSongIndex = songs.any(
+      (_SongOption option) => option.songIndex == _selectedInsertSongIndex,
+    )
+        ? _selectedInsertSongIndex
+        : (songs.isEmpty ? null : songs.first.songIndex);
+
+    final Widget bookPicker = DropdownButtonFormField<String>(
+      isExpanded: true,
+      initialValue: selectedBook.fileName,
+      decoration: InputDecoration(
+        labelText: l10n.customOrderInsertBookLabel,
+        border: const OutlineInputBorder(),
+      ),
+      items: books
+          .map(
+            (DtxBook book) => DropdownMenuItem<String>(
+              value: book.fileName,
+              child: Text(book.displayName, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
+      onChanged: (String? value) {
+        if (value == null) {
+          return;
+        }
+        final DtxBook selected = books.firstWhere((DtxBook b) => b.fileName == value);
+        final List<_SongOption> options = _songOptionsForBook(selected);
+        setState(() {
+          _selectedInsertBookFileName = value;
+          _selectedInsertSongIndex = options.isEmpty ? null : options.first.songIndex;
+        });
+      },
+    );
+
+    final Widget songPicker = DropdownButtonFormField<int>(
+      isExpanded: true,
+      initialValue: selectedSongIndex,
+      decoration: InputDecoration(
+        labelText: l10n.customOrderInsertSongLabel,
+        border: const OutlineInputBorder(),
+      ),
+      items: songs
+          .map(
+            (_SongOption option) => DropdownMenuItem<int>(
+              value: option.songIndex,
+              child: Text(option.songTitle, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
+      onChanged: (int? value) {
+        setState(() => _selectedInsertSongIndex = value);
+      },
+    );
+
+    final Widget insertButton = FilledButton.icon(
+      onPressed: selectedSongIndex == null ? null : () => unawaited(_insertFromSelection()),
+      icon: const Icon(Icons.playlist_add),
+      label: Text(l10n.customOrderInsertVersesAction),
+    );
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool compact = constraints.maxWidth < 700;
+        if (compact) {
+          return Column(
+            children: <Widget>[
+              bookPicker,
+              const SizedBox(height: 8),
+              songPicker,
+              const SizedBox(height: 8),
+              SizedBox(width: double.infinity, child: insertButton),
+            ],
+          );
+        }
+        return Row(
+          children: <Widget>[
+            Expanded(flex: 3, child: bookPicker),
+            const SizedBox(width: 8),
+            Expanded(flex: 4, child: songPicker),
+            const SizedBox(width: 8),
+            insertButton,
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _insertFromSelection() async {
+    if (_selectedInsertBookFileName == null || _selectedInsertSongIndex == null) {
+      return;
+    }
+    final CustomOrderEntry baseEntry = CustomOrderEntry(
+      fileName: _selectedInsertBookFileName!,
+      songIndex: _selectedInsertSongIndex!,
+      verseIndex: 0,
+      label: controller.buildEntryLabel(_selectedInsertBookFileName!, _selectedInsertSongIndex!, 0),
+    );
+    final List<DtxVerse> verses = controller.versesForEntry(baseEntry);
+
+    List<CustomOrderEntry> toInsert;
+    if (verses.isEmpty) {
+      toInsert = <CustomOrderEntry>[baseEntry];
+    } else {
+      final Set<int> allSelected = Set<int>.from(List<int>.generate(verses.length, (int i) => i));
+      final List<int>? chosen = await _showVerseSelectionSheet(
+        verses: verses,
+        initialSelection: allSelected,
+        title: context.l10n.customOrderInsertVersesTitle,
+        subtitle: context.l10n.customOrderInsertVersesSubtitle,
+      );
+      if (chosen == null || chosen.isEmpty) {
+        return;
+      }
+      toInsert = chosen
+          .map(
+            (int verseIx) => CustomOrderEntry(
+              fileName: _selectedInsertBookFileName!,
+              songIndex: _selectedInsertSongIndex!,
+              verseIndex: verseIx,
+              label: controller.buildEntryLabel(
+                _selectedInsertBookFileName!,
+                _selectedInsertSongIndex!,
+                verseIx,
+              ),
+            ),
+          )
+          .toList();
+    }
+
+    setState(() {
+      _entries.addAll(toInsert);
+    });
+    await _commitEntries();
+  }
+
+  Future<List<int>?> _showVerseSelectionSheet({
+    required List<DtxVerse> verses,
+    required Set<int> initialSelection,
+    required String title,
+    required String subtitle,
+  }) async {
+    final Set<int> selectedSet = Set<int>.from(initialSelection);
+    return showModalBottomSheet<List<int>>(
+      context: context,
+      builder: (BuildContext modalContext) {
+        return StatefulBuilder(
+          builder: (BuildContext sheetContext, void Function(void Function()) setModalState) {
+            return SafeArea(
+              child: Column(
+                children: <Widget>[
+                  ListTile(
+                    title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(subtitle),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Row(
+                      children: <Widget>[
+                        TextButton.icon(
+                          onPressed: () {
+                            setModalState(() {
+                              selectedSet
+                                ..clear()
+                                ..addAll(List<int>.generate(verses.length, (int i) => i));
+                            });
+                          },
+                          icon: const Icon(Icons.done_all),
+                          label: Text(sheetContext.l10n.customOrderSelectAllVerses),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton.icon(
+                          onPressed: () {
+                            setModalState(selectedSet.clear);
+                          },
+                          icon: const Icon(Icons.remove_done),
+                          label: Text(sheetContext.l10n.customOrderClearVerseSelection),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: verses.length,
+                      itemBuilder: (BuildContext itemContext, int i) {
+                        final bool selected = selectedSet.contains(i);
+                        return CheckboxListTile(
+                          value: selected,
+                          title: Text(verses[i].name),
+                          onChanged: (bool? value) {
+                            setModalState(() {
+                              if (value == true) {
+                                selectedSet.add(i);
+                              } else {
+                                selectedSet.remove(i);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(modalContext).pop(null),
+                            child: Text(sheetContext.l10n.cancel),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: selectedSet.isEmpty
+                                ? null
+                                : () {
+                                    final List<int> out = selectedSet.toList()..sort();
+                                    Navigator.of(modalContext).pop(out);
+                                  },
+                            child: Text(sheetContext.l10n.apply),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -504,77 +806,18 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       return;
     }
 
-    final Set<int> selectedSet = groupEntries.map(_safeEntryVerseIndex).toSet();
+    final Set<int> selectedSet =
+      groupEntries.map((CustomOrderEntry e) => _safeEntryVerseIndex(e)).toSet();
     if (selectedSet.isEmpty) {
       selectedSet.add(0);
     }
     final List<int> originalSelection = selectedSet.toList()..sort();
-    final List<int>? selectedMany = await showModalBottomSheet<List<int>>(
-          context: context,
-          builder: (BuildContext context) {
-            return StatefulBuilder(
-              builder: (BuildContext context, void Function(void Function()) setModalState) {
-                return SafeArea(
-                  child: Column(
-                    children: <Widget>[
-                      ListTile(
-                        title: Text(context.l10n.selectedVersesTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        subtitle: Text(context.l10n.selectedVersesSubtitle),
-                      ),
-                      const Divider(height: 1),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: verses.length,
-                          itemBuilder: (BuildContext context, int i) {
-                            final bool selected = selectedSet.contains(i);
-                            return CheckboxListTile(
-                              value: selected,
-                              title: Text(verses[i].name),
-                              onChanged: (bool? value) {
-                                setModalState(() {
-                                  if (value == true) {
-                                    selectedSet.add(i);
-                                  } else {
-                                    selectedSet.remove(i);
-                                  }
-                                });
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => Navigator.of(context).pop(null),
-                                child: Text(context.l10n.cancel),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: FilledButton(
-                                onPressed: selectedSet.isEmpty
-                                    ? null
-                                    : () {
-                                        final List<int> out = selectedSet.toList()..sort();
-                                        Navigator.of(context).pop(out);
-                                      },
-                                child: Text(context.l10n.apply),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        );
+    final List<int>? selectedMany = await _showVerseSelectionSheet(
+      verses: verses,
+      initialSelection: selectedSet,
+      title: context.l10n.selectedVersesTitle,
+      subtitle: context.l10n.selectedVersesSubtitle,
+    );
 
     if (selectedMany == null || selectedMany.isEmpty) {
       return;
@@ -663,6 +906,16 @@ class _SearchCandidate {
 
   final String fileName;
   final String bookTitle;
+  final int songIndex;
+  final String songTitle;
+}
+
+class _SongOption {
+  const _SongOption({
+    required this.songIndex,
+    required this.songTitle,
+  });
+
   final int songIndex;
   final String songTitle;
 }

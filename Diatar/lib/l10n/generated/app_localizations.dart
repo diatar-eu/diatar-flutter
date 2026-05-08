@@ -1163,6 +1163,36 @@ abstract class AppLocalizations {
   /// **'Kötet vagy énekcím'**
   String get searchSongHint;
 
+  /// No description provided for @customOrderInsertBookLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kötet'**
+  String get customOrderInsertBookLabel;
+
+  /// No description provided for @customOrderInsertSongLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ének'**
+  String get customOrderInsertSongLabel;
+
+  /// No description provided for @customOrderInsertVersesAction.
+  ///
+  /// In hu, this message translates to:
+  /// **'Versszakok beszúrása'**
+  String get customOrderInsertVersesAction;
+
+  /// No description provided for @customOrderInsertVersesTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beszúrandó versszakok'**
+  String get customOrderInsertVersesTitle;
+
+  /// No description provided for @customOrderInsertVersesSubtitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Jelöld ki, mely versszakok kerüljenek az énekrendbe.'**
+  String get customOrderInsertVersesSubtitle;
+
   /// No description provided for @textSlideDialogTitle.
   ///
   /// In hu, this message translates to:
@@ -1228,6 +1258,18 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Többet is kijelölhetsz.'**
   String get selectedVersesSubtitle;
+
+  /// No description provided for @customOrderSelectAllVerses.
+  ///
+  /// In hu, this message translates to:
+  /// **'Összes'**
+  String get customOrderSelectAllVerses;
+
+  /// No description provided for @customOrderClearVerseSelection.
+  ///
+  /// In hu, this message translates to:
+  /// **'Egyik sem'**
+  String get customOrderClearVerseSelection;
 
   /// No description provided for @apply.
   ///
@@ -1298,8 +1340,8 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLocalNetworkSubtitle.
   ///
   /// In hu, this message translates to:
-  /// **'TCP kliens célpontok: {summary}'**
-  String settingsLocalNetworkSubtitle(Object summary);
+  /// **'TCP kliens: {status}, célpontok: {summary}'**
+  String settingsLocalNetworkSubtitle(Object status, Object summary);
 
   /// No description provided for @settingsColorSummary.
   ///
@@ -1462,6 +1504,12 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Internetes közvetítés'**
   String get internetRelaySwitchTitle;
+
+  /// No description provided for @localNetworkRelaySwitchTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Helyi hálózat (TCP/IP)'**
+  String get localNetworkRelaySwitchTitle;
 
   /// No description provided for @passwordHideTooltip.
   ///

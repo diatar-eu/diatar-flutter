@@ -407,6 +407,11 @@
   "customOrderEditTitle": "Saját sorrend szerkesztése",
   "addSong": "Ének hozzáadása",
   "searchSongHint": "Kötet vagy énekcím",
+  "customOrderInsertBookLabel": "Kötet",
+  "customOrderInsertSongLabel": "Ének",
+  "customOrderInsertVersesAction": "Versszakok beszúrása",
+  "customOrderInsertVersesTitle": "Beszúrandó versszakok",
+  "customOrderInsertVersesSubtitle": "Jelöld ki, mely versszakok kerüljenek az énekrendbe.",
   "textSlideDialogTitle": "Szöveges dia hozzáadása",
   "textSlideTitleLabel": "Cím",
   "textSlideBodyLabel": "Szöveg (soronként)",
@@ -430,6 +435,8 @@
   "versePicker": "Versszak",
   "selectedVersesTitle": "Kiválasztott versszakok",
   "selectedVersesSubtitle": "Többet is kijelölhetsz.",
+  "customOrderSelectAllVerses": "Összes",
+  "customOrderClearVerseSelection": "Egyik sem",
   "apply": "Alkalmaz",
   "internetUserActionsTitle": "Felhasználói műveletek (API)",
   "internetStatusOn": "Be",
@@ -454,9 +461,10 @@
     }
   },
   "settingsLocalNetworkTitle": "Helyi hálózat (TCP/IP)",
-  "settingsLocalNetworkSubtitle": "TCP kliens célpontok: {summary}",
+  "settingsLocalNetworkSubtitle": "TCP kliens: {status}, célpontok: {summary}",
   "@settingsLocalNetworkSubtitle": {
     "placeholders": {
+      "status": {},
       "summary": {}
     }
   },
@@ -516,6 +524,7 @@
   },
   "settingsNoResults": "Nincs találat a keresésre.",
   "internetRelaySwitchTitle": "Internetes közvetítés",
+  "localNetworkRelaySwitchTitle": "Helyi hálózat (TCP/IP)",
   "passwordHideTooltip": "Elrejtés",
   "passwordShowTooltip": "Megjelenítés",
   "tcpTargetsLabel": "Célpontok (IP:port soronként)",

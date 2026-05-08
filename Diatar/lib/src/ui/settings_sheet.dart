@@ -64,6 +64,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _projUseTitle;
   late bool _projBoldText;
   late bool _internetRelayEnabled;
+  late bool _localNetworkEnabled;
   late Map<String, String> _desktopActionHotkeys;
   late Map<String, String> _desktopSongHotkeys;
   late List<SongHotkeyOption> _availableSongs;
@@ -114,6 +115,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projUseTitle = s.projUseTitle;
     _projBoldText = s.projBoldText;
     _internetRelayEnabled = s.mqttUser.trim().isNotEmpty;
+    _localNetworkEnabled = s.tcpClientEnabled;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
     _desktopSongHotkeys = Map<String, String>.from(s.desktopSongHotkeys);
     _availableSongs = List<SongHotkeyOption>.from(widget.availableSongs);
@@ -157,6 +159,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final String mqttUser = _mqttUser.text.trim().isEmpty
       ? l10n.valueNotSet
         : _mqttUser.text.trim();
+    final String localNetworkStatus = _localNetworkEnabled
+      ? l10n.internetStatusOn
+      : l10n.internetStatusOff;
     final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
     final String tcpSummary = tcpTargets.isEmpty
       ? l10n.tcpNoTargets
@@ -249,7 +254,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     _settingsTile(
                       leading: const Icon(Icons.lan),
                       title: Text(l10n.settingsLocalNetworkTitle),
-                      subtitle: Text(l10n.settingsLocalNetworkSubtitle(tcpSummary)),
+                      subtitle: Text(
+                        l10n.settingsLocalNetworkSubtitle(
+                          localNetworkStatus,
+                          tcpSummary,
+                        ),
+                      ),
                       onTap: _openLocalNetworkSettings,
                     ),
                   if (showLan &&
@@ -763,19 +773,27 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     return _openSectionSheet(
       title: context.l10n.settingsLocalNetworkTitle,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
         return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _localNetworkEnabled,
+            onChanged: (bool v) => setBoth(() => _localNetworkEnabled = v),
+            title: Text(l10n.localNetworkRelaySwitchTitle),
+          ),
           TextField(
             controller: _tcpTargets,
+            enabled: _localNetworkEnabled,
             keyboardType: TextInputType.multiline,
             minLines: 3,
             maxLines: 8,
             decoration: InputDecoration(
-              labelText: context.l10n.tcpTargetsLabel,
-              hintText: context.l10n.tcpTargetsHint,
+              labelText: l10n.tcpTargetsLabel,
+              hintText: l10n.tcpTargetsHint,
             ),
           ),
           const SizedBox(height: 8),
-          Text(context.l10n.tcpTargetsHelp),
+          Text(l10n.tcpTargetsHelp),
         ];
       },
     );
@@ -1691,15 +1709,18 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final String mqttUser = _internetRelayEnabled ? _mqttUser.text.trim() : '';
     final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
     final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
-    final String? tcpError = _validateTcpTargets(tcpTargets);
+    final String? tcpError = _localNetworkEnabled
+      ? _validateTcpTargets(tcpTargets)
+      : null;
     if (tcpError != null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(tcpError)));
       return;
     }
-    final int firstPort =
-        _firstPortFromTargets(tcpTargets) ?? widget.initialSettings.port;
+    final int firstPort = _localNetworkEnabled
+      ? (_firstPortFromTargets(tcpTargets) ?? widget.initialSettings.port)
+      : widget.initialSettings.port;
 
     final Set<String> usedHotkeys = <String>{};
     for (final String hotkey in _desktopActionHotkeys.values) {
@@ -1727,7 +1748,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
     final AppSettings updated = widget.initialSettings.copyWith(
       port: firstPort,
-      tcpClientEnabled: tcpTargets.isNotEmpty,
+      tcpClientEnabled: _localNetworkEnabled,
       tcpTargets: tcpTargets,
       mqttUser: mqttUser,
       mqttPassword: mqttPassword,

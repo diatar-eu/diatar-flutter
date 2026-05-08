@@ -407,6 +407,11 @@
   "customOrderEditTitle": "Edit custom order",
   "addSong": "Add song",
   "searchSongHint": "Book or song title",
+  "customOrderInsertBookLabel": "Book",
+  "customOrderInsertSongLabel": "Song",
+  "customOrderInsertVersesAction": "Insert verses",
+  "customOrderInsertVersesTitle": "Verses to insert",
+  "customOrderInsertVersesSubtitle": "Select which verses should be added to the order.",
   "textSlideDialogTitle": "Add text slide",
   "textSlideTitleLabel": "Title",
   "textSlideBodyLabel": "Text (one line per row)",
@@ -430,6 +435,8 @@
   "versePicker": "Verse",
   "selectedVersesTitle": "Selected verses",
   "selectedVersesSubtitle": "You can select multiple.",
+  "customOrderSelectAllVerses": "Select all",
+  "customOrderClearVerseSelection": "Clear",
   "apply": "Apply",
   "internetUserActionsTitle": "User actions (API)",
   "internetStatusOn": "On",
@@ -454,9 +461,10 @@
     }
   },
   "settingsLocalNetworkTitle": "Local network (TCP/IP)",
-  "settingsLocalNetworkSubtitle": "TCP client targets: {summary}",
+  "settingsLocalNetworkSubtitle": "TCP client: {status}, targets: {summary}",
   "@settingsLocalNetworkSubtitle": {
     "placeholders": {
+      "status": {},
       "summary": {}
     }
   },
@@ -516,6 +524,7 @@
   },
   "settingsNoResults": "No results for the search.",
   "internetRelaySwitchTitle": "Internet relay",
+  "localNetworkRelaySwitchTitle": "Local network (TCP/IP)",
   "passwordHideTooltip": "Hide",
   "passwordShowTooltip": "Show",
   "tcpTargetsLabel": "Targets (IP:port per line)",

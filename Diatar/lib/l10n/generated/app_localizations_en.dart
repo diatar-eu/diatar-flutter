@@ -625,6 +625,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchSongHint => 'Book or song title';
 
   @override
+  String get customOrderInsertBookLabel => 'Book';
+
+  @override
+  String get customOrderInsertSongLabel => 'Song';
+
+  @override
+  String get customOrderInsertVersesAction => 'Insert verses';
+
+  @override
+  String get customOrderInsertVersesTitle => 'Verses to insert';
+
+  @override
+  String get customOrderInsertVersesSubtitle =>
+      'Select which verses should be added to the order.';
+
+  @override
   String get textSlideDialogTitle => 'Add text slide';
 
   @override
@@ -661,6 +677,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selectedVersesSubtitle => 'You can select multiple.';
+
+  @override
+  String get customOrderSelectAllVerses => 'Select all';
+
+  @override
+  String get customOrderClearVerseSelection => 'Clear';
 
   @override
   String get apply => 'Apply';
@@ -700,8 +722,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLocalNetworkTitle => 'Local network (TCP/IP)';
 
   @override
-  String settingsLocalNetworkSubtitle(Object summary) {
-    return 'TCP client targets: $summary';
+  String settingsLocalNetworkSubtitle(Object status, Object summary) {
+    return 'TCP client: $status, targets: $summary';
   }
 
   @override
@@ -796,6 +818,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get internetRelaySwitchTitle => 'Internet relay';
+
+  @override
+  String get localNetworkRelaySwitchTitle => 'Local network (TCP/IP)';
 
   @override
   String get passwordHideTooltip => 'Hide';
