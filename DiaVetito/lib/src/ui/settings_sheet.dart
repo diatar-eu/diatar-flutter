@@ -345,11 +345,29 @@ class _SettingsSheetState extends State<SettingsSheet> {
     return _openSectionSheet(
       title: context.l10n.settingsLocalNetworkTitle,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
         return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _ipMode,
+            onChanged: (bool v) {
+              setBoth(() {
+                _ipMode = v;
+                if (_ipMode) {
+                  _mqttUser.text = '';
+                }
+              });
+              if (!v) {
+                widget.onRefreshUsers();
+              }
+            },
+            title: Text(l10n.settingsLocalNetworkTitle),
+          ),
           TextField(
             controller: _port,
+            enabled: _ipMode,
             keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: context.l10n.tcpPortRange),
+            decoration: InputDecoration(labelText: l10n.tcpPortRange),
           ),
         ];
       },
