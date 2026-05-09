@@ -355,9 +355,20 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
 
     setState(() {
-      _entries.addAll(toInsert);
+      final int insertIndex = _selectedInsertInsertionIndex();
+      _entries.insertAll(insertIndex, toInsert);
     });
     await _commitEntries();
+  }
+
+  int _selectedInsertInsertionIndex() {
+    if (_entries.isEmpty) {
+      return 0;
+    }
+    if (controller.customOrderCursor < 0) {
+      return _entries.length;
+    }
+    return controller.customOrderCursor.clamp(0, _entries.length);
   }
 
   Future<List<int>?> _showVerseSelectionSheet({
@@ -766,32 +777,30 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(height: 0.95),
           ),
-          trailing: isContinuation
-              ? null
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    if (isSongEntry)
-                      IconButton(
-                        tooltip: context.l10n.versePicker,
-                        icon: const Icon(Icons.format_list_numbered),
-                        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                        onPressed: () => _pickVerse(index),
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                      onPressed: () {
-                        setState(() => _entries.removeAt(index));
-                        unawaited(_commitEntries());
-                      },
-                    ),
-                  ],
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (isSongEntry && !isContinuation)
+                IconButton(
+                  tooltip: context.l10n.versePicker,
+                  icon: const Icon(Icons.format_list_numbered),
+                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  onPressed: () => _pickVerse(index),
                 ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                onPressed: () {
+                  setState(() => _entries.removeAt(index));
+                  unawaited(_commitEntries());
+                },
+              ),
+            ],
+          ),
         );
       },
     );
