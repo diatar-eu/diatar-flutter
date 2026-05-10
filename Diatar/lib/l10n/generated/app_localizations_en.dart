@@ -637,6 +637,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderInsertVersesAction => 'Insert verses';
 
   @override
+  String get customOrderInsertSeparatorAction => 'Insert separator';
+
+  @override
+  String get customOrderSeparatorNameLabel => 'Separator name';
+
+  @override
+  String get customOrderSeparatorDefaultName => 'separator';
+
+  @override
   String get customOrderInsertVersesTitle => 'Verses to insert';
 
   @override

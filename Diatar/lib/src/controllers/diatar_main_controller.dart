@@ -45,6 +45,9 @@ class CustomOrderCandidate {
 }
 
 class CustomOrderEntry {
+  static const String separatorFileName = '__separator__';
+  static const int separatorSongIndex = -3;
+
   const CustomOrderEntry({
     required this.fileName,
     required this.songIndex,
@@ -63,9 +66,11 @@ class CustomOrderEntry {
   final String? customTextBody;
   final String? customImagePath;
 
+  bool get isSeparator =>
+      fileName == separatorFileName && songIndex == separatorSongIndex;
   bool get isCustomText => customTextBody != null;
   bool get isCustomImage => customImagePath != null;
-  bool get isSongEntry => !isCustomText && !isCustomImage;
+  bool get isSongEntry => !isSeparator && !isCustomText && !isCustomImage;
 
   CustomOrderEntry copyWith({
     String? fileName,
@@ -856,6 +861,7 @@ class DiatarMainController extends ChangeNotifier {
       if (!entry.isSongEntry || !candidate.isSongEntry) {
         return candidate.fileName == entry.fileName &&
             candidate.songIndex == entry.songIndex &&
+        candidate.label == entry.label &&
             candidate.customTextTitle == entry.customTextTitle &&
             candidate.customTextBody == entry.customTextBody &&
             candidate.customImagePath == entry.customImagePath;
@@ -1079,6 +1085,20 @@ class DiatarMainController extends ChangeNotifier {
     }
     final int safe = cursor.clamp(0, _customOrder.length - 1);
     final CustomOrderEntry entry = _customOrder[safe];
+
+    if (entry.isSeparator && sync) {
+      final int? next = _findNextProjectableCustomOrderIndex(safe + 1);
+      if (next != null) {
+        _selectByCustomOrderCursor(next, sync: true);
+        return;
+      }
+      final int? prev = _findPrevProjectableCustomOrderIndex(safe - 1);
+      if (prev != null) {
+        _selectByCustomOrderCursor(prev, sync: true);
+        return;
+      }
+    }
+
     if (!entry.isSongEntry) {
       _customOrderCursor = safe;
       highPos = 0;
@@ -1144,6 +1164,15 @@ class DiatarMainController extends ChangeNotifier {
       final CustomOrderEntry entry = exportable[i];
       out.writeln();
       out.writeln('[${i + 1}]');
+
+      if (entry.isSeparator) {
+        final String separatorName =
+            (entry.customTextTitle ?? '').trim().isEmpty
+            ? entry.label.trim()
+            : (entry.customTextTitle ?? '').trim();
+        out.writeln('separator=$separatorName');
+        continue;
+      }
 
       if (entry.isCustomImage) {
         final String rel = _relativeDiaImagePath(
@@ -1240,6 +1269,20 @@ class DiatarMainController extends ChangeNotifier {
     for (int i = 1; i <= max; i++) {
       final Map<String, String>? sec = sections['$i'];
       if (sec == null) {
+        continue;
+      }
+
+      final String separatorName = (sec['separator'] ?? '').trim();
+      if (separatorName.isNotEmpty) {
+        imported.add(
+          CustomOrderEntry(
+            fileName: CustomOrderEntry.separatorFileName,
+            songIndex: CustomOrderEntry.separatorSongIndex,
+            verseIndex: 0,
+            label: '--- $separatorName ---',
+            customTextTitle: separatorName,
+          ),
+        );
         continue;
       }
 
@@ -1364,7 +1407,7 @@ class DiatarMainController extends ChangeNotifier {
       final String imagePath = imageFile.absolute.path.replaceAll('\\', '/');
       final String basePath = diaFile.absolute.path.replaceAll('\\', '/');
 
-      if (imagePath.startsWith(basePath + '/')) {
+      if (imagePath.startsWith('$basePath/')) {
         // Image is within dia directory subtree: return relative path for portability
         return imagePath.substring(basePath.length + 1);
       }
@@ -1682,10 +1725,13 @@ class DiatarMainController extends ChangeNotifier {
     if (customOrderActive && _customOrder.isNotEmpty) {
       final int exactIdx = _currentCustomOrderIndex();
       if (exactIdx >= 0) {
-        if (exactIdx + 1 >= _customOrder.length) {
+        final int? nextIdx = _findNextProjectableCustomOrderIndex(
+          exactIdx + 1,
+        );
+        if (nextIdx == null) {
           return;
         }
-        _selectByCustomOrderCursor(exactIdx + 1, sync: true);
+        _selectByCustomOrderCursor(nextIdx, sync: true);
         return;
       }
 
@@ -1697,11 +1743,19 @@ class DiatarMainController extends ChangeNotifier {
       }
 
       if (_customOrderCursor < 0) {
-        _selectByCustomOrderCursor(0, sync: true);
+        final int? firstIdx = _findNextProjectableCustomOrderIndex(0);
+        if (firstIdx != null) {
+          _selectByCustomOrderCursor(firstIdx, sync: true);
+        }
         return;
       }
       if (_customOrderCursor + 1 < _customOrder.length) {
-        _selectByCustomOrderCursor(_customOrderCursor + 1, sync: true);
+        final int? nextIdx = _findNextProjectableCustomOrderIndex(
+          _customOrderCursor + 1,
+        );
+        if (nextIdx != null) {
+          _selectByCustomOrderCursor(nextIdx, sync: true);
+        }
       }
       return;
     }
@@ -1768,10 +1822,13 @@ class DiatarMainController extends ChangeNotifier {
     if (customOrderActive && _customOrder.isNotEmpty) {
       final int exactIdx = _currentCustomOrderIndex();
       if (exactIdx >= 0) {
-        if (exactIdx <= 0) {
+        final int? prevIdx = _findPrevProjectableCustomOrderIndex(
+          exactIdx - 1,
+        );
+        if (prevIdx == null) {
           return;
         }
-        _selectByCustomOrderCursor(exactIdx - 1, sync: true);
+        _selectByCustomOrderCursor(prevIdx, sync: true);
         return;
       }
 
@@ -1783,11 +1840,19 @@ class DiatarMainController extends ChangeNotifier {
       }
 
       if (_customOrderCursor < 0) {
-        _selectByCustomOrderCursor(0, sync: true);
+        final int? firstIdx = _findNextProjectableCustomOrderIndex(0);
+        if (firstIdx != null) {
+          _selectByCustomOrderCursor(firstIdx, sync: true);
+        }
         return;
       }
       if (_customOrderCursor > 0) {
-        _selectByCustomOrderCursor(_customOrderCursor - 1, sync: true);
+        final int? prevIdx = _findPrevProjectableCustomOrderIndex(
+          _customOrderCursor - 1,
+        );
+        if (prevIdx != null) {
+          _selectByCustomOrderCursor(prevIdx, sync: true);
+        }
       }
       return;
     }
@@ -1813,10 +1878,13 @@ class DiatarMainController extends ChangeNotifier {
 
   void nextSong() {
     if (customOrderActive && _customOrder.isNotEmpty) {
-      if (_customOrderCursor + 1 >= _customOrder.length) {
+      final int? nextIdx = _findNextProjectableCustomOrderIndex(
+        _customOrderCursor + 1,
+      );
+      if (nextIdx == null) {
         return;
       }
-      _selectByCustomOrderCursor(_customOrderCursor + 1, sync: true);
+      _selectByCustomOrderCursor(nextIdx, sync: true);
       return;
     }
     final int? nextSongIdx = _findSelectableSongIndex(
@@ -1831,10 +1899,13 @@ class DiatarMainController extends ChangeNotifier {
 
   void prevSong() {
     if (customOrderActive && _customOrder.isNotEmpty) {
-      if (_customOrderCursor <= 0) {
+      final int? prevIdx = _findPrevProjectableCustomOrderIndex(
+        _customOrderCursor - 1,
+      );
+      if (prevIdx == null) {
         return;
       }
-      _selectByCustomOrderCursor(_customOrderCursor - 1, sync: true);
+      _selectByCustomOrderCursor(prevIdx, sync: true);
       return;
     }
     final int? prevSongIdx = _findSelectableSongIndex(
@@ -1858,6 +1929,28 @@ class DiatarMainController extends ChangeNotifier {
         return idx;
       }
       idx += forward ? 1 : -1;
+    }
+    return null;
+  }
+
+  int? _findNextProjectableCustomOrderIndex(int start) {
+    int idx = start;
+    while (idx >= 0 && idx < _customOrder.length) {
+      if (!_customOrder[idx].isSeparator) {
+        return idx;
+      }
+      idx++;
+    }
+    return null;
+  }
+
+  int? _findPrevProjectableCustomOrderIndex(int start) {
+    int idx = start;
+    while (idx >= 0 && idx < _customOrder.length) {
+      if (!_customOrder[idx].isSeparator) {
+        return idx;
+      }
+      idx--;
     }
     return null;
   }
@@ -2014,6 +2107,14 @@ class DiatarMainController extends ChangeNotifier {
     required int cursor,
   }) async {
     _projectedCustomCursor = cursor;
+
+    if (entry.isSeparator) {
+      _setStatus('statusCustomOrderSelected', <String, String>{
+        'label': entry.label,
+      });
+      notifyListeners();
+      return;
+    }
 
     if (entry.isCustomText) {
       highPos = 0;

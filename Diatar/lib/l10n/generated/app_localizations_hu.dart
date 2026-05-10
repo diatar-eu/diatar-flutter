@@ -639,6 +639,15 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderInsertVersesAction => 'Versszakok beszúrása';
 
   @override
+  String get customOrderInsertSeparatorAction => 'Elválasztó beszúrása';
+
+  @override
+  String get customOrderSeparatorNameLabel => 'Elválasztó neve';
+
+  @override
+  String get customOrderSeparatorDefaultName => 'elválasztó';
+
+  @override
   String get customOrderInsertVersesTitle => 'Beszúrandó versszakok';
 
   @override

@@ -163,6 +163,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                       icon: const Icon(Icons.playlist_add),
                     ),
                     IconButton(
+                      tooltip: l10n.customOrderInsertSeparatorAction,
+                      onPressed: _insertSeparator,
+                      icon: const Icon(Icons.horizontal_rule),
+                    ),
+                    IconButton(
                       tooltip: l10n.addImageSlideTooltip,
                       onPressed: _pickAndSendImageSlide,
                       icon: const Icon(Icons.image),
@@ -579,6 +584,69 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       verseIndex: 0,
       label: '[Kep] $fileName',
       customImagePath: file.path,
+    );
+
+    setState(() {
+      final int insertIndex = _selectedInsertInsertionIndex();
+      _entries.insert(insertIndex, entry);
+    });
+    await _commitEntries();
+  }
+
+  Future<void> _insertSeparator() async {
+    final l10n = context.l10n;
+    String entered = l10n.customOrderSeparatorDefaultName;
+
+    final String? enteredName = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        final dialogL10n = dialogContext.l10n;
+        return AlertDialog(
+          title: Text(dialogL10n.customOrderInsertSeparatorAction),
+          content: TextFormField(
+            initialValue: entered,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: dialogL10n.customOrderSeparatorNameLabel,
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: (String value) => entered = value,
+            onFieldSubmitted: (String value) {
+              Navigator.of(dialogContext).pop(value);
+            },
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: Text(dialogL10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(entered);
+              },
+              child: Text(dialogL10n.apply),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (enteredName == null) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
+    final String separatorName = enteredName.trim().isEmpty
+        ? l10n.customOrderSeparatorDefaultName
+        : enteredName.trim();
+    final CustomOrderEntry entry = CustomOrderEntry(
+      fileName: CustomOrderEntry.separatorFileName,
+      songIndex: CustomOrderEntry.separatorSongIndex,
+      verseIndex: 0,
+      label: '--- $separatorName ---',
+      customTextTitle: separatorName,
     );
 
     setState(() {

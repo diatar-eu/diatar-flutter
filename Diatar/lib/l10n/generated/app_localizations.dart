@@ -1187,6 +1187,24 @@ abstract class AppLocalizations {
   /// **'Versszakok beszúrása'**
   String get customOrderInsertVersesAction;
 
+  /// No description provided for @customOrderInsertSeparatorAction.
+  ///
+  /// In hu, this message translates to:
+  /// **'Elválasztó beszúrása'**
+  String get customOrderInsertSeparatorAction;
+
+  /// No description provided for @customOrderSeparatorNameLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Elválasztó neve'**
+  String get customOrderSeparatorNameLabel;
+
+  /// No description provided for @customOrderSeparatorDefaultName.
+  ///
+  /// In hu, this message translates to:
+  /// **'elválasztó'**
+  String get customOrderSeparatorDefaultName;
+
   /// No description provided for @customOrderInsertVersesTitle.
   ///
   /// In hu, this message translates to:
