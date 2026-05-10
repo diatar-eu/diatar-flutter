@@ -37,7 +37,7 @@ class AppLocalizationsHu extends AppLocalizations {
       'Ez a művelet később visszakaphatja a teljes dialógust.';
 
   @override
-  String get customOrderTooltip => 'Saját sorrend';
+  String get customOrderTooltip => 'Énekrend';
 
   @override
   String get addSlideTooltip => 'Dia hozzáadása';
@@ -618,7 +618,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderSuggestedFileName => 'sorrend.dia';
 
   @override
-  String get customOrderEditTitle => 'Saját sorrend szerkesztése';
+  String get customOrderEditTitle => 'Énekrend szerkesztése';
 
   @override
   String get addSong => 'Ének hozzáadása';

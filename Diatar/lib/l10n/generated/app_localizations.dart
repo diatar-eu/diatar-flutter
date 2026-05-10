@@ -155,7 +155,7 @@ abstract class AppLocalizations {
   /// No description provided for @customOrderTooltip.
   ///
   /// In hu, this message translates to:
-  /// **'Saját sorrend'**
+  /// **'Énekrend'**
   String get customOrderTooltip;
 
   /// No description provided for @addSlideTooltip.
@@ -1148,7 +1148,7 @@ abstract class AppLocalizations {
   /// No description provided for @customOrderEditTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Saját sorrend szerkesztése'**
+  /// **'Énekrend szerkesztése'**
   String get customOrderEditTitle;
 
   /// No description provided for @addSong.
