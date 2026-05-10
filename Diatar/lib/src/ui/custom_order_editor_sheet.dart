@@ -162,6 +162,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                       onPressed: _openInsertVersesDialog,
                       icon: const Icon(Icons.playlist_add),
                     ),
+                    IconButton(
+                      tooltip: l10n.addImageSlideTooltip,
+                      onPressed: _pickAndSendImageSlide,
+                      icon: const Icon(Icons.image),
+                    ),
                     if (!widget.embedded) ...<Widget>[
                       const SizedBox(width: 4),
                       IconButton(
@@ -551,6 +556,34 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
     setState(() {
       _entries.addAll(toInsert);
+    });
+    await _commitEntries();
+  }
+
+  Future<void> _pickAndSendImageSlide() async {
+    final XTypeGroup images = XTypeGroup(
+      label: context.l10n.imagesFileTypeLabel,
+      extensions: <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
+    );
+    final XFile? file = await openFile(
+      acceptedTypeGroups: <XTypeGroup>[images],
+    );
+    if (file == null) {
+      return;
+    }
+
+    final String fileName = file.name;
+    final CustomOrderEntry entry = CustomOrderEntry(
+      fileName: '__custom_image__',
+      songIndex: -2,
+      verseIndex: 0,
+      label: '[Kep] $fileName',
+      customImagePath: file.path,
+    );
+
+    setState(() {
+      final int insertIndex = _selectedInsertInsertionIndex();
+      _entries.insert(insertIndex, entry);
     });
     await _commitEntries();
   }

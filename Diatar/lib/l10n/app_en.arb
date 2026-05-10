@@ -13,6 +13,7 @@
   "addSlideTooltip": "Add slide",
   "addTextSlide": "Text slide",
   "addImageSlide": "Image slide",
+  "addImageSlideTooltip": "Add image",
   "downloadBooksTooltip": "Download songbooks",
   "downloadTitle": "Download",
   "downloadMessage": "The download dialog can be restored later.",

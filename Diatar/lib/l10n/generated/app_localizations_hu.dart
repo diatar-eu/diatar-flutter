@@ -49,6 +49,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get addImageSlide => 'Képes dia';
 
   @override
+  String get addImageSlideTooltip => 'Kép hozzáadása';
+
+  @override
   String get downloadBooksTooltip => 'Énektárak letöltése';
 
   @override

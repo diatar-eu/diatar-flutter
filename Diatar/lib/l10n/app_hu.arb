@@ -13,6 +13,7 @@
   "addSlideTooltip": "Dia hozzáadása",
   "addTextSlide": "Szöveges dia",
   "addImageSlide": "Képes dia",
+  "addImageSlideTooltip": "Kép hozzáadása",
   "downloadBooksTooltip": "Énektárak letöltése",
   "downloadTitle": "Letöltés",
   "downloadMessage": "A letöltési párbeszéd később visszahelyezhető.",

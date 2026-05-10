@@ -1,0 +1,26 @@
+name: L10n Key Parity
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-l10n-keys:
+    name: Validate ARB Keys
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check ARB key parity
+        run: python .github/scripts/check_arb_keys.py

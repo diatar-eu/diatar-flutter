@@ -49,6 +49,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addImageSlide => 'Image slide';
 
   @override
+  String get addImageSlideTooltip => 'Add image';
+
+  @override
   String get downloadBooksTooltip => 'Download songbooks';
 
   @override

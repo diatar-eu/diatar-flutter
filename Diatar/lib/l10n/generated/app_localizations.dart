@@ -176,6 +176,12 @@ abstract class AppLocalizations {
   /// **'Képes dia'**
   String get addImageSlide;
 
+  /// No description provided for @addImageSlideTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kép hozzáadása'**
+  String get addImageSlideTooltip;
+
   /// No description provided for @downloadBooksTooltip.
   ///
   /// In hu, this message translates to:
