@@ -1166,7 +1166,7 @@ class DiatarMainController extends ChangeNotifier {
         out.writeln('caption=$caption');
         out.writeln('lines=${lines.length}');
         for (int li = 0; li < lines.length; li++) {
-          out.writeln('line${li + 1}=${lines[li]}');
+          out.writeln('line$li=${lines[li]}');
         }
         continue;
       }
@@ -1212,6 +1212,19 @@ class DiatarMainController extends ChangeNotifier {
     final Map<String, Map<String, String>> sections = _parseDiaIni(content);
     final int declaredCount =
         int.tryParse(sections['main']?['diaszam'] ?? '') ?? 0;
+
+    // Build ID-based lookup map for faster identification
+    final Map<String, ({DtxBook book, int songIndex, int verseIndex})> idMap =
+        <String, ({DtxBook book, int songIndex, int verseIndex})>{};
+    for (final DtxBook book in books) {
+      for (int si = 0; si < book.songs.length; si++) {
+        final DtxSong song = book.songs[si];
+        for (int vi = 0; vi < song.verses.length; vi++) {
+          final String id = '${book.fileName}|$si|$vi';
+          idMap[id] = (book: book, songIndex: si, verseIndex: vi);
+        }
+      }
+    }
 
     final List<CustomOrderEntry> imported = <CustomOrderEntry>[];
     final Iterable<String> keys = sections.keys.where(
@@ -1263,6 +1276,22 @@ class DiatarMainController extends ChangeNotifier {
         continue;
       }
 
+      // Try ID-based identification first (most reliable)
+      final String idField = (sec['id'] ?? '').trim();
+      if (idField.isNotEmpty && idMap.containsKey(idField)) {
+        final (:DtxBook book, :int songIndex, :int verseIndex) = idMap[idField]!;
+        imported.add(
+          CustomOrderEntry(
+            fileName: book.fileName,
+            songIndex: songIndex,
+            verseIndex: verseIndex,
+            label: buildEntryLabel(book.fileName, songIndex, verseIndex),
+          ),
+        );
+        continue;
+      }
+
+      // Fallback: name-based identification
       final String kotet = (sec['kotet'] ?? '').trim();
       final String enek = (sec['enek'] ?? '').trim();
       final String versszak = (sec['versszak'] ?? '').trim();
@@ -1311,14 +1340,41 @@ class DiatarMainController extends ChangeNotifier {
     if (normalized.isEmpty) {
       return '';
     }
-    if (!normalized.startsWith('/')) {
+
+    // If already relative, keep it as-is for portability
+    final bool looksWindowsAbs = RegExp(r'^[a-zA-Z]:/').hasMatch(normalized);
+    final bool looksUnixAbs = normalized.startsWith('/');
+    if (!looksWindowsAbs && !looksUnixAbs) {
       return normalized;
     }
-    final String diaPrefix = '${diaDir.path.replaceAll('\\', '/')}/';
+
+    // Try to make absolute path relative to dia directory
+    final String diaDirNorm = diaDir.path.replaceAll('\\', '/');
+    final String diaPrefix = '$diaDirNorm/';
     if (normalized.startsWith(diaPrefix)) {
+      // Same directory: return relative path
       return normalized.substring(diaPrefix.length);
     }
-    return _fileNameFromPath(normalized);
+
+    // Check if image is in a subdirectory of dia directory
+    // by comparing absolute paths (for cross-device portability)
+    try {
+      final File imageFile = File(normalized.replaceAll('/', Platform.pathSeparator));
+      final File diaFile = File(diaDir.path);
+      final String imagePath = imageFile.absolute.path.replaceAll('\\', '/');
+      final String basePath = diaFile.absolute.path.replaceAll('\\', '/');
+
+      if (imagePath.startsWith(basePath + '/')) {
+        // Image is within dia directory subtree: return relative path for portability
+        return imagePath.substring(basePath.length + 1);
+      }
+    } catch (_) {
+      // Path resolution failed; continue to fallback
+    }
+
+    // Fallback: return absolute path as-is for cache paths
+    // This preserves cache image paths which are stable within same device
+    return normalized;
   }
 
   String _resolveDiaImagePath(String diaPath, String relOrAbs) {
@@ -1326,12 +1382,40 @@ class DiatarMainController extends ChangeNotifier {
     if (normalized.isEmpty) {
       return '';
     }
+    
+    // Check if it's an absolute path (Windows or Unix style)
     final bool looksWindowsAbs = RegExp(r'^[a-zA-Z]:/').hasMatch(normalized);
-    if (normalized.startsWith('/') || looksWindowsAbs) {
+    final bool looksUnixAbs = normalized.startsWith('/');
+    
+    if (looksWindowsAbs || looksUnixAbs) {
+      // Absolute path: try to use as-is for same device
+      final File absFile = File(normalized.replaceAll('/', Platform.pathSeparator));
+      if (absFile.existsSync()) {
+        return absFile.path;
+      }
+      
+      // Fallback: if absolute path doesn't exist (e.g., cache on different device),
+      // try to find the file by name in the dia directory
+      final String fileName = _fileNameFromPath(normalized);
+      final Directory diaDir = File(diaPath).parent;
+      final File fallbackFile = File('${diaDir.path}${Platform.pathSeparator}$fileName');
+      if (fallbackFile.existsSync()) {
+        return fallbackFile.path;
+      }
+      
+      // Return the absolute path as-is (will fail gracefully with error message)
       return normalized;
     }
+    
+    // Relative path: resolve relative to .dia file directory
     final Directory parent = File(diaPath).parent;
-    return '${parent.path}/$normalized';
+    final String resolvedPath = '${parent.path}${Platform.pathSeparator}${normalized.replaceAll('/', Platform.pathSeparator)}';
+    final File relFile = File(resolvedPath);
+    if (relFile.existsSync()) {
+      return relFile.path;
+    }
+    // Return the resolved path even if not found (user will get feedback)
+    return resolvedPath;
   }
 
   String _fileNameFromPath(String rawPath) {
@@ -1358,7 +1442,7 @@ class DiatarMainController extends ChangeNotifier {
   List<String> _collectDiaLines(Map<String, String> sec, int declaredLines) {
     if (declaredLines > 0) {
       final List<String> lines = <String>[];
-      for (int i = 1; i <= declaredLines; i++) {
+      for (int i = 0; i < declaredLines; i++) {
         lines.add((sec['line$i'] ?? '').trimRight());
       }
       return lines;
@@ -1368,7 +1452,7 @@ class DiatarMainController extends ChangeNotifier {
         sec.keys
             .where((String key) => key.startsWith('line'))
             .map((String key) => int.tryParse(key.substring(4)) ?? -1)
-            .where((int value) => value > 0)
+            .where((int value) => value >= 0)
             .toList()
           ..sort();
     return indexes.map((int i) => (sec['line$i'] ?? '').trimRight()).toList();
