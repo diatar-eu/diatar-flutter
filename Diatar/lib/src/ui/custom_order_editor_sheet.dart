@@ -27,8 +27,6 @@ class CustomOrderEditorPanel extends StatefulWidget {
 
 class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   late List<CustomOrderEntry> _entries;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
   String? _selectedInsertBookFileName;
   int? _selectedInsertSongIndex;
 
@@ -64,7 +62,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   void _syncEntriesFromControllerIfNeeded() {
-    final List<CustomOrderEntry> source = List<CustomOrderEntry>.from(controller.customOrder);
+    final List<CustomOrderEntry> source = List<CustomOrderEntry>.from(
+      controller.customOrder,
+    );
     if (_sameEntries(_entries, source)) {
       return;
     }
@@ -88,7 +88,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   void _ensureInsertSelectionValid() {
-    final List<DtxBook> books = controller.books.where(_bookHasSongs).toList(growable: false);
+    final List<DtxBook> books = controller.books
+        .where(_bookHasSongs)
+        .toList(growable: false);
     if (books.isEmpty) {
       _selectedInsertBookFileName = null;
       _selectedInsertSongIndex = null;
@@ -124,12 +126,6 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AnimatedBuilder(
@@ -138,7 +134,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         _syncEntriesFromControllerIfNeeded();
         _ensureInsertSelectionValid();
         return Material(
-          color: widget.embedded ? Colors.transparent : Theme.of(context).scaffoldBackgroundColor,
+          color: widget.embedded
+              ? Colors.transparent
+              : Theme.of(context).scaffoldBackgroundColor,
           child: Column(
             children: <Widget>[
               Padding(
@@ -148,8 +146,21 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                     Expanded(
                       child: Text(
                         l10n.customOrderEditTitle,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
+                    ),
+                    IconButton(
+                      tooltip: l10n.addSong,
+                      onPressed: _openSearchDialog,
+                      icon: const Icon(Icons.search),
+                    ),
+                    IconButton(
+                      tooltip: l10n.customOrderInsertVersesAction,
+                      onPressed: _openInsertVersesDialog,
+                      icon: const Icon(Icons.playlist_add),
                     ),
                     if (!widget.embedded) ...<Widget>[
                       const SizedBox(width: 4),
@@ -163,28 +174,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 ),
               ),
               const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-                child: Column(
-                  children: <Widget>[
-                    TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        labelText: l10n.addSong,
-                        hintText: l10n.searchSongHint,
-                        prefixIcon: const Icon(Icons.search),
-                        border: const OutlineInputBorder(),
-                      ),
-                      onChanged: (String value) => setState(() => _searchQuery = value.trim()),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildPrimaryInsertControls(),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: _searchQuery.isNotEmpty ? _buildSearchResults() : _buildCurrentOrderList(),
-              ),
+              Expanded(child: _buildCurrentOrderList()),
               const Divider(height: 1),
               Padding(
                 padding: const EdgeInsets.all(12),
@@ -213,114 +203,163 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     );
   }
 
-  Widget _buildPrimaryInsertControls() {
-    final l10n = context.l10n;
-    final List<DtxBook> books = controller.books.where(_bookHasSongs).toList(growable: false);
+  Future<void> _openInsertVersesDialog() async {
+    final List<DtxBook> books = controller.books
+        .where(_bookHasSongs)
+        .toList(growable: false);
     if (books.isEmpty) {
-      return const SizedBox.shrink();
+      return;
     }
 
-    final DtxBook selectedBook = books.firstWhere(
-      (DtxBook b) => b.fileName == _selectedInsertBookFileName,
+    String selectedBookFileName =
+        _selectedInsertBookFileName ?? books.first.fileName;
+    DtxBook selectedBook = books.firstWhere(
+      (DtxBook b) => b.fileName == selectedBookFileName,
       orElse: () => books.first,
     );
-    final List<_SongOption> songs = _songOptionsForBook(selectedBook);
-    final int? selectedSongIndex = songs.any(
-      (_SongOption option) => option.songIndex == _selectedInsertSongIndex,
-    )
+    List<_SongOption> songs = _songOptionsForBook(selectedBook);
+    int? selectedSongIndex =
+        songs.any(
+          (_SongOption option) => option.songIndex == _selectedInsertSongIndex,
+        )
         ? _selectedInsertSongIndex
         : (songs.isEmpty ? null : songs.first.songIndex);
 
-    final Widget bookPicker = DropdownButtonFormField<String>(
-      isExpanded: true,
-      initialValue: selectedBook.fileName,
-      decoration: InputDecoration(
-        labelText: l10n.customOrderInsertBookLabel,
-        border: const OutlineInputBorder(),
-      ),
-      items: books
-          .map(
-            (DtxBook book) => DropdownMenuItem<String>(
-              value: book.fileName,
-              child: Text(book.displayName, overflow: TextOverflow.ellipsis),
-            ),
-          )
-          .toList(),
-      onChanged: (String? value) {
-        if (value == null) {
-          return;
-        }
-        final DtxBook selected = books.firstWhere((DtxBook b) => b.fileName == value);
-        final List<_SongOption> options = _songOptionsForBook(selected);
-        setState(() {
-          _selectedInsertBookFileName = value;
-          _selectedInsertSongIndex = options.isEmpty ? null : options.first.songIndex;
-        });
-      },
-    );
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        final l10n = dialogContext.l10n;
+        return StatefulBuilder(
+          builder:
+              (
+                BuildContext innerContext,
+                void Function(void Function()) setDialogState,
+              ) {
+                selectedBook = books.firstWhere(
+                  (DtxBook b) => b.fileName == selectedBookFileName,
+                  orElse: () => books.first,
+                );
+                songs = _songOptionsForBook(selectedBook);
+                if (!songs.any(
+                  (_SongOption option) => option.songIndex == selectedSongIndex,
+                )) {
+                  selectedSongIndex = songs.isEmpty
+                      ? null
+                      : songs.first.songIndex;
+                }
 
-    final Widget songPicker = DropdownButtonFormField<int>(
-      isExpanded: true,
-      initialValue: selectedSongIndex,
-      decoration: InputDecoration(
-        labelText: l10n.customOrderInsertSongLabel,
-        border: const OutlineInputBorder(),
-      ),
-      items: songs
-          .map(
-            (_SongOption option) => DropdownMenuItem<int>(
-              value: option.songIndex,
-              child: Text(option.songTitle, overflow: TextOverflow.ellipsis),
-            ),
-          )
-          .toList(),
-      onChanged: (int? value) {
-        setState(() => _selectedInsertSongIndex = value);
-      },
-    );
-
-    final Widget insertButton = FilledButton.icon(
-      onPressed: selectedSongIndex == null ? null : () => unawaited(_insertFromSelection()),
-      icon: const Icon(Icons.playlist_add),
-      label: Text(l10n.customOrderInsertVersesAction),
-    );
-
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final bool compact = constraints.maxWidth < 700;
-        if (compact) {
-          return Column(
-            children: <Widget>[
-              bookPicker,
-              const SizedBox(height: 8),
-              songPicker,
-              const SizedBox(height: 8),
-              SizedBox(width: double.infinity, child: insertButton),
-            ],
-          );
-        }
-        return Row(
-          children: <Widget>[
-            Expanded(flex: 3, child: bookPicker),
-            const SizedBox(width: 8),
-            Expanded(flex: 4, child: songPicker),
-            const SizedBox(width: 8),
-            insertButton,
-          ],
+                return AlertDialog(
+                  title: Text(l10n.customOrderInsertVersesAction),
+                  content: SizedBox(
+                    width: 520,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          initialValue: selectedBook.fileName,
+                          decoration: InputDecoration(
+                            labelText: l10n.customOrderInsertBookLabel,
+                            border: const OutlineInputBorder(),
+                          ),
+                          items: books
+                              .map(
+                                (DtxBook book) => DropdownMenuItem<String>(
+                                  value: book.fileName,
+                                  child: Text(
+                                    book.displayName,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (String? value) {
+                            if (value == null) {
+                              return;
+                            }
+                            setDialogState(() {
+                              selectedBookFileName = value;
+                              final DtxBook selected = books.firstWhere(
+                                (DtxBook b) => b.fileName == value,
+                              );
+                              final List<_SongOption> options =
+                                  _songOptionsForBook(selected);
+                              selectedSongIndex = options.isEmpty
+                                  ? null
+                                  : options.first.songIndex;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<int>(
+                          isExpanded: true,
+                          initialValue: selectedSongIndex,
+                          decoration: InputDecoration(
+                            labelText: l10n.customOrderInsertSongLabel,
+                            border: const OutlineInputBorder(),
+                          ),
+                          items: songs
+                              .map(
+                                (_SongOption option) => DropdownMenuItem<int>(
+                                  value: option.songIndex,
+                                  child: Text(
+                                    option.songTitle,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (int? value) {
+                            setDialogState(() => selectedSongIndex = value);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      child: Text(l10n.cancel),
+                    ),
+                    FilledButton.icon(
+                      onPressed: selectedSongIndex == null
+                          ? null
+                          : () async {
+                              Navigator.of(dialogContext).pop();
+                              setState(() {
+                                _selectedInsertBookFileName =
+                                    selectedBookFileName;
+                                _selectedInsertSongIndex = selectedSongIndex;
+                              });
+                              await _insertFromSelection(
+                                selectedBookFileName,
+                                selectedSongIndex!,
+                              );
+                            },
+                      icon: const Icon(Icons.playlist_add),
+                      label: Text(l10n.customOrderInsertVersesAction),
+                    ),
+                  ],
+                );
+              },
         );
       },
     );
   }
 
-  Future<void> _insertFromSelection() async {
-    if (_selectedInsertBookFileName == null || _selectedInsertSongIndex == null) {
-      return;
-    }
+  Future<void> _insertFromSelection(
+    String selectedBookFileName,
+    int selectedSongIndex,
+  ) async {
     final CustomOrderEntry baseEntry = CustomOrderEntry(
-      fileName: _selectedInsertBookFileName!,
-      songIndex: _selectedInsertSongIndex!,
+      fileName: selectedBookFileName,
+      songIndex: selectedSongIndex,
       verseIndex: 0,
-      label: controller.buildEntryLabel(_selectedInsertBookFileName!, _selectedInsertSongIndex!, 0),
+      label: controller.buildEntryLabel(
+        selectedBookFileName,
+        selectedSongIndex,
+        0,
+      ),
     );
     final List<DtxVerse> verses = controller.versesForEntry(baseEntry);
 
@@ -328,7 +367,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     if (verses.isEmpty) {
       toInsert = <CustomOrderEntry>[baseEntry];
     } else {
-      final Set<int> allSelected = Set<int>.from(List<int>.generate(verses.length, (int i) => i));
+      final Set<int> allSelected = Set<int>.from(
+        List<int>.generate(verses.length, (int i) => i),
+      );
       final List<int>? chosen = await _showVerseSelectionSheet(
         verses: verses,
         initialSelection: allSelected,
@@ -341,12 +382,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       toInsert = chosen
           .map(
             (int verseIx) => CustomOrderEntry(
-              fileName: _selectedInsertBookFileName!,
-              songIndex: _selectedInsertSongIndex!,
+              fileName: selectedBookFileName,
+              songIndex: selectedSongIndex,
               verseIndex: verseIx,
               label: controller.buildEntryLabel(
-                _selectedInsertBookFileName!,
-                _selectedInsertSongIndex!,
+                selectedBookFileName,
+                selectedSongIndex,
                 verseIx,
               ),
             ),
@@ -357,6 +398,159 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     setState(() {
       final int insertIndex = _selectedInsertInsertionIndex();
       _entries.insertAll(insertIndex, toInsert);
+    });
+    await _commitEntries();
+  }
+
+  Future<void> _openSearchDialog() async {
+    final TextEditingController searchController = TextEditingController();
+    String query = '';
+
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        final l10n = dialogContext.l10n;
+        return StatefulBuilder(
+          builder:
+              (
+                BuildContext innerContext,
+                void Function(void Function()) setDialogState,
+              ) {
+                final String filter = query.trim().toLowerCase();
+                final List<_SearchCandidate> hits =
+                    _collectSearchCandidates()
+                        .where(
+                          (_SearchCandidate candidate) =>
+                              candidate.bookTitle.toLowerCase().contains(
+                                filter,
+                              ) ||
+                              candidate.songTitle.toLowerCase().contains(
+                                filter,
+                              ),
+                        )
+                        .toList()
+                      ..sort((_SearchCandidate a, _SearchCandidate b) {
+                        final int byBook = a.bookTitle.toLowerCase().compareTo(
+                          b.bookTitle.toLowerCase(),
+                        );
+                        return byBook != 0
+                            ? byBook
+                            : a.songTitle.toLowerCase().compareTo(
+                                b.songTitle.toLowerCase(),
+                              );
+                      });
+
+                return AlertDialog(
+                  title: Text(l10n.addSong),
+                  content: SizedBox(
+                    width: 560,
+                    height: 460,
+                    child: Column(
+                      children: <Widget>[
+                        TextField(
+                          controller: searchController,
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            hintText: l10n.searchSongHint,
+                            prefixIcon: const Icon(Icons.search),
+                            border: const OutlineInputBorder(),
+                          ),
+                          onChanged: (String value) {
+                            setDialogState(() => query = value);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: hits.isEmpty
+                              ? Center(child: Text(l10n.noResults))
+                              : ListView.builder(
+                                  itemCount: hits.length,
+                                  itemBuilder:
+                                      (BuildContext listContext, int index) {
+                                        final _SearchCandidate hit =
+                                            hits[index];
+                                        return ListTile(
+                                          dense: true,
+                                          title: Text(hit.songTitle),
+                                          subtitle: Text(hit.bookTitle),
+                                          trailing: IconButton(
+                                            icon: const Icon(
+                                              Icons.add_circle_outline,
+                                            ),
+                                            onPressed: () async {
+                                              Navigator.of(dialogContext).pop();
+                                              await _insertSearchCandidate(hit);
+                                            },
+                                          ),
+                                        );
+                                      },
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      child: Text(l10n.close),
+                    ),
+                  ],
+                );
+              },
+        );
+      },
+    );
+
+    searchController.dispose();
+  }
+
+  List<_SearchCandidate> _collectSearchCandidates() {
+    final List<_SearchCandidate> candidates = <_SearchCandidate>[];
+    for (final DtxBook book in controller.books) {
+      for (int i = 0; i < book.songs.length; i++) {
+        final DtxSong song = book.songs[i];
+        if (song.separator) {
+          continue;
+        }
+        candidates.add(
+          _SearchCandidate(
+            fileName: book.fileName,
+            bookTitle: book.displayName,
+            songIndex: i,
+            songTitle: song.title,
+          ),
+        );
+      }
+    }
+    return candidates;
+  }
+
+  Future<void> _insertSearchCandidate(_SearchCandidate hit) async {
+    final CustomOrderEntry baseEntry = CustomOrderEntry(
+      fileName: hit.fileName,
+      songIndex: hit.songIndex,
+      verseIndex: 0,
+      label: controller.buildEntryLabel(hit.fileName, hit.songIndex, 0),
+    );
+    final List<DtxVerse> verses = controller.versesForEntry(baseEntry);
+    final List<CustomOrderEntry> toInsert = verses.isEmpty
+        ? <CustomOrderEntry>[baseEntry]
+        : List<CustomOrderEntry>.generate(
+            verses.length,
+            (int verseIx) => CustomOrderEntry(
+              fileName: hit.fileName,
+              songIndex: hit.songIndex,
+              verseIndex: verseIx,
+              label: controller.buildEntryLabel(
+                hit.fileName,
+                hit.songIndex,
+                verseIx,
+              ),
+            ),
+          );
+
+    setState(() {
+      _entries.addAll(toInsert);
     });
     await _commitEntries();
   }
@@ -382,91 +576,111 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       context: context,
       builder: (BuildContext modalContext) {
         return StatefulBuilder(
-          builder: (BuildContext sheetContext, void Function(void Function()) setModalState) {
-            return SafeArea(
-              child: Column(
-                children: <Widget>[
-                  ListTile(
-                    title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(subtitle),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Row(
-                      children: <Widget>[
-                        TextButton.icon(
-                          onPressed: () {
-                            setModalState(() {
-                              selectedSet
-                                ..clear()
-                                ..addAll(List<int>.generate(verses.length, (int i) => i));
-                            });
+          builder:
+              (
+                BuildContext sheetContext,
+                void Function(void Function()) setModalState,
+              ) {
+                return SafeArea(
+                  child: Column(
+                    children: <Widget>[
+                      ListTile(
+                        title: Text(
+                          title,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        subtitle: Text(subtitle),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: Row(
+                          children: <Widget>[
+                            TextButton.icon(
+                              onPressed: () {
+                                setModalState(() {
+                                  selectedSet
+                                    ..clear()
+                                    ..addAll(
+                                      List<int>.generate(
+                                        verses.length,
+                                        (int i) => i,
+                                      ),
+                                    );
+                                });
+                              },
+                              icon: const Icon(Icons.done_all),
+                              label: Text(
+                                sheetContext.l10n.customOrderSelectAllVerses,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            TextButton.icon(
+                              onPressed: () {
+                                setModalState(selectedSet.clear);
+                              },
+                              icon: const Icon(Icons.remove_done),
+                              label: Text(
+                                sheetContext
+                                    .l10n
+                                    .customOrderClearVerseSelection,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: verses.length,
+                          itemBuilder: (BuildContext itemContext, int i) {
+                            final bool selected = selectedSet.contains(i);
+                            return CheckboxListTile(
+                              value: selected,
+                              title: Text(verses[i].name),
+                              onChanged: (bool? value) {
+                                setModalState(() {
+                                  if (value == true) {
+                                    selectedSet.add(i);
+                                  } else {
+                                    selectedSet.remove(i);
+                                  }
+                                });
+                              },
+                            );
                           },
-                          icon: const Icon(Icons.done_all),
-                          label: Text(sheetContext.l10n.customOrderSelectAllVerses),
                         ),
-                        const SizedBox(width: 8),
-                        TextButton.icon(
-                          onPressed: () {
-                            setModalState(selectedSet.clear);
-                          },
-                          icon: const Icon(Icons.remove_done),
-                          label: Text(sheetContext.l10n.customOrderClearVerseSelection),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () =>
+                                    Navigator.of(modalContext).pop(null),
+                                child: Text(sheetContext.l10n.cancel),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: selectedSet.isEmpty
+                                    ? null
+                                    : () {
+                                        final List<int> out =
+                                            selectedSet.toList()..sort();
+                                        Navigator.of(modalContext).pop(out);
+                                      },
+                                child: Text(sheetContext.l10n.apply),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: verses.length,
-                      itemBuilder: (BuildContext itemContext, int i) {
-                        final bool selected = selectedSet.contains(i);
-                        return CheckboxListTile(
-                          value: selected,
-                          title: Text(verses[i].name),
-                          onChanged: (bool? value) {
-                            setModalState(() {
-                              if (value == true) {
-                                selectedSet.add(i);
-                              } else {
-                                selectedSet.remove(i);
-                              }
-                            });
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(modalContext).pop(null),
-                            child: Text(sheetContext.l10n.cancel),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: selectedSet.isEmpty
-                                ? null
-                                : () {
-                                    final List<int> out = selectedSet.toList()..sort();
-                                    Navigator.of(modalContext).pop(out);
-                                  },
-                            child: Text(sheetContext.l10n.apply),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+                );
+              },
         );
       },
     );
@@ -500,7 +714,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       );
       final String defaultFileName = '$defaultBaseName.dia';
       final String configuredDir = controller.settings.diaExportPath.trim();
-      final String? initialDir = configuredDir.isNotEmpty && Directory(configuredDir).existsSync()
+      final String? initialDir =
+          configuredDir.isNotEmpty && Directory(configuredDir).existsSync()
           ? configuredDir
           : null;
 
@@ -532,20 +747,22 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         return;
       }
 
-      final String outPath = await controller.exportCustomOrderToDia(targetPath);
+      final String outPath = await controller.exportCustomOrderToDia(
+        targetPath,
+      );
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.savedPath(outPath))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.savedPath(outPath))));
     } catch (e) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.statusLoadError('$e'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.statusLoadError('$e'))));
     }
   }
 
@@ -617,7 +834,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       label: context.l10n.diatarPlaylistFileTypeLabel,
       extensions: <String>['dia'],
     );
-    final XFile? file = await openFile(acceptedTypeGroups: <XTypeGroup>[diaType]);
+    final XFile? file = await openFile(
+      acceptedTypeGroups: <XTypeGroup>[diaType],
+    );
     if (file == null) {
       return;
     }
@@ -631,87 +850,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
     setState(() {
       _entries = List<CustomOrderEntry>.from(controller.customOrder);
-      _searchQuery = '';
     });
-    _searchController.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.l10n.loadedCount(count))),
-    );
-  }
-
-  Widget _buildSearchResults() {
-    final List<_SearchCandidate> candidates = <_SearchCandidate>[];
-    for (final DtxBook book in controller.books) {
-      for (int i = 0; i < book.songs.length; i++) {
-        final DtxSong song = book.songs[i];
-        if (song.separator) {
-          continue;
-        }
-        candidates.add(
-          _SearchCandidate(
-            fileName: book.fileName,
-            bookTitle: book.displayName,
-            songIndex: i,
-            songTitle: song.title,
-          ),
-        );
-      }
-    }
-
-    final String filter = _searchQuery.toLowerCase();
-    final List<_SearchCandidate> hits = candidates.where((_SearchCandidate c) {
-      return c.bookTitle.toLowerCase().contains(filter) || c.songTitle.toLowerCase().contains(filter);
-    }).toList()
-      ..sort((_SearchCandidate a, _SearchCandidate b) {
-        final int byBook = a.bookTitle.toLowerCase().compareTo(b.bookTitle.toLowerCase());
-        return byBook != 0 ? byBook : a.songTitle.toLowerCase().compareTo(b.songTitle.toLowerCase());
-      });
-
-    if (hits.isEmpty) {
-      return Center(child: Text(context.l10n.noResults));
-    }
-
-    return ListView.builder(
-      itemCount: hits.length,
-      itemBuilder: (BuildContext context, int index) {
-        final _SearchCandidate hit = hits[index];
-
-        return ListTile(
-          dense: true,
-          title: Text(hit.songTitle),
-          subtitle: Text(hit.bookTitle),
-          trailing: IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            onPressed: () {
-              final CustomOrderEntry baseEntry = CustomOrderEntry(
-                fileName: hit.fileName,
-                songIndex: hit.songIndex,
-                verseIndex: 0,
-                label: controller.buildEntryLabel(hit.fileName, hit.songIndex, 0),
-              );
-              final List<DtxVerse> verses = controller.versesForEntry(baseEntry);
-              final List<CustomOrderEntry> toInsert = verses.isEmpty
-                  ? <CustomOrderEntry>[baseEntry]
-                  : List<CustomOrderEntry>.generate(
-                      verses.length,
-                      (int verseIx) => CustomOrderEntry(
-                        fileName: hit.fileName,
-                        songIndex: hit.songIndex,
-                        verseIndex: verseIx,
-                        label: controller.buildEntryLabel(hit.fileName, hit.songIndex, verseIx),
-                      ),
-                    );
-              setState(() {
-                _entries.addAll(toInsert);
-                _searchQuery = '';
-              });
-              _searchController.clear();
-              unawaited(_commitEntries());
-            },
-          ),
-        );
-      },
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.loadedCount(count))));
   }
 
   Widget _buildCurrentOrderList() {
@@ -720,7 +862,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         child: Text(
           context.l10n.customOrderEmpty,
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey[600], fontStyle: FontStyle.italic),
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontStyle: FontStyle.italic,
+          ),
         ),
       );
     }
@@ -742,13 +887,13 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         final CustomOrderEntry entry = _entries[index];
         final bool isSongEntry = controller.isSongOrderEntry(entry);
         final bool isContinuation =
-          isSongEntry &&
+            isSongEntry &&
             index > 0 &&
             _entries[index - 1].fileName == entry.fileName &&
             _entries[index - 1].songIndex == entry.songIndex;
         final List<DtxVerse> verses = isSongEntry
-          ? controller.versesForEntry(entry)
-          : const <DtxVerse>[];
+            ? controller.versesForEntry(entry)
+            : const <DtxVerse>[];
         final int verseIx = _safeEntryVerseIndex(entry);
         final String verseLabel = verses.isEmpty
             ? '-'
@@ -762,7 +907,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           minTileHeight: 30,
           selected: controller.isCustomOrderIndexCurrent(index),
           selectedTileColor: Colors.blue.withValues(alpha: 0.12),
-          onTap: () => unawaited(controller.projectCustomOrderEntry(entry, preferredCursor: index)),
+          onTap: () => unawaited(
+            controller.projectCustomOrderEntry(entry, preferredCursor: index),
+          ),
           leading: ReorderableDragStartListener(
             index: index,
             child: const Icon(Icons.drag_handle),
@@ -784,14 +931,23 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 IconButton(
                   tooltip: context.l10n.versePicker,
                   icon: const Icon(Icons.format_list_numbered),
-                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                  visualDensity: const VisualDensity(
+                    horizontal: -4,
+                    vertical: -4,
+                  ),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
                   onPressed: () => _pickVerse(index),
                 ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
-                visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                visualDensity: const VisualDensity(
+                  horizontal: -4,
+                  vertical: -4,
+                ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                 onPressed: () {
@@ -808,15 +964,19 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
   Future<void> _pickVerse(int index) async {
     final ({int start, int end}) group = _contiguousSongGroup(index);
-    final List<CustomOrderEntry> groupEntries = _entries.sublist(group.start, group.end + 1);
+    final List<CustomOrderEntry> groupEntries = _entries.sublist(
+      group.start,
+      group.end + 1,
+    );
     final CustomOrderEntry base = groupEntries.first;
     final List<DtxVerse> verses = controller.versesForEntry(base);
     if (verses.isEmpty) {
       return;
     }
 
-    final Set<int> selectedSet =
-      groupEntries.map((CustomOrderEntry e) => _safeEntryVerseIndex(e)).toSet();
+    final Set<int> selectedSet = groupEntries
+        .map((CustomOrderEntry e) => _safeEntryVerseIndex(e))
+        .toSet();
     if (selectedSet.isEmpty) {
       selectedSet.add(0);
     }
@@ -843,7 +1003,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             (int v) => controller.normalizeEntry(
               base.copyWith(
                 verseIndex: v,
-                label: controller.buildEntryLabel(base.fileName, base.songIndex, v),
+                label: controller.buildEntryLabel(
+                  base.fileName,
+                  base.songIndex,
+                  v,
+                ),
               ),
             ),
           )
@@ -880,10 +1044,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 }
 
 class CustomOrderEditorSheet extends StatelessWidget {
-  const CustomOrderEditorSheet({
-    super.key,
-    required this.controller,
-  });
+  const CustomOrderEditorSheet({super.key, required this.controller});
 
   final DiatarMainController controller;
 
@@ -920,10 +1081,7 @@ class _SearchCandidate {
 }
 
 class _SongOption {
-  const _SongOption({
-    required this.songIndex,
-    required this.songTitle,
-  });
+  const _SongOption({required this.songIndex, required this.songTitle});
 
   final int songIndex;
   final String songTitle;
