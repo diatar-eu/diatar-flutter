@@ -611,6 +611,12 @@ abstract class AppLocalizations {
   /// **'Kötet'**
   String get bookLabel;
 
+  /// No description provided for @diaBookLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'DIA: {name}'**
+  String diaBookLabel(Object name);
+
   /// No description provided for @songLabel.
   ///
   /// In hu, this message translates to:

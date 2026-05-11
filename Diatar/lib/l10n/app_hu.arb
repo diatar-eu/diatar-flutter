@@ -304,6 +304,12 @@
   },
   "noLoadedSlide": "Nincs betöltött dia.",
   "bookLabel": "Kötet",
+  "diaBookLabel": "DIA: {name}",
+  "@diaBookLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "songLabel": "Ének",
   "verseLabel": "Versszak",
   "versePanelTitle": "{title}: {verse}",

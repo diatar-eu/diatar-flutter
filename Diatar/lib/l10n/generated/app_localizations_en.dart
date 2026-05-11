@@ -344,6 +344,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookLabel => 'Book';
 
   @override
+  String diaBookLabel(Object name) {
+    return 'DIA: $name';
+  }
+
+  @override
   String get songLabel => 'Song';
 
   @override

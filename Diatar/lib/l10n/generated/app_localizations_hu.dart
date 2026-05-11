@@ -346,6 +346,11 @@ class AppLocalizationsHu extends AppLocalizations {
   String get bookLabel => 'Kötet';
 
   @override
+  String diaBookLabel(Object name) {
+    return 'DIA: $name';
+  }
+
+  @override
   String get songLabel => 'Ének';
 
   @override

@@ -136,12 +136,17 @@ class DiatarMainController extends ChangeNotifier {
   int _customOrderCursor = -1;
   int _projectedCustomCursor = -1;
   String? _lastImportedCustomOrderBaseName;
+  bool _diaVirtualBookSelected = false;
 
   Map<String, String> get statusParams =>
       Map<String, String>.unmodifiable(_statusParams);
 
-    String? get lastImportedCustomOrderBaseName =>
+  String? get lastImportedCustomOrderBaseName =>
       _lastImportedCustomOrderBaseName;
+  bool get hasImportedCustomOrderDia =>
+      _lastImportedCustomOrderBaseName != null && _customOrder.isNotEmpty;
+  bool get diaVirtualBookSelected =>
+      _diaVirtualBookSelected && hasImportedCustomOrderDia;
 
   void _setStatus(
     String code, [
@@ -576,6 +581,15 @@ class DiatarMainController extends ChangeNotifier {
   List<CustomOrderEntry> get customOrder =>
       List<CustomOrderEntry>.unmodifiable(_customOrder);
   int get customOrderCursor => _customOrderCursor;
+  int get selectedCustomOrderCursor {
+    if (_projectedCustomCursor >= 0 && _projectedCustomCursor < _customOrder.length) {
+      return _projectedCustomCursor;
+    }
+    if (_customOrderCursor >= 0 && _customOrderCursor < _customOrder.length) {
+      return _customOrderCursor;
+    }
+    return _customOrder.isEmpty ? -1 : 0;
+  }
   CustomOrderEntry? get projectedCustomOrderEntry {
     if (_projectedCustomCursor < 0 ||
         _projectedCustomCursor >= _customOrder.length) {
@@ -596,6 +610,33 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
     _selectByCustomOrderCursor(index, sync: true);
+  }
+
+  void selectCustomOrderEntryAt(int index) {
+    if (index < 0 || index >= _customOrder.length) {
+      return;
+    }
+    customOrderActive = _customOrder.isNotEmpty;
+    _diaVirtualBookSelected = hasImportedCustomOrderDia;
+    _selectByCustomOrderCursor(index, sync: true);
+  }
+
+  void selectDiaVirtualBook() {
+    if (!hasImportedCustomOrderDia) {
+      return;
+    }
+    _diaVirtualBookSelected = true;
+    if (_customOrder.isEmpty) {
+      customOrderActive = false;
+      notifyListeners();
+      return;
+    }
+    customOrderActive = true;
+    int target = _customOrderCursor;
+    if (target < 0 || target >= _customOrder.length || _customOrder[target].isSeparator) {
+      target = _findNextProjectableCustomOrderIndex(0) ?? 0;
+    }
+    _selectByCustomOrderCursor(target, sync: true);
   }
 
   bool isEntryCurrentlyProjected(CustomOrderEntry entry) {
@@ -936,6 +977,9 @@ class DiatarMainController extends ChangeNotifier {
         : null;
 
     _customOrder = entries.map(normalizeEntry).toList();
+    if (_customOrder.isEmpty) {
+      _diaVirtualBookSelected = false;
+    }
     customOrderActive = activate && _customOrder.isNotEmpty;
     if (customOrderActive) {
       final int preservedCursor = previousEntry == null
@@ -1370,6 +1414,7 @@ class DiatarMainController extends ChangeNotifier {
     _lastImportedCustomOrderBaseName = importedName.trim().isEmpty
         ? null
         : importedName;
+    _diaVirtualBookSelected = _lastImportedCustomOrderBaseName != null;
     _setStatus('statusOrderLoaded', <String, String>{
       'count': '${imported.length}',
       'path': path,
@@ -1641,6 +1686,7 @@ class DiatarMainController extends ChangeNotifier {
     if (books.isEmpty) {
       return;
     }
+    _diaVirtualBookSelected = false;
     bookIndex = value.clamp(0, books.length - 1);
     songIndex = 0;
     verseIndex = 0;

@@ -304,6 +304,12 @@
   },
   "noLoadedSlide": "No slide loaded.",
   "bookLabel": "Book",
+  "diaBookLabel": "DIA: {name}",
+  "@diaBookLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "songLabel": "Song",
   "verseLabel": "Verse",
   "versePanelTitle": "{title}: {verse}",

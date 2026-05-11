@@ -24,6 +24,157 @@ class _BookDropdownEntry {
   bool get isHeader => group != null;
 }
 
+class _DiaVerseEntry {
+  const _DiaVerseEntry({required this.customOrderIndex, required this.label});
+
+  final int customOrderIndex;
+  final String label;
+}
+
+class _DiaSongGroup {
+  const _DiaSongGroup({required this.label, required this.verses});
+
+  final String label;
+  final List<_DiaVerseEntry> verses;
+}
+
+const int _diaVirtualBookValue = -1000000;
+
+String _basename(String path) {
+  final String normalized = path.replaceAll('\\', '/');
+  final List<String> parts = normalized
+      .split('/')
+      .where((String part) => part.isNotEmpty)
+      .toList();
+  return parts.isEmpty ? normalized : parts.last;
+}
+
+String _cleanSeparatorLabel(CustomOrderEntry entry) {
+  final String explicit = (entry.customTextTitle ?? '').trim();
+  if (explicit.isNotEmpty) {
+    return '-- $explicit --';
+  }
+  final String compact = entry.label
+      .trim()
+      .replaceAll(RegExp(r'^-+\s*'), '')
+      .replaceAll(RegExp(r'\s*-+$'), '')
+      .trim();
+  return compact.isEmpty ? '--' : '-- $compact --';
+}
+
+String _songVerseToken(DtxVerse verse) {
+  final String raw = verse.name.trim();
+  if (raw.isEmpty || raw == '---') {
+    return '';
+  }
+  final RegExpMatch? match = RegExp(r'^(\d+)').firstMatch(raw);
+  if (match != null) {
+    return match.group(1)!;
+  }
+  return raw;
+}
+
+String _entryShortLabel(DiatarMainController controller, CustomOrderEntry entry) {
+  if (entry.isSeparator) {
+    return _cleanSeparatorLabel(entry);
+  }
+  if (entry.isCustomImage) {
+    return _basename(entry.customImagePath ?? entry.label);
+  }
+  if (entry.isCustomText) {
+    final String title = (entry.customTextTitle ?? '').trim();
+    return title.isEmpty ? entry.label : title;
+  }
+  final DtxSong? song = controller.songForEntry(entry);
+  final List<DtxVerse> verses = controller.versesForEntry(entry);
+  if (song == null || verses.isEmpty) {
+    return entry.label;
+  }
+  final int safeVerse = entry.verseIndex.clamp(0, verses.length - 1);
+  final String token = _songVerseToken(verses[safeVerse]);
+  if (token.isNotEmpty) {
+    return token;
+  }
+  final String fallback = verses[safeVerse].name.trim();
+  return fallback.isEmpty ? '${safeVerse + 1}' : fallback;
+}
+
+List<_DiaSongGroup> _buildDiaSongGroups(DiatarMainController controller) {
+  final List<CustomOrderEntry> custom = controller.customOrder;
+  final List<_DiaSongGroup> groups = <_DiaSongGroup>[];
+  int i = 0;
+
+  while (i < custom.length) {
+    final CustomOrderEntry first = custom[i];
+    if (!first.isSongEntry) {
+      groups.add(
+        _DiaSongGroup(
+          label: _entryShortLabel(controller, first),
+          verses: <_DiaVerseEntry>[
+            _DiaVerseEntry(
+              customOrderIndex: i,
+              label: _entryShortLabel(controller, first),
+            ),
+          ],
+        ),
+      );
+      i++;
+      continue;
+    }
+
+    final List<_DiaVerseEntry> verses = <_DiaVerseEntry>[];
+    final DtxSong? song = controller.songForEntry(first);
+    final DtxBook? book = controller.bookForEntry(first);
+    int j = i;
+    int lastVerse = first.verseIndex;
+
+    while (j < custom.length) {
+      final CustomOrderEntry candidate = custom[j];
+      if (!candidate.isSongEntry ||
+          candidate.fileName != first.fileName ||
+          candidate.songIndex != first.songIndex) {
+        break;
+      }
+      if (j != i && candidate.verseIndex != lastVerse + 1) {
+        break;
+      }
+      verses.add(
+        _DiaVerseEntry(
+          customOrderIndex: j,
+          label: _entryShortLabel(controller, candidate),
+        ),
+      );
+      lastVerse = candidate.verseIndex;
+      j++;
+    }
+
+    final String bookName = book?.displayName ?? first.fileName;
+    final String songTitle = song?.title ?? first.label;
+    final List<String> tokens = verses
+        .map((_DiaVerseEntry v) => v.label.trim())
+        .where((String v) => v.isNotEmpty)
+        .toList();
+    final String suffix = tokens.isEmpty
+        ? songTitle
+        : '$songTitle/${tokens.join(', ')}';
+    groups.add(_DiaSongGroup(label: '$bookName: $suffix', verses: verses));
+    i = j;
+  }
+
+  return groups;
+}
+
+int _selectedDiaSongGroupIndex(
+  List<_DiaSongGroup> groups,
+  int selectedCustomOrderCursor,
+) {
+  final int idx = groups.indexWhere(
+    (_DiaSongGroup g) =>
+        g.verses.any((_DiaVerseEntry v) => v.customOrderIndex == selectedCustomOrderCursor),
+  );
+  return idx >= 0 ? idx : 0;
+}
+
 List<_BookDropdownEntry> _buildBookDropdownEntries(List<DtxBook> books) {
   final List<_BookDropdownEntry> entries = <_BookDropdownEntry>[];
   String? lastGroup;
@@ -738,60 +889,94 @@ class _BookDropdown extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final ThemeData theme = Theme.of(context);
+    final bool hasDia = controller.hasImportedCustomOrderDia;
+    final String? diaName = controller.lastImportedCustomOrderBaseName;
     final List<_BookDropdownEntry> entries = _buildBookDropdownEntries(
       controller.books,
     );
+    final int initial = controller.diaVirtualBookSelected
+        ? _diaVirtualBookValue
+        : controller.bookIndex;
     return DropdownButtonFormField<int>(
-      initialValue: controller.bookIndex,
+      initialValue: initial,
       decoration: InputDecoration(
         labelText: context.l10n.bookLabel,
         border: const OutlineInputBorder(),
       ),
       isExpanded: true,
-      items: entries.asMap().entries.map((MapEntry<int, _BookDropdownEntry> e) {
-        final _BookDropdownEntry entry = e.value;
-        if (entry.isHeader) {
-          return DropdownMenuItem<int>(
-            value: -(e.key + 1),
-            enabled: false,
-            child: Text(
-              '[${entry.group!}]',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          );
-        }
-        return DropdownMenuItem<int>(
-          value: entry.bookIndex,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 16),
+      items: <DropdownMenuItem<int>>[
+        if (hasDia)
+          DropdownMenuItem<int>(
+            value: _diaVirtualBookValue,
             child: SizedBox(
               width: double.infinity,
               child: Text(
-                entry.title!,
+                context.l10n.diaBookLabel(diaName ?? ''),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
             ),
           ),
-        );
-      }).toList(),
-      selectedItemBuilder: (BuildContext context) {
-        return entries.map((_BookDropdownEntry entry) {
-          return Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              entry.title ?? '[${entry.group!}]',
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
+        ...entries.asMap().entries.map((MapEntry<int, _BookDropdownEntry> e) {
+          final _BookDropdownEntry entry = e.value;
+          if (entry.isHeader) {
+            return DropdownMenuItem<int>(
+              value: -(e.key + 1),
+              enabled: false,
+              child: Text(
+                '[${entry.group!}]',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            );
+          }
+          return DropdownMenuItem<int>(
+            value: entry.bookIndex,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: Text(
+                  entry.title!,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
             ),
           );
-        }).toList();
+        }),
+      ],
+      selectedItemBuilder: (BuildContext context) {
+        return <Widget>[
+          if (hasDia)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                context.l10n.diaBookLabel(diaName ?? ''),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          ...entries.map((_BookDropdownEntry entry) {
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                entry.title ?? '[${entry.group!}]',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            );
+          }),
+        ];
       },
       onChanged: (int? value) {
-        if (value != null) {
+        if (value == _diaVirtualBookValue) {
+          controller.selectDiaVirtualBook();
+          return;
+        }
+        if (value != null && value >= 0) {
           controller.setBookIndex(value);
         }
       },
@@ -806,6 +991,46 @@ class _SongDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (controller.diaVirtualBookSelected) {
+      final List<_DiaSongGroup> groups = _buildDiaSongGroups(controller);
+      if (groups.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      final int selectedCursor = controller.selectedCustomOrderCursor;
+      final int selectedGroup = _selectedDiaSongGroupIndex(groups, selectedCursor);
+      return DropdownButtonFormField<int>(
+        initialValue: selectedGroup.clamp(0, groups.length - 1),
+        decoration: InputDecoration(
+          labelText: context.l10n.songLabel,
+          border: const OutlineInputBorder(),
+        ),
+        isExpanded: true,
+        items: groups.asMap().entries.map((MapEntry<int, _DiaSongGroup> e) {
+          return DropdownMenuItem<int>(
+            value: e.key,
+            child: SizedBox(
+              width: double.infinity,
+              child: Text(
+                e.value.label,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          );
+        }).toList(),
+        onChanged: (int? value) {
+          if (value == null || value < 0 || value >= groups.length) {
+            return;
+          }
+          final List<_DiaVerseEntry> verses = groups[value].verses;
+          if (verses.isEmpty) {
+            return;
+          }
+          controller.selectCustomOrderEntryAt(verses.first.customOrderIndex);
+        },
+      );
+    }
+
     final DtxBook? b = controller.currentBook;
     final List<DtxSong> songs = b?.songs ?? const <DtxSong>[];
     if (songs.isEmpty) {
@@ -846,6 +1071,53 @@ class _VerseDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (controller.diaVirtualBookSelected) {
+      final List<_DiaSongGroup> groups = _buildDiaSongGroups(controller);
+      if (groups.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      final int selectedCursor = controller.selectedCustomOrderCursor;
+      final int selectedGroup = _selectedDiaSongGroupIndex(groups, selectedCursor);
+      final List<_DiaVerseEntry> verses = groups[selectedGroup].verses;
+      if (verses.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      final int selectedVerse = verses.indexWhere(
+        (_DiaVerseEntry v) => v.customOrderIndex == selectedCursor,
+      );
+      final int initialValue = (selectedVerse >= 0 ? selectedVerse : 0).clamp(
+        0,
+        verses.length - 1,
+      );
+      return DropdownButtonFormField<int>(
+        initialValue: initialValue,
+        decoration: InputDecoration(
+          labelText: context.l10n.verseLabel,
+          border: const OutlineInputBorder(),
+        ),
+        isExpanded: true,
+        items: verses.asMap().entries.map((MapEntry<int, _DiaVerseEntry> e) {
+          return DropdownMenuItem<int>(
+            value: e.key,
+            child: SizedBox(
+              width: double.infinity,
+              child: Text(
+                e.value.label,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          );
+        }).toList(),
+        onChanged: (int? value) {
+          if (value == null || value < 0 || value >= verses.length) {
+            return;
+          }
+          controller.selectCustomOrderEntryAt(verses[value].customOrderIndex);
+        },
+      );
+    }
+
     final DtxSong? s = controller.currentSong;
     final List<DtxVerse> verses = s?.verses ?? const <DtxVerse>[];
     if (verses.isEmpty) {
