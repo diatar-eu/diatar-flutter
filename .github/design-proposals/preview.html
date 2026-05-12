@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diatár ikon- és bannertervek</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg-a: #f6efe4;
+      --bg-b: #d8e7ef;
+      --ink: #1f2937;
+      --muted: #52606d;
+      --card: rgba(255, 255, 255, 0.72);
+      --line: rgba(31, 41, 55, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.75), transparent 34%),
+        linear-gradient(135deg, var(--bg-a), var(--bg-b));
+    }
+
+    main {
+      width: min(1280px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 3vw, 42px);
+      font-weight: 700;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.55;
+      max-width: 900px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 22px;
+      margin-top: 28px;
+    }
+
+    .card {
+      padding: 18px;
+      border-radius: 24px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 16px 44px rgba(41, 56, 79, 0.12);
+    }
+
+    .artboard {
+      display: grid;
+      place-items: center;
+      min-height: 380px;
+      padding: 10px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(240, 246, 250, 0.86));
+      overflow: hidden;
+    }
+
+    .artboard.banner {
+      min-height: 240px;
+    }
+
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    h2 {
+      margin: 14px 0 6px;
+      font-size: 20px;
+    }
+
+    .meta {
+      margin-top: 6px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Diatár / DiaVetítő ráncfelvarrás tervek</h1>
+    <p>
+      Első körös SVG-javaslatok a jóváhagyott irányhoz: az alapmotívum marad a fekvő tablet és a DT monogram,
+      modernebb formákkal, tisztább színkezeléssel és visszafogottabb kereszt-utalással.
+    </p>
+
+    <section class="grid">
+      <article class="card">
+        <div class="artboard">
+          <img src="diatar_icon_refresh.svg" alt="Diatár ikon frissített változat">
+        </div>
+        <h2>Diatár ikon</h2>
+        <p class="meta">Világosabb háttér, meleg réz tabletkeret, tiszta DT monogram.</p>
+      </article>
+
+      <article class="card">
+        <div class="artboard">
+          <img src="diavetito_icon_refresh.svg" alt="DiaVetítő ikon frissített változat">
+        </div>
+        <h2>DiaVetítő ikon</h2>
+        <p class="meta">Azonos vizuális család, mélyebb kék-lila háttérrel és erősebb technikai karakterrel.</p>
+      </article>
+
+      <article class="card" style="grid-column: 1 / -1;">
+        <div class="artboard banner">
+          <img src="diavetito_tv_banner_refresh.svg" alt="DiaVetítő TV banner frissített változat">
+        </div>
+        <h2>DiaVetítő TV banner</h2>
+        <p class="meta">Nagy ikon bal oldalon, letisztult szövegblokk jobb oldalon, Play Store-barát 16:9 arány.</p>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

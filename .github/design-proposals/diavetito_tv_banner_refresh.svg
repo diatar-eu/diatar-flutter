@@ -1,0 +1,62 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="96" y1="76" x2="1185" y2="688" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#17378C"/>
+      <stop offset="0.55" stop-color="#12627A"/>
+      <stop offset="1" stop-color="#8BAECC"/>
+    </linearGradient>
+    <radialGradient id="glowLeft" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(254 327) rotate(90) scale(254)">
+      <stop stop-color="#C4D9FF" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#C4D9FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="frame" x1="120" y1="148" x2="438" y2="478" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F3A76F"/>
+      <stop offset="1" stop-color="#DB733B"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="148" y1="180" x2="392" y2="398" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E6F6FF"/>
+      <stop offset="1" stop-color="#AAD2E9"/>
+    </linearGradient>
+    <linearGradient id="crossGlow" x1="242" y1="234" x2="334" y2="372" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#F4FAFF" stop-opacity="0.08"/>
+    </linearGradient>
+    <filter id="cardShadow" x="48" y="90" width="522" height="522" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="28"/>
+      <feGaussianBlur stdDeviation="22"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.020 0 0 0 0 0.059 0 0 0 0 0.141 0 0 0 0.35 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+  </defs>
+  <rect width="1280" height="720" rx="28" fill="url(#bg)"/>
+  <circle cx="254" cy="328" r="254" fill="url(#glowLeft)"/>
+  <circle cx="1038" cy="604" r="154" fill="#FFFFFF" fill-opacity="0.08"/>
+  <circle cx="1166" cy="118" r="100" fill="#C3E4F7" fill-opacity="0.12"/>
+  <g filter="url(#cardShadow)">
+    <g transform="translate(-6 8) scale(1.29)">
+      <rect x="84" y="78" width="344" height="332" rx="62" fill="url(#frame)"/>
+      <rect x="114" y="104" width="284" height="280" rx="32" fill="#213444"/>
+      <rect x="130" y="122" width="252" height="244" rx="22" fill="url(#screen)"/>
+      <rect x="140" y="132" width="232" height="11" rx="5.5" fill="#1C2A35" fill-opacity="0.92"/>
+      <rect x="140" y="346" width="232" height="11" rx="5.5" fill="#1C2A35" fill-opacity="0.92"/>
+      <circle cx="152" cy="137.5" r="1.9" fill="#F8FAFC" fill-opacity="0.84"/>
+      <rect x="160" y="135.5" width="52" height="4" rx="2" fill="#F8FAFC" fill-opacity="0.45"/>
+      <circle cx="100" cy="244" r="3.6" fill="#7A421E"/>
+      <circle cx="412" cy="244" r="3.6" fill="#7A421E"/>
+      <circle cx="100" cy="244" r="1.3" fill="#F2B48E" fill-opacity="0.74"/>
+      <circle cx="412" cy="244" r="1.3" fill="#F2B48E" fill-opacity="0.74"/>
+      <path d="M288 174H308V214H346V232H308V320H288V232H250V214H288V174Z" fill="url(#crossGlow)"/>
+      <path d="M192 196H232C261.823 196 286 220.177 286 250V260C286 293.137 259.137 320 226 320H192V196ZM211 214V302H225C250.405 302 271 281.405 271 256V250C271 230.118 254.882 214 235 214H211Z" fill="#F43F3F"/>
+      <path d="M256 196H348V214H312V320H293V214H256V196Z" fill="#C62828"/>
+    </g>
+  </g>
+  <g>
+    <rect x="594" y="202" width="512" height="8" rx="4" fill="#C3DCF2" fill-opacity="0.34"/>
+    <text x="594" y="320" fill="#F8FAFC" font-family="Segoe UI, Arial, sans-serif" font-size="92" font-weight="700" letter-spacing="0.2">DiaVetítő</text>
+    <text x="594" y="398" fill="#F3F0D7" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="400">A Diatár program vetítő alkalmazása</text>
+    <text x="594" y="474" fill="#D7E8F5" fill-opacity="0.9" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="600" letter-spacing="0.5">Templomi énekvetítő program</text>
+  </g>
+</svg>
