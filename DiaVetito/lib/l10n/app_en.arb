@@ -2,7 +2,21 @@
   "@@locale": "en",
   "appTitle": "DiaVetito",
   "logoTitle": "Diatar Vetito",
+  "splashVersionSubtitle": "Version v{version} ({buildNumber})",
+  "@splashVersionSubtitle": {
+    "placeholders": {
+      "version": {},
+      "buildNumber": {}
+    }
+  },
   "settingsTitleReceiver": "Settings",
+  "settingsVersionLabel": "Version {version} ({buildNumber})",
+  "@settingsVersionLabel": {
+    "placeholders": {
+      "version": {},
+      "buildNumber": {}
+    }
+  },
   "settingsSearchLabel": "Search in settings",
   "settingsNoResults": "No results for your search.",
   "settingsInternetTitle": "Internet",

@@ -3,6 +3,7 @@ import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
@@ -79,10 +80,13 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late Color _txtColor;
   late Color _blankColor;
   late Color _hiColor;
+  String _appVersion = '-';
+  String _buildNumber = '-';
 
   @override
   void initState() {
     super.initState();
+    _loadAppVersion();
     final AppSettings s = widget.initialSettings;
     _search = TextEditingController();
     _tcpTargets = TextEditingController(text: s.tcpTargets.join('\n'));
@@ -129,6 +133,17 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _hiColor = s.hiColor;
   }
 
+  Future<void> _loadAppVersion() async {
+    final PackageInfo info = await PackageInfo.fromPlatform();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _appVersion = info.version;
+      _buildNumber = info.buildNumber;
+    });
+  }
+
   @override
   void dispose() {
     _search.dispose();
@@ -154,18 +169,18 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final l10n = context.l10n;
     final String query = _search.text.trim().toLowerCase();
     final String internetStatus = _internetRelayEnabled
-      ? l10n.internetStatusOn
-      : l10n.internetStatusOff;
+        ? l10n.internetStatusOn
+        : l10n.internetStatusOff;
     final String mqttUser = _mqttUser.text.trim().isEmpty
-      ? l10n.valueNotSet
+        ? l10n.valueNotSet
         : _mqttUser.text.trim();
     final String localNetworkStatus = _localNetworkEnabled
-      ? l10n.internetStatusOn
-      : l10n.internetStatusOff;
+        ? l10n.internetStatusOn
+        : l10n.internetStatusOff;
     final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
     final String tcpSummary = tcpTargets.isEmpty
-      ? l10n.tcpNoTargets
-      : l10n.tcpTargetsCount(tcpTargets.length);
+        ? l10n.tcpNoTargets
+        : l10n.tcpTargetsCount(tcpTargets.length);
     final String languageLabel = _appLanguage.trim().isEmpty
         ? l10n.languageSystem
         : _languageLabel(context, _appLanguage);
@@ -173,10 +188,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ? l10n.themeDark
         : l10n.themeLight;
     final String dtxSummary = _dtxPath.text.trim().isEmpty
-      ? l10n.valueNotSet
+        ? l10n.valueNotSet
         : _shortPath(_dtxPath.text.trim());
     final String blankSummary = _blankPicPath.text.trim().isEmpty
-      ? l10n.valueNotSet
+        ? l10n.valueNotSet
         : _shortPath(_blankPicPath.text.trim());
     final bool desktopHotkeysAvailable = _isDesktopPlatform();
     final bool showInternet = _matches(
@@ -192,16 +207,19 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final bool showFiles = _matches(query, 'enektar fajlok dtx ures kep blank');
     final bool showGeneral = _matches(query, 'altalanos tema nyelv language');
     final bool showHotkeys =
-      desktopHotkeysAvailable &&
-      _matches(query, 'gyorsbillentyu hotkey billentyu shortcut vezerles enek');
+        desktopHotkeysAvailable &&
+        _matches(
+          query,
+          'gyorsbillentyu hotkey billentyu shortcut vezerles enek',
+        );
     final bool anyVisible =
         showInternet ||
         showLan ||
         showColors ||
         showProjection ||
-      showFiles ||
-      showGeneral ||
-      showHotkeys;
+        showFiles ||
+        showGeneral ||
+        showHotkeys;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -214,9 +232,25 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              l10n.settingsTitle,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
+              children: <Widget>[
+                Text(
+                  l10n.settingsTitle,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  l10n.settingsVersionLabel(_appVersion, _buildNumber),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             TextField(
@@ -295,7 +329,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       ),
                       onTap: _openProjectionSettings,
                     ),
-                  if (showProjection && (showFiles || showGeneral || showHotkeys))
+                  if (showProjection &&
+                      (showFiles || showGeneral || showHotkeys))
                     const Divider(height: 1),
                   if (showFiles)
                     _settingsTile(
@@ -522,7 +557,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     }
     await _runUserApiAction(
       successMessage: l10n.userActionResendVerificationSuccess,
-      action: () => _userApi.resendVerification(username: username, email: email),
+      action: () =>
+          _userApi.resendVerification(username: username, email: email),
     );
   }
 
@@ -723,7 +759,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               child: Text(context.l10n.cancel),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+              onPressed: () =>
+                  Navigator.of(context).pop(controller.text.trim()),
               child: Text(context.l10n.ok),
             ),
           ],
@@ -759,9 +796,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(
-        SnackBar(content: Text(context.l10n.userApiError('$e'))),
-      );
+      ).showSnackBar(SnackBar(content: Text(context.l10n.userApiError('$e'))));
     } finally {
       if (mounted) {
         setState(() => _internetActionRunning = false);
@@ -909,15 +944,37 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       title: context.l10n.settingsDesktopHotkeysTitle,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final AppLocalizations l10n = context.l10n;
-        final List<MapEntry<String, String>> actions = <MapEntry<String, String>>[
-          MapEntry<String, String>('prevSong', l10n.settingsHotkeyActionPrevSong),
-          MapEntry<String, String>('prevVerse', l10n.settingsHotkeyActionPrevVerse),
-          MapEntry<String, String>('toggleProjection', l10n.settingsHotkeyActionToggleProjection),
-          MapEntry<String, String>('nextVerse', l10n.settingsHotkeyActionNextVerse),
-          MapEntry<String, String>('nextSong', l10n.settingsHotkeyActionNextSong),
-          MapEntry<String, String>('highlightPrev', l10n.settingsHotkeyActionHighlightPrev),
-          MapEntry<String, String>('highlightNext', l10n.settingsHotkeyActionHighlightNext),
-        ];
+        final List<MapEntry<String, String>> actions =
+            <MapEntry<String, String>>[
+              MapEntry<String, String>(
+                'prevSong',
+                l10n.settingsHotkeyActionPrevSong,
+              ),
+              MapEntry<String, String>(
+                'prevVerse',
+                l10n.settingsHotkeyActionPrevVerse,
+              ),
+              MapEntry<String, String>(
+                'toggleProjection',
+                l10n.settingsHotkeyActionToggleProjection,
+              ),
+              MapEntry<String, String>(
+                'nextVerse',
+                l10n.settingsHotkeyActionNextVerse,
+              ),
+              MapEntry<String, String>(
+                'nextSong',
+                l10n.settingsHotkeyActionNextSong,
+              ),
+              MapEntry<String, String>(
+                'highlightPrev',
+                l10n.settingsHotkeyActionHighlightPrev,
+              ),
+              MapEntry<String, String>(
+                'highlightNext',
+                l10n.settingsHotkeyActionHighlightNext,
+              ),
+            ];
 
         return <Widget>[
           Text(
@@ -953,7 +1010,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                             vertical: 8,
                           ),
                           child: Text(
-                            _desktopActionHotkeys[entry.key] ?? '(${l10n.valueNotSet})',
+                            _desktopActionHotkeys[entry.key] ??
+                                '(${l10n.valueNotSet})',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
@@ -961,7 +1019,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       const SizedBox(width: 8),
                       FilledButton.icon(
                         onPressed: () async {
-                          final String? captured = await _showHotkeyCaptureDialog(context);
+                          final String? captured =
+                              await _showHotkeyCaptureDialog(context);
                           if (captured != null) {
                             setBoth(() {
                               _desktopActionHotkeys[entry.key] = captured;
@@ -1057,10 +1116,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                         const SizedBox(height: 12),
                         Text(
                           _capturedSongHotkey,
-                          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).primaryColor,
-                          ),
+                          style: Theme.of(context).textTheme.displaySmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).primaryColor,
+                              ),
                         ),
                       ],
                     ],
@@ -1078,10 +1138,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                   children: [
                     Text(
                       _capturedSongHotkey,
-                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
+                      style: Theme.of(context).textTheme.displayMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -1101,7 +1162,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                           onPressed: () {
                             if (_selectedSongHotkeyOptionId.isNotEmpty) {
                               setBoth(() {
-                                _desktopSongHotkeys[_capturedSongHotkey] = _selectedSongHotkeyOptionId;
+                                _desktopSongHotkeys[_capturedSongHotkey] =
+                                    _selectedSongHotkeyOptionId;
                                 _capturedSongHotkey = '';
                               });
                             }
@@ -1131,7 +1193,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           ],
           if (_desktopSongHotkeys.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
-            ..._desktopSongHotkeys.entries.map((MapEntry<String, String> entry) {
+            ..._desktopSongHotkeys.entries.map((
+              MapEntry<String, String> entry,
+            ) {
               final String label = _songLabelForId(entry.value);
               return ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -1188,85 +1252,88 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (
-            BuildContext context,
-            void Function(void Function()) setStateDialog,
-          ) {
-            void applyFilter(String query) {
-              final String normalized = query.trim().toLowerCase();
-              if (normalized.isEmpty) {
-                setStateDialog(() {
-                  filteredIndexes = List<int>.generate(
-                    _availableSongs.length,
-                    (int i) => i,
-                    growable: true,
-                  );
-                });
-                return;
-              }
-              setStateDialog(() {
-                final List<int> matches = <int>[];
-                for (int i = 0; i < lowerLabels.length; i++) {
-                  if (lowerLabels[i].contains(normalized)) {
-                    matches.add(i);
+          builder:
+              (
+                BuildContext context,
+                void Function(void Function()) setStateDialog,
+              ) {
+                void applyFilter(String query) {
+                  final String normalized = query.trim().toLowerCase();
+                  if (normalized.isEmpty) {
+                    setStateDialog(() {
+                      filteredIndexes = List<int>.generate(
+                        _availableSongs.length,
+                        (int i) => i,
+                        growable: true,
+                      );
+                    });
+                    return;
                   }
+                  setStateDialog(() {
+                    final List<int> matches = <int>[];
+                    for (int i = 0; i < lowerLabels.length; i++) {
+                      if (lowerLabels[i].contains(normalized)) {
+                        matches.add(i);
+                      }
+                    }
+                    filteredIndexes = matches;
+                  });
                 }
-                filteredIndexes = matches;
-              });
-            }
 
-            return AlertDialog(
-              title: Text(l10n.songLabel),
-              content: SizedBox(
-                width: 520,
-                height: 420,
-                child: Column(
-                  children: <Widget>[
-                    TextField(
-                      controller: search,
-                      autofocus: true,
-                      decoration: InputDecoration(labelText: l10n.settingsSearchLabel),
-                      onChanged: applyFilter,
+                return AlertDialog(
+                  title: Text(l10n.songLabel),
+                  content: SizedBox(
+                    width: 520,
+                    height: 420,
+                    child: Column(
+                      children: <Widget>[
+                        TextField(
+                          controller: search,
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            labelText: l10n.settingsSearchLabel,
+                          ),
+                          onChanged: applyFilter,
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: ListView.builder(
+                            itemExtent: 40,
+                            itemCount: filteredIndexes.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              final SongHotkeyOption option =
+                                  _availableSongs[filteredIndexes[index]];
+                              return InkWell(
+                                onTap: () => Navigator.of(context).pop(option),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    child: Text(
+                                      option.label,
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: ListView.builder(
-                        itemExtent: 40,
-                        itemCount: filteredIndexes.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          final SongHotkeyOption option =
-                              _availableSongs[filteredIndexes[index]];
-                          return InkWell(
-                            onTap: () => Navigator.of(context).pop(option),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                child: Text(
-                                  option.label,
-                                  maxLines: 1,
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(l10n.cancel),
                     ),
                   ],
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(l10n.cancel),
-                ),
-              ],
-            );
-          },
+                );
+              },
         );
       },
     );
@@ -1357,57 +1424,59 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
-          builder: (BuildContext context, void Function(void Function()) setState) {
-            return Focus(
-              autofocus: true,
-              onKeyEvent: (FocusNode node, KeyEvent event) {
-                if (event is KeyDownEvent) {
-                  final String combo = _eventToCombo(event);
-                  if (combo.isNotEmpty) {
-                    setState(() {
-                      capturedCombo = combo;
-                    });
-                  }
-                }
-                return KeyEventResult.handled;
-              },
-              child: AlertDialog(
-                title: Text(l10n.settingsHotkeyDialogTitle),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n.settingsHotkeyPressAnyKey,
-                      style: const TextStyle(fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
-                    if (capturedCombo.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 16),
-                      Text(
-                        capturedCombo,
-                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
+          builder:
+              (BuildContext context, void Function(void Function()) setState) {
+                return Focus(
+                  autofocus: true,
+                  onKeyEvent: (FocusNode node, KeyEvent event) {
+                    if (event is KeyDownEvent) {
+                      final String combo = _eventToCombo(event);
+                      if (combo.isNotEmpty) {
+                        setState(() {
+                          capturedCombo = combo;
+                        });
+                      }
+                    }
+                    return KeyEventResult.handled;
+                  },
+                  child: AlertDialog(
+                    title: Text(l10n.settingsHotkeyDialogTitle),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          l10n.settingsHotkeyPressAnyKey,
+                          style: const TextStyle(fontSize: 14),
+                          textAlign: TextAlign.center,
                         ),
+                        if (capturedCombo.isNotEmpty) ...<Widget>[
+                          const SizedBox(height: 16),
+                          Text(
+                            capturedCombo,
+                            style: Theme.of(context).textTheme.displaySmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(l10n.cancel),
+                      ),
+                      FilledButton(
+                        onPressed: capturedCombo.isEmpty
+                            ? null
+                            : () => Navigator.pop(context, capturedCombo),
+                        child: Text(l10n.settingsHotkeyConfirm),
                       ),
                     ],
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(l10n.cancel),
                   ),
-                  FilledButton(
-                    onPressed: capturedCombo.isEmpty
-                        ? null
-                        : () => Navigator.pop(context, capturedCombo),
-                    child: Text(l10n.settingsHotkeyConfirm),
-                  ),
-                ],
-              ),
-            );
-          },
+                );
+              },
         );
       },
     );
@@ -1434,7 +1503,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             decoration: InputDecoration(labelText: l10n.leftMargin),
           ),
           const SizedBox(height: 8),
-          Text(l10n.projectionMarginsTitle, style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            l10n.projectionMarginsTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
@@ -1710,8 +1782,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
     final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
     final String? tcpError = _localNetworkEnabled
-      ? _validateTcpTargets(tcpTargets)
-      : null;
+        ? _validateTcpTargets(tcpTargets)
+        : null;
     if (tcpError != null) {
       ScaffoldMessenger.of(
         context,
@@ -1719,15 +1791,13 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       return;
     }
     final int firstPort = _localNetworkEnabled
-      ? (_firstPortFromTargets(tcpTargets) ?? widget.initialSettings.port)
-      : widget.initialSettings.port;
+        ? (_firstPortFromTargets(tcpTargets) ?? widget.initialSettings.port)
+        : widget.initialSettings.port;
 
     final Set<String> usedHotkeys = <String>{};
     for (final String hotkey in _desktopActionHotkeys.values) {
       if (usedHotkeys.contains(hotkey)) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.settingsHotkeyConflict(hotkey))),
         );
         return;
@@ -1736,9 +1806,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     }
     for (final String hotkey in _desktopSongHotkeys.keys) {
       if (usedHotkeys.contains(hotkey)) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.settingsHotkeyConflict(hotkey))),
         );
         return;

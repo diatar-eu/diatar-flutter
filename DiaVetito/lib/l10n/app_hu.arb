@@ -2,7 +2,21 @@
   "@@locale": "hu",
   "appTitle": "DiaVetítő",
   "logoTitle": "Diatár Vetítő",
+  "splashVersionSubtitle": "Verzió v{version} ({buildNumber})",
+  "@splashVersionSubtitle": {
+    "placeholders": {
+      "version": {},
+      "buildNumber": {}
+    }
+  },
   "settingsTitleReceiver": "Beállítások",
+  "settingsVersionLabel": "Verzió {version} ({buildNumber})",
+  "@settingsVersionLabel": {
+    "placeholders": {
+      "version": {},
+      "buildNumber": {}
+    }
+  },
   "settingsSearchLabel": "Keresés a beállításokban",
   "settingsNoResults": "Nincs találat a keresésre.",
   "settingsInternetTitle": "Internet",

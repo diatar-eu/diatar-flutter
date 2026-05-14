@@ -397,6 +397,11 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsTitleReceiver => 'Beállítások';
 
   @override
+  String settingsVersionLabel(Object version, Object buildNumber) {
+    return 'Verzió $version ($buildNumber)';
+  }
+
+  @override
   String get modeIp => 'IP';
 
   @override

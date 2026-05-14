@@ -15,7 +15,17 @@ class AppLocalizationsHu extends AppLocalizations {
   String get logoTitle => 'Diatár Vetítő';
 
   @override
+  String splashVersionSubtitle(Object version, Object buildNumber) {
+    return 'Verzió v$version ($buildNumber)';
+  }
+
+  @override
   String get settingsTitleReceiver => 'Beállítások';
+
+  @override
+  String settingsVersionLabel(Object version, Object buildNumber) {
+    return 'Verzió $version ($buildNumber)';
+  }
 
   @override
   String get settingsSearchLabel => 'Keresés a beállításokban';

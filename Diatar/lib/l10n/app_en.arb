@@ -335,6 +335,13 @@
   "projectedImage": "Projected image:",
   "settingsTitle": "Diatar settings",
   "settingsTitleReceiver": "Settings",
+  "settingsVersionLabel": "Version {version} ({buildNumber})",
+  "@settingsVersionLabel": {
+    "placeholders": {
+      "version": {},
+      "buildNumber": {}
+    }
+  },
   "modeIp": "IP",
   "modeInternet": "Internet",
   "senderLabel": "Sender",

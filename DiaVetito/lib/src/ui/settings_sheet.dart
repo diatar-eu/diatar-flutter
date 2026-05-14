@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
@@ -86,10 +87,13 @@ class _SettingsSheetState extends State<SettingsSheet> {
   late Color _txtColor;
   late Color _blankColor;
   late Color _hiColor;
+  String _appVersion = '-';
+  String _buildNumber = '-';
 
   @override
   void initState() {
     super.initState();
+    _loadAppVersion();
     final AppSettings s = widget.initialSettings;
     _search = TextEditingController();
     _port = TextEditingController(text: s.port.toString());
@@ -123,6 +127,17 @@ class _SettingsSheetState extends State<SettingsSheet> {
     });
   }
 
+  Future<void> _loadAppVersion() async {
+    final PackageInfo info = await PackageInfo.fromPlatform();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _appVersion = info.version;
+      _buildNumber = info.buildNumber;
+    });
+  }
+
   @override
   void dispose() {
     _search.dispose();
@@ -140,18 +155,45 @@ class _SettingsSheetState extends State<SettingsSheet> {
     final l10n = context.l10n;
     final String query = _search.text.trim().toLowerCase();
     final bool internetEnabled = !_ipMode;
-    final String senderSummary = _mqttUser.text.trim().isEmpty ? '-' : _mqttUser.text.trim();
-    final String internetSummary = internetEnabled ? l10n.valueOn : l10n.valueOff;
-    final String languageLabel = _appLanguage.trim().isEmpty ? l10n.languageSystem : _languageLabel(context, _appLanguage);
-    final String filterSummary = _receiverUseServerColors ? l10n.projectionColorSourceServer : l10n.projectionColorSourceLocal;
-    final bool showInternet = _matches(query, l10n.settingsSearchKeywordsInternet);
+    final String senderSummary = _mqttUser.text.trim().isEmpty
+        ? '-'
+        : _mqttUser.text.trim();
+    final String internetSummary = internetEnabled
+        ? l10n.valueOn
+        : l10n.valueOff;
+    final String languageLabel = _appLanguage.trim().isEmpty
+        ? l10n.languageSystem
+        : _languageLabel(context, _appLanguage);
+    final String filterSummary = _receiverUseServerColors
+        ? l10n.projectionColorSourceServer
+        : l10n.projectionColorSourceLocal;
+    final bool showInternet = _matches(
+      query,
+      l10n.settingsSearchKeywordsInternet,
+    );
     final bool showLan = _matches(query, l10n.settingsSearchKeywordsLan);
-    final bool showProjectionImage = _matches(query, l10n.settingsSearchKeywordsProjectionImage);
-    final bool showProjectionFilter = _matches(query, l10n.settingsSearchKeywordsProjectionFilter);
+    final bool showProjectionImage = _matches(
+      query,
+      l10n.settingsSearchKeywordsProjectionImage,
+    );
+    final bool showProjectionFilter = _matches(
+      query,
+      l10n.settingsSearchKeywordsProjectionFilter,
+    );
     final bool showColors = _matches(query, l10n.settingsSearchKeywordsColors);
-    final bool showGeneral = _matches(query, l10n.settingsSearchKeywordsGeneral);
+    final bool showGeneral = _matches(
+      query,
+      l10n.settingsSearchKeywordsGeneral,
+    );
     final bool showSystem = _matches(query, l10n.settingsSearchKeywordsSystem);
-    final bool anyVisible = showInternet || showLan || showProjectionImage || showProjectionFilter || showColors || showGeneral || showSystem;
+    final bool anyVisible =
+        showInternet ||
+        showLan ||
+        showProjectionImage ||
+        showProjectionFilter ||
+        showColors ||
+        showGeneral ||
+        showSystem;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -164,7 +206,26 @@ class _SettingsSheetState extends State<SettingsSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(l10n.settingsTitleReceiver, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
+              children: <Widget>[
+                Text(
+                  l10n.settingsTitleReceiver,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  l10n.settingsVersionLabel(_appVersion, _buildNumber),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _search,
@@ -185,47 +246,97 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     _settingsTile(
                       leading: const Icon(Icons.public),
                       title: Text(l10n.settingsInternetTitle),
-                      subtitle: Text(l10n.settingsInternetSubtitle(internetSummary, senderSummary)),
+                      subtitle: Text(
+                        l10n.settingsInternetSubtitle(
+                          internetSummary,
+                          senderSummary,
+                        ),
+                      ),
                       onTap: _openInternetSettings,
                     ),
-                  if (showInternet && (showLan || showProjectionImage || showProjectionFilter || showColors || showGeneral || showSystem)) const Divider(height: 1),
+                  if (showInternet &&
+                      (showLan ||
+                          showProjectionImage ||
+                          showProjectionFilter ||
+                          showColors ||
+                          showGeneral ||
+                          showSystem))
+                    const Divider(height: 1),
                   if (showLan)
                     _settingsTile(
                       leading: const Icon(Icons.lan),
                       title: Text(l10n.settingsLocalNetworkTitle),
-                      subtitle: Text(l10n.settingsLocalNetworkSubtitle(_port.text.trim().isEmpty ? '-' : _port.text.trim())),
+                      subtitle: Text(
+                        l10n.settingsLocalNetworkSubtitle(
+                          _port.text.trim().isEmpty ? '-' : _port.text.trim(),
+                        ),
+                      ),
                       onTap: _openLocalNetworkSettings,
                     ),
-                  if (showLan && (showProjectionImage || showProjectionFilter || showColors || showGeneral || showSystem)) const Divider(height: 1),
+                  if (showLan &&
+                      (showProjectionImage ||
+                          showProjectionFilter ||
+                          showColors ||
+                          showGeneral ||
+                          showSystem))
+                    const Divider(height: 1),
                   if (showProjectionImage)
                     _settingsTile(
                       leading: const Icon(Icons.crop_free),
                       title: Text(l10n.projectionImageTitle),
-                      subtitle: Text(l10n.projectionImageSummary('${_rotate * 90}°', _mirror ? l10n.valueOn : l10n.valueOff)),
+                      subtitle: Text(
+                        l10n.projectionImageSummary(
+                          '${_rotate * 90}°',
+                          _mirror ? l10n.valueOn : l10n.valueOff,
+                        ),
+                      ),
                       onTap: _openProjectionLayoutSettings,
                     ),
-                  if (showProjectionImage && (showProjectionFilter || showColors || showGeneral || showSystem)) const Divider(height: 1),
+                  if (showProjectionImage &&
+                      (showProjectionFilter ||
+                          showColors ||
+                          showGeneral ||
+                          showSystem))
+                    const Divider(height: 1),
                   if (showProjectionFilter)
                     _settingsTile(
                       leading: const Icon(Icons.filter_alt_outlined),
                       title: Text(l10n.projectionFilteringTitle),
-                      subtitle: Text(l10n.projectionFilterSummary(filterSummary, _projectionScrollable ? l10n.valueOn : l10n.valueOff)),
+                      subtitle: Text(
+                        l10n.projectionFilterSummary(
+                          filterSummary,
+                          _projectionScrollable ? l10n.valueOn : l10n.valueOff,
+                        ),
+                      ),
                       onTap: _openProjectionFilterSettings,
                     ),
-                  if (showProjectionFilter && (showColors || showGeneral || showSystem)) const Divider(height: 1),
+                  if (showProjectionFilter &&
+                      (showColors || showGeneral || showSystem))
+                    const Divider(height: 1),
                   if (showColors)
                     _settingsTile(
                       leading: const Icon(Icons.palette_outlined),
                       title: Text(l10n.localColorsTitle),
-                      subtitle: Text(l10n.localColorsSummary(_shortColorHex(_bkColor), _shortColorHex(_txtColor))),
+                      subtitle: Text(
+                        l10n.localColorsSummary(
+                          _shortColorHex(_bkColor),
+                          _shortColorHex(_txtColor),
+                        ),
+                      ),
                       onTap: _openColorSettings,
                     ),
-                  if (showColors && (showGeneral || showSystem)) const Divider(height: 1),
+                  if (showColors && (showGeneral || showSystem))
+                    const Divider(height: 1),
                   if (showGeneral)
                     _settingsTile(
                       leading: const Icon(Icons.tune),
                       title: Text(l10n.settingsGeneralTitle),
-                      subtitle: Text(l10n.settingsGeneralSubtitle(languageLabel, _boot ? l10n.valueOn : l10n.valueOff)),
+                      subtitle: Text(
+                        l10n.settingsGeneralSubtitle(
+                          languageLabel,
+                          _boot ? l10n.valueOn : l10n.valueOff,
+                        ),
+                      ),
                       onTap: _openGeneralSettings,
                     ),
                   if (showGeneral && showSystem) const Divider(height: 1),
@@ -247,7 +358,10 @@ class _SettingsSheetState extends State<SettingsSheet> {
             const SizedBox(height: 8),
             Row(
               children: <Widget>[
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.cancel),
+                ),
                 const Spacer(),
                 FilledButton(onPressed: _save, child: Text(l10n.save)),
               ],
@@ -325,7 +439,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
               decoration: InputDecoration(labelText: l10n.channelLabel),
               items: <DropdownMenuItem<String>>[
                 const DropdownMenuItem<String>(value: '1', child: Text('1.')),
-                ...widget.channelSuggestions.asMap().entries.map((MapEntry<int, String> e) {
+                ...widget.channelSuggestions.asMap().entries.map((
+                  MapEntry<int, String> e,
+                ) {
                   final String value = '${e.key + 1}';
                   return DropdownMenuItem<String>(
                     value: value,
@@ -406,7 +522,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
             initialValue: _rotate,
             decoration: InputDecoration(labelText: l10n.rotationLabel),
             items: <DropdownMenuItem<int>>[
-              for (int i = 0; i < 4; i++) DropdownMenuItem<int>(value: i, child: Text('${i * 90}°')),
+              for (int i = 0; i < 4; i++)
+                DropdownMenuItem<int>(value: i, child: Text('${i * 90}°')),
             ],
             onChanged: (int? v) => setBoth(() => _rotate = v ?? 0),
           ),
@@ -509,10 +626,16 @@ class _SettingsSheetState extends State<SettingsSheet> {
             initialValue: _appLanguage,
             decoration: InputDecoration(labelText: l10n.uiLanguage),
             items: <DropdownMenuItem<String>>[
-              DropdownMenuItem<String>(value: '', child: Text(l10n.languageSystem)),
+              DropdownMenuItem<String>(
+                value: '',
+                child: Text(l10n.languageSystem),
+              ),
               ...AppLocalizations.supportedLocales.map((Locale locale) {
                 final String code = locale.languageCode;
-                return DropdownMenuItem<String>(value: code, child: Text(_languageLabel(context, code)));
+                return DropdownMenuItem<String>(
+                  value: code,
+                  child: Text(_languageLabel(context, code)),
+                );
               }),
             ],
             onChanged: (String? v) => setBoth(() => _appLanguage = v ?? ''),
@@ -532,9 +655,18 @@ class _SettingsSheetState extends State<SettingsSheet> {
             spacing: 8,
             runSpacing: 8,
             children: <Widget>[
-              OutlinedButton(onPressed: widget.onExitRequested, child: Text(l10n.exit)),
-              OutlinedButton(onPressed: widget.onShutdownRequested, child: Text(l10n.shutdown)),
-              OutlinedButton(onPressed: widget.onRebootRequested, child: Text(l10n.reboot)),
+              OutlinedButton(
+                onPressed: widget.onExitRequested,
+                child: Text(l10n.exit),
+              ),
+              OutlinedButton(
+                onPressed: widget.onShutdownRequested,
+                child: Text(l10n.shutdown),
+              ),
+              OutlinedButton(
+                onPressed: widget.onRebootRequested,
+                child: Text(l10n.reboot),
+              ),
             ],
           ),
         ];
@@ -544,51 +676,65 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
   Future<void> _openSectionSheet({
     required String title,
-    required List<Widget> Function(BuildContext context, void Function(void Function()) setBoth) builder,
+    required List<Widget> Function(
+      BuildContext context,
+      void Function(void Function()) setBoth,
+    )
+    builder,
   }) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (BuildContext context, void Function(void Function()) setModalState) {
-            void setBoth(void Function() fn) {
-              if (mounted) {
-                setState(fn);
-              }
-              setModalState(() {});
-            }
+          builder:
+              (
+                BuildContext context,
+                void Function(void Function()) setModalState,
+              ) {
+                void setBoth(void Function() fn) {
+                  if (mounted) {
+                    setState(fn);
+                  }
+                  setModalState(() {});
+                }
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 12,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-              ),
-              child: SafeArea(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 8),
-                      ...builder(context, setBoth),
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(context.l10n.ok),
-                        ),
-                      ),
-                    ],
+                return Padding(
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 12,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 16,
                   ),
-                ),
-              ),
-            );
-          },
+                  child: SafeArea(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...builder(context, setBoth),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: FilledButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: Text(context.l10n.ok),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
         );
       },
     );
@@ -630,9 +776,12 @@ class _SettingsSheetState extends State<SettingsSheet> {
   }
 
   void _save() {
-    final int port = int.tryParse(_port.text.trim()) ?? widget.initialSettings.port;
+    final int port =
+        int.tryParse(_port.text.trim()) ?? widget.initialSettings.port;
     if (port < 0 || port > 65535) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.invalidPortRange)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.invalidPortRange)));
       return;
     }
 
@@ -640,10 +789,14 @@ class _SettingsSheetState extends State<SettingsSheet> {
       port: port,
       mqttUser: _ipMode ? '' : _mqttUser.text.trim(),
       mqttChannel: _channel,
-      clipL: double.tryParse(_clipL.text.trim()) ?? widget.initialSettings.clipL,
-      clipT: double.tryParse(_clipT.text.trim()) ?? widget.initialSettings.clipT,
-      clipR: double.tryParse(_clipR.text.trim()) ?? widget.initialSettings.clipR,
-      clipB: double.tryParse(_clipB.text.trim()) ?? widget.initialSettings.clipB,
+      clipL:
+          double.tryParse(_clipL.text.trim()) ?? widget.initialSettings.clipL,
+      clipT:
+          double.tryParse(_clipT.text.trim()) ?? widget.initialSettings.clipT,
+      clipR:
+          double.tryParse(_clipR.text.trim()) ?? widget.initialSettings.clipR,
+      clipB:
+          double.tryParse(_clipB.text.trim()) ?? widget.initialSettings.clipB,
       borderToClip: _borderToClip,
       mirror: _mirror,
       boot: _boot,
@@ -668,7 +821,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
     if (code.trim().isEmpty) {
       return true;
     }
-    return AppLocalizations.supportedLocales.any((Locale locale) => locale.languageCode == code);
+    return AppLocalizations.supportedLocales.any(
+      (Locale locale) => locale.languageCode == code,
+    );
   }
 
   String _languageLabel(BuildContext context, String code) {
@@ -683,7 +838,12 @@ class _SettingsSheetState extends State<SettingsSheet> {
     }
   }
 
-  Widget _colorRow(String label, Color color, ValueChanged<Color> onChanged, {required bool enabled}) {
+  Widget _colorRow(
+    String label,
+    Color color,
+    ValueChanged<Color> onChanged, {
+    required bool enabled,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -705,7 +865,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase().substring(2)}',
                 style: TextStyle(
                   fontSize: 10,
-                  color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                  color: color.computeLuminance() > 0.5
+                      ? Colors.black
+                      : Colors.white,
                 ),
               ),
             ),
@@ -742,7 +904,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
                       color: c,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: selected ? Theme.of(context).colorScheme.primary : Colors.white24,
+                        color: selected
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.white24,
                         width: selected ? 3 : 1,
                       ),
                     ),
@@ -752,7 +916,10 @@ class _SettingsSheetState extends State<SettingsSheet> {
             ),
           ),
           actions: <Widget>[
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.cancel)),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(context.l10n.cancel),
+            ),
           ],
         );
       },

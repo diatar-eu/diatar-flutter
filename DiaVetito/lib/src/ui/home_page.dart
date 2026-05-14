@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../controllers/projection_controller.dart';
 import '../l10n/l10n.dart';
@@ -18,8 +19,27 @@ class _HomePageState extends State<HomePage> {
   double? _canvasHeight;
   Size? _lastViewport;
   int _lastFrameSignature = 0;
+  String _appVersion = '-';
+  String _buildNumber = '-';
 
   ProjectionController get controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final PackageInfo info = await PackageInfo.fromPlatform();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _appVersion = info.version;
+      _buildNumber = info.buildNumber;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,13 +50,18 @@ class _HomePageState extends State<HomePage> {
         builder: (BuildContext context, _) {
           return LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
-              controller.updateViewport(Size(constraints.maxWidth, constraints.maxHeight));
+              controller.updateViewport(
+                Size(constraints.maxWidth, constraints.maxHeight),
+              );
               final double viewportHeight = constraints.maxHeight;
               final bool fitToViewport = controller.settings.projAutoSize;
-              final double initialCanvasHeight = _canvasHeight ?? viewportHeight;
+              final double initialCanvasHeight =
+                  _canvasHeight ?? viewportHeight;
               final double canvasHeight = fitToViewport
                   ? viewportHeight
-                  : (initialCanvasHeight > viewportHeight ? initialCanvasHeight : viewportHeight);
+                  : (initialCanvasHeight > viewportHeight
+                        ? initialCanvasHeight
+                        : viewportHeight);
 
               if (!fitToViewport) {
                 _scheduleHeightRefresh(
@@ -50,18 +75,26 @@ class _HomePageState extends State<HomePage> {
                 children: <Widget>[
                   Positioned.fill(
                     child: GestureDetector(
-                      onLongPress: () => _openSettings(context),
+                      onTap: () => _openSettings(context),
                       child: fitToViewport
                           ? SizedBox(
                               width: constraints.maxWidth,
                               height: viewportHeight,
                               child: CustomPaint(
-                                size: Size(constraints.maxWidth, viewportHeight),
+                                size: Size(
+                                  constraints.maxWidth,
+                                  viewportHeight,
+                                ),
                                 painter: ProjectorPainter(
                                   frame: controller.activeFrame,
                                   globals: controller.globals,
                                   settings: controller.settings,
                                   logoTitle: context.l10n.logoTitle,
+                                  logoSubtitle: context.l10n
+                                      .splashVersionSubtitle(
+                                        _appVersion,
+                                        _buildNumber,
+                                      ),
                                 ),
                               ),
                             )
@@ -71,25 +104,32 @@ class _HomePageState extends State<HomePage> {
                                 width: constraints.maxWidth,
                                 height: canvasHeight,
                                 child: CustomPaint(
-                                  size: Size(constraints.maxWidth, canvasHeight),
+                                  size: Size(
+                                    constraints.maxWidth,
+                                    canvasHeight,
+                                  ),
                                   painter: ProjectorPainter(
                                     frame: controller.activeFrame,
                                     globals: controller.globals,
                                     settings: controller.settings,
                                     logoTitle: context.l10n.logoTitle,
+                                    logoSubtitle: context.l10n
+                                        .splashVersionSubtitle(
+                                          _appVersion,
+                                          _buildNumber,
+                                        ),
                                   ),
                                 ),
                               ),
                             ),
                     ),
                   ),
-                  
                 ],
               );
             },
           );
         },
-      )
+      ),
     );
   }
 
@@ -123,7 +163,9 @@ class _HomePageState extends State<HomePage> {
         viewportWidth: viewportWidth,
         viewportHeight: viewportHeight,
       );
-      final double nextHeight = estimated > viewportHeight ? estimated : viewportHeight;
+      final double nextHeight = estimated > viewportHeight
+          ? estimated
+          : viewportHeight;
       final double current = _canvasHeight ?? viewportHeight;
       if ((nextHeight - current).abs() < 1) {
         return;
@@ -167,10 +209,14 @@ class _HomePageState extends State<HomePage> {
       globals: controller.globals,
       settings: controller.settings,
       logoTitle: context.l10n.logoTitle,
+      logoSubtitle: context.l10n.splashVersionSubtitle(
+        _appVersion,
+        _buildNumber,
+      ),
     );
-    final double required = painter.measureRequiredHeight(Size(viewportWidth, viewportHeight));
+    final double required = painter.measureRequiredHeight(
+      Size(viewportWidth, viewportHeight),
+    );
     return required > viewportHeight ? required : viewportHeight;
   }
-
-
 }

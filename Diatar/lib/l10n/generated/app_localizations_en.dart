@@ -395,6 +395,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitleReceiver => 'Settings';
 
   @override
+  String settingsVersionLabel(Object version, Object buildNumber) {
+    return 'Version $version ($buildNumber)';
+  }
+
+  @override
   String get modeIp => 'IP';
 
   @override

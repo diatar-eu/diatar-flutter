@@ -110,11 +110,23 @@ abstract class AppLocalizations {
   /// **'Diatár Vetítő'**
   String get logoTitle;
 
+  /// No description provided for @splashVersionSubtitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Verzió v{version} ({buildNumber})'**
+  String splashVersionSubtitle(Object version, Object buildNumber);
+
   /// No description provided for @settingsTitleReceiver.
   ///
   /// In hu, this message translates to:
   /// **'Beállítások'**
   String get settingsTitleReceiver;
+
+  /// No description provided for @settingsVersionLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Verzió {version} ({buildNumber})'**
+  String settingsVersionLabel(Object version, Object buildNumber);
 
   /// No description provided for @settingsSearchLabel.
   ///

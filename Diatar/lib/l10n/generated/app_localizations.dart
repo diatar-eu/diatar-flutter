@@ -701,6 +701,12 @@ abstract class AppLocalizations {
   /// **'Beállítások'**
   String get settingsTitleReceiver;
 
+  /// No description provided for @settingsVersionLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Verzió {version} ({buildNumber})'**
+  String settingsVersionLabel(Object version, Object buildNumber);
+
   /// No description provided for @modeIp.
   ///
   /// In hu, this message translates to:

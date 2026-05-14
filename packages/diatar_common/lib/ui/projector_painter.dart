@@ -15,12 +15,14 @@ class ProjectorPainter extends CustomPainter {
     required this.globals,
     required this.settings,
     this.logoTitle = '',
+    this.logoSubtitle = 'Flutter port',
   });
 
   final ProjectionFrame? frame;
   final ProjectionGlobals globals;
   final AppSettings settings;
   final String logoTitle;
+  final String logoSubtitle;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -282,7 +284,7 @@ class ProjectorPainter extends CustomPainter {
 
     final TextPainter verPainter = TextPainter(
       text: TextSpan(
-        text: 'Flutter port',
+        text: logoSubtitle,
         style: TextStyle(color: Colors.white70, fontSize: verFontSize),
       ),
       textDirection: TextDirection.ltr,

@@ -15,7 +15,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logoTitle => 'Diatar Vetito';
 
   @override
+  String splashVersionSubtitle(Object version, Object buildNumber) {
+    return 'Version v$version ($buildNumber)';
+  }
+
+  @override
   String get settingsTitleReceiver => 'Settings';
+
+  @override
+  String settingsVersionLabel(Object version, Object buildNumber) {
+    return 'Version $version ($buildNumber)';
+  }
 
   @override
   String get settingsSearchLabel => 'Search in settings';

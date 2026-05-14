@@ -335,6 +335,13 @@
   "projectedImage": "Vetített kép:",
   "settingsTitle": "Diatár beállítások",
   "settingsTitleReceiver": "Beállítások",
+  "settingsVersionLabel": "Verzió {version} ({buildNumber})",
+  "@settingsVersionLabel": {
+    "placeholders": {
+      "version": {},
+      "buildNumber": {}
+    }
+  },
   "modeIp": "IP",
   "modeInternet": "Internet",
   "senderLabel": "Küldő",
