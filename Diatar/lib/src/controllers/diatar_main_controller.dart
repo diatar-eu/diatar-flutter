@@ -137,6 +137,7 @@ class DiatarMainController extends ChangeNotifier {
   int _projectedCustomCursor = -1;
   String? _lastImportedCustomOrderBaseName;
   bool _diaVirtualBookSelected = false;
+  bool _startupDownloadDialogHandled = false;
 
   Map<String, String> get statusParams =>
       Map<String, String>.unmodifiable(_statusParams);
@@ -147,6 +148,14 @@ class DiatarMainController extends ChangeNotifier {
       _lastImportedCustomOrderBaseName != null && _customOrder.isNotEmpty;
   bool get diaVirtualBookSelected =>
       _diaVirtualBookSelected && hasImportedCustomOrderDia;
+  bool get shouldAutoOpenDownloadDialog =>
+      !_startupDownloadDialogHandled &&
+      !loading &&
+      statusCode == 'statusNoDtxFiles';
+
+  void markStartupDownloadDialogHandled() {
+    _startupDownloadDialogHandled = true;
+  }
 
   void _setStatus(
     String code, [

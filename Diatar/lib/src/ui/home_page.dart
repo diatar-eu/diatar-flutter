@@ -274,6 +274,16 @@ class DiatarHomePage extends StatelessWidget {
       body: AnimatedBuilder(
         animation: controller,
         builder: (BuildContext context, Widget? child) {
+          if (controller.shouldAutoOpenDownloadDialog) {
+            controller.markStartupDownloadDialogHandled();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!context.mounted) {
+                return;
+              }
+              unawaited(_openDownloadDialog(context));
+            });
+          }
+
           final MediaQueryData mq = MediaQuery.of(context);
           final int screenW = (mq.size.width * mq.devicePixelRatio).round();
           final int screenH = (mq.size.height * mq.devicePixelRatio).round();
