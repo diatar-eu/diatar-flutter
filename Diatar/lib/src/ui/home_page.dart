@@ -2102,7 +2102,7 @@ class _SearchHit {
   String get bookSortTitle => book.title;
 
   String get bookDisplayTitle =>
-      bookGroup.isEmpty ? bookSortTitle : '[${bookGroup}] $bookSortTitle';
+      bookGroup.isEmpty ? bookSortTitle : '[$bookGroup] $bookSortTitle';
 
   String get bookSearchText => '${book.displayName} ${book.title}';
 }
