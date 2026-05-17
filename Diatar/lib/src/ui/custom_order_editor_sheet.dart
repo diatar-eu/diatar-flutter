@@ -87,6 +87,30 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     return options;
   }
 
+  List<_InsertBookDropdownEntry> _buildInsertBookDropdownEntries(
+    List<DtxBook> books,
+  ) {
+    final List<_InsertBookDropdownEntry> entries = <_InsertBookDropdownEntry>[];
+    String? lastGroup;
+    for (final DtxBook book in books) {
+      final String group = book.group.trim();
+      if (group.isNotEmpty && group != lastGroup) {
+        entries.add(_InsertBookDropdownEntry.header(group));
+        lastGroup = group;
+      }
+      if (group.isEmpty) {
+        lastGroup = null;
+      }
+      entries.add(
+        _InsertBookDropdownEntry.book(
+          fileName: book.fileName,
+          title: book.title,
+        ),
+      );
+    }
+    return entries;
+  }
+
   void _ensureInsertSelectionValid() {
     final List<DtxBook> books = controller.books
         .where(_bookHasSongs)
@@ -217,6 +241,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     final List<DtxBook> books = controller.books
         .where(_bookHasSongs)
         .toList(growable: false);
+    final List<_InsertBookDropdownEntry> bookEntries =
+        _buildInsertBookDropdownEntries(books);
     if (books.isEmpty) {
       return;
     }
@@ -272,17 +298,57 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                             labelText: l10n.customOrderInsertBookLabel,
                             border: const OutlineInputBorder(),
                           ),
-                          items: books
-                              .map(
-                                (DtxBook book) => DropdownMenuItem<String>(
-                                  value: book.fileName,
+                          items: bookEntries.asMap().entries.map((
+                            MapEntry<int, _InsertBookDropdownEntry> e,
+                          ) {
+                            final _InsertBookDropdownEntry entry = e.value;
+                            if (entry.isHeader) {
+                              return DropdownMenuItem<String>(
+                                value: '__header_${e.key}',
+                                enabled: false,
+                                child: Text(
+                                  '[${entry.group!}]',
+                                  style: Theme.of(dialogContext)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(
+                                          dialogContext,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              );
+                            }
+                            return DropdownMenuItem<String>(
+                              value: entry.fileName,
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 16),
+                                child: SizedBox(
+                                  width: double.infinity,
                                   child: Text(
-                                    book.displayName,
+                                    entry.title!,
                                     overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
                                   ),
                                 ),
-                              )
-                              .toList(),
+                              ),
+                            );
+                          }).toList(),
+                          selectedItemBuilder: (BuildContext context) {
+                            return bookEntries.map((
+                              _InsertBookDropdownEntry entry,
+                            ) {
+                              return Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  entry.title ?? '[${entry.group!}]',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              );
+                            }).toList();
+                          },
                           onChanged: (String? value) {
                             if (value == null) {
                               return;
@@ -376,6 +442,19 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     List<CustomOrderEntry> toInsert;
     if (verses.isEmpty) {
       toInsert = <CustomOrderEntry>[baseEntry];
+    } else if (verses.length == 1) {
+      toInsert = <CustomOrderEntry>[
+        CustomOrderEntry(
+          fileName: selectedBookFileName,
+          songIndex: selectedSongIndex,
+          verseIndex: 0,
+          label: controller.buildEntryLabel(
+            selectedBookFileName,
+            selectedSongIndex,
+            0,
+          ),
+        ),
+      ];
     } else {
       final Set<int> allSelected = Set<int>.from(
         List<int>.generate(verses.length, (int i) => i),
@@ -431,7 +510,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                     _collectSearchCandidates()
                         .where(
                           (_SearchCandidate candidate) =>
-                              candidate.bookTitle.toLowerCase().contains(
+                              candidate.bookSearchText.toLowerCase().contains(
                                 filter,
                               ) ||
                               candidate.songTitle.toLowerCase().contains(
@@ -440,11 +519,17 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                         )
                         .toList()
                       ..sort((_SearchCandidate a, _SearchCandidate b) {
-                        final int byBook = a.bookTitle.toLowerCase().compareTo(
-                          b.bookTitle.toLowerCase(),
+                        final int byBook = a.bookSortTitle
+                            .toLowerCase()
+                            .compareTo(b.bookSortTitle.toLowerCase());
+                        if (byBook != 0) {
+                          return byBook;
+                        }
+                        final int byGroup = a.bookGroup.toLowerCase().compareTo(
+                          b.bookGroup.toLowerCase(),
                         );
-                        return byBook != 0
-                            ? byBook
+                        return byGroup != 0
+                            ? byGroup
                             : a.songTitle.toLowerCase().compareTo(
                                 b.songTitle.toLowerCase(),
                               );
@@ -482,7 +567,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                                         return ListTile(
                                           dense: true,
                                           title: Text(hit.songTitle),
-                                          subtitle: Text(hit.bookTitle),
+                                          subtitle: Text(hit.bookDisplayTitle),
                                           trailing: IconButton(
                                             icon: const Icon(
                                               Icons.add_circle_outline,
@@ -517,6 +602,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   List<_SearchCandidate> _collectSearchCandidates() {
     final List<_SearchCandidate> candidates = <_SearchCandidate>[];
     for (final DtxBook book in controller.books) {
+      final String group = book.group.trim();
+      final String fullTitle = book.title;
+      final String displayTitle = group.isEmpty
+          ? fullTitle
+          : '[$group] $fullTitle';
+      final String searchText = '${book.displayName} $fullTitle';
       for (int i = 0; i < book.songs.length; i++) {
         final DtxSong song = book.songs[i];
         if (song.separator) {
@@ -525,7 +616,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         candidates.add(
           _SearchCandidate(
             fileName: book.fileName,
-            bookTitle: book.displayName,
+            bookDisplayTitle: displayTitle,
+            bookSortTitle: fullTitle,
+            bookSearchText: searchText,
+            bookGroup: group,
             songIndex: i,
             songTitle: song.title,
           ),
@@ -1075,6 +1169,28 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     if (verses.isEmpty) {
       return;
     }
+    if (verses.length == 1) {
+      final CustomOrderEntry onlyVerseEntry = controller.normalizeEntry(
+        base.copyWith(
+          verseIndex: 0,
+          label: controller.buildEntryLabel(base.fileName, base.songIndex, 0),
+        ),
+      );
+      final String normalizedSignature = _entrySignature(onlyVerseEntry);
+      final bool alreadySame = groupEntries.every(
+        (CustomOrderEntry e) => _entrySignature(e) == normalizedSignature,
+      );
+      if (alreadySame) {
+        return;
+      }
+
+      setState(() {
+        _entries.removeRange(group.start, group.end + 1);
+        _entries.insert(group.start, onlyVerseEntry);
+      });
+      await _commitEntries();
+      return;
+    }
 
     final Set<int> selectedSet = groupEntries
         .map((CustomOrderEntry e) => _safeEntryVerseIndex(e))
@@ -1171,13 +1287,19 @@ class CustomOrderEditorSheet extends StatelessWidget {
 class _SearchCandidate {
   const _SearchCandidate({
     required this.fileName,
-    required this.bookTitle,
+    required this.bookDisplayTitle,
+    required this.bookSortTitle,
+    required this.bookSearchText,
+    required this.bookGroup,
     required this.songIndex,
     required this.songTitle,
   });
 
   final String fileName;
-  final String bookTitle;
+  final String bookDisplayTitle;
+  final String bookSortTitle;
+  final String bookSearchText;
+  final String bookGroup;
   final int songIndex;
   final String songTitle;
 }
@@ -1187,6 +1309,23 @@ class _SongOption {
 
   final int songIndex;
   final String songTitle;
+}
+
+class _InsertBookDropdownEntry {
+  const _InsertBookDropdownEntry.header(this.group)
+    : fileName = null,
+      title = null;
+
+  const _InsertBookDropdownEntry.book({
+    required this.fileName,
+    required this.title,
+  }) : group = null;
+
+  final String? group;
+  final String? fileName;
+  final String? title;
+
+  bool get isHeader => group != null;
 }
 
 class _DiaSaveTarget {

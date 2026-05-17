@@ -74,7 +74,10 @@ String _songVerseToken(DtxVerse verse) {
   return raw;
 }
 
-String _entryShortLabel(DiatarMainController controller, CustomOrderEntry entry) {
+String _entryShortLabel(
+  DiatarMainController controller,
+  CustomOrderEntry entry,
+) {
   if (entry.isSeparator) {
     return _cleanSeparatorLabel(entry);
   }
@@ -169,8 +172,9 @@ int _selectedDiaSongGroupIndex(
   int selectedCustomOrderCursor,
 ) {
   final int idx = groups.indexWhere(
-    (_DiaSongGroup g) =>
-        g.verses.any((_DiaVerseEntry v) => v.customOrderIndex == selectedCustomOrderCursor),
+    (_DiaSongGroup g) => g.verses.any(
+      (_DiaVerseEntry v) => v.customOrderIndex == selectedCustomOrderCursor,
+    ),
   );
   return idx >= 0 ? idx : 0;
 }
@@ -418,24 +422,25 @@ class DiatarHomePage extends StatelessWidget {
                     : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 8),
-                _actionIconButton(
+              _actionIconButton(
                 context,
                 icon: controller.settings.projectionLocked
-                  ? Icons.lock
-                  : Icons.lock_open,
+                    ? Icons.lock
+                    : Icons.lock_open,
                 tooltip: controller.settings.projectionLocked
-                  ? l10n.projectionUnlock
-                  : l10n.projectionLock,
+                    ? l10n.projectionUnlock
+                    : l10n.projectionLock,
                 onPressed: () => unawaited(controller.toggleProjectionLock()),
                 backgroundColor: controller.settings.projectionLocked
-                  ? const Color(0xFFF9A825).withValues(alpha: 0.15)
-                  : Theme.of(context).colorScheme.onSurfaceVariant
-                      .withValues(alpha: 0.08),
+                    ? const Color(0xFFF9A825).withValues(alpha: 0.15)
+                    : Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
                 foregroundColor: controller.settings.projectionLocked
-                  ? const Color(0xFFF9A825)
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 8),
+                    ? const Color(0xFFF9A825)
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
               _actionIconButton(
                 context,
                 icon: Icons.chevron_right,
@@ -1007,7 +1012,10 @@ class _SongDropdown extends StatelessWidget {
         return const SizedBox.shrink();
       }
       final int selectedCursor = controller.selectedCustomOrderCursor;
-      final int selectedGroup = _selectedDiaSongGroupIndex(groups, selectedCursor);
+      final int selectedGroup = _selectedDiaSongGroupIndex(
+        groups,
+        selectedCursor,
+      );
       return DropdownButtonFormField<int>(
         initialValue: selectedGroup.clamp(0, groups.length - 1),
         decoration: InputDecoration(
@@ -1087,7 +1095,10 @@ class _VerseDropdown extends StatelessWidget {
         return const SizedBox.shrink();
       }
       final int selectedCursor = controller.selectedCustomOrderCursor;
-      final int selectedGroup = _selectedDiaSongGroupIndex(groups, selectedCursor);
+      final int selectedGroup = _selectedDiaSongGroupIndex(
+        groups,
+        selectedCursor,
+      );
       final List<_DiaVerseEntry> verses = groups[selectedGroup].verses;
       if (verses.isEmpty) {
         return const SizedBox.shrink();
@@ -1499,14 +1510,20 @@ class _SongSearchDashboardState extends State<_SongSearchDashboard> {
           if (filter.isEmpty) {
             return true;
           }
-          return hit.book.displayName.toLowerCase().contains(filter) ||
+          return hit.bookSearchText.toLowerCase().contains(filter) ||
               hit.song.title.toLowerCase().contains(filter);
         }).toList()..sort((_SearchHit a, _SearchHit b) {
-          final int byBook = a.book.displayName.toLowerCase().compareTo(
-            b.book.displayName.toLowerCase(),
+          final int byBook = a.bookSortTitle.toLowerCase().compareTo(
+            b.bookSortTitle.toLowerCase(),
           );
           if (byBook != 0) {
             return byBook;
+          }
+          final int byGroup = a.bookGroup.toLowerCase().compareTo(
+            b.bookGroup.toLowerCase(),
+          );
+          if (byGroup != 0) {
+            return byGroup;
           }
           return a.song.title.toLowerCase().compareTo(
             b.song.title.toLowerCase(),
@@ -1595,7 +1612,7 @@ class _SongSearchDashboardState extends State<_SongSearchDashboard> {
           dense: true,
           selected: selected,
           title: Text(hit.song.title),
-          subtitle: Text(hit.book.displayName, overflow: TextOverflow.ellipsis),
+          subtitle: Text(hit.bookDisplayTitle, overflow: TextOverflow.ellipsis),
           trailing: Text(
             '${hit.song.verses.length}',
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
@@ -2079,4 +2096,13 @@ class _SearchHit {
   final DtxBook book;
   final int songIndex;
   final DtxSong song;
+
+  String get bookGroup => book.group.trim();
+
+  String get bookSortTitle => book.title;
+
+  String get bookDisplayTitle =>
+      bookGroup.isEmpty ? bookSortTitle : '[${bookGroup}] $bookSortTitle';
+
+  String get bookSearchText => '${book.displayName} ${book.title}';
 }
