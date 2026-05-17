@@ -1250,14 +1250,20 @@ abstract class AppLocalizations {
   /// No description provided for @loadDia.
   ///
   /// In hu, this message translates to:
-  /// **'Betöltés .DIA'**
+  /// **'Betöltés'**
   String get loadDia;
 
   /// No description provided for @saveDia.
   ///
   /// In hu, this message translates to:
-  /// **'Mentés .DIA'**
+  /// **'Mentés'**
   String get saveDia;
+
+  /// No description provided for @customOrderDiaFileNameLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Fájlnév'**
+  String get customOrderDiaFileNameLabel;
 
   /// No description provided for @savedPath.
   ///
