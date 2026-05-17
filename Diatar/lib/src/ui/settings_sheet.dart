@@ -139,7 +139,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       return;
     }
     setState(() {
-      _appVersion = info.version;
+      final parts = info.version.split('.');
+      _appVersion = parts.length >= 2 ? '${parts[0]}.${parts[1]}' : info.version;
       _buildNumber = info.buildNumber;
     });
   }

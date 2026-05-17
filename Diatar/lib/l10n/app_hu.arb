@@ -432,8 +432,9 @@
   "textSlideDialogTitle": "Szöveges dia hozzáadása",
   "textSlideTitleLabel": "Cím",
   "textSlideBodyLabel": "Szöveg (soronként)",
-  "loadDia": "Betöltés .DIA",
-  "saveDia": "Mentés .DIA",
+  "loadDia": "Betöltés",
+  "saveDia": "Mentés",
+  "customOrderDiaFileNameLabel": "Fájlnév",
   "savedPath": "Mentve: {path}",
   "@savedPath": {
     "placeholders": {

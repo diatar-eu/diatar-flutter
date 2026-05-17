@@ -672,10 +672,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get textSlideBodyLabel => 'Text (one line per row)';
 
   @override
-  String get loadDia => 'Load .DIA';
+  String get loadDia => 'Load';
 
   @override
-  String get saveDia => 'Save .DIA';
+  String get saveDia => 'Save';
+
+  @override
+  String get customOrderDiaFileNameLabel => 'File name';
 
   @override
   String savedPath(Object path) {

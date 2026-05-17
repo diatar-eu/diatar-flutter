@@ -815,6 +815,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       );
       final String defaultFileName = '$defaultBaseName.dia';
       final String configuredDir = controller.settings.diaExportPath.trim();
+      final bool hadConfiguredDir = configuredDir.isNotEmpty;
       final String? initialDir =
           configuredDir.isNotEmpty && Directory(configuredDir).existsSync()
           ? configuredDir
@@ -833,15 +834,32 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
       if (!nativeSaveDialogAvailable) {
         final String baseDir = await _resolveDiaExportDirectory();
-        final String? chosenName = await _askDiaFileName(defaultBaseName);
-        if (chosenName == null) {
+        final _DiaSaveTarget? chosenTarget = await _askDiaSaveTarget(
+          initialName: defaultBaseName,
+          initialDirectory: baseDir,
+        );
+        if (chosenTarget == null) {
           return;
         }
         final String fileBaseName = _normalizeDiaBaseName(
-          chosenName,
+          chosenTarget.fileName,
           fallback: defaultBaseName,
         );
-        targetPath = '$baseDir${Platform.pathSeparator}$fileBaseName.dia';
+        final String targetDir = chosenTarget.directoryPath.trim();
+        if (targetDir.isEmpty) {
+          return;
+        }
+        final Directory exportDir = Directory(targetDir);
+        if (!await exportDir.exists()) {
+          await exportDir.create(recursive: true);
+        }
+        if (!hadConfiguredDir) {
+          await controller.applySettings(
+            controller.settings.copyWith(diaExportPath: exportDir.path),
+          );
+        }
+        targetPath =
+            '${exportDir.path}${Platform.pathSeparator}$fileBaseName.dia';
       }
 
       if (targetPath == null || targetPath.trim().isEmpty) {
@@ -877,33 +895,16 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     return normalized.trim().isEmpty ? fallback : normalized;
   }
 
-  Future<String?> _askDiaFileName(String initialName) async {
-    String enteredName = initialName;
-    final String? result = await showDialog<String>(
+  Future<_DiaSaveTarget?> _askDiaSaveTarget({
+    required String initialName,
+    required String initialDirectory,
+  }) async {
+    final _DiaSaveTarget? result = await showDialog<_DiaSaveTarget>(
       context: context,
       builder: (BuildContext dialogContext) {
-        final l10n = dialogContext.l10n;
-        return AlertDialog(
-          title: Text(l10n.saveDia),
-          content: TextFormField(
-            initialValue: initialName,
-            autofocus: true,
-            decoration: const InputDecoration(hintText: 'sorrend'),
-            onChanged: (String value) => enteredName = value,
-            onFieldSubmitted: (String value) {
-              Navigator.of(dialogContext).pop(value);
-            },
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(null),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(enteredName),
-              child: Text(l10n.saveDia),
-            ),
-          ],
+        return _DiaSaveDialog(
+          initialName: initialName,
+          initialDirectory: initialDirectory,
         );
       },
     );
@@ -1186,4 +1187,133 @@ class _SongOption {
 
   final int songIndex;
   final String songTitle;
+}
+
+class _DiaSaveTarget {
+  const _DiaSaveTarget({required this.fileName, required this.directoryPath});
+
+  final String fileName;
+  final String directoryPath;
+}
+
+class _DiaSaveDialog extends StatefulWidget {
+  const _DiaSaveDialog({
+    required this.initialName,
+    required this.initialDirectory,
+  });
+
+  final String initialName;
+  final String initialDirectory;
+
+  @override
+  State<_DiaSaveDialog> createState() => _DiaSaveDialogState();
+}
+
+class _DiaSaveDialogState extends State<_DiaSaveDialog> {
+  late final TextEditingController _fileNameController;
+  late final TextEditingController _directoryController;
+
+  @override
+  void initState() {
+    super.initState();
+    _fileNameController = TextEditingController(text: widget.initialName);
+    _directoryController = TextEditingController(text: widget.initialDirectory);
+  }
+
+  @override
+  void dispose() {
+    _fileNameController.dispose();
+    _directoryController.dispose();
+    super.dispose();
+  }
+
+  _DiaSaveTarget? _buildTargetOrNull() {
+    final String fileName = _fileNameController.text.trim();
+    final String directoryPath = _directoryController.text.trim();
+    if (fileName.isEmpty || directoryPath.isEmpty) {
+      return null;
+    }
+    return _DiaSaveTarget(fileName: fileName, directoryPath: directoryPath);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final bool canSave =
+        _fileNameController.text.trim().isNotEmpty &&
+        _directoryController.text.trim().isNotEmpty;
+
+    return AlertDialog(
+      title: Text(l10n.saveDia),
+      content: SizedBox(
+        width: 520,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TextField(
+              controller: _fileNameController,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: l10n.customOrderDiaFileNameLabel,
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) {
+                final _DiaSaveTarget? target = _buildTargetOrNull();
+                if (target != null) {
+                  Navigator.of(context).pop(target);
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    controller: _directoryController,
+                    decoration: InputDecoration(
+                      labelText: l10n.diaExportFolderPath,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: l10n.fileChoose,
+                  onPressed: () async {
+                    final String? folderPath = await getDirectoryPath();
+                    if (folderPath == null || !mounted) {
+                      return;
+                    }
+                    setState(() {
+                      _directoryController.text = folderPath;
+                    });
+                  },
+                  icon: const Icon(Icons.folder_open),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: !canSave
+              ? null
+              : () {
+                  final _DiaSaveTarget? target = _buildTargetOrNull();
+                  if (target != null) {
+                    Navigator.of(context).pop(target);
+                  }
+                },
+          child: Text(l10n.saveDia),
+        ),
+      ],
+    );
+  }
 }

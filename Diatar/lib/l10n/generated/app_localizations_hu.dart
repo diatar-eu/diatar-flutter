@@ -674,10 +674,13 @@ class AppLocalizationsHu extends AppLocalizations {
   String get textSlideBodyLabel => 'Szöveg (soronként)';
 
   @override
-  String get loadDia => 'Betöltés .DIA';
+  String get loadDia => 'Betöltés';
 
   @override
-  String get saveDia => 'Mentés .DIA';
+  String get saveDia => 'Mentés';
+
+  @override
+  String get customOrderDiaFileNameLabel => 'Fájlnév';
 
   @override
   String savedPath(Object path) {

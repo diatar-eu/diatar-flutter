@@ -432,8 +432,9 @@
   "textSlideDialogTitle": "Add text slide",
   "textSlideTitleLabel": "Title",
   "textSlideBodyLabel": "Text (one line per row)",
-  "loadDia": "Load .DIA",
-  "saveDia": "Save .DIA",
+  "loadDia": "Load",
+  "saveDia": "Save",
+  "customOrderDiaFileNameLabel": "File name",
   "savedPath": "Saved: {path}",
   "@savedPath": {
     "placeholders": {
