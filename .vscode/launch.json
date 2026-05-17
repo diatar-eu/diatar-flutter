@@ -1,0 +1,68 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Diatar",
+            "cwd": "Diatar",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "Diatar (profile mode)",
+            "cwd": "Diatar",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "Diatar (release mode)",
+            "cwd": "Diatar",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "DiaVetito",
+            "cwd": "DiaVetito",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "DiaVetito (profile mode)",
+            "cwd": "DiaVetito",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "DiaVetito (release mode)",
+            "cwd": "DiaVetito",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "diatar_common",
+            "cwd": "packages\\diatar_common",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "diatar_common (profile mode)",
+            "cwd": "packages\\diatar_common",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "diatar_common (release mode)",
+            "cwd": "packages\\diatar_common",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}

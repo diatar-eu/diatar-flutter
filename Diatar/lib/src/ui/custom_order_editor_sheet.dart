@@ -265,6 +265,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       context: context,
       builder: (BuildContext dialogContext) {
         final l10n = dialogContext.l10n;
+        final NavigatorState dialogNavigator = Navigator.of(dialogContext);
         return StatefulBuilder(
           builder:
               (
@@ -394,14 +395,17 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                   ),
                   actions: <Widget>[
                     TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      onPressed: () => dialogNavigator.pop(),
                       child: Text(l10n.cancel),
                     ),
                     FilledButton.icon(
                       onPressed: selectedSongIndex == null
                           ? null
                           : () async {
-                              Navigator.of(dialogContext).pop();
+                              dialogNavigator.pop();
+                              if (!mounted) {
+                                return;
+                              }
                               setState(() {
                                 _selectedInsertBookFileName =
                                     selectedBookFileName;
@@ -492,13 +496,13 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<void> _openSearchDialog() async {
-    final TextEditingController searchController = TextEditingController();
     String query = '';
 
-    await showDialog<void>(
+    final _SearchCandidate? selected = await showDialog<_SearchCandidate>(
       context: context,
       builder: (BuildContext dialogContext) {
         final l10n = dialogContext.l10n;
+        final NavigatorState dialogNavigator = Navigator.of(dialogContext);
         return StatefulBuilder(
           builder:
               (
@@ -543,7 +547,6 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                     child: Column(
                       children: <Widget>[
                         TextField(
-                          controller: searchController,
                           autofocus: true,
                           decoration: InputDecoration(
                             hintText: l10n.searchSongHint,
@@ -572,9 +575,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                                             icon: const Icon(
                                               Icons.add_circle_outline,
                                             ),
-                                            onPressed: () async {
-                                              Navigator.of(dialogContext).pop();
-                                              await _insertSearchCandidate(hit);
+                                            onPressed: () {
+                                              dialogNavigator.pop(hit);
                                             },
                                           ),
                                         );
@@ -586,7 +588,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                   ),
                   actions: <Widget>[
                     TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      onPressed: () => dialogNavigator.pop(),
                       child: Text(l10n.close),
                     ),
                   ],
@@ -595,8 +597,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         );
       },
     );
-
-    searchController.dispose();
+    if (!mounted || selected == null) {
+      return;
+    }
+    await _insertSearchCandidate(selected);
   }
 
   List<_SearchCandidate> _collectSearchCandidates() {
