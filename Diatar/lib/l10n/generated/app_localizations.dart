@@ -1265,6 +1265,12 @@ abstract class AppLocalizations {
   /// **'Fájlnév'**
   String get customOrderDiaFileNameLabel;
 
+  /// No description provided for @customOrderUnnamedFileName.
+  ///
+  /// In hu, this message translates to:
+  /// **'Névtelen'**
+  String get customOrderUnnamedFileName;
+
   /// No description provided for @savedPath.
   ///
   /// In hu, this message translates to:

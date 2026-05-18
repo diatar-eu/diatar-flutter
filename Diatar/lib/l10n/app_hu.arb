@@ -435,6 +435,7 @@
   "loadDia": "Betöltés",
   "saveDia": "Mentés",
   "customOrderDiaFileNameLabel": "Fájlnév",
+  "customOrderUnnamedFileName": "Névtelen",
   "savedPath": "Mentve: {path}",
   "@savedPath": {
     "placeholders": {

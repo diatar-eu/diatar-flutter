@@ -681,6 +681,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderDiaFileNameLabel => 'File name';
 
   @override
+  String get customOrderUnnamedFileName => 'Unnamed';
+
+  @override
   String savedPath(Object path) {
     return 'Saved: $path';
   }

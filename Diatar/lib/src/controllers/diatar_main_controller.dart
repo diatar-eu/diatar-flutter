@@ -144,8 +144,7 @@ class DiatarMainController extends ChangeNotifier {
 
   String? get lastImportedCustomOrderBaseName =>
       _lastImportedCustomOrderBaseName;
-  bool get hasImportedCustomOrderDia =>
-      _lastImportedCustomOrderBaseName != null && _customOrder.isNotEmpty;
+  bool get hasImportedCustomOrderDia => _customOrder.isNotEmpty;
   bool get diaVirtualBookSelected =>
       _diaVirtualBookSelected && hasImportedCustomOrderDia;
   bool get shouldAutoOpenDownloadDialog =>
@@ -626,20 +625,15 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
     customOrderActive = _customOrder.isNotEmpty;
-    _diaVirtualBookSelected = hasImportedCustomOrderDia;
+    _diaVirtualBookSelected = _customOrder.isNotEmpty;
     _selectByCustomOrderCursor(index, sync: true);
   }
 
   void selectDiaVirtualBook() {
-    if (!hasImportedCustomOrderDia) {
+    if (_customOrder.isEmpty) {
       return;
     }
     _diaVirtualBookSelected = true;
-    if (_customOrder.isEmpty) {
-      customOrderActive = false;
-      notifyListeners();
-      return;
-    }
     customOrderActive = true;
     int target = _customOrderCursor;
     if (target < 0 || target >= _customOrder.length || _customOrder[target].isSeparator) {
@@ -1423,7 +1417,7 @@ class DiatarMainController extends ChangeNotifier {
     _lastImportedCustomOrderBaseName = importedName.trim().isEmpty
         ? null
         : importedName;
-    _diaVirtualBookSelected = _lastImportedCustomOrderBaseName != null;
+    _diaVirtualBookSelected = _customOrder.isNotEmpty;
     _setStatus('statusOrderLoaded', <String, String>{
       'count': '${imported.length}',
       'path': path,

@@ -905,7 +905,9 @@ class _BookDropdown extends StatelessWidget {
     }
     final ThemeData theme = Theme.of(context);
     final bool hasDia = controller.hasImportedCustomOrderDia;
-    final String? diaName = controller.lastImportedCustomOrderBaseName;
+    final String diaName =
+        controller.lastImportedCustomOrderBaseName ??
+        context.l10n.customOrderUnnamedFileName;
     final List<_BookDropdownEntry> entries = _buildBookDropdownEntries(
       controller.books,
     );
@@ -926,7 +928,7 @@ class _BookDropdown extends StatelessWidget {
             child: SizedBox(
               width: double.infinity,
               child: Text(
-                context.l10n.diaBookLabel(diaName ?? ''),
+                context.l10n.diaBookLabel(diaName),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
@@ -969,7 +971,7 @@ class _BookDropdown extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                context.l10n.diaBookLabel(diaName ?? ''),
+                context.l10n.diaBookLabel(diaName),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
