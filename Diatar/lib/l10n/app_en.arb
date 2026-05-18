@@ -435,6 +435,7 @@
   "loadDia": "Load",
   "saveDia": "Save",
   "customOrderDiaFileNameLabel": "File name",
+  "customOrderUnnamedFileName": "Unnamed",
   "savedPath": "Saved: {path}",
   "@savedPath": {
     "placeholders": {

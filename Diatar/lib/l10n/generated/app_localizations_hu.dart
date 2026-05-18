@@ -683,6 +683,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderDiaFileNameLabel => 'Fájlnév';
 
   @override
+  String get customOrderUnnamedFileName => 'Névtelen';
+
+  @override
   String savedPath(Object path) {
     return 'Mentve: $path';
   }
