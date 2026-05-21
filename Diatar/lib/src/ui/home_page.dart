@@ -457,14 +457,20 @@ class DiatarHomePage extends StatelessWidget {
               const SizedBox(width: 8),
               _actionIconButton(
                 context,
-                icon: Icons.light_mode_outlined,
+                child: const Text(
+                  '\u2796',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                ),
                 tooltip: l10n.highlightPrev,
                 onPressed: controller.highlightPrev,
               ),
               const SizedBox(width: 8),
               _actionIconButton(
                 context,
-                icon: Icons.light_mode,
+                child: const Text(
+                  '\u2795',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                ),
                 tooltip: l10n.highlightNext,
                 onPressed: controller.highlightNext,
               ),
@@ -1929,14 +1935,26 @@ class _OrderDashboard extends StatelessWidget {
                     const SizedBox(width: 8),
                     _actionIconButton(
                       context,
-                      icon: Icons.light_mode_outlined,
+                      child: const Text(
+                        '\u2796',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       tooltip: context.l10n.highlightPrev,
                       onPressed: controller.highlightPrev,
                     ),
                     const SizedBox(width: 8),
                     _actionIconButton(
                       context,
-                      icon: Icons.light_mode,
+                      child: const Text(
+                        '\u2795',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       tooltip: context.l10n.highlightNext,
                       onPressed: controller.highlightNext,
                     ),
@@ -2056,13 +2074,15 @@ class _OrderDashboard extends StatelessWidget {
 
 Widget _actionIconButton(
   BuildContext context, {
-  required IconData icon,
+  IconData? icon,
+  Widget? child,
   required String tooltip,
   required VoidCallback onPressed,
   Color? backgroundColor,
   Color? foregroundColor,
   bool selected = false,
 }) {
+  assert(icon != null || child != null, 'Either icon or child must be set.');
   final ColorScheme colors = Theme.of(context).colorScheme;
   return Tooltip(
     message: tooltip,
@@ -2083,7 +2103,7 @@ Widget _actionIconButton(
         foregroundColor:
             foregroundColor ?? (selected ? colors.onPrimary : null),
       ),
-      child: Icon(icon, size: 26),
+      child: child ?? Icon(icon!, size: 26),
     ),
   );
 }
