@@ -590,7 +590,8 @@ class DiatarMainController extends ChangeNotifier {
       List<CustomOrderEntry>.unmodifiable(_customOrder);
   int get customOrderCursor => _customOrderCursor;
   int get selectedCustomOrderCursor {
-    if (_projectedCustomCursor >= 0 && _projectedCustomCursor < _customOrder.length) {
+    if (_projectedCustomCursor >= 0 &&
+        _projectedCustomCursor < _customOrder.length) {
       return _projectedCustomCursor;
     }
     if (_customOrderCursor >= 0 && _customOrderCursor < _customOrder.length) {
@@ -598,6 +599,7 @@ class DiatarMainController extends ChangeNotifier {
     }
     return _customOrder.isEmpty ? -1 : 0;
   }
+
   CustomOrderEntry? get projectedCustomOrderEntry {
     if (_projectedCustomCursor < 0 ||
         _projectedCustomCursor >= _customOrder.length) {
@@ -636,7 +638,9 @@ class DiatarMainController extends ChangeNotifier {
     _diaVirtualBookSelected = true;
     customOrderActive = true;
     int target = _customOrderCursor;
-    if (target < 0 || target >= _customOrder.length || _customOrder[target].isSeparator) {
+    if (target < 0 ||
+        target >= _customOrder.length ||
+        _customOrder[target].isSeparator) {
       target = _findNextProjectableCustomOrderIndex(0) ?? 0;
     }
     _selectByCustomOrderCursor(target, sync: true);
@@ -905,7 +909,7 @@ class DiatarMainController extends ChangeNotifier {
       if (!entry.isSongEntry || !candidate.isSongEntry) {
         return candidate.fileName == entry.fileName &&
             candidate.songIndex == entry.songIndex &&
-        candidate.label == entry.label &&
+            candidate.label == entry.label &&
             candidate.customTextTitle == entry.customTextTitle &&
             candidate.customTextBody == entry.customTextBody &&
             candidate.customImagePath == entry.customImagePath;
@@ -1265,8 +1269,8 @@ class DiatarMainController extends ChangeNotifier {
     await diaFile.writeAsString(out.toString(), encoding: utf8);
     final String savedName = _stripFileExtension(_fileNameFromPath(safePath));
     _lastImportedCustomOrderBaseName = savedName.trim().isEmpty
-      ? null
-      : savedName;
+        ? null
+        : savedName;
     _setStatus('statusOrderSaved', <String, String>{'path': safePath});
     notifyListeners();
     return safePath;
@@ -1369,7 +1373,8 @@ class DiatarMainController extends ChangeNotifier {
       // Try ID-based identification first (most reliable)
       final String idField = (sec['id'] ?? '').trim();
       if (idField.isNotEmpty && idMap.containsKey(idField)) {
-        final (:DtxBook book, :int songIndex, :int verseIndex) = idMap[idField]!;
+        final (:DtxBook book, :int songIndex, :int verseIndex) =
+            idMap[idField]!;
         imported.add(
           CustomOrderEntry(
             fileName: book.fileName,
@@ -1450,7 +1455,9 @@ class DiatarMainController extends ChangeNotifier {
     // Check if image is in a subdirectory of dia directory
     // by comparing absolute paths (for cross-device portability)
     try {
-      final File imageFile = File(normalized.replaceAll('/', Platform.pathSeparator));
+      final File imageFile = File(
+        normalized.replaceAll('/', Platform.pathSeparator),
+      );
       final File diaFile = File(diaDir.path);
       final String imagePath = imageFile.absolute.path.replaceAll('\\', '/');
       final String basePath = diaFile.absolute.path.replaceAll('\\', '/');
@@ -1473,34 +1480,39 @@ class DiatarMainController extends ChangeNotifier {
     if (normalized.isEmpty) {
       return '';
     }
-    
+
     // Check if it's an absolute path (Windows or Unix style)
     final bool looksWindowsAbs = RegExp(r'^[a-zA-Z]:/').hasMatch(normalized);
     final bool looksUnixAbs = normalized.startsWith('/');
-    
+
     if (looksWindowsAbs || looksUnixAbs) {
       // Absolute path: try to use as-is for same device
-      final File absFile = File(normalized.replaceAll('/', Platform.pathSeparator));
+      final File absFile = File(
+        normalized.replaceAll('/', Platform.pathSeparator),
+      );
       if (absFile.existsSync()) {
         return absFile.path;
       }
-      
+
       // Fallback: if absolute path doesn't exist (e.g., cache on different device),
       // try to find the file by name in the dia directory
       final String fileName = _fileNameFromPath(normalized);
       final Directory diaDir = File(diaPath).parent;
-      final File fallbackFile = File('${diaDir.path}${Platform.pathSeparator}$fileName');
+      final File fallbackFile = File(
+        '${diaDir.path}${Platform.pathSeparator}$fileName',
+      );
       if (fallbackFile.existsSync()) {
         return fallbackFile.path;
       }
-      
+
       // Return the absolute path as-is (will fail gracefully with error message)
       return normalized;
     }
-    
+
     // Relative path: resolve relative to .dia file directory
     final Directory parent = File(diaPath).parent;
-    final String resolvedPath = '${parent.path}${Platform.pathSeparator}${normalized.replaceAll('/', Platform.pathSeparator)}';
+    final String resolvedPath =
+        '${parent.path}${Platform.pathSeparator}${normalized.replaceAll('/', Platform.pathSeparator)}';
     final File relFile = File(resolvedPath);
     if (relFile.existsSync()) {
       return relFile.path;
@@ -1771,12 +1783,10 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
-    if (customOrderActive && _customOrder.isNotEmpty) {
+    if (diaVirtualBookSelected) {
       final int exactIdx = _currentCustomOrderIndex();
       if (exactIdx >= 0) {
-        final int? nextIdx = _findNextProjectableCustomOrderIndex(
-          exactIdx + 1,
-        );
+        final int? nextIdx = _findNextProjectableCustomOrderIndex(exactIdx + 1);
         if (nextIdx == null) {
           return;
         }
@@ -1868,12 +1878,10 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
-    if (customOrderActive && _customOrder.isNotEmpty) {
+    if (diaVirtualBookSelected) {
       final int exactIdx = _currentCustomOrderIndex();
       if (exactIdx >= 0) {
-        final int? prevIdx = _findPrevProjectableCustomOrderIndex(
-          exactIdx - 1,
-        );
+        final int? prevIdx = _findPrevProjectableCustomOrderIndex(exactIdx - 1);
         if (prevIdx == null) {
           return;
         }
@@ -1926,10 +1934,8 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void nextSong() {
-    if (customOrderActive && _customOrder.isNotEmpty) {
-      final int? nextIdx = _findNextProjectableCustomOrderIndex(
-        _customOrderCursor + 1,
-      );
+    if (diaVirtualBookSelected) {
+      final int? nextIdx = _findNextDiaSongGroupStart();
       if (nextIdx == null) {
         return;
       }
@@ -1947,10 +1953,8 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void prevSong() {
-    if (customOrderActive && _customOrder.isNotEmpty) {
-      final int? prevIdx = _findPrevProjectableCustomOrderIndex(
-        _customOrderCursor - 1,
-      );
+    if (diaVirtualBookSelected) {
+      final int? prevIdx = _findPrevDiaSongGroupStart();
       if (prevIdx == null) {
         return;
       }
@@ -2002,6 +2006,63 @@ class DiatarMainController extends ChangeNotifier {
       idx--;
     }
     return null;
+  }
+
+  bool _isDiaSongGroupContinuation(int previousIndex, int currentIndex) {
+    if (previousIndex < 0 ||
+        currentIndex < 0 ||
+        previousIndex >= _customOrder.length ||
+        currentIndex >= _customOrder.length) {
+      return false;
+    }
+    final CustomOrderEntry previous = _customOrder[previousIndex];
+    final CustomOrderEntry current = _customOrder[currentIndex];
+    if (!previous.isSongEntry || !current.isSongEntry) {
+      return false;
+    }
+    return previous.fileName == current.fileName &&
+        previous.songIndex == current.songIndex &&
+        _safeVerseIndex(current) == _safeVerseIndex(previous) + 1;
+  }
+
+  int _currentDiaGroupStartIndex() {
+    int current = _currentCustomOrderIndex();
+    if (current < 0 || current >= _customOrder.length) {
+      current = _customOrderCursor.clamp(0, _customOrder.length - 1);
+    }
+    while (current > 0 && _isDiaSongGroupContinuation(current - 1, current)) {
+      current--;
+    }
+    return current;
+  }
+
+  int? _findNextDiaSongGroupStart() {
+    if (_customOrder.isEmpty) {
+      return null;
+    }
+    int next = _currentDiaGroupStartIndex() + 1;
+    while (next < _customOrder.length &&
+        _isDiaSongGroupContinuation(next - 1, next)) {
+      next++;
+    }
+    if (next >= _customOrder.length) {
+      return null;
+    }
+    return next;
+  }
+
+  int? _findPrevDiaSongGroupStart() {
+    if (_customOrder.isEmpty) {
+      return null;
+    }
+    int start = _currentDiaGroupStartIndex() - 1;
+    if (start < 0) {
+      return null;
+    }
+    while (start > 0 && _isDiaSongGroupContinuation(start - 1, start)) {
+      start--;
+    }
+    return start;
   }
 
   void _selectSongAndVerse(
