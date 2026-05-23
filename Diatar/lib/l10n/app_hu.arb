@@ -1,10 +1,6 @@
 {
   "@@locale": "hu",
   "appTitle": "Diatár",
-  "viewTooltip": "Nézet",
-  "viewSimple": "Szimpla",
-  "viewSpontaneous": "Spontán",
-  "viewOrder": "Sorrend",
   "settingsTooltip": "Beállítások",
   "playlistsTooltip": "Énekrendek",
   "playlistsTitle": "Énekrendek",
