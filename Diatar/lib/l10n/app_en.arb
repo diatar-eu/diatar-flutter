@@ -1,10 +1,6 @@
 {
   "@@locale": "en",
   "appTitle": "Diatar",
-  "viewTooltip": "View",
-  "viewSimple": "Simple",
-  "viewSpontaneous": "Spontaneous",
-  "viewOrder": "Order",
   "settingsTooltip": "Settings",
   "playlistsTooltip": "Playlists",
   "playlistsTitle": "Playlists",

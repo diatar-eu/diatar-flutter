@@ -12,18 +12,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get appTitle => 'Diatár';
 
   @override
-  String get viewTooltip => 'Nézet';
-
-  @override
-  String get viewSimple => 'Szimpla';
-
-  @override
-  String get viewSpontaneous => 'Spontán';
-
-  @override
-  String get viewOrder => 'Sorrend';
-
-  @override
   String get settingsTooltip => 'Beállítások';
 
   @override

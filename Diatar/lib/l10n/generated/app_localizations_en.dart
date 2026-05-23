@@ -12,18 +12,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Diatar';
 
   @override
-  String get viewTooltip => 'View';
-
-  @override
-  String get viewSimple => 'Simple';
-
-  @override
-  String get viewSpontaneous => 'Spontaneous';
-
-  @override
-  String get viewOrder => 'Order';
-
-  @override
   String get settingsTooltip => 'Settings';
 
   @override

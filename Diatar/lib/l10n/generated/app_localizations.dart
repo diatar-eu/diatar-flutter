@@ -104,30 +104,6 @@ abstract class AppLocalizations {
   /// **'Diatár'**
   String get appTitle;
 
-  /// No description provided for @viewTooltip.
-  ///
-  /// In hu, this message translates to:
-  /// **'Nézet'**
-  String get viewTooltip;
-
-  /// No description provided for @viewSimple.
-  ///
-  /// In hu, this message translates to:
-  /// **'Szimpla'**
-  String get viewSimple;
-
-  /// No description provided for @viewSpontaneous.
-  ///
-  /// In hu, this message translates to:
-  /// **'Spontán'**
-  String get viewSpontaneous;
-
-  /// No description provided for @viewOrder.
-  ///
-  /// In hu, this message translates to:
-  /// **'Sorrend'**
-  String get viewOrder;
-
   /// No description provided for @settingsTooltip.
   ///
   /// In hu, this message translates to:

@@ -12,8 +12,6 @@ import '../services/dtx_order_store.dart';
 import '../services/settings_store.dart';
 import '../services/tcp_sender_service.dart';
 
-enum DiatarHomeViewMode { szimpla, spontan, sorrend }
-
 class SongbookOrderItem {
   const SongbookOrderItem({
     required this.fileName,
@@ -274,20 +272,6 @@ class DiatarMainController extends ChangeNotifier {
         return;
       }
     }
-  }
-
-  DiatarHomeViewMode get viewMode {
-    final int idx = settings.homeViewMode.clamp(
-      0,
-      DiatarHomeViewMode.values.length - 1,
-    );
-    return DiatarHomeViewMode.values[idx];
-  }
-
-  Future<void> setViewMode(DiatarHomeViewMode mode) async {
-    settings = settings.copyWith(homeViewMode: mode.index);
-    await _settingsStore.save(settings);
-    notifyListeners();
   }
 
   void _configureSender() {
