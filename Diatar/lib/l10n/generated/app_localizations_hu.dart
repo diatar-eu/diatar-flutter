@@ -28,6 +28,31 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderTooltip => 'Énekrend';
 
   @override
+  String get zsolozsmaTooltip => 'Zsolozsma';
+
+  @override
+  String get zsolozsmaTitle => 'Zsolozsma kiválasztása';
+
+  @override
+  String get zsolozsmaDateLabel => 'Dátum';
+
+  @override
+  String get zsolozsmaPickDate => 'Dátum választása';
+
+  @override
+  String get zsolozsmaSyncButton => 'Éves ZIP frissítés';
+
+  @override
+  String get zsolozsmaNoItems => 'Erre a napra nincs elérhető napszak lista.';
+
+  @override
+  String get zsolozsmaDiagnosticsLabel => 'Diagnosztika';
+
+  @override
+  String get zsolozsmaSelectionHint =>
+      'A kiválasztás most még csak listáz és kijelöl. A diasorra bontás a következő lépésben érkezik.';
+
+  @override
   String get addSlideTooltip => 'Dia hozzáadása';
 
   @override
@@ -189,6 +214,46 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String statusDownloadError(Object error) {
     return 'Letöltési hiba: $error';
+  }
+
+  @override
+  String statusZsolozsmaSyncOk(int downloaded, int failed) {
+    return 'Zsolozsma ZIP frissítve: $downloaded letöltve, $failed hiba.';
+  }
+
+  @override
+  String statusZsolozsmaSyncError(Object error) {
+    return 'Zsolozsma ZIP frissítési hiba: $error';
+  }
+
+  @override
+  String statusZsolozsmaDayLoaded(int count, Object date) {
+    return 'Zsolozsma lista betöltve ($count) - $date';
+  }
+
+  @override
+  String statusZsolozsmaDayEmpty(Object date) {
+    return 'Erre a napra nincs zsolozsma lista: $date';
+  }
+
+  @override
+  String statusZsolozsmaDayError(Object error) {
+    return 'Zsolozsma lista hiba: $error';
+  }
+
+  @override
+  String statusZsolozsmaPartSelected(Object date, Object title) {
+    return 'Zsolozsma kijelölve ($date): $title';
+  }
+
+  @override
+  String statusZsolozsmaPartLoaded(int count, Object date, Object title) {
+    return 'Zsolozsma betöltve ($count dia) - $date: $title';
+  }
+
+  @override
+  String statusZsolozsmaPartLoadError(Object title) {
+    return 'A kiválasztott zsolozsma napszak nem tölthető be: $title';
   }
 
   @override

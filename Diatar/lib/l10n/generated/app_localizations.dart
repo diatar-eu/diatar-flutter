@@ -134,6 +134,54 @@ abstract class AppLocalizations {
   /// **'Énekrend'**
   String get customOrderTooltip;
 
+  /// No description provided for @zsolozsmaTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Zsolozsma'**
+  String get zsolozsmaTooltip;
+
+  /// No description provided for @zsolozsmaTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Zsolozsma kiválasztása'**
+  String get zsolozsmaTitle;
+
+  /// No description provided for @zsolozsmaDateLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dátum'**
+  String get zsolozsmaDateLabel;
+
+  /// No description provided for @zsolozsmaPickDate.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dátum választása'**
+  String get zsolozsmaPickDate;
+
+  /// No description provided for @zsolozsmaSyncButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Éves ZIP frissítés'**
+  String get zsolozsmaSyncButton;
+
+  /// No description provided for @zsolozsmaNoItems.
+  ///
+  /// In hu, this message translates to:
+  /// **'Erre a napra nincs elérhető napszak lista.'**
+  String get zsolozsmaNoItems;
+
+  /// No description provided for @zsolozsmaDiagnosticsLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Diagnosztika'**
+  String get zsolozsmaDiagnosticsLabel;
+
+  /// No description provided for @zsolozsmaSelectionHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'A kiválasztás most még csak listáz és kijelöl. A diasorra bontás a következő lépésben érkezik.'**
+  String get zsolozsmaSelectionHint;
+
   /// No description provided for @addSlideTooltip.
   ///
   /// In hu, this message translates to:
@@ -378,6 +426,54 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Letöltési hiba: {error}'**
   String statusDownloadError(Object error);
+
+  /// No description provided for @statusZsolozsmaSyncOk.
+  ///
+  /// In hu, this message translates to:
+  /// **'Zsolozsma ZIP frissítve: {downloaded} letöltve, {failed} hiba.'**
+  String statusZsolozsmaSyncOk(int downloaded, int failed);
+
+  /// No description provided for @statusZsolozsmaSyncError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Zsolozsma ZIP frissítési hiba: {error}'**
+  String statusZsolozsmaSyncError(Object error);
+
+  /// No description provided for @statusZsolozsmaDayLoaded.
+  ///
+  /// In hu, this message translates to:
+  /// **'Zsolozsma lista betöltve ({count}) - {date}'**
+  String statusZsolozsmaDayLoaded(int count, Object date);
+
+  /// No description provided for @statusZsolozsmaDayEmpty.
+  ///
+  /// In hu, this message translates to:
+  /// **'Erre a napra nincs zsolozsma lista: {date}'**
+  String statusZsolozsmaDayEmpty(Object date);
+
+  /// No description provided for @statusZsolozsmaDayError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Zsolozsma lista hiba: {error}'**
+  String statusZsolozsmaDayError(Object error);
+
+  /// No description provided for @statusZsolozsmaPartSelected.
+  ///
+  /// In hu, this message translates to:
+  /// **'Zsolozsma kijelölve ({date}): {title}'**
+  String statusZsolozsmaPartSelected(Object date, Object title);
+
+  /// No description provided for @statusZsolozsmaPartLoaded.
+  ///
+  /// In hu, this message translates to:
+  /// **'Zsolozsma betöltve ({count} dia) - {date}: {title}'**
+  String statusZsolozsmaPartLoaded(int count, Object date, Object title);
+
+  /// No description provided for @statusZsolozsmaPartLoadError.
+  ///
+  /// In hu, this message translates to:
+  /// **'A kiválasztott zsolozsma napszak nem tölthető be: {title}'**
+  String statusZsolozsmaPartLoadError(Object title);
 
   /// No description provided for @statusBookSelected.
   ///
