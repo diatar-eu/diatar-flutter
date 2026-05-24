@@ -28,6 +28,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderTooltip => 'Custom order';
 
   @override
+  String get zsolozsmaTooltip => 'Liturgy of the Hours';
+
+  @override
+  String get zsolozsmaTitle => 'Select Liturgy of the Hours';
+
+  @override
+  String get zsolozsmaDateLabel => 'Date';
+
+  @override
+  String get zsolozsmaPickDate => 'Pick date';
+
+  @override
+  String get zsolozsmaSyncButton => 'Sync yearly ZIPs';
+
+  @override
+  String get zsolozsmaNoItems => 'No dayparts are available for this date.';
+
+  @override
+  String get zsolozsmaDiagnosticsLabel => 'Diagnostics';
+
+  @override
+  String get zsolozsmaSelectionHint =>
+      'Selection currently loads and picks an item only. Slide splitting comes in the next step.';
+
+  @override
   String get addSlideTooltip => 'Add slide';
 
   @override
@@ -187,6 +212,46 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String statusDownloadError(Object error) {
     return 'Download error: $error';
+  }
+
+  @override
+  String statusZsolozsmaSyncOk(int downloaded, int failed) {
+    return 'Zsolozsma ZIP sync: $downloaded downloaded, $failed failed.';
+  }
+
+  @override
+  String statusZsolozsmaSyncError(Object error) {
+    return 'Zsolozsma ZIP sync error: $error';
+  }
+
+  @override
+  String statusZsolozsmaDayLoaded(int count, Object date) {
+    return 'Zsolozsma list loaded ($count) - $date';
+  }
+
+  @override
+  String statusZsolozsmaDayEmpty(Object date) {
+    return 'No zsolozsma list for this date: $date';
+  }
+
+  @override
+  String statusZsolozsmaDayError(Object error) {
+    return 'Zsolozsma list error: $error';
+  }
+
+  @override
+  String statusZsolozsmaPartSelected(Object date, Object title) {
+    return 'Zsolozsma selected ($date): $title';
+  }
+
+  @override
+  String statusZsolozsmaPartLoaded(int count, Object date, Object title) {
+    return 'Zsolozsma loaded ($count slides) - $date: $title';
+  }
+
+  @override
+  String statusZsolozsmaPartLoadError(Object title) {
+    return 'Failed to load selected zsolozsma part: $title';
   }
 
   @override

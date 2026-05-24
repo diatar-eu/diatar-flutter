@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
 import '../services/dtx_download_service.dart';
+import '../services/zsolozsma_service.dart';
 import 'settings_sheet.dart';
 import 'custom_order_editor_sheet.dart';
 
@@ -218,6 +219,11 @@ class DiatarHomePage extends StatelessWidget {
             tooltip: l10n.customOrderTooltip,
             onPressed: () => _openCustomOrderEditor(context),
             icon: const Icon(Icons.queue_music),
+          ),
+          IconButton(
+            tooltip: l10n.zsolozsmaTooltip,
+            onPressed: () => _openZsolozsmaDialog(context),
+            icon: const Icon(Icons.menu_book_outlined),
           ),
           PopupMenuButton<_AddSlideAction>(
             tooltip: l10n.addSlideTooltip,
@@ -597,6 +603,15 @@ class DiatarHomePage extends StatelessWidget {
     unawaited(controller.downloadSongBooks(selected: selected));
   }
 
+  Future<void> _openZsolozsmaDialog(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return _ZsolozsmaDialog(controller: controller);
+      },
+    );
+  }
+
   Future<void> _openCustomTextSlideDialog(BuildContext context) async {
     final _TextSlideInput? input = await showDialog<_TextSlideInput>(
       context: context,
@@ -713,6 +728,195 @@ class _DownloadSongbooksDialog extends StatefulWidget {
   @override
   State<_DownloadSongbooksDialog> createState() =>
       _DownloadSongbooksDialogState();
+}
+
+class _ZsolozsmaDialog extends StatefulWidget {
+  const _ZsolozsmaDialog({required this.controller});
+
+  final DiatarMainController controller;
+
+  @override
+  State<_ZsolozsmaDialog> createState() => _ZsolozsmaDialogState();
+}
+
+class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
+  late DateTime _selectedDate;
+  bool _loading = false;
+  bool _syncing = false;
+  String? _error;
+  List<ZsolozsmaDayPart> _parts = const <ZsolozsmaDayPart>[];
+  String _diagnostics = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final DateTime now = DateTime.now();
+    _selectedDate = DateTime(now.year, now.month, now.day);
+    unawaited(_load(syncArchives: true));
+  }
+
+  Future<void> _load({required bool syncArchives}) async {
+    setState(() {
+      _loading = true;
+      _syncing = syncArchives;
+      _error = null;
+    });
+    try {
+      final List<ZsolozsmaDayPart> parts = await widget.controller
+          .loadZsolozsmaDayParts(_selectedDate, syncArchives: syncArchives);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _parts = parts;
+        _diagnostics = widget.controller.zsolozsmaLastDiagnostics;
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _parts = const <ZsolozsmaDayPart>[];
+        _error = '$e';
+        _diagnostics = widget.controller.zsolozsmaLastDiagnostics;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _syncing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final DateTime now = DateTime.now();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(now.year - 1, 1, 1),
+      lastDate: DateTime(now.year + 1, 12, 31),
+    );
+    if (picked == null) {
+      return;
+    }
+    setState(() {
+      _selectedDate = DateTime(picked.year, picked.month, picked.day);
+    });
+    await _load(syncArchives: false);
+  }
+
+  String _dateLabel(DateTime date) {
+    final String yy = date.year.toString().padLeft(4, '0');
+    final String mm = date.month.toString().padLeft(2, '0');
+    final String dd = date.day.toString().padLeft(2, '0');
+    return '$yy-$mm-$dd';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.zsolozsmaTitle),
+      content: SizedBox(
+        width: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                Text('${l10n.zsolozsmaDateLabel}: ${_dateLabel(_selectedDate)}'),
+                OutlinedButton(
+                  onPressed: _loading ? null : _pickDate,
+                  child: Text(l10n.zsolozsmaPickDate),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _loading ? null : () => _load(syncArchives: true),
+                  icon: _syncing
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.sync),
+                  label: Text(l10n.zsolozsmaSyncButton),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_error != null)
+              Text(_error!)
+            else if (_parts.isEmpty)
+              Text(l10n.zsolozsmaNoItems)
+            else
+              SizedBox(
+                height: math.min(320, 72.0 * _parts.length),
+                child: ListView.builder(
+                  primary: false,
+                  padding: EdgeInsets.zero,
+                  itemCount: _parts.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final ZsolozsmaDayPart part = _parts[index];
+                    return ListTile(
+                      dense: true,
+                      title: Text(part.title),
+                      subtitle: Text(part.href),
+                      onTap: () async {
+                        await widget.controller.selectZsolozsmaPart(
+                          _selectedDate,
+                          part,
+                        );
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 8),
+            if (!_loading && _diagnostics.trim().isNotEmpty) ...<Widget>[
+              Text(
+                l10n.zsolozsmaDiagnosticsLabel,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+              const SizedBox(height: 4),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 140),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    _diagnostics,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            Text(
+              l10n.zsolozsmaSelectionHint,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.close),
+        ),
+      ],
+    );
+  }
 }
 
 class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {

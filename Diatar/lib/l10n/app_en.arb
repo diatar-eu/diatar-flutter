@@ -6,6 +6,14 @@
   "playlistsTitle": "Playlists",
   "playlistsMessage": "This action can get back the full dialog later.",
   "customOrderTooltip": "Custom order",
+  "zsolozsmaTooltip": "Liturgy of the Hours",
+  "zsolozsmaTitle": "Select Liturgy of the Hours",
+  "zsolozsmaDateLabel": "Date",
+  "zsolozsmaPickDate": "Pick date",
+  "zsolozsmaSyncButton": "Sync yearly ZIPs",
+  "zsolozsmaNoItems": "No dayparts are available for this date.",
+  "zsolozsmaDiagnosticsLabel": "Diagnostics",
+  "zsolozsmaSelectionHint": "Selection currently loads and picks an item only. Slide splitting comes in the next step.",
   "addSlideTooltip": "Add slide",
   "addTextSlide": "Text slide",
   "addImageSlide": "Image slide",
@@ -164,6 +172,67 @@
   "@statusDownloadError": {
     "placeholders": {
       "error": {}
+    }
+  },
+  "statusZsolozsmaSyncOk": "Zsolozsma ZIP sync: {downloaded} downloaded, {failed} failed.",
+  "@statusZsolozsmaSyncOk": {
+    "placeholders": {
+      "downloaded": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "statusZsolozsmaSyncError": "Zsolozsma ZIP sync error: {error}",
+  "@statusZsolozsmaSyncError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusZsolozsmaDayLoaded": "Zsolozsma list loaded ({count}) - {date}",
+  "@statusZsolozsmaDayLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {}
+    }
+  },
+  "statusZsolozsmaDayEmpty": "No zsolozsma list for this date: {date}",
+  "@statusZsolozsmaDayEmpty": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "statusZsolozsmaDayError": "Zsolozsma list error: {error}",
+  "@statusZsolozsmaDayError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusZsolozsmaPartSelected": "Zsolozsma selected ({date}): {title}",
+  "@statusZsolozsmaPartSelected": {
+    "placeholders": {
+      "date": {},
+      "title": {}
+    }
+  },
+  "statusZsolozsmaPartLoaded": "Zsolozsma loaded ({count} slides) - {date}: {title}",
+  "@statusZsolozsmaPartLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {},
+      "title": {}
+    }
+  },
+  "statusZsolozsmaPartLoadError": "Failed to load selected zsolozsma part: {title}",
+  "@statusZsolozsmaPartLoadError": {
+    "placeholders": {
+      "title": {}
     }
   },
   "statusBookSelected": "Book: {name}",

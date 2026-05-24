@@ -6,6 +6,14 @@
   "playlistsTitle": "Énekrendek",
   "playlistsMessage": "Ez a művelet később visszakaphatja a teljes dialógust.",
   "customOrderTooltip": "Énekrend",
+  "zsolozsmaTooltip": "Zsolozsma",
+  "zsolozsmaTitle": "Zsolozsma kiválasztása",
+  "zsolozsmaDateLabel": "Dátum",
+  "zsolozsmaPickDate": "Dátum választása",
+  "zsolozsmaSyncButton": "Éves ZIP frissítés",
+  "zsolozsmaNoItems": "Erre a napra nincs elérhető napszak lista.",
+  "zsolozsmaDiagnosticsLabel": "Diagnosztika",
+  "zsolozsmaSelectionHint": "A kiválasztás most még csak listáz és kijelöl. A diasorra bontás a következő lépésben érkezik.",
   "addSlideTooltip": "Dia hozzáadása",
   "addTextSlide": "Szöveges dia",
   "addImageSlide": "Képes dia",
@@ -164,6 +172,67 @@
   "@statusDownloadError": {
     "placeholders": {
       "error": {}
+    }
+  },
+  "statusZsolozsmaSyncOk": "Zsolozsma ZIP frissítve: {downloaded} letöltve, {failed} hiba.",
+  "@statusZsolozsmaSyncOk": {
+    "placeholders": {
+      "downloaded": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "statusZsolozsmaSyncError": "Zsolozsma ZIP frissítési hiba: {error}",
+  "@statusZsolozsmaSyncError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusZsolozsmaDayLoaded": "Zsolozsma lista betöltve ({count}) - {date}",
+  "@statusZsolozsmaDayLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {}
+    }
+  },
+  "statusZsolozsmaDayEmpty": "Erre a napra nincs zsolozsma lista: {date}",
+  "@statusZsolozsmaDayEmpty": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "statusZsolozsmaDayError": "Zsolozsma lista hiba: {error}",
+  "@statusZsolozsmaDayError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusZsolozsmaPartSelected": "Zsolozsma kijelölve ({date}): {title}",
+  "@statusZsolozsmaPartSelected": {
+    "placeholders": {
+      "date": {},
+      "title": {}
+    }
+  },
+  "statusZsolozsmaPartLoaded": "Zsolozsma betöltve ({count} dia) - {date}: {title}",
+  "@statusZsolozsmaPartLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {},
+      "title": {}
+    }
+  },
+  "statusZsolozsmaPartLoadError": "A kiválasztott zsolozsma napszak nem tölthető be: {title}",
+  "@statusZsolozsmaPartLoadError": {
+    "placeholders": {
+      "title": {}
     }
   },
   "statusBookSelected": "Kötet: {name}",

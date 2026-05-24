@@ -11,6 +11,8 @@ import '../services/dtx_download_service.dart';
 import '../services/dtx_order_store.dart';
 import '../services/settings_store.dart';
 import '../services/tcp_sender_service.dart';
+import '../services/zsolozsma_decode_breviar.dart';
+import '../services/zsolozsma_service.dart';
 
 class SongbookOrderItem {
   const SongbookOrderItem({
@@ -96,6 +98,8 @@ class DiatarMainController extends ChangeNotifier {
   final SettingsStore _settingsStore = SettingsStore();
   final DtxDownloadService _downloadService = DtxDownloadService();
   final DtxOrderStore _orderStore = DtxOrderStore();
+  final ZsolozsmaService _zsolozsmaService = ZsolozsmaService();
+  final ZsolozsmaBreviarDecoder _zsolozsmaDecoder = ZsolozsmaBreviarDecoder();
   final TcpSenderService _sender = TcpSenderService(
     onStatusChanged: (bool connected) {},
     onError: (String code, Map<String, String> params) {},
@@ -136,12 +140,14 @@ class DiatarMainController extends ChangeNotifier {
   String? _lastImportedCustomOrderBaseName;
   bool _diaVirtualBookSelected = false;
   bool _startupDownloadDialogHandled = false;
+  String _zsolozsmaLastDiagnostics = '';
 
   Map<String, String> get statusParams =>
       Map<String, String>.unmodifiable(_statusParams);
 
   String? get lastImportedCustomOrderBaseName =>
       _lastImportedCustomOrderBaseName;
+  String get zsolozsmaLastDiagnostics => _zsolozsmaLastDiagnostics;
   bool get hasImportedCustomOrderDia => _customOrder.isNotEmpty;
   bool get diaVirtualBookSelected =>
       _diaVirtualBookSelected && hasImportedCustomOrderDia;
@@ -371,6 +377,129 @@ class DiatarMainController extends ChangeNotifier {
         ? configured
         : '${docs.path}/diatar/DTXs';
     return Directory(path);
+  }
+
+  Future<Directory> _resolveZsolozsmaDirectory() async {
+    final Directory docs = await getApplicationDocumentsDirectory();
+    return Directory('${docs.path}/zsolozsma');
+  }
+
+  Future<ZsolozsmaSyncResult> syncZsolozsmaArchives({
+    int? centerYear,
+  }) async {
+    final int year = centerYear ?? DateTime.now().year;
+    final Directory dir = await _resolveZsolozsmaDirectory();
+    final ZsolozsmaSyncResult result = await _zsolozsmaService
+        .ensureYearArchives(storageDir: dir, centerYear: year);
+    if (result.failedCount > 0) {
+      _setStatus('statusZsolozsmaSyncError', <String, String>{
+        'error': result.failedByYear.values.first,
+      });
+    } else {
+      _setStatus('statusZsolozsmaSyncOk', <String, String>{
+        'downloaded': '${result.downloadedYears.length}',
+        'failed': '${result.failedCount}',
+      });
+    }
+    notifyListeners();
+    return result;
+  }
+
+  Future<List<ZsolozsmaDayPart>> loadZsolozsmaDayParts(
+    DateTime date, {
+    bool syncArchives = false,
+  }) async {
+    final DateTime day = DateTime(date.year, date.month, date.day);
+    final Directory dir = await _resolveZsolozsmaDirectory();
+    if (syncArchives) {
+      await syncZsolozsmaArchives(centerYear: day.year);
+    }
+
+    try {
+      final ZsolozsmaDayPartsLoadResult loadResult =
+          await _zsolozsmaService.listDayPartsWithDiagnostics(
+        storageDir: dir,
+        date: day,
+      );
+      final List<ZsolozsmaDayPart> parts = loadResult.parts;
+      _zsolozsmaLastDiagnostics = loadResult.diagnostics;
+      final String dateLabel = _formatDateIso(day);
+      if (parts.isEmpty) {
+        _setStatus('statusZsolozsmaDayEmpty', <String, String>{
+          'date': dateLabel,
+        });
+      } else {
+        _setStatus('statusZsolozsmaDayLoaded', <String, String>{
+          'date': dateLabel,
+          'count': '${parts.length}',
+        });
+      }
+      notifyListeners();
+      return parts;
+    } catch (e) {
+      _zsolozsmaLastDiagnostics =
+          'date=${_formatDateIso(day)}\nerror=$e\nstorageDir=${dir.path}';
+      _setStatus('statusZsolozsmaDayError', <String, String>{
+        'error': '$e',
+      });
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> selectZsolozsmaPart(DateTime date, ZsolozsmaDayPart part) async {
+    final DateTime day = DateTime(date.year, date.month, date.day);
+    final Directory dir = await _resolveZsolozsmaDirectory();
+    final ZsolozsmaDayPartHtmlResult loadResult =
+        await _zsolozsmaService.loadDayPartHtml(
+          storageDir: dir,
+          date: day,
+          part: part,
+        );
+    _zsolozsmaLastDiagnostics = loadResult.diagnostics;
+
+    final String? html = loadResult.html;
+    if (html == null || html.trim().isEmpty) {
+      _setStatus('statusZsolozsmaPartLoadError', <String, String>{
+        'title': part.title,
+      });
+      notifyListeners();
+      return;
+    }
+
+    final List<ZsolozsmaSlide> slides = _zsolozsmaDecoder.decode(html);
+    final List<CustomOrderEntry> entries = slides
+        .map(
+          (ZsolozsmaSlide slide) => CustomOrderEntry(
+            fileName: '__custom_text__',
+            songIndex: -1,
+            verseIndex: 0,
+            label: '[Zsolozsma] ${slide.title}',
+            customTextTitle: slide.title,
+            customTextBody: slide.lines.join('\n'),
+          ),
+        )
+        .toList();
+
+    await applyCustomOrder(entries, activate: true);
+    _diaVirtualBookSelected = entries.isNotEmpty;
+    if (entries.isNotEmpty) {
+      _selectByCustomOrderCursor(0, sync: true);
+    }
+
+    _setStatus('statusZsolozsmaPartLoaded', <String, String>{
+      'date': _formatDateIso(day),
+      'title': part.title,
+      'count': '${entries.length}',
+    });
+    notifyListeners();
+  }
+
+  String _formatDateIso(DateTime date) {
+    final String yy = date.year.toString().padLeft(4, '0');
+    final String mm = date.month.toString().padLeft(2, '0');
+    final String dd = date.day.toString().padLeft(2, '0');
+    return '$yy-$mm-$dd';
   }
 
   Future<void> _applyTransport() async {
