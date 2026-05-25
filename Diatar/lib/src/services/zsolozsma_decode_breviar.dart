@@ -109,7 +109,15 @@ class ZsolozsmaBreviarDecoder {
       }
 
       if (cls == 'ending') {
-        _consume(element);
+        // The ending container itself is just a wrapper; decode child paragraphs.
+        continue;
+      }
+
+      if (cls == 'section-title') {
+        final String folded = _asciiFold(_allText(element)).toUpperCase();
+        if (folded == 'KONYORGES') {
+          _isKonyorges = true;
+        }
         continue;
       }
 
@@ -138,6 +146,9 @@ class ZsolozsmaBreviarDecoder {
         continue;
       }
     }
+
+    _ensureClosingSlides(doc);
+    _flushCurrent();
 
     if (_slides.isEmpty) {
       _startSlide('Ima');
@@ -251,6 +262,9 @@ class ZsolozsmaBreviarDecoder {
     // Omit red instruction fragments and pause helpers from the projected text.
     final List<String> parts = <String>[];
     void collect(dom.Node node) {
+      if (node is dom.Comment) {
+        return;
+      }
       if (node is dom.Element) {
         final String cls = _classOf(node);
         if (cls.startsWith('tts_pause') || cls.contains(' red')) {
@@ -273,6 +287,33 @@ class ZsolozsmaBreviarDecoder {
     }
 
     return parts.join(' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  String _stripPsalmLineNumber(String line) {
+    final String trimmed = line.trimLeft();
+    final String stripped = trimmed.replaceFirst(RegExp(r'^\d+\s*'), '');
+    return stripped.isEmpty ? line : stripped;
+  }
+
+  String _expandHungarianDoxology(String text) {
+    final String folded = _asciiFold(text).toLowerCase();
+    final bool looksShort =
+        folded.startsWith('dicsoseg az atyanak') &&
+      folded.contains('mikeppen') &&
+        !folded.contains('fiunak') &&
+        !folded.contains('szentleleknek');
+    if (!looksShort) {
+      return text;
+    }
+
+    final bool hasAlleluja = folded.contains('alleluja');
+    final String full =
+        'Dicsőség az Atyának, a Fiúnak és a Szentléleknek. '
+        'Miképpen kezdetben, most és mindörökké. Ámen.';
+    if (!hasAlleluja) {
+      return full;
+    }
+    return '$full Alleluja.';
   }
 
   void _doRespons(dom.Element root) {
@@ -350,7 +391,11 @@ class ZsolozsmaBreviarDecoder {
     _startVerse('Ant');
     final String txt = _allText(root);
     if (txt.isNotEmpty) {
-      _addLine('Ant: $txt');
+      final String normalized = txt.replaceFirst(
+        RegExp(r'^\s*(?:\d+\s*\.\s*)?ant\.?\s*', caseSensitive: false),
+        '',
+      );
+      _addLine('Ant: ${normalized.isNotEmpty ? normalized : txt}');
     }
   }
 
@@ -384,7 +429,7 @@ class ZsolozsmaBreviarDecoder {
         }
         final String line = _allText(el);
         if (line.isNotEmpty) {
-          _addLine(line);
+          _addLine(_stripPsalmLineNumber(line));
           lineCount++;
         }
       } else if (el.localName == 'div' && cls.startsWith('antiphon')) {
@@ -397,13 +442,20 @@ class ZsolozsmaBreviarDecoder {
 
   void _doBibleref(dom.Element root) {
     _startSlide('Rovid olvasmany');
-    String line = _allText(root);
-    if (line.isEmpty) {
-      final dom.Element? sibling = root.nextElementSibling;
-      if (sibling != null) {
-        line = _allText(sibling);
-      }
+    String line = '';
+
+    // Java reference decoder uses the next tag after bibleref as the content.
+    final dom.Element? sibling = root.nextElementSibling;
+    if (sibling != null) {
+      line = _allText(sibling);
+      _consume(sibling);
     }
+
+    if (line.isEmpty) {
+      // Fallback when no usable sibling exists.
+      line = _allText(root);
+    }
+
     if (line.isNotEmpty) {
       _addLine(line);
     }
@@ -414,7 +466,23 @@ class ZsolozsmaBreviarDecoder {
     final String folded = _asciiFold(text);
     if (folded.startsWith('Dicsoseg az')) {
       _startSlide('Dicsoseg');
+      _addLine(_expandHungarianDoxology(text));
+      return;
+    }
+
+    if (folded.startsWith('Mondjunk aldast') ||
+        folded.startsWith('Az Ur aldjon') ||
+        folded.startsWith('A nyugodalmas')) {
+      _startSlide('Aldas');
       _addLine(text);
+      final dom.Element? n1 = root.nextElementSibling;
+      if (n1 != null && _classOf(n1) == 'respF') {
+        final String l = _allText(n1);
+        if (l.isNotEmpty) {
+          _addLine('F: $l');
+        }
+        _consume(n1);
+      }
       return;
     }
 
@@ -443,41 +511,27 @@ class ZsolozsmaBreviarDecoder {
       return;
     }
 
-    if (folded.startsWith('Mondjunk aldast') ||
-        folded.startsWith('Az Ur aldjon') ||
-        folded.startsWith('A nyugodalmas')) {
-      _startSlide('Aldas');
-      _addLine(text);
-      final dom.Element? n1 = root.nextElementSibling;
-      if (n1 != null && _classOf(n1) == 'respF') {
-        final String l = _allText(n1);
-        if (l.isNotEmpty) {
-          _addLine('F: $l');
-        }
-        _consume(n1);
-      }
-      return;
-    }
-
     _startSlide('Ima');
     _addLine(text);
   }
 
   int _splitLongText(String text, int startPos, int verse) {
     const int maxLen = 300;
-    if (startPos + text.length <= maxLen) {
+    final int effectiveStartPos = startPos < 0 ? 0 : startPos;
+    if (effectiveStartPos + text.length <= maxLen) {
       _addLine(text);
       return verse;
     }
 
-    final int pages = 1 + ((startPos + text.length) ~/ maxLen);
-    final int baseSplit = (text.length ~/ pages) - startPos;
+    final int pages = 1 + ((effectiveStartPos + text.length) ~/ maxLen);
+    final int baseSplit = (text.length ~/ pages) - effectiveStartPos;
     int nearestSpace = 9999;
     int nearestStop = 9999;
 
     for (int i = 0; i <= 50; i++) {
-      if (baseSplit + i < text.length) {
-        final String ch = text[baseSplit + i];
+      final int fwd = baseSplit + i;
+      if (fwd >= 0 && fwd < text.length) {
+        final String ch = text[fwd];
         if (ch == ' ' && nearestSpace == 9999) {
           nearestSpace = i;
         }
@@ -486,8 +540,9 @@ class ZsolozsmaBreviarDecoder {
           break;
         }
       }
-      if (baseSplit - i > 0) {
-        final String ch = text[baseSplit - i];
+      final int back = baseSplit - i;
+      if (back > 0 && back < text.length) {
+        final String ch = text[back];
         if (ch == ' ' && nearestSpace == 9999) {
           nearestSpace = -i;
         }
@@ -560,6 +615,7 @@ class ZsolozsmaBreviarDecoder {
         if (sectionPar.length > 20) {
           verse++;
           _startVerse('$verse');
+          sectionPar = '';
         }
         verse = _splitLongText(_allText(el), sectionPar.length, verse);
         sectionPar = '';
@@ -610,6 +666,105 @@ class ZsolozsmaBreviarDecoder {
       _addLine(_allText(el));
     }
   }
+
+  bool _hasSlideTitle(String title) {
+    if (_current != null && _current!.title == title) {
+      return true;
+    }
+    return _slides.any((ZsolozsmaSlide s) => s.title == title);
+  }
+
+  dom.Element? _findStrongByKeywords(
+    List<List<String>> keywordGroups,
+    dom.Document doc,
+  ) {
+    for (final dom.Element p in doc.querySelectorAll('p')) {
+      if (_classOf(p) != 'strong') {
+        continue;
+      }
+      final String text = _allText(p).toLowerCase();
+      for (final List<String> group in keywordGroups) {
+        bool ok = true;
+        for (final String token in group) {
+          if (!text.contains(token)) {
+            ok = false;
+            break;
+          }
+        }
+        if (ok) {
+          return p;
+        }
+      }
+    }
+    return null;
+  }
+
+  void _ensureClosingSlides(dom.Document doc) {
+    if (!_hasSlideTitle('Konyorges')) {
+      final dom.Element? kStrong = _findStrongByKeywords(
+        <List<String>>[
+          <String>['könyörögjünk'],
+          <String>['konyorogjunk'],
+          <String>['istenünk'],
+          <String>['istenunk'],
+          <String>['kérünk'],
+          <String>['kerunk'],
+        ],
+        doc,
+      );
+      if (kStrong != null) {
+        _startSlide('Konyorges');
+        final String lead = _allText(kStrong);
+        if (lead.isNotEmpty) {
+          _addLine(lead);
+        }
+
+        final dom.Element? n1 = kStrong.nextElementSibling;
+        if (n1 != null) {
+          final String l1 = _allText(n1);
+          if (l1.isNotEmpty) {
+            _addLine(l1);
+          }
+          final dom.Element? n2 = n1.nextElementSibling;
+          if (n2 != null && _classOf(n2) == 'respF') {
+            final String l2 = _allText(n2);
+            if (l2.isNotEmpty) {
+              _addLine('F: $l2');
+            }
+          }
+        }
+      }
+    }
+
+    if (!_hasSlideTitle('Aldas')) {
+      final dom.Element? aStrong = _findStrongByKeywords(
+        <List<String>>[
+          <String>['mondjunk', 'áldást'],
+          <String>['mondjunk', 'aldast'],
+          <String>['az úr áldjon'],
+          <String>['az ur aldjon'],
+          <String>['a nyugodalmas'],
+        ],
+        doc,
+      );
+      if (aStrong != null) {
+        _startSlide('Aldas');
+        final String lead = _allText(aStrong);
+        if (lead.isNotEmpty) {
+          _addLine(lead);
+        }
+        final dom.Element? n1 = aStrong.nextElementSibling;
+        if (n1 != null && _classOf(n1) == 'respF') {
+          final String l1 = _allText(n1);
+          if (l1.isNotEmpty) {
+            _addLine('F: $l1');
+          }
+        }
+
+      }
+    }
+  }
+
 }
 
 class _SlideBuilder {
