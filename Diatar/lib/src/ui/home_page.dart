@@ -39,6 +39,19 @@ class _DiaSongGroup {
   final List<_DiaVerseEntry> verses;
 }
 
+({String prefix, String suffix})? _splitSlashLabel(String label) {
+  final int slashIndex = label.indexOf('/');
+  if (slashIndex <= 0 || slashIndex >= label.length - 1) {
+    return null;
+  }
+  final String prefix = label.substring(0, slashIndex).trim();
+  final String suffix = label.substring(slashIndex + 1).trim();
+  if (prefix.isEmpty || suffix.isEmpty) {
+    return null;
+  }
+  return (prefix: prefix, suffix: suffix);
+}
+
 const int _diaVirtualBookValue = -1000000;
 
 String _basename(String path) {
@@ -111,18 +124,54 @@ List<_DiaSongGroup> _buildDiaSongGroups(DiatarMainController controller) {
   while (i < custom.length) {
     final CustomOrderEntry first = custom[i];
     if (!first.isSongEntry) {
-      groups.add(
-        _DiaSongGroup(
-          label: _entryShortLabel(controller, first),
-          verses: <_DiaVerseEntry>[
-            _DiaVerseEntry(
-              customOrderIndex: i,
-              label: _entryShortLabel(controller, first),
-            ),
-          ],
-        ),
+      final String firstLabel = _entryShortLabel(controller, first);
+      final ({String prefix, String suffix})? firstSplit = _splitSlashLabel(
+        firstLabel,
       );
-      i++;
+      if (firstSplit == null) {
+        groups.add(
+          _DiaSongGroup(
+            label: firstLabel,
+            verses: <_DiaVerseEntry>[
+              _DiaVerseEntry(customOrderIndex: i, label: firstLabel),
+            ],
+          ),
+        );
+        i++;
+        continue;
+      }
+
+      final List<_DiaVerseEntry> verses = <_DiaVerseEntry>[];
+      int j = i;
+      while (j < custom.length) {
+        final CustomOrderEntry candidate = custom[j];
+        if (candidate.isSongEntry) {
+          break;
+        }
+        final String candidateLabel = _entryShortLabel(controller, candidate);
+        final ({String prefix, String suffix})? candidateSplit =
+            _splitSlashLabel(candidateLabel);
+        if (candidateSplit == null || candidateSplit.prefix != firstSplit.prefix) {
+          break;
+        }
+        verses.add(
+          _DiaVerseEntry(
+            customOrderIndex: j,
+            label: candidateSplit.suffix,
+          ),
+        );
+        j++;
+      }
+
+      final String compactSuffix = verses
+          .map((_DiaVerseEntry verse) => verse.label)
+          .where((String label) => label.trim().isNotEmpty)
+          .join(', ');
+      final String groupLabel = compactSuffix.isEmpty
+          ? firstLabel
+          : '${firstSplit.prefix}/$compactSuffix';
+      groups.add(_DiaSongGroup(label: groupLabel, verses: verses));
+      i = j;
       continue;
     }
 
@@ -512,7 +561,7 @@ class DiatarHomePage extends StatelessWidget {
     if (projectedCustom != null && projectedCustom.isCustomText) {
       final String title =
           (projectedCustom.customTextTitle ?? '').trim().isEmpty
-          ? 'Dia'
+          ? projectedCustom.label
           : (projectedCustom.customTextTitle ?? '').trim();
       final List<String> lines = (projectedCustom.customTextBody ?? '')
           .split(RegExp(r'\r?\n'))
@@ -523,7 +572,6 @@ class DiatarHomePage extends StatelessWidget {
         controller: controller,
         title: title,
         lines: lines,
-        panelTitle: panelTitle,
       );
     }
     if (projectedCustom != null && projectedCustom.isCustomImage) {
@@ -745,7 +793,6 @@ class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
   bool _syncing = false;
   String? _error;
   List<ZsolozsmaDayPart> _parts = const <ZsolozsmaDayPart>[];
-  String _diagnostics = '';
 
   @override
   void initState() {
@@ -769,7 +816,6 @@ class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
       }
       setState(() {
         _parts = parts;
-        _diagnostics = widget.controller.zsolozsmaLastDiagnostics;
       });
     } catch (e) {
       if (!mounted) {
@@ -778,7 +824,6 @@ class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
       setState(() {
         _parts = const <ZsolozsmaDayPart>[];
         _error = '$e';
-        _diagnostics = widget.controller.zsolozsmaLastDiagnostics;
       });
     } finally {
       if (mounted) {
@@ -825,26 +870,28 @@ class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
+            Row(
               children: <Widget>[
-                Text('${l10n.zsolozsmaDateLabel}: ${_dateLabel(_selectedDate)}'),
+                Text('${l10n.zsolozsmaDateLabel}:'),
+                const SizedBox(width: 8),
                 OutlinedButton(
                   onPressed: _loading ? null : _pickDate,
-                  child: Text(l10n.zsolozsmaPickDate),
+                  child: Text(_dateLabel(_selectedDate)),
                 ),
-                OutlinedButton.icon(
+                const Spacer(),
+                OutlinedButton(
                   onPressed: _loading ? null : () => _load(syncArchives: true),
-                  icon: _syncing
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(40, 40),
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: _syncing
                       ? const SizedBox(
                           width: 14,
                           height: 14,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.sync),
-                  label: Text(l10n.zsolozsmaSyncButton),
                 ),
               ],
             ),
@@ -870,7 +917,6 @@ class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
                     return ListTile(
                       dense: true,
                       title: Text(part.title),
-                      subtitle: Text(part.href),
                       onTap: () async {
                         await widget.controller.selectZsolozsmaPart(
                           _selectedDate,
@@ -884,28 +930,6 @@ class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
                   },
                 ),
               ),
-            const SizedBox(height: 8),
-            if (!_loading && _diagnostics.trim().isNotEmpty) ...<Widget>[
-              Text(
-                l10n.zsolozsmaDiagnosticsLabel,
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-              const SizedBox(height: 4),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 140),
-                child: SingleChildScrollView(
-                  child: SelectableText(
-                    _diagnostics,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-            Text(
-              l10n.zsolozsmaSelectionHint,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
           ],
         ),
       ),
@@ -1078,9 +1102,11 @@ class _BookDropdown extends StatelessWidget {
     }
     final ThemeData theme = Theme.of(context);
     final bool hasDia = controller.hasImportedCustomOrderDia;
+    final String fallbackDiaName = controller.customOrderLooksLikeZsolozsma
+      ? context.l10n.zsolozsmaTooltip
+      : context.l10n.customOrderUnnamedFileName;
     final String diaName =
-        controller.lastImportedCustomOrderBaseName ??
-        context.l10n.customOrderUnnamedFileName;
+      controller.lastImportedCustomOrderBaseName ?? fallbackDiaName;
     final List<_BookDropdownEntry> entries = _buildBookDropdownEntries(
       controller.books,
     );
@@ -1513,19 +1539,17 @@ class _CustomTextPreview extends StatelessWidget {
     required this.controller,
     required this.title,
     required this.lines,
-    required this.panelTitle,
   });
 
   final DiatarMainController controller;
   final String title;
   final List<String> lines;
-  final String panelTitle;
 
   @override
   Widget build(BuildContext context) {
     final RecTextRecord previewRecord = RecTextRecord(
       scholaLine: '',
-      title: title,
+      title: '',
       lines: lines.isEmpty ? const <String>[''] : lines,
     );
     final ProjectionFrame frame = TextFrame(record: previewRecord);
@@ -1533,16 +1557,19 @@ class _CustomTextPreview extends StatelessWidget {
       projecting: true,
       wordToHighlight: 0,
     );
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: frame,
+      globals: globals,
+      settings: controller.settings,
+      logoTitle: context.l10n.appTitle,
+    );
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double width = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : 800;
-        final String fullTitle = context.l10n.versePanelTitle(
-          panelTitle,
-          title,
-        );
+        final String fullTitle = context.l10n.diaBookLabel(title);
         final TextStyle titleStyle = TextStyle(
           color: controller.globals.txtColor.withValues(alpha: 0.75),
         );
@@ -1552,36 +1579,77 @@ class _CustomTextPreview extends StatelessWidget {
           textDirection: TextDirection.ltr,
         )..layout(maxWidth: width);
         final double titleHeight = titlePainter.height + 10;
-        final double naturalHeight = (120 + (previewRecord.lines.length * 54))
-            .clamp(220, 1200)
-            .toDouble();
-        final double height = constraints.maxHeight.isFinite
-            ? math.max(0, constraints.maxHeight - titleHeight)
-            : naturalHeight;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              fullTitle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: titleStyle,
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: width,
-              height: height,
-              child: CustomPaint(
-                size: Size(width, height),
-                painter: ProjectorPainter(
-                  frame: frame,
-                  globals: globals,
-                  settings: controller.settings,
-                  logoTitle: context.l10n.appTitle,
+        final double viewportHeightForMeasure = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : (MediaQuery.of(context).size.height -
+                      kToolbarHeight -
+                      MediaQuery.of(context).padding.vertical -
+                      220)
+                  .clamp(240, double.infinity);
+        final double fallbackCanvasHeight = math.max(
+          120,
+          viewportHeightForMeasure - titleHeight,
+        );
+        final double requiredCanvasHeight = painter.measureRequiredHeight(
+          Size(width, fallbackCanvasHeight),
+        );
+        final double scrollCanvasHeight = math.max(
+          fallbackCanvasHeight,
+          requiredCanvasHeight,
+        );
+
+        return GestureDetector(
+          onHorizontalDragEnd: (DragEndDetails details) {
+            const double swipeThreshold = 300.0;
+            if (details.velocity.pixelsPerSecond.dx.abs() > swipeThreshold) {
+              if (details.velocity.pixelsPerSecond.dx > 0) {
+                controller.prevVerse();
+              } else {
+                controller.nextVerse();
+              }
+            }
+          },
+          child: constraints.maxHeight.isFinite
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      fullTitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle,
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: SizedBox(
+                        width: width,
+                        child: ClipRect(child: CustomPaint(painter: painter)),
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      fullTitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle,
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: width,
+                      height: scrollCanvasHeight,
+                      child: ClipRect(
+                        child: CustomPaint(
+                          size: Size(width, scrollCanvasHeight),
+                          painter: painter,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ),
-          ],
         );
       },
     );
@@ -1682,4 +1750,3 @@ Widget _actionIconButton(
     ),
   );
 }
-
