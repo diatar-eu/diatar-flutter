@@ -147,6 +147,12 @@ class DiatarMainController extends ChangeNotifier {
 
   String? get lastImportedCustomOrderBaseName =>
       _lastImportedCustomOrderBaseName;
+    bool get customOrderLooksLikeZsolozsma =>
+      _customOrder.isNotEmpty &&
+      _customOrder.every(
+      (CustomOrderEntry entry) =>
+        entry.isCustomText && entry.label.startsWith('[Zsolozsma]'),
+      );
   String get zsolozsmaLastDiagnostics => _zsolozsmaLastDiagnostics;
   bool get hasImportedCustomOrderDia => _customOrder.isNotEmpty;
   bool get diaVirtualBookSelected =>

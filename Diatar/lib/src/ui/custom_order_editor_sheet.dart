@@ -906,9 +906,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
       String? targetPath;
       bool nativeSaveDialogAvailable = true;
+      final String fallbackBaseName = controller.customOrderLooksLikeZsolozsma
+          ? l10n.zsolozsmaTooltip
+          : l10n.customOrderSuggestedFileName;
       final String defaultBaseName = _normalizeDiaBaseName(
-        controller.lastImportedCustomOrderBaseName ??
-            l10n.customOrderSuggestedFileName,
+        controller.lastImportedCustomOrderBaseName ?? fallbackBaseName,
         fallback: 'sorrend',
       );
       final String defaultFileName = '$defaultBaseName.dia';

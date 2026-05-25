@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_archive/flutter_archive.dart' as fa;
+import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 
 class ZsolozsmaDayPart {
@@ -230,24 +231,15 @@ class ZsolozsmaService {
       diag.writeln('htmlSource=${extractedFallback ? 'archive+extracted' : 'archive'}');
     }
 
-    final List<ZsolozsmaDayPart> result = <ZsolozsmaDayPart>[];
-    final Set<String> seen = <String>{};
     final document = html_parser.parse(html);
-    final anchors = document.querySelectorAll('a[href]');
-    diag.writeln('anchorsTotal=${anchors.length}');
-    for (final element in anchors) {
-      final String href = (element.attributes['href'] ?? '').trim();
-      if (href.isEmpty || !href.contains(yymmdd)) {
-        continue;
-      }
-      if (!seen.add(href)) {
-        continue;
-      }
-      final String plain = _stripHtml(element.text);
-      final String title = plain.isEmpty ? href : plain;
-      result.add(ZsolozsmaDayPart(title: title, href: href));
-    }
-    diag.writeln('anchorsMatched=${result.length}');
+    final List<ZsolozsmaDayPart> result = _extractDayPartsFromDocument(
+      document: document,
+      date: date,
+      yymmdd: yymmdd,
+    );
+    diag.writeln('formsTotal=${document.querySelectorAll('form[action]').length}');
+    diag.writeln('anchorsTotal=${document.querySelectorAll('a[href]').length}');
+    diag.writeln('parsedMatches=${result.length}');
 
     if (result.isNotEmpty) {
       return ZsolozsmaDayPartsLoadResult(
@@ -601,6 +593,131 @@ class ZsolozsmaService {
     return head.contains('<html') || head.contains('<body') || head.contains('<a ');
   }
 
+  List<ZsolozsmaDayPart> _extractDayPartsFromDocument({
+    required dom.Document document,
+    required DateTime date,
+    String? yymmdd,
+  }) {
+    final List<ZsolozsmaDayPart> fromForms = <ZsolozsmaDayPart>[];
+    final Set<String> seenForms = <String>{};
+
+    for (final dom.Element form in document.querySelectorAll('form[action]')) {
+      final String action = (form.attributes['action'] ?? '').trim();
+      if (!_matchesDayPartTarget(rawTarget: action, date: date, yymmdd: yymmdd)) {
+        continue;
+      }
+
+      final String href = _normalizeDayPartTarget(action);
+      if (href.isEmpty || !seenForms.add(href)) {
+        continue;
+      }
+
+      final dom.Element? input = form.querySelector('input[type="submit"]');
+      final String title = _preferredDayPartTitle(
+        primary: input?.attributes['title'],
+        secondary: input?.attributes['value'],
+        fallback: href,
+      );
+      fromForms.add(ZsolozsmaDayPart(title: title, href: href));
+    }
+
+    if (fromForms.isNotEmpty) {
+      return fromForms;
+    }
+
+    final List<ZsolozsmaDayPart> fromAnchors = <ZsolozsmaDayPart>[];
+    final Set<String> seenAnchors = <String>{};
+
+    for (final dom.Element anchor in document.querySelectorAll('a[href]')) {
+      final String href = (anchor.attributes['href'] ?? '').trim();
+      if (!_matchesDayPartTarget(rawTarget: href, date: date, yymmdd: yymmdd)) {
+        continue;
+      }
+      if (!seenAnchors.add(href)) {
+        continue;
+      }
+
+      final String title = _preferredDayPartTitle(
+        primary: anchor.attributes['title'],
+        secondary: anchor.text,
+        fallback: href,
+      );
+      fromAnchors.add(ZsolozsmaDayPart(title: title, href: href));
+    }
+
+    return fromAnchors;
+  }
+
+  bool _matchesDayPartTarget({
+    required String rawTarget,
+    required DateTime date,
+    String? yymmdd,
+  }) {
+    final String target = rawTarget.trim();
+    if (target.isEmpty) {
+      return false;
+    }
+
+    final Uri? uri = Uri.tryParse(target);
+    if (uri != null) {
+      final String qt = uri.queryParameters['qt'] ?? '';
+      final String p = uri.queryParameters['p'] ?? '';
+      if (qt == 'pdt' && p.isNotEmpty && p != '*') {
+        return _matchesQueryDate(uri: uri, date: date);
+      }
+    }
+
+    return yymmdd != null && target.toUpperCase().contains(yymmdd.toUpperCase());
+  }
+
+  bool _matchesQueryDate({
+    required Uri uri,
+    required DateTime date,
+  }) {
+    final String day = uri.queryParameters['d'] ?? '';
+    final String month = uri.queryParameters['m'] ?? '';
+    final String year = uri.queryParameters['r'] ?? '';
+
+    if (day.isEmpty || month.isEmpty || year.isEmpty) {
+      return true;
+    }
+
+    return day == '${date.day}' &&
+        month == '${date.month}' &&
+        year == '${date.year}';
+  }
+
+  String _normalizeDayPartTarget(String rawTarget) {
+    final String target = rawTarget.trim();
+    final Uri? uri = Uri.tryParse(target);
+    final bool isCgi =
+        target.startsWith('/cgi-bin/l.cgi') ||
+        target.contains('/cgi-bin/l.cgi') ||
+        (uri != null && uri.path.endsWith('/cgi-bin/l.cgi'));
+    if (isCgi) {
+      return _normalizeHref(target);
+    }
+    return target;
+  }
+
+  String _preferredDayPartTitle({
+    String? primary,
+    String? secondary,
+    required String fallback,
+  }) {
+    final String primaryText = _stripHtml(primary ?? '');
+    if (primaryText.isNotEmpty) {
+      return primaryText;
+    }
+
+    final String secondaryText = _stripHtml(secondary ?? '');
+    if (secondaryText.isNotEmpty) {
+      return secondaryText;
+    }
+
+    return fallback;
+  }
+
   ArchiveFile? _findArchiveFileByHref({
     required Archive archive,
     required String href,
@@ -690,37 +807,7 @@ class ZsolozsmaService {
       );
       final String html = _decodeBytes(bytes);
       final document = html_parser.parse(html);
-      final List<ZsolozsmaDayPart> out = <ZsolozsmaDayPart>[];
-      final Set<String> seen = <String>{};
-
-      for (final form in document.querySelectorAll('form[action]')) {
-        final String action = (form.attributes['action'] ?? '').trim();
-        if (action.isEmpty) {
-          continue;
-        }
-        final Uri? actionUri = Uri.tryParse(action);
-        if (actionUri == null) {
-          continue;
-        }
-        final String qt = actionUri.queryParameters['qt'] ?? '';
-        final String p = actionUri.queryParameters['p'] ?? '';
-        if (qt != 'pdt' || p.isEmpty || p == '*') {
-          continue;
-        }
-
-        final input = form.querySelector('input[type="submit"]');
-        final String value = (input?.attributes['value'] ?? '').trim();
-        final String title = _stripHtml(value).trim().isEmpty
-            ? p
-            : _stripHtml(value);
-        final String normalizedHref = _normalizeHref(action);
-        if (!seen.add(normalizedHref)) {
-          continue;
-        }
-        out.add(ZsolozsmaDayPart(title: title, href: normalizedHref));
-      }
-
-      return out;
+      return _extractDayPartsFromDocument(document: document, date: date);
     } catch (_) {
       return const <ZsolozsmaDayPart>[];
     } finally {
