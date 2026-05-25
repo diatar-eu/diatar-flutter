@@ -129,6 +129,15 @@ class ZsolozsmaService {
     diag.writeln('date=${_formatIsoDate(date)}');
     diag.writeln('storageDir=${storageDir.path}');
 
+    final List<ZsolozsmaDayPart> webParts = await _listDayPartsFromWeb(date);
+    diag.writeln('webListMatches=${webParts.length}');
+    if (webParts.isNotEmpty) {
+      return ZsolozsmaDayPartsLoadResult(
+        parts: webParts,
+        diagnostics: diag.toString().trimRight(),
+      );
+    }
+
     final File yearZip = File('${storageDir.path}/${date.year}.zip');
     if (!await yearZip.exists()) {
       diag.writeln('yearZip=${yearZip.path}');
@@ -248,15 +257,6 @@ class ZsolozsmaService {
       );
     }
 
-    final List<ZsolozsmaDayPart> webParts = await _listDayPartsFromWeb(date);
-    diag.writeln('webListMatches=${webParts.length}');
-    if (webParts.isNotEmpty) {
-      return ZsolozsmaDayPartsLoadResult(
-        parts: webParts,
-        diagnostics: diag.toString().trimRight(),
-      );
-    }
-
     if (archive != null) {
       final List<ZsolozsmaDayPart> byName = _listDayPartsFromArchiveNames(
         archive: archive,
@@ -311,63 +311,6 @@ class ZsolozsmaService {
       }
     }
 
-    final File yearZip = File('${storageDir.path}/${date.year}.zip');
-    if (!await yearZip.exists()) {
-      diag.writeln('yearZipExists=false');
-      return ZsolozsmaDayPartHtmlResult(
-        html: null,
-        diagnostics: diag.toString().trimRight(),
-      );
-    }
-    diag.writeln('yearZipExists=true');
-    diag.writeln('yearZip=${yearZip.path}');
-
-    try {
-      final Archive archive = _decodeArchive(await yearZip.readAsBytes());
-      diag.writeln('archiveDecode=ok');
-      final ArchiveFile? file = _findArchiveFileByHref(
-        archive: archive,
-        href: href,
-      );
-      if (file == null) {
-        diag.writeln('archiveHrefFile=not_found');
-      } else {
-        diag.writeln('archiveHrefFile=${file.name}');
-        final String decoded = _decodeBytes(file.content);
-        if (_looksLikeHtml(decoded)) {
-          diag.writeln('archiveHrefLooksLikeHtml=true');
-          return ZsolozsmaDayPartHtmlResult(
-            html: decoded,
-            diagnostics: diag.toString().trimRight(),
-          );
-        }
-        diag.writeln('archiveHrefLooksLikeHtml=false');
-      }
-    } catch (e) {
-      diag.writeln('archiveDecode=error');
-      diag.writeln('archiveDecodeError=$e');
-    }
-
-    try {
-      final _ExtractedDayHtml? extracted = await _loadHrefHtmlViaExtraction(
-        storageDir: storageDir,
-        yearZip: yearZip,
-        href: href,
-      );
-      if (extracted != null && _looksLikeHtml(extracted.html)) {
-        diag.writeln('extractHref=ok');
-        diag.writeln('extractHrefFile=${extracted.dayFilePath}');
-        return ZsolozsmaDayPartHtmlResult(
-          html: extracted.html,
-          diagnostics: diag.toString().trimRight(),
-        );
-      }
-      diag.writeln('extractHref=failed');
-    } catch (e) {
-      diag.writeln('extractHref=error');
-      diag.writeln('extractHrefError=$e');
-    }
-
     if (partCode != null) {
       final String? webHtml = await _loadDayPartHtmlFromWeb(
         date: date,
@@ -384,6 +327,61 @@ class ZsolozsmaService {
       diag.writeln('webFallback=failed');
     } else {
       diag.writeln('webFallback=skipped_no_part_code');
+    }
+
+    final File yearZip = File('${storageDir.path}/${date.year}.zip');
+    final bool yearZipExists = await yearZip.exists();
+    if (!yearZipExists) {
+      diag.writeln('yearZipExists=false');
+    } else {
+      diag.writeln('yearZipExists=true');
+      diag.writeln('yearZip=${yearZip.path}');
+
+      try {
+        final Archive archive = _decodeArchive(await yearZip.readAsBytes());
+        diag.writeln('archiveDecode=ok');
+        final ArchiveFile? file = _findArchiveFileByHref(
+          archive: archive,
+          href: href,
+        );
+        if (file == null) {
+          diag.writeln('archiveHrefFile=not_found');
+        } else {
+          diag.writeln('archiveHrefFile=${file.name}');
+          final String decoded = _decodeBytes(file.content);
+          if (_looksLikeHtml(decoded)) {
+            diag.writeln('archiveHrefLooksLikeHtml=true');
+            return ZsolozsmaDayPartHtmlResult(
+              html: decoded,
+              diagnostics: diag.toString().trimRight(),
+            );
+          }
+          diag.writeln('archiveHrefLooksLikeHtml=false');
+        }
+      } catch (e) {
+        diag.writeln('archiveDecode=error');
+        diag.writeln('archiveDecodeError=$e');
+      }
+
+      try {
+        final _ExtractedDayHtml? extracted = await _loadHrefHtmlViaExtraction(
+          storageDir: storageDir,
+          yearZip: yearZip,
+          href: href,
+        );
+        if (extracted != null && _looksLikeHtml(extracted.html)) {
+          diag.writeln('extractHref=ok');
+          diag.writeln('extractHrefFile=${extracted.dayFilePath}');
+          return ZsolozsmaDayPartHtmlResult(
+            html: extracted.html,
+            diagnostics: diag.toString().trimRight(),
+          );
+        }
+        diag.writeln('extractHref=failed');
+      } catch (e) {
+        diag.writeln('extractHref=error');
+        diag.writeln('extractHrefError=$e');
+      }
     }
 
     return ZsolozsmaDayPartHtmlResult(
@@ -781,7 +779,11 @@ class ZsolozsmaService {
           return out;
         },
       );
-      return _decodeBytes(bytes);
+      final String html = _decodeBytes(bytes);
+      return await _resolveFullTextPreference(
+        html: html,
+        baseUri: uri,
+      );
     } catch (_) {
       return null;
     } finally {
@@ -860,12 +862,110 @@ class ZsolozsmaService {
           return out;
         },
       );
-      return _decodeBytes(bytes);
+      final String html = _decodeBytes(bytes);
+      return await _resolveFullTextPreference(
+        html: html,
+        baseUri: uri,
+      );
     } catch (_) {
       return null;
     } finally {
       client.close(force: true);
     }
+  }
+
+  Future<String> _resolveFullTextPreference({
+    required String html,
+    required Uri baseUri,
+  }) async {
+    String currentHtml = html;
+    Uri currentBaseUri = baseUri;
+    final Set<String> visited = <String>{};
+
+    for (int i = 0; i < 3; i++) {
+      final Uri? preferredUri = _findPreferredDisplayToggleUri(
+        html: currentHtml,
+        baseUri: currentBaseUri,
+      );
+      if (preferredUri == null) {
+        break;
+      }
+      if (!visited.add(preferredUri.toString())) {
+        break;
+      }
+
+      final HttpClient client = HttpClient();
+      try {
+        final HttpClientRequest request = await client.getUrl(preferredUri);
+        final HttpClientResponse response = await request.close();
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          break;
+        }
+
+        final List<int> bytes = await response.fold<List<int>>(
+          <int>[],
+          (List<int> out, List<int> chunk) {
+            out.addAll(chunk);
+            return out;
+          },
+        );
+        final String preferredHtml = _decodeBytes(bytes);
+        if (!_looksLikeValidPrayerHtml(preferredHtml)) {
+          break;
+        }
+
+        currentHtml = preferredHtml;
+        currentBaseUri = preferredUri;
+      } catch (_) {
+        break;
+      } finally {
+        client.close(force: true);
+      }
+    }
+
+    return currentHtml;
+  }
+
+  Uri? _findPreferredDisplayToggleUri({
+    required String html,
+    required Uri baseUri,
+  }) {
+    final dom.Document doc = html_parser.parse(html);
+    Uri? endingUri;
+    Uri? gloriaUri;
+
+    for (final dom.Element anchor in doc.querySelectorAll('a[href]')) {
+      final String text = _stripHtml(anchor.text).toLowerCase();
+      final bool isDisplayLink =
+          text.contains('megjelenites:') || text.contains('megjelenítés:');
+      if (!isDisplayLink) {
+        continue;
+      }
+
+      final String href = (anchor.attributes['href'] ?? '').trim();
+      if (href.isEmpty) {
+        continue;
+      }
+      final Uri resolved = baseUri.resolve(href);
+
+      final bool isEndingShowLink =
+          (text.contains('imaora befejezesenek') ||
+              text.contains('imaóra befejezésének')) &&
+          (text.contains('megjelenites') || text.contains('megjelenítés'));
+      if (isEndingShowLink) {
+        endingUri ??= resolved;
+        continue;
+      }
+
+      final bool isGloriaLink =
+          text.contains('dicsoseg az atyanak') ||
+          text.contains('dicsőség az atyának');
+      if (isGloriaLink) {
+        gloriaUri ??= resolved;
+      }
+    }
+
+    return endingUri ?? gloriaUri;
   }
 
   bool _looksLikeValidPrayerHtml(String text) {
