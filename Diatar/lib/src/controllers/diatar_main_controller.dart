@@ -2127,6 +2127,26 @@ class DiatarMainController extends ChangeNotifier {
     return null;
   }
 
+  String? _nonSongSlashGroupPrefix(CustomOrderEntry entry) {
+    if (entry.isSongEntry || entry.isSeparator) {
+      return null;
+    }
+    final String source = (entry.customTextTitle ?? entry.label).trim();
+    if (source.isEmpty) {
+      return null;
+    }
+    final int slashIndex = source.indexOf('/');
+    if (slashIndex <= 0 || slashIndex >= source.length - 1) {
+      return null;
+    }
+    final String prefix = source.substring(0, slashIndex).trim();
+    final String suffix = source.substring(slashIndex + 1).trim();
+    if (prefix.isEmpty || suffix.isEmpty) {
+      return null;
+    }
+    return prefix.toLowerCase();
+  }
+
   bool _isDiaSongGroupContinuation(int previousIndex, int currentIndex) {
     if (previousIndex < 0 ||
         currentIndex < 0 ||
@@ -2136,12 +2156,21 @@ class DiatarMainController extends ChangeNotifier {
     }
     final CustomOrderEntry previous = _customOrder[previousIndex];
     final CustomOrderEntry current = _customOrder[currentIndex];
-    if (!previous.isSongEntry || !current.isSongEntry) {
+    if (previous.isSongEntry && current.isSongEntry) {
+      return previous.fileName == current.fileName &&
+          previous.songIndex == current.songIndex &&
+          _safeVerseIndex(current) == _safeVerseIndex(previous) + 1;
+    }
+
+    final String? previousPrefix = _nonSongSlashGroupPrefix(previous);
+    if (previousPrefix == null) {
       return false;
     }
-    return previous.fileName == current.fileName &&
-        previous.songIndex == current.songIndex &&
-        _safeVerseIndex(current) == _safeVerseIndex(previous) + 1;
+    final String? currentPrefix = _nonSongSlashGroupPrefix(current);
+    if (currentPrefix == null) {
+      return false;
+    }
+    return previousPrefix == currentPrefix;
   }
 
   int _currentDiaGroupStartIndex() {
