@@ -913,7 +913,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tcpTargetsLabel => 'Targets (IP:port per line)';
 
   @override
-  String get tcpTargetsHint => '192.168.1.50:1024\\n192.168.1.51:1024';
+  String get tcpTargetsHint => '192.168.1.50:1024\n192.168.1.51:1024';
 
   @override
   String get tcpTargetsHelp =>

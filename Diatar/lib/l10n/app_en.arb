@@ -612,7 +612,7 @@
   "passwordHideTooltip": "Hide",
   "passwordShowTooltip": "Show",
   "tcpTargetsLabel": "Targets (IP:port per line)",
-  "tcpTargetsHint": "192.168.1.50:1024\\n192.168.1.51:1024",
+  "tcpTargetsHint": "192.168.1.50:1024\n192.168.1.51:1024",
   "tcpTargetsHelp": "The sender connects as a client to the addresses above.",
   "projectionMarginsTitle": "Margins",
   "projectionMarginLeft": "Left margin",
