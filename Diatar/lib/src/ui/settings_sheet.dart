@@ -808,6 +808,22 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   Future<void> _openLocalNetworkSettings() {
     return _openSectionSheet(
       title: context.l10n.settingsLocalNetworkTitle,
+      isDismissible: false,
+      enableDrag: false,
+      onConfirmClose: () {
+        final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
+        final String? tcpError = _localNetworkEnabled
+            ? _validateTcpTargets(tcpTargets)
+            : null;
+        if (tcpError != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(tcpError)));
+          return false;
+        }
+        _tcpTargets.text = tcpTargets.join('\n');
+        return true;
+      },
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         return <Widget>[
@@ -826,10 +842,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             decoration: InputDecoration(
               labelText: l10n.tcpTargetsLabel,
               hintText: l10n.tcpTargetsHint,
+              hintStyle: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           const SizedBox(height: 8),
-          Text(l10n.tcpTargetsHelp),
+          Text(
+            l10n.tcpTargetsHelp,
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
         ];
       },
     );
@@ -1714,6 +1736,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   Future<void> _openSectionSheet({
     required String title,
+    bool isDismissible = true,
+    bool enableDrag = true,
+    bool Function()? onConfirmClose,
     required List<Widget> Function(
       BuildContext context,
       void Function(void Function()) setBoth,
@@ -1723,6 +1748,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      isDismissible: isDismissible,
+      enableDrag: enableDrag,
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder:
@@ -1763,7 +1790,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                           Align(
                             alignment: Alignment.centerRight,
                             child: FilledButton(
-                              onPressed: () => Navigator.of(context).pop(),
+                              onPressed: () {
+                                final bool canClose = onConfirmClose?.call() ?? true;
+                                if (canClose) {
+                                  Navigator.of(context).pop();
+                                }
+                              },
                               child: Text(context.l10n.ok),
                             ),
                           ),
@@ -1897,9 +1929,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   List<String> _parseTcpTargets(String raw) {
     return raw
         .split(RegExp(r'\r?\n'))
-        .map((String e) => e.trim())
+        .map((String e) => _normalizeTcpTarget(e.trim()))
         .where((String e) => e.isNotEmpty)
         .toList();
+  }
+
+  String _normalizeTcpTarget(String rawTarget) {
+    if (rawTarget.isEmpty) {
+      return rawTarget;
+    }
+    return rawTarget.contains(':') ? rawTarget : '$rawTarget:1024';
   }
 
   String? _validateTcpTargets(List<String> targets) {

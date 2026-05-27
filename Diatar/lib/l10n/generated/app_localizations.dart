@@ -1652,7 +1652,7 @@ abstract class AppLocalizations {
   /// No description provided for @tcpTargetsHint.
   ///
   /// In hu, this message translates to:
-  /// **'192.168.1.50:1024\\n192.168.1.51:1024'**
+  /// **'192.168.1.50:1024\n192.168.1.51:1024'**
   String get tcpTargetsHint;
 
   /// No description provided for @tcpTargetsHelp.

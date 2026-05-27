@@ -915,7 +915,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get tcpTargetsLabel => 'Célpontok (IP:port soronként)';
 
   @override
-  String get tcpTargetsHint => '192.168.1.50:1024\\n192.168.1.51:1024';
+  String get tcpTargetsHint => '192.168.1.50:1024\n192.168.1.51:1024';
 
   @override
   String get tcpTargetsHelp =>
