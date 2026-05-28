@@ -519,6 +519,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dtxFolderPath => 'DTX folder';
 
   @override
+  String get dtxFolderHint => 'For your own .dtx files, set a public folder.';
+
+  @override
   String get blankImagePath => 'Blank image path';
 
   @override

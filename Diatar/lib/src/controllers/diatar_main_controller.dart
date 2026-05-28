@@ -377,12 +377,18 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<Directory> _resolveDtxDirectory() async {
-    final Directory docs = await getApplicationDocumentsDirectory();
     final String configured = settings.dtxPath.trim();
-    final String path = configured.isNotEmpty
-        ? configured
-        : '${docs.path}/diatar/DTXs';
-    return Directory(path);
+    if (configured.isNotEmpty) {
+      return Directory(configured);
+    }
+    if (Platform.isAndroid) {
+      final Directory? ext = await getExternalStorageDirectory();
+      if (ext != null) {
+        return Directory('${ext.path}/diatar/DTXs');
+      }
+    }
+    final Directory docs = await getApplicationDocumentsDirectory();
+    return Directory('${docs.path}/diatar/DTXs');
   }
 
   Future<Directory> _resolveZsolozsmaDirectory() async {

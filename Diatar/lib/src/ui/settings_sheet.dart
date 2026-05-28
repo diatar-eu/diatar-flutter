@@ -906,7 +906,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               Expanded(
                 child: TextField(
                   controller: _dtxPath,
-                  decoration: InputDecoration(labelText: l10n.dtxFolderPath),
+                  decoration: InputDecoration(
+                    labelText: l10n.dtxFolderPath,
+                    helperText: l10n.dtxFolderHint,
+                  ),
                 ),
               ),
               IconButton(

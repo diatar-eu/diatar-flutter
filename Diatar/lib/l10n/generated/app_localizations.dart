@@ -911,6 +911,12 @@ abstract class AppLocalizations {
   /// **'DTX mappa'**
   String get dtxFolderPath;
 
+  /// No description provided for @dtxFolderHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Saját .dtx fájlokhoz adj meg egy publikus mappát.'**
+  String get dtxFolderHint;
+
   /// No description provided for @blankImagePath.
   ///
   /// In hu, this message translates to:
