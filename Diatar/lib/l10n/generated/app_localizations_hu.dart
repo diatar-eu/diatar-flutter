@@ -521,6 +521,10 @@ class AppLocalizationsHu extends AppLocalizations {
   String get dtxFolderPath => 'DTX mappa';
 
   @override
+  String get dtxFolderHint =>
+      'Saját .dtx fájlokhoz adj meg egy publikus mappát.';
+
+  @override
   String get blankImagePath => 'Blank kép útvonal';
 
   @override

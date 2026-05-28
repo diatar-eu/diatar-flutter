@@ -433,6 +433,7 @@
   "languageHungarian": "Hungarian",
   "languageEnglish": "English",
   "dtxFolderPath": "DTX folder",
+  "dtxFolderHint": "For your own .dtx files, set a public folder.",
   "blankImagePath": "Blank image path",
   "diaExportFolderPath": "DIA export folder",
   "fileChoose": "Choose file",

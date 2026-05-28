@@ -429,6 +429,7 @@
   "themeDark": "Sötét",
   "themeLight": "Világos",
   "dtxFolderPath": "DTX mappa",
+  "dtxFolderHint": "Saját .dtx fájlokhoz adj meg egy publikus mappát.",
   "blankImagePath": "Blank kép útvonal",
   "diaExportFolderPath": "DIA mentési mappa",
   "fileChoose": "Fájl választása",
