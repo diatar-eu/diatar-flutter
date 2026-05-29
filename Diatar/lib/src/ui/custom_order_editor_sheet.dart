@@ -800,10 +800,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     if (_entries.isEmpty) {
       return 0;
     }
-    if (controller.customOrderCursor < 0) {
+    final int cursor = controller.customOrderCursor;
+    if (cursor < 0 || cursor >= _entries.length) {
       return _entries.length;
     }
-    return controller.customOrderCursor.clamp(0, _entries.length);
+    return cursor + 1;
   }
 
   Future<List<int>?> _showVerseSelectionSheet({
