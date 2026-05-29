@@ -488,6 +488,12 @@ abstract class AppLocalizations {
   /// **'Színválasztó'**
   String get colorPickerTitle;
 
+  /// No description provided for @settingsProgramExit.
+  ///
+  /// In hu, this message translates to:
+  /// **'Program vége'**
+  String get settingsProgramExit;
+
   /// No description provided for @exit.
   ///
   /// In hu, this message translates to:

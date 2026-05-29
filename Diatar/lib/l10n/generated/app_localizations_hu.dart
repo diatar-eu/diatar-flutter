@@ -1068,4 +1068,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get settingsHotkeyCapture => 'Rögzítés';
+
+  @override
+  String get settingsProgramExit => 'Program vége';
 }

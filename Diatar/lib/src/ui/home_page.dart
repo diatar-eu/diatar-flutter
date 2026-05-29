@@ -624,6 +624,7 @@ class DiatarHomePage extends StatelessWidget {
             return songOptions;
           },
           onApply: (AppSettings settings) => controller.applySettings(settings),
+          onExitRequested: controller.requestExit,
         );
       },
     );

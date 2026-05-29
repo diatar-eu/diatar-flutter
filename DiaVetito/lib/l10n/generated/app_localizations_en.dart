@@ -225,6 +225,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get colorPickerTitle => 'Color picker';
 
   @override
+  String get settingsProgramExit => 'End program';
+
+  @override
   String get exit => 'Exit';
 
   @override

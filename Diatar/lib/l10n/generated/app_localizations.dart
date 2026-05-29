@@ -1936,6 +1936,12 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Rögzítés'**
   String get settingsHotkeyCapture;
+
+  /// No description provided for @settingsProgramExit.
+  ///
+  /// In hu, this message translates to:
+  /// **'Program vége'**
+  String get settingsProgramExit;
 }
 
 class _AppLocalizationsDelegate
