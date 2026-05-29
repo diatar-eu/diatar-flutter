@@ -8,6 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
 import '../services/mqtt_user_api_service.dart';
+import '../utils/friendly_path.dart';
 
 class SongHotkeyOption {
   const SongHotkeyOption({required this.id, required this.label});
@@ -189,11 +190,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ? l10n.themeDark
         : l10n.themeLight;
     final String dtxSummary = _dtxPath.text.trim().isEmpty
-        ? l10n.valueNotSet
-        : _shortPath(_dtxPath.text.trim());
+      ? l10n.valueNotSet
+      : shortFriendlyPathLabel(_dtxPath.text.trim(), l10n);
     final String blankSummary = _blankPicPath.text.trim().isEmpty
-        ? l10n.valueNotSet
-        : _shortPath(_blankPicPath.text.trim());
+      ? l10n.valueNotSet
+      : shortFriendlyPathLabel(_blankPicPath.text.trim(), l10n);
     final bool desktopHotkeysAvailable = _isDesktopPlatform();
     final bool showInternet = _matches(
       query,
@@ -901,68 +902,84 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         return <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: TextField(
-                  controller: _dtxPath,
-                  decoration: InputDecoration(
-                    labelText: l10n.dtxFolderPath,
-                    helperText: l10n.dtxFolderHint,
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: () async {
-                  await _pickDtxFolder();
-                  setBoth(() {});
-                },
-                icon: const Icon(Icons.folder_open),
-                tooltip: l10n.fileChoose,
-              ),
-            ],
+          _buildPathPickerRow(
+            l10n: l10n,
+            label: l10n.dtxFolderPath,
+            rawPath: _dtxPath.text.trim(),
+            helperText: l10n.dtxFolderHint,
+            onPick: () async {
+              await _pickDtxFolder();
+              setBoth(() {});
+            },
           ),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: TextField(
-                  controller: _blankPicPath,
-                  decoration: InputDecoration(labelText: l10n.blankImagePath),
-                ),
-              ),
-              IconButton(
-                onPressed: () async {
-                  await _pickBlankFile();
-                  setBoth(() {});
-                },
-                icon: const Icon(Icons.folder_open),
-                tooltip: l10n.fileChoose,
-              ),
-            ],
+          _buildPathPickerRow(
+            l10n: l10n,
+            label: l10n.blankImagePath,
+            rawPath: _blankPicPath.text.trim(),
+            onPick: () async {
+              await _pickBlankFile();
+              setBoth(() {});
+            },
           ),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: TextField(
-                  controller: _diaExportPath,
-                  decoration: InputDecoration(
-                    labelText: l10n.diaExportFolderPath,
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: () async {
-                  await _pickDiaExportFolder();
-                  setBoth(() {});
-                },
-                icon: const Icon(Icons.folder_open),
-                tooltip: l10n.fileChoose,
-              ),
-            ],
+          _buildPathPickerRow(
+            l10n: l10n,
+            label: l10n.diaExportFolderPath,
+            rawPath: _diaExportPath.text.trim(),
+            onPick: () async {
+              await _pickDiaExportFolder();
+              setBoth(() {});
+            },
           ),
         ];
       },
     );
+  }
+
+  Widget _buildPathPickerRow({
+    required AppLocalizations l10n,
+    required String label,
+    required String rawPath,
+    String? helperText,
+    required Future<void> Function() onPick,
+  }) {
+    final String trimmed = rawPath.trim();
+    final String friendly = trimmed.isEmpty
+        ? l10n.valueNotSet
+        : formatFriendlyPathLabel(trimmed, l10n);
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: TextFormField(
+            key: ValueKey<String>('path_$label|$trimmed'),
+            initialValue: friendly,
+            readOnly: true,
+            decoration: InputDecoration(labelText: label, helperText: helperText),
+          ),
+        ),
+        IconButton(
+          onPressed: trimmed.isEmpty ? null : () => _copyRawPath(trimmed),
+          icon: const Icon(Icons.content_copy),
+          tooltip: l10n.copyPathTooltip,
+        ),
+        IconButton(
+          onPressed: () async {
+            await onPick();
+          },
+          icon: const Icon(Icons.folder_open),
+          tooltip: l10n.fileChoose,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _copyRawPath(String rawPath) async {
+    await Clipboard.setData(ClipboardData(text: rawPath));
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.pathCopied)));
   }
 
   Future<void> _openDesktopHotkeySettings() {
@@ -2208,18 +2225,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       return null;
     }
     return Color(parsed);
-  }
-
-  String _shortPath(String path) {
-    final List<String> normalized = path
-        .replaceAll('\\', '/')
-        .split('/')
-        .where((String p) => p.isNotEmpty)
-        .toList();
-    if (normalized.length <= 2) {
-      return path;
-    }
-    return '.../${normalized[normalized.length - 2]}/${normalized.last}';
   }
 
   String _rgbHex(Color color) {

@@ -5,10 +5,11 @@ import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/services.dart';
 
 import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
+import '../utils/friendly_path.dart';
 
 class CustomOrderEditorPanel extends StatefulWidget {
   const CustomOrderEditorPanel({
@@ -928,15 +929,29 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           initialDirectory: initialDir,
         );
         targetPath = target?.path;
+        if (
+          !hadConfiguredDir &&
+          targetPath != null &&
+          targetPath.trim().isNotEmpty
+        ) {
+          final String selectedDir = File(targetPath).parent.path.trim();
+          if (selectedDir.isNotEmpty) {
+            final Directory selectedDirectory = Directory(selectedDir);
+            if (await selectedDirectory.exists()) {
+              await controller.applySettings(
+                controller.settings.copyWith(diaExportPath: selectedDir),
+              );
+            }
+          }
+        }
       } on UnimplementedError {
         nativeSaveDialogAvailable = false;
       }
 
       if (!nativeSaveDialogAvailable) {
-        final String baseDir = await _resolveDiaExportDirectory();
         final _DiaSaveTarget? chosenTarget = await _askDiaSaveTarget(
           initialName: defaultBaseName,
-          initialDirectory: baseDir,
+          initialDirectory: initialDir ?? '',
         );
         if (chosenTarget == null) {
           return;
@@ -951,7 +966,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         }
         final Directory exportDir = Directory(targetDir);
         if (!await exportDir.exists()) {
-          await exportDir.create(recursive: true);
+          return;
         }
         if (!hadConfiguredDir) {
           await controller.applySettings(
@@ -974,7 +989,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(l10n.savedPath(outPath))));
+      ).showSnackBar(
+        SnackBar(content: Text(l10n.savedPath(formatFriendlyPathLabel(outPath, l10n)))),
+      );
     } catch (e) {
       if (!mounted) {
         return;
@@ -1009,26 +1026,6 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       },
     );
     return result;
-  }
-
-  Future<String> _resolveDiaExportDirectory() async {
-    final String configured = controller.settings.diaExportPath.trim();
-    if (configured.isNotEmpty) {
-      final Directory dir = Directory(configured);
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
-      return dir.path;
-    }
-
-    final Directory docs = await getApplicationDocumentsDirectory();
-    final Directory exportDir = Directory(
-      '${docs.path}${Platform.pathSeparator}dia',
-    );
-    if (!await exportDir.exists()) {
-      await exportDir.create(recursive: true);
-    }
-    return exportDir.path;
   }
 
   Future<void> _importDia() async {
@@ -1356,26 +1353,37 @@ class _DiaSaveDialog extends StatefulWidget {
 
 class _DiaSaveDialogState extends State<_DiaSaveDialog> {
   late final TextEditingController _fileNameController;
-  late final TextEditingController _directoryController;
+  late String _directoryPath;
+
+  bool _isValidExistingDirectory(String rawPath) {
+    final String path = rawPath.trim();
+    if (path.isEmpty) {
+      return false;
+    }
+    try {
+      return Directory(path).existsSync();
+    } catch (_) {
+      return false;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _fileNameController = TextEditingController(text: widget.initialName);
-    _directoryController = TextEditingController(text: widget.initialDirectory);
+    _directoryPath = widget.initialDirectory.trim();
   }
 
   @override
   void dispose() {
     _fileNameController.dispose();
-    _directoryController.dispose();
     super.dispose();
   }
 
   _DiaSaveTarget? _buildTargetOrNull() {
     final String fileName = _fileNameController.text.trim();
-    final String directoryPath = _directoryController.text.trim();
-    if (fileName.isEmpty || directoryPath.isEmpty) {
+    final String directoryPath = _directoryPath.trim();
+    if (fileName.isEmpty || !_isValidExistingDirectory(directoryPath)) {
       return null;
     }
     return _DiaSaveTarget(fileName: fileName, directoryPath: directoryPath);
@@ -1384,9 +1392,12 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final String friendlyDirectory = _directoryPath.trim().isEmpty
+      ? l10n.valueNotSet
+      : formatFriendlyPathLabel(_directoryPath.trim(), l10n);
     final bool canSave =
         _fileNameController.text.trim().isNotEmpty &&
-        _directoryController.text.trim().isNotEmpty;
+      _isValidExistingDirectory(_directoryPath);
 
     return AlertDialog(
       title: Text(l10n.saveDia),
@@ -1414,16 +1425,34 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
             Row(
               children: <Widget>[
                 Expanded(
-                  child: TextField(
-                    controller: _directoryController,
+                  child: TextFormField(
+                    key: ValueKey<String>('friendly_dir_${_directoryPath.trim()}'),
+                    initialValue: friendlyDirectory,
+                    readOnly: true,
                     decoration: InputDecoration(
                       labelText: l10n.diaExportFolderPath,
                       border: const OutlineInputBorder(),
                     ),
-                    onChanged: (_) => setState(() {}),
                   ),
                 ),
                 const SizedBox(width: 8),
+                IconButton(
+                  tooltip: l10n.copyPathTooltip,
+                  onPressed: _directoryPath.trim().isEmpty
+                      ? null
+                      : () async {
+                          await Clipboard.setData(
+                            ClipboardData(text: _directoryPath.trim()),
+                          );
+                          if (!mounted) {
+                            return;
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.pathCopied)),
+                          );
+                        },
+                  icon: const Icon(Icons.content_copy),
+                ),
                 IconButton(
                   tooltip: l10n.fileChoose,
                   onPressed: () async {
@@ -1432,7 +1461,7 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
                       return;
                     }
                     setState(() {
-                      _directoryController.text = folderPath;
+                      _directoryPath = folderPath;
                     });
                   },
                   icon: const Icon(Icons.folder_open),

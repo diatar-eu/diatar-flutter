@@ -534,6 +534,33 @@ class AppLocalizationsHu extends AppLocalizations {
   String get fileChoose => 'Fájl választása';
 
   @override
+  String get copyPathTooltip => 'Eredeti útvonal másolása';
+
+  @override
+  String get pathCopied => 'Az eredeti útvonal a vágólapra került';
+
+  @override
+  String get pathLabelInternalStorage => 'Belső tárhely';
+
+  @override
+  String get pathSegmentDocuments => 'Dokumentumok';
+
+  @override
+  String get pathSegmentDownloads => 'Letöltések';
+
+  @override
+  String get pathSegmentCamera => 'Kamera';
+
+  @override
+  String get pathSegmentPictures => 'Képek';
+
+  @override
+  String get pathSegmentMusic => 'Zene';
+
+  @override
+  String get pathSegmentMovies => 'Videók';
+
+  @override
   String get uiLanguage => 'Felhasználói felület nyelve';
 
   @override
