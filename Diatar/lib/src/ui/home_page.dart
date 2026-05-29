@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:diatar_common/diatar_common.dart';
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
@@ -274,28 +273,6 @@ class DiatarHomePage extends StatelessWidget {
             tooltip: l10n.zsolozsmaTooltip,
             onPressed: () => _openZsolozsmaDialog(context),
             icon: const Icon(Icons.menu_book_outlined),
-          ),
-          PopupMenuButton<_AddSlideAction>(
-            tooltip: l10n.addSlideTooltip,
-            onSelected: (_AddSlideAction action) {
-              if (action == _AddSlideAction.text) {
-                unawaited(_openCustomTextSlideDialog(context));
-              } else {
-                unawaited(_pickAndSendImageSlide(context));
-              }
-            },
-            itemBuilder: (BuildContext context) =>
-                <PopupMenuEntry<_AddSlideAction>>[
-                  PopupMenuItem<_AddSlideAction>(
-                    value: _AddSlideAction.text,
-                    child: Text(l10n.addTextSlide),
-                  ),
-                  PopupMenuItem<_AddSlideAction>(
-                    value: _AddSlideAction.image,
-                    child: Text(l10n.addImageSlide),
-                  ),
-                ],
-            icon: const Icon(Icons.add_circle_outline),
           ),
           IconButton(
             tooltip: l10n.downloadBooksTooltip,
@@ -659,113 +636,6 @@ class DiatarHomePage extends StatelessWidget {
       builder: (BuildContext context) {
         return _ZsolozsmaDialog(controller: controller);
       },
-    );
-  }
-
-  Future<void> _openCustomTextSlideDialog(BuildContext context) async {
-    final _TextSlideInput? input = await showDialog<_TextSlideInput>(
-      context: context,
-      builder: (BuildContext context) => const _CustomTextSlideDialog(),
-    );
-    if (input == null) {
-      return;
-    }
-    await controller.addCustomTextSlideToOrder(
-      title: input.title,
-      body: input.body,
-    );
-  }
-
-  Future<void> _pickAndSendImageSlide(BuildContext context) async {
-    final XTypeGroup images = XTypeGroup(
-      label: context.l10n.imagesFileTypeLabel,
-      extensions: <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
-    );
-    final XFile? file = await openFile(
-      acceptedTypeGroups: <XTypeGroup>[images],
-    );
-    if (file == null) {
-      return;
-    }
-    await controller.addCustomImageSlideToOrder(file.path);
-  }
-}
-
-enum _AddSlideAction { text, image }
-
-class _TextSlideInput {
-  const _TextSlideInput({required this.title, required this.body});
-
-  final String title;
-  final String body;
-}
-
-class _CustomTextSlideDialog extends StatefulWidget {
-  const _CustomTextSlideDialog();
-
-  @override
-  State<_CustomTextSlideDialog> createState() => _CustomTextSlideDialogState();
-}
-
-class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
-  late final TextEditingController _titleController;
-  late final TextEditingController _bodyController;
-
-  @override
-  void initState() {
-    super.initState();
-    _titleController = TextEditingController();
-    _bodyController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _bodyController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return AlertDialog(
-      title: Text(l10n.textSlideDialogTitle),
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(labelText: l10n.textSlideTitleLabel),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _bodyController,
-              decoration: InputDecoration(labelText: l10n.textSlideBodyLabel),
-              minLines: 4,
-              maxLines: 8,
-            ),
-          ],
-        ),
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.cancel),
-        ),
-        FilledButton(
-          onPressed: () {
-            Navigator.of(context).pop(
-              _TextSlideInput(
-                title: _titleController.text,
-                body: _bodyController.text,
-              ),
-            );
-          },
-          child: Text(l10n.apply),
-        ),
-      ],
     );
   }
 }
