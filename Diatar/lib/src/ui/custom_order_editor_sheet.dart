@@ -193,6 +193,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                       icon: const Icon(Icons.horizontal_rule),
                     ),
                     IconButton(
+                      tooltip: l10n.addTextSlide,
+                      onPressed: _openCustomTextSlideDialog,
+                      icon: const Icon(Icons.text_fields),
+                    ),
+                    IconButton(
                       tooltip: l10n.addImageSlideTooltip,
                       onPressed: _pickAndSendImageSlide,
                       icon: const Icon(Icons.image),
@@ -681,6 +686,44 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       verseIndex: 0,
       label: '[Kep] $fileName',
       customImagePath: file.path,
+    );
+
+    setState(() {
+      final int insertIndex = _selectedInsertInsertionIndex();
+      _entries.insert(insertIndex, entry);
+    });
+    await _commitEntries();
+  }
+
+  Future<void> _openCustomTextSlideDialog() async {
+    final _TextSlideInput? input = await showDialog<_TextSlideInput>(
+      context: context,
+      builder: (BuildContext context) => const _CustomTextSlideDialog(),
+    );
+    if (input == null || !mounted) {
+      return;
+    }
+
+    final String normalizedTitle = input.title.trim();
+    final List<String> lines = input.body
+        .split(RegExp(r'\r?\n'))
+        .map((String line) => line.trimRight())
+        .where((String line) => line.trim().isNotEmpty)
+        .toList();
+    if (normalizedTitle.isEmpty && lines.isEmpty) {
+      return;
+    }
+
+    final String effectiveTitle = normalizedTitle.isEmpty
+        ? 'Dia'
+        : normalizedTitle;
+    final CustomOrderEntry entry = CustomOrderEntry(
+      fileName: '__custom_text__',
+      songIndex: -1,
+      verseIndex: 0,
+      label: '[Szoveg] $effectiveTitle',
+      customTextTitle: effectiveTitle,
+      customTextBody: lines.join('\n'),
     );
 
     setState(() {
@@ -1332,6 +1375,83 @@ class _DiaSaveTarget {
 
   final String fileName;
   final String directoryPath;
+}
+
+class _TextSlideInput {
+  const _TextSlideInput({required this.title, required this.body});
+
+  final String title;
+  final String body;
+}
+
+class _CustomTextSlideDialog extends StatefulWidget {
+  const _CustomTextSlideDialog();
+
+  @override
+  State<_CustomTextSlideDialog> createState() => _CustomTextSlideDialogState();
+}
+
+class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _bodyController;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController();
+    _bodyController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.textSlideDialogTitle),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TextField(
+              controller: _titleController,
+              decoration: InputDecoration(labelText: l10n.textSlideTitleLabel),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _bodyController,
+              decoration: InputDecoration(labelText: l10n.textSlideBodyLabel),
+              minLines: 4,
+              maxLines: 8,
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.of(context).pop(
+              _TextSlideInput(
+                title: _titleController.text,
+                body: _bodyController.text,
+              ),
+            );
+          },
+          child: Text(l10n.apply),
+        ),
+      ],
+    );
+  }
 }
 
 class _DiaSaveDialog extends StatefulWidget {
