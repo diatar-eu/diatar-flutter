@@ -356,6 +356,15 @@ class _SettingsSheetState extends State<SettingsSheet> {
               ),
             ),
             const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.tonalIcon(
+                onPressed: widget.onExitRequested,
+                icon: const Icon(Icons.power_settings_new),
+                label: Text(l10n.settingsProgramExit),
+              ),
+            ),
+            const SizedBox(height: 8),
             Row(
               children: <Widget>[
                 TextButton(

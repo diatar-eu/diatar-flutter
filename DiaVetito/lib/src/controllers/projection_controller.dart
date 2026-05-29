@@ -134,6 +134,8 @@ class ProjectionController extends ChangeNotifier {
       return;
     }
     _setStatus('statusExitRequested');
+    await _server.stop();
+    await _mqtt.closeReceiver();
     await SystemNavigator.pop();
   }
 

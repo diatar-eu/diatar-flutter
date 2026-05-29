@@ -669,5 +669,6 @@
   "settingsHotkeyConfirm": "Confirm",
   "settingsHotkeyClearCapture": "Clear",
   "settingsHotkeyClear": "Clear",
-  "settingsHotkeyCapture": "Capture"
+  "settingsHotkeyCapture": "Capture",
+  "settingsProgramExit": "End program"
 }

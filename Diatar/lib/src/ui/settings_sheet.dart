@@ -22,12 +22,14 @@ class DiatarSettingsSheet extends StatefulWidget {
     super.key,
     required this.initialSettings,
     required this.onApply,
+    required this.onExitRequested,
     this.availableSongs = const <SongHotkeyOption>[],
     this.availableSongsLoader,
   });
 
   final AppSettings initialSettings;
   final ValueChanged<AppSettings> onApply;
+  final VoidCallback onExitRequested;
   final List<SongHotkeyOption> availableSongs;
   final List<SongHotkeyOption> Function()? availableSongsLoader;
 
@@ -371,6 +373,15 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               ),
             ),
             const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.tonalIcon(
+                onPressed: widget.onExitRequested,
+                icon: const Icon(Icons.power_settings_new),
+                label: Text(l10n.settingsProgramExit),
+              ),
+            ),
+            const SizedBox(height: 8),
             Row(
               children: <Widget>[
                 TextButton(

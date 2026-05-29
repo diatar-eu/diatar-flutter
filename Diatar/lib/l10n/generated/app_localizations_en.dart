@@ -1064,4 +1064,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsHotkeyCapture => 'Capture';
+
+  @override
+  String get settingsProgramExit => 'End program';
 }

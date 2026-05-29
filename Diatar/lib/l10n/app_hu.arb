@@ -669,5 +669,6 @@
   "settingsHotkeyConfirm": "Megerősítés",
   "settingsHotkeyClearCapture": "Törlés",
   "settingsHotkeyClear": "Törlés",
-  "settingsHotkeyCapture": "Rögzítés"
+  "settingsHotkeyCapture": "Rögzítés",
+  "settingsProgramExit": "Program vége"
 }

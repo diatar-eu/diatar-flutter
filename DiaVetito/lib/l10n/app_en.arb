@@ -112,6 +112,7 @@
   "highlightColorLabel": "Highlight color",
   "change": "Change",
   "colorPickerTitle": "Color picker",
+  "settingsProgramExit": "End program",
   "exit": "Exit",
   "shutdown": "Shutdown",
   "reboot": "Reboot",

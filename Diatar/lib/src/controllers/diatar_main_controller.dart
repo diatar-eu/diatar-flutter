@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../services/mqtt_sender_service.dart';
@@ -2733,6 +2734,12 @@ class DiatarMainController extends ChangeNotifier {
       _setStatus('statusCommandSendError', <String, String>{'error': '$e'});
       notifyListeners();
     }
+  }
+
+  Future<void> requestExit() async {
+    await _sender.stop();
+    await _mqttSender.close();
+    await SystemNavigator.pop();
   }
 
   String _fileExtension(String path) {

@@ -226,6 +226,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get colorPickerTitle => 'Színválasztó';
 
   @override
+  String get settingsProgramExit => 'Program vége';
+
+  @override
   String get exit => 'Kilépés';
 
   @override
