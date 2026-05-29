@@ -935,6 +935,60 @@ abstract class AppLocalizations {
   /// **'Fájl választása'**
   String get fileChoose;
 
+  /// No description provided for @copyPathTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Eredeti útvonal másolása'**
+  String get copyPathTooltip;
+
+  /// No description provided for @pathCopied.
+  ///
+  /// In hu, this message translates to:
+  /// **'Az eredeti útvonal a vágólapra került'**
+  String get pathCopied;
+
+  /// No description provided for @pathLabelInternalStorage.
+  ///
+  /// In hu, this message translates to:
+  /// **'Belső tárhely'**
+  String get pathLabelInternalStorage;
+
+  /// No description provided for @pathSegmentDocuments.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dokumentumok'**
+  String get pathSegmentDocuments;
+
+  /// No description provided for @pathSegmentDownloads.
+  ///
+  /// In hu, this message translates to:
+  /// **'Letöltések'**
+  String get pathSegmentDownloads;
+
+  /// No description provided for @pathSegmentCamera.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kamera'**
+  String get pathSegmentCamera;
+
+  /// No description provided for @pathSegmentPictures.
+  ///
+  /// In hu, this message translates to:
+  /// **'Képek'**
+  String get pathSegmentPictures;
+
+  /// No description provided for @pathSegmentMusic.
+  ///
+  /// In hu, this message translates to:
+  /// **'Zene'**
+  String get pathSegmentMusic;
+
+  /// No description provided for @pathSegmentMovies.
+  ///
+  /// In hu, this message translates to:
+  /// **'Videók'**
+  String get pathSegmentMovies;
+
   /// No description provided for @uiLanguage.
   ///
   /// In hu, this message translates to:

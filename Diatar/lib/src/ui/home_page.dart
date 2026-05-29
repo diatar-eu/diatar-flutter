@@ -9,6 +9,7 @@ import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
 import '../services/dtx_download_service.dart';
 import '../services/zsolozsma_service.dart';
+import '../utils/friendly_path.dart';
 import 'settings_sheet.dart';
 import 'custom_order_editor_sheet.dart';
 
@@ -1668,6 +1669,9 @@ class _CustomImagePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String normalized = imagePath.trim();
+    final String friendlyPath = normalized.isEmpty
+        ? ''
+        : formatFriendlyPathLabel(normalized, context.l10n);
     final File f = File(normalized);
     final bool exists = normalized.isNotEmpty && f.existsSync();
 
@@ -1675,7 +1679,7 @@ class _CustomImagePreview extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints constraints) {
         final String fullTitle = context.l10n.versePanelTitle(
           panelTitle,
-          normalized.isEmpty ? '-' : normalized,
+          friendlyPath.isEmpty ? '-' : friendlyPath,
         );
         final TextPainter titlePainter =
             TextPainter(
@@ -1698,7 +1702,7 @@ class _CustomImagePreview extends StatelessWidget {
             Text(fullTitle, maxLines: 2, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 10),
             if (!exists)
-              Text(context.l10n.statusImageNotFound(normalized))
+              Text(context.l10n.statusImageNotFound(friendlyPath))
             else
               SizedBox(
                 height: imageHeight,

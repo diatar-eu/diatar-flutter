@@ -531,6 +531,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileChoose => 'Choose file';
 
   @override
+  String get copyPathTooltip => 'Copy original path';
+
+  @override
+  String get pathCopied => 'Original path copied';
+
+  @override
+  String get pathLabelInternalStorage => 'Internal storage';
+
+  @override
+  String get pathSegmentDocuments => 'Documents';
+
+  @override
+  String get pathSegmentDownloads => 'Downloads';
+
+  @override
+  String get pathSegmentCamera => 'Camera';
+
+  @override
+  String get pathSegmentPictures => 'Pictures';
+
+  @override
+  String get pathSegmentMusic => 'Music';
+
+  @override
+  String get pathSegmentMovies => 'Movies';
+
+  @override
   String get uiLanguage => 'User interface language';
 
   @override
