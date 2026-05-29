@@ -197,14 +197,6 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                       onPressed: _pickAndSendImageSlide,
                       icon: const Icon(Icons.image),
                     ),
-                    if (!widget.embedded) ...<Widget>[
-                      const SizedBox(width: 4),
-                      IconButton(
-                        tooltip: l10n.close,
-                        onPressed: widget.onClose,
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -228,6 +220,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                       icon: const Icon(Icons.save_alt),
                       label: Text(l10n.saveDia),
                     ),
+                    if (!widget.embedded)
+                      OutlinedButton.icon(
+                        onPressed: widget.onClose,
+                        icon: const Icon(Icons.close),
+                        label: Text(l10n.close),
+                      ),
                   ],
                 ),
               ),
@@ -929,11 +927,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           initialDirectory: initialDir,
         );
         targetPath = target?.path;
-        if (
-          !hadConfiguredDir &&
-          targetPath != null &&
-          targetPath.trim().isNotEmpty
-        ) {
+        if (!hadConfiguredDir &&
+            targetPath != null &&
+            targetPath.trim().isNotEmpty) {
           final String selectedDir = File(targetPath).parent.path.trim();
           if (selectedDir.isNotEmpty) {
             final Directory selectedDirectory = Directory(selectedDir);
@@ -987,10 +983,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
-        SnackBar(content: Text(l10n.savedPath(formatFriendlyPathLabel(outPath, l10n)))),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.savedPath(formatFriendlyPathLabel(outPath, l10n))),
+        ),
       );
     } catch (e) {
       if (!mounted) {
@@ -1393,11 +1389,11 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final String friendlyDirectory = _directoryPath.trim().isEmpty
-      ? l10n.valueNotSet
-      : formatFriendlyPathLabel(_directoryPath.trim(), l10n);
+        ? l10n.valueNotSet
+        : formatFriendlyPathLabel(_directoryPath.trim(), l10n);
     final bool canSave =
         _fileNameController.text.trim().isNotEmpty &&
-      _isValidExistingDirectory(_directoryPath);
+        _isValidExistingDirectory(_directoryPath);
 
     return AlertDialog(
       title: Text(l10n.saveDia),
@@ -1426,7 +1422,9 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
               children: <Widget>[
                 Expanded(
                   child: TextFormField(
-                    key: ValueKey<String>('friendly_dir_${_directoryPath.trim()}'),
+                    key: ValueKey<String>(
+                      'friendly_dir_${_directoryPath.trim()}',
+                    ),
                     initialValue: friendlyDirectory,
                     readOnly: true,
                     decoration: InputDecoration(
