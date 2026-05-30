@@ -905,18 +905,6 @@ abstract class AppLocalizations {
   /// **'Világos'**
   String get themeLight;
 
-  /// No description provided for @dtxFolderPath.
-  ///
-  /// In hu, this message translates to:
-  /// **'DTX mappa'**
-  String get dtxFolderPath;
-
-  /// No description provided for @dtxFolderHint.
-  ///
-  /// In hu, this message translates to:
-  /// **'Saját .dtx fájlokhoz adj meg egy publikus mappát.'**
-  String get dtxFolderHint;
-
   /// No description provided for @blankImagePath.
   ///
   /// In hu, this message translates to:
@@ -1544,8 +1532,26 @@ abstract class AppLocalizations {
   /// No description provided for @settingsFilesSummary.
   ///
   /// In hu, this message translates to:
-  /// **'DTX: {dtx}, Üres kép: {blank}'**
-  String settingsFilesSummary(Object dtx, Object blank);
+  /// **'Üres kép: {blank}'**
+  String settingsFilesSummary(Object blank);
+
+  /// No description provided for @importDtxFilesButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Importálás fájlból'**
+  String get importDtxFilesButton;
+
+  /// No description provided for @importDtxFilesSuccess.
+  ///
+  /// In hu, this message translates to:
+  /// **'{count} .dtx fájl beimportálva'**
+  String importDtxFilesSuccess(int count);
+
+  /// No description provided for @importDtxFilesError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hiba a .dtx importálás során'**
+  String get importDtxFilesError;
 
   /// No description provided for @settingsGeneralTitle.
   ///

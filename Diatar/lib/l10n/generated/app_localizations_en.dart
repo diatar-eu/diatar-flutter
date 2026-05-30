@@ -516,12 +516,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeLight => 'Light';
 
   @override
-  String get dtxFolderPath => 'DTX folder';
-
-  @override
-  String get dtxFolderHint => 'For your own .dtx files, set a public folder.';
-
-  @override
   String get blankImagePath => 'Blank image path';
 
   @override
@@ -851,9 +845,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsFilesTitle => 'Songbooks and files';
 
   @override
-  String settingsFilesSummary(Object dtx, Object blank) {
-    return 'DTX: $dtx, Blank image: $blank';
+  String settingsFilesSummary(Object blank) {
+    return 'Blank image: $blank';
   }
+
+  @override
+  String get importDtxFilesButton => 'Import from file';
+
+  @override
+  String importDtxFilesSuccess(int count) {
+    return '$count .dtx file(s) imported';
+  }
+
+  @override
+  String get importDtxFilesError => 'Error importing .dtx file(s)';
 
   @override
   String get settingsGeneralTitle => 'General';

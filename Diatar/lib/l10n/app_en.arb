@@ -432,8 +432,6 @@
   "languageSystem": "System default",
   "languageHungarian": "Hungarian",
   "languageEnglish": "English",
-  "dtxFolderPath": "DTX folder",
-  "dtxFolderHint": "For your own .dtx files, set a public folder.",
   "blankImagePath": "Blank image path",
   "diaExportFolderPath": "DIA export folder",
   "fileChoose": "Choose file",
@@ -577,13 +575,22 @@
     }
   },
   "settingsFilesTitle": "Songbooks and files",
-  "settingsFilesSummary": "DTX: {dtx}, Blank image: {blank}",
+  "settingsFilesSummary": "Blank image: {blank}",
   "@settingsFilesSummary": {
     "placeholders": {
-      "dtx": {},
       "blank": {}
     }
   },
+  "importDtxFilesButton": "Import from file",
+  "importDtxFilesSuccess": "{count} .dtx file(s) imported",
+  "@importDtxFilesSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importDtxFilesError": "Error importing .dtx file(s)",
   "settingsGeneralTitle": "General",
   "settingsGeneralSummary": "Theme: {theme}, Language: {language}",
   "@settingsGeneralSummary": {

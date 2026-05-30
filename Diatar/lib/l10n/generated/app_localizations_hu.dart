@@ -518,13 +518,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get themeLight => 'Világos';
 
   @override
-  String get dtxFolderPath => 'DTX mappa';
-
-  @override
-  String get dtxFolderHint =>
-      'Saját .dtx fájlokhoz adj meg egy publikus mappát.';
-
-  @override
   String get blankImagePath => 'Blank kép útvonal';
 
   @override
@@ -854,9 +847,20 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsFilesTitle => 'Énektárak és fájlok';
 
   @override
-  String settingsFilesSummary(Object dtx, Object blank) {
-    return 'DTX: $dtx, Üres kép: $blank';
+  String settingsFilesSummary(Object blank) {
+    return 'Üres kép: $blank';
   }
+
+  @override
+  String get importDtxFilesButton => 'Importálás fájlból';
+
+  @override
+  String importDtxFilesSuccess(int count) {
+    return '$count .dtx fájl beimportálva';
+  }
+
+  @override
+  String get importDtxFilesError => 'Hiba a .dtx importálás során';
 
   @override
   String get settingsGeneralTitle => 'Általános';
