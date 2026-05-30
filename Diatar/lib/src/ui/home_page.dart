@@ -26,6 +26,17 @@ class _BookDropdownEntry {
   bool get isHeader => group != null;
 }
 
+class _DownloadListEntry {
+  const _DownloadListEntry.header(this.group) : item = null;
+
+  const _DownloadListEntry.item(this.item) : group = null;
+
+  final String? group;
+  final DtxDownloadItem? item;
+
+  bool get isHeader => group != null;
+}
+
 class _DiaVerseEntry {
   const _DiaVerseEntry({required this.customOrderIndex, required this.label});
 
@@ -244,6 +255,23 @@ List<_BookDropdownEntry> _buildBookDropdownEntries(List<DtxBook> books) {
       lastGroup = null;
     }
     entries.add(_BookDropdownEntry.book(bookIndex: index, title: book.title));
+  }
+  return entries;
+}
+
+List<_DownloadListEntry> _buildDownloadListEntries(List<DtxDownloadItem> items) {
+  final List<_DownloadListEntry> entries = <_DownloadListEntry>[];
+  String? lastGroup;
+  for (final DtxDownloadItem item in items) {
+    final String group = item.group.trim();
+    if (group.isNotEmpty && group != lastGroup) {
+      entries.add(_DownloadListEntry.header(group));
+      lastGroup = group;
+    }
+    if (group.isEmpty) {
+      lastGroup = null;
+    }
+    entries.add(_DownloadListEntry.item(item));
   }
   return entries;
 }
@@ -904,27 +932,50 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                   );
                 }
 
+                final List<_DownloadListEntry> entries =
+                    _buildDownloadListEntries(items);
+
                 return ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 360),
                   child: ListView.builder(
                     shrinkWrap: true,
-                    itemCount: items.length,
+                    itemCount: entries.length,
                     itemBuilder: (BuildContext context, int index) {
-                      final DtxDownloadItem item = items[index];
-                      return CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        value: _selectedFiles.contains(item.fileName),
-                        title: Text(item.fileName),
-                        subtitle: Text(item.timestamp),
-                        onChanged: (bool? checked) {
-                          setState(() {
-                            if (checked ?? false) {
-                              _selectedFiles.add(item.fileName);
-                            } else {
-                              _selectedFiles.remove(item.fileName);
-                            }
-                          });
-                        },
+                      final _DownloadListEntry entry = entries[index];
+                      if (entry.isHeader) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8, bottom: 2),
+                          child: Text(
+                            '[${entry.group!}]',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                        );
+                      }
+
+                      final DtxDownloadItem item = entry.item!;
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 16),
+                        child: CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: _selectedFiles.contains(item.fileName),
+                          title: Text(item.longName),
+                          subtitle: Text(item.timestamp),
+                          onChanged: (bool? checked) {
+                            setState(() {
+                              if (checked ?? false) {
+                                _selectedFiles.add(item.fileName);
+                              } else {
+                                _selectedFiles.remove(item.fileName);
+                              }
+                            });
+                          },
+                        ),
                       );
                     },
                   ),

@@ -8,11 +8,19 @@ class DtxDownloadItem {
     required this.fileName,
     required this.timestamp,
     required this.size,
+    required this.group,
+    required this.order,
+    required this.longName,
+    required this.shortName,
   });
 
   final String fileName;
   final String timestamp;
   final int size;
+  final String group;
+  final int order;
+  final String longName;
+  final String shortName;
 }
 
 class DtxDownloadProgress {
@@ -70,12 +78,47 @@ class DtxDownloadService {
             fileName: item.fileName,
             timestamp: item.timestamp,
             size: item.size,
+            group: item.group,
+            order: item.order,
+            longName: item.longName,
+            shortName: item.shortName,
           ),
         );
       }
     }
 
+    updates.sort(_compareDownloadItems);
     return updates;
+  }
+
+  int _compareDownloadItems(DtxDownloadItem a, DtxDownloadItem b) {
+    final String aGroup = a.group.trim();
+    final String bGroup = b.group.trim();
+    final bool aEmpty = aGroup.isEmpty;
+    final bool bEmpty = bGroup.isEmpty;
+    if (aEmpty != bEmpty) {
+      return aEmpty ? 1 : -1;
+    }
+
+    final int byGroup = aGroup.toLowerCase().compareTo(bGroup.toLowerCase());
+    if (byGroup != 0) {
+      return byGroup;
+    }
+
+    final int aOrder = a.order <= 0 ? 1 << 30 : a.order;
+    final int bOrder = b.order <= 0 ? 1 << 30 : b.order;
+    final int byOrder = aOrder.compareTo(bOrder);
+    if (byOrder != 0) {
+      return byOrder;
+    }
+
+    final int byLongName = a.longName.toLowerCase().compareTo(
+      b.longName.toLowerCase(),
+    );
+    if (byLongName != 0) {
+      return byLongName;
+    }
+    return a.fileName.toLowerCase().compareTo(b.fileName.toLowerCase());
   }
 
   Future<DtxDownloadSummary> downloadUpdates({
@@ -102,7 +145,15 @@ class DtxDownloadService {
       }
 
       await _downloadOne(
-        item: _RemoteDtx(fileName: item.fileName, timestamp: item.timestamp, size: item.size),
+        item: _RemoteDtx(
+          fileName: item.fileName,
+          timestamp: item.timestamp,
+          size: item.size,
+          group: item.group,
+          order: item.order,
+          longName: item.longName,
+          shortName: item.shortName,
+        ),
         targetFile: local,
         currentFile: i + 1,
         totalFiles: updates.length,
@@ -158,7 +209,23 @@ class DtxDownloadService {
       return null;
     }
 
-    return _RemoteDtx(fileName: fileName, timestamp: timestamp, size: size);
+    final String group = cells.length > 3 ? cells[3].trim() : '';
+    final int order = cells.length > 4 ? int.tryParse(cells[4].trim()) ?? 0 : 0;
+    final String longName =
+        cells.length > 5 && cells[5].trim().isNotEmpty
+        ? cells[5].trim()
+        : fileName;
+    final String shortName = cells.length > 6 ? cells[6].trim() : '';
+
+    return _RemoteDtx(
+      fileName: fileName,
+      timestamp: timestamp,
+      size: size,
+      group: group,
+      order: order,
+      longName: longName,
+      shortName: shortName,
+    );
   }
 
   List<String> _splitCsv(String line) {
@@ -238,9 +305,17 @@ class _RemoteDtx {
     required this.fileName,
     required this.timestamp,
     required this.size,
+    required this.group,
+    required this.order,
+    required this.longName,
+    required this.shortName,
   });
 
   final String fileName;
   final String timestamp;
   final int size;
+  final String group;
+  final int order;
+  final String longName;
+  final String shortName;
 }
