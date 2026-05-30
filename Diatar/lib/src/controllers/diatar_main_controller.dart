@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:diatar_common/diatar_common.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -334,8 +335,6 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> applySettings(AppSettings newSettings) async {
-    final String oldDtxPath = _normalizedDtxPath(settings.dtxPath);
-    final String newDtxPath = _normalizedDtxPath(newSettings.dtxPath);
     settings = newSettings;
     lastBlankPath = settings.blankPicPath;
     await _settingsStore.save(settings);
@@ -366,28 +365,11 @@ class DiatarMainController extends ChangeNotifier {
       boldText: settings.projBoldText,
     );
     await _applyTransport();
-    if (oldDtxPath != newDtxPath) {
-      await reloadBooks();
-    }
     notifyListeners();
     await _syncCurrentDia();
   }
 
-  String _normalizedDtxPath(String raw) {
-    return raw.trim().replaceAll('\\', '/');
-  }
-
   Future<Directory> _resolveDtxDirectory() async {
-    final String configured = settings.dtxPath.trim();
-    if (configured.isNotEmpty) {
-      return Directory(configured);
-    }
-    if (Platform.isAndroid) {
-      final Directory? ext = await getExternalStorageDirectory();
-      if (ext != null) {
-        return Directory('${ext.path}/diatar/DTXs');
-      }
-    }
     final Directory docs = await getApplicationDocumentsDirectory();
     return Directory('${docs.path}/diatar/DTXs');
   }
@@ -395,6 +377,31 @@ class DiatarMainController extends ChangeNotifier {
   Future<Directory> _resolveZsolozsmaDirectory() async {
     final Directory docs = await getApplicationDocumentsDirectory();
     return Directory('${docs.path}/zsolozsma');
+  }
+
+  /// Copies the given [files] (picked via file picker) into the internal DTX
+  /// directory, then reloads books. Returns the number of files copied.
+  Future<int> importDtxFiles(List<XFile> files) async {
+    final Directory dtxDir = await _resolveDtxDirectory();
+    await dtxDir.create(recursive: true);
+    int count = 0;
+    for (final XFile xf in files) {
+      final String name = xf.name.trim();
+      if (!name.toLowerCase().endsWith('.dtx')) {
+        continue;
+      }
+      try {
+        final List<int> bytes = await xf.readAsBytes();
+        await File('${dtxDir.path}/$name').writeAsBytes(bytes);
+        count++;
+      } catch (_) {
+        // Skip files that cannot be read.
+      }
+    }
+    if (count > 0) {
+      await reloadBooks();
+    }
+    return count;
   }
 
   Future<ZsolozsmaSyncResult> syncZsolozsmaArchives({

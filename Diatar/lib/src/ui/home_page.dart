@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:diatar_common/diatar_common.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
@@ -936,6 +937,10 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l10n.close),
         ),
+        OutlinedButton(
+          onPressed: () => _importDtxFiles(context),
+          child: Text(l10n.importDtxFilesButton),
+        ),
         FutureBuilder<List<DtxDownloadItem>>(
           future: _candidatesFuture,
           builder:
@@ -959,6 +964,31 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
         ),
       ],
     );
+  }
+
+  Future<void> _importDtxFiles(BuildContext context) async {
+    const XTypeGroup dtxType = XTypeGroup(
+      label: 'DTX',
+      extensions: <String>['dtx'],
+    );
+    final List<XFile> files = await openFiles(
+      acceptedTypeGroups: <XTypeGroup>[dtxType],
+    );
+    if (files.isEmpty || !context.mounted) {
+      return;
+    }
+    try {
+      final int count = await widget.controller.importDtxFiles(files);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.importDtxFilesSuccess(count))),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.importDtxFilesError)),
+      );
+    }
   }
 }
 

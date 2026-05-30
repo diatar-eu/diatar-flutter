@@ -428,8 +428,6 @@
   "uiTheme": "Felhasználói felület témája",
   "themeDark": "Sötét",
   "themeLight": "Világos",
-  "dtxFolderPath": "DTX mappa",
-  "dtxFolderHint": "Saját .dtx fájlokhoz adj meg egy publikus mappát.",
   "blankImagePath": "Blank kép útvonal",
   "diaExportFolderPath": "DIA mentési mappa",
   "fileChoose": "Fájl választása",
@@ -577,13 +575,22 @@
     }
   },
   "settingsFilesTitle": "Énektárak és fájlok",
-  "settingsFilesSummary": "DTX: {dtx}, Üres kép: {blank}",
+  "settingsFilesSummary": "Üres kép: {blank}",
   "@settingsFilesSummary": {
     "placeholders": {
-      "dtx": {},
       "blank": {}
     }
   },
+  "importDtxFilesButton": "Importálás fájlból",
+  "importDtxFilesSuccess": "{count} .dtx fájl beimportálva",
+  "@importDtxFilesSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importDtxFilesError": "Hiba a .dtx importálás során",
   "settingsGeneralTitle": "Általános",
   "settingsGeneralSummary": "Téma: {theme}, Nyelv: {language}",
   "@settingsGeneralSummary": {

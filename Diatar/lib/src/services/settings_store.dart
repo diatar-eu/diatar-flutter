@@ -9,7 +9,6 @@ class SettingsStore {
   static const String _kUser = 'Username';
   static const String _kPassword = 'Password';
   static const String _kChannel = 'Channel';
-  static const String _kDtxPath = 'DtxPath';
   static const String _kBlankPicPath = 'BlankPicPath';
   static const String _kDiaExportPath = 'DiaExportPath';
   static const String _kBkColor = 'BkColor';
@@ -72,7 +71,7 @@ class SettingsStore {
       mqttUser: mqttUser,
       mqttPassword: mqttPassword,
       mqttChannel: '1',
-      dtxPath: prefs.getString(_kDtxPath) ?? '',
+      dtxPath: '',
       blankPicPath: prefs.getString(_kBlankPicPath) ?? '',
       diaExportPath: prefs.getString(_kDiaExportPath) ?? '',
       projFontSize: prefs.getInt(_kProjFontSize) ?? 70,
@@ -127,7 +126,6 @@ class SettingsStore {
       settings.mqttUser.trim().isEmpty ? '' : settings.mqttPassword,
     );
     await prefs.setString(_kChannel, '1');
-    await prefs.setString(_kDtxPath, settings.dtxPath);
     await prefs.setString(_kBlankPicPath, settings.blankPicPath);
     await prefs.setString(_kDiaExportPath, settings.diaExportPath);
     await prefs.setInt(_kProjFontSize, settings.projFontSize);

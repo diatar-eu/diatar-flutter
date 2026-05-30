@@ -42,7 +42,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _tcpTargets;
   late final TextEditingController _mqttUser;
   late final TextEditingController _mqttPassword;
-  late final TextEditingController _dtxPath;
   late final TextEditingController _blankPicPath;
   late final TextEditingController _diaExportPath;
   late final TextEditingController _projFontSize;
@@ -96,7 +95,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _mqttUser = TextEditingController(text: s.mqttUser);
     _mqttPassword = TextEditingController(text: s.mqttPassword);
     _focusNodeForHotkey = FocusNode(debugLabel: 'hotkey-capture');
-    _dtxPath = TextEditingController(text: s.dtxPath);
     _blankPicPath = TextEditingController(text: s.blankPicPath);
     _diaExportPath = TextEditingController(text: s.diaExportPath);
     _projFontSize = TextEditingController(text: s.projFontSize.toString());
@@ -155,7 +153,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _mqttUser.dispose();
     _mqttPassword.dispose();
     _focusNodeForHotkey.dispose();
-    _dtxPath.dispose();
     _blankPicPath.dispose();
     _diaExportPath.dispose();
     _projFontSize.dispose();
@@ -191,9 +188,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final String themeLabel = _appThemeMode == 0
         ? l10n.themeDark
         : l10n.themeLight;
-    final String dtxSummary = _dtxPath.text.trim().isEmpty
-      ? l10n.valueNotSet
-      : shortFriendlyPathLabel(_dtxPath.text.trim(), l10n);
     final String blankSummary = _blankPicPath.text.trim().isEmpty
       ? l10n.valueNotSet
       : shortFriendlyPathLabel(_blankPicPath.text.trim(), l10n);
@@ -341,7 +335,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       leading: const Icon(Icons.folder),
                       title: Text(l10n.settingsFilesTitle),
                       subtitle: Text(
-                        l10n.settingsFilesSummary(dtxSummary, blankSummary),
+                        l10n.settingsFilesSummary(blankSummary),
                       ),
                       onTap: _openFileSettings,
                     ),
@@ -913,16 +907,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         return <Widget>[
-          _buildPathPickerRow(
-            l10n: l10n,
-            label: l10n.dtxFolderPath,
-            rawPath: _dtxPath.text.trim(),
-            helperText: l10n.dtxFolderHint,
-            onPick: () async {
-              await _pickDtxFolder();
-              setBoth(() {});
-            },
-          ),
           _buildPathPickerRow(
             l10n: l10n,
             label: l10n.blankImagePath,
@@ -1885,7 +1869,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       mqttUser: mqttUser,
       mqttPassword: mqttPassword,
       mqttChannel: '1',
-      dtxPath: _dtxPath.text.trim(),
+      dtxPath: '',
       blankPicPath: _blankPicPath.text.trim(),
       diaExportPath: _diaExportPath.text.trim(),
       projFontSize: _parseInt(
@@ -2058,16 +2042,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     }
     setState(() {
       _blankPicPath.text = file.path;
-    });
-  }
-
-  Future<void> _pickDtxFolder() async {
-    final String? folderPath = await getDirectoryPath();
-    if (!mounted || folderPath == null) {
-      return;
-    }
-    setState(() {
-      _dtxPath.text = folderPath;
     });
   }
 
