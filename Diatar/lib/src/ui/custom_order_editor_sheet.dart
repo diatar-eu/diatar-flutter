@@ -93,15 +93,14 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     List<DtxBook> books,
   ) {
     final List<_InsertBookDropdownEntry> entries = <_InsertBookDropdownEntry>[];
+    final String ungroupedLabel = context.l10n.ungroupedBookGroupLabel;
     String? lastGroup;
     for (final DtxBook book in books) {
-      final String group = book.group.trim();
-      if (group.isNotEmpty && group != lastGroup) {
-        entries.add(_InsertBookDropdownEntry.header(group));
-        lastGroup = group;
-      }
-      if (group.isEmpty) {
-        lastGroup = null;
+      final String rawGroup = book.group.trim();
+      final String displayGroup = rawGroup.isEmpty ? ungroupedLabel : rawGroup;
+      if (displayGroup != lastGroup) {
+        entries.add(_InsertBookDropdownEntry.header(displayGroup));
+        lastGroup = displayGroup;
       }
       entries.add(
         _InsertBookDropdownEntry.book(
@@ -615,12 +614,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
   List<_SearchCandidate> _collectSearchCandidates() {
     final List<_SearchCandidate> candidates = <_SearchCandidate>[];
+    final String ungroupedLabel = context.l10n.ungroupedBookGroupLabel;
     for (final DtxBook book in controller.books) {
-      final String group = book.group.trim();
+      final String rawGroup = book.group.trim();
+      final String group = rawGroup.isEmpty ? ungroupedLabel : rawGroup;
       final String fullTitle = book.title;
-      final String displayTitle = group.isEmpty
-          ? fullTitle
-          : '[$group] $fullTitle';
+      final String displayTitle = '[$group] $fullTitle';
       final String searchText = '${book.displayName} $fullTitle';
       for (int i = 0; i < book.songs.length; i++) {
         final DtxSong song = book.songs[i];

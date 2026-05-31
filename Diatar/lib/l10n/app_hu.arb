@@ -369,6 +369,7 @@
   },
   "noLoadedSlide": "Nincs betöltött dia.",
   "bookLabel": "Kötet",
+  "ungroupedBookGroupLabel": "(nem besorolt)",
   "diaBookLabel": "DIA: {name}",
   "@diaBookLabel": {
     "placeholders": {

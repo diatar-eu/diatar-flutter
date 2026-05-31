@@ -241,35 +241,37 @@ int _selectedDiaSongGroupIndex(
   return idx >= 0 ? idx : 0;
 }
 
-List<_BookDropdownEntry> _buildBookDropdownEntries(List<DtxBook> books) {
+List<_BookDropdownEntry> _buildBookDropdownEntries(
+  List<DtxBook> books,
+  String ungroupedLabel,
+) {
   final List<_BookDropdownEntry> entries = <_BookDropdownEntry>[];
   String? lastGroup;
   for (int index = 0; index < books.length; index++) {
     final DtxBook book = books[index];
-    final String group = book.group.trim();
-    if (group.isNotEmpty && group != lastGroup) {
-      entries.add(_BookDropdownEntry.header(group));
-      lastGroup = group;
-    }
-    if (group.isEmpty) {
-      lastGroup = null;
+    final String rawGroup = book.group.trim();
+    final String displayGroup = rawGroup.isEmpty ? ungroupedLabel : rawGroup;
+    if (displayGroup != lastGroup) {
+      entries.add(_BookDropdownEntry.header(displayGroup));
+      lastGroup = displayGroup;
     }
     entries.add(_BookDropdownEntry.book(bookIndex: index, title: book.title));
   }
   return entries;
 }
 
-List<_DownloadListEntry> _buildDownloadListEntries(List<DtxDownloadItem> items) {
+List<_DownloadListEntry> _buildDownloadListEntries(
+  List<DtxDownloadItem> items,
+  String ungroupedLabel,
+) {
   final List<_DownloadListEntry> entries = <_DownloadListEntry>[];
   String? lastGroup;
   for (final DtxDownloadItem item in items) {
-    final String group = item.group.trim();
-    if (group.isNotEmpty && group != lastGroup) {
-      entries.add(_DownloadListEntry.header(group));
-      lastGroup = group;
-    }
-    if (group.isEmpty) {
-      lastGroup = null;
+    final String rawGroup = item.group.trim();
+    final String displayGroup = rawGroup.isEmpty ? ungroupedLabel : rawGroup;
+    if (displayGroup != lastGroup) {
+      entries.add(_DownloadListEntry.header(displayGroup));
+      lastGroup = displayGroup;
     }
     entries.add(_DownloadListEntry.item(item));
   }
@@ -932,8 +934,10 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                   );
                 }
 
-                final List<_DownloadListEntry> entries =
-                    _buildDownloadListEntries(items);
+                final List<_DownloadListEntry> entries = _buildDownloadListEntries(
+                  items,
+                  l10n.ungroupedBookGroupLabel,
+                );
 
                 return ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 360),
@@ -1062,6 +1066,7 @@ class _BookDropdown extends StatelessWidget {
       controller.lastImportedCustomOrderBaseName ?? fallbackDiaName;
     final List<_BookDropdownEntry> entries = _buildBookDropdownEntries(
       controller.books,
+      context.l10n.ungroupedBookGroupLabel,
     );
     final int initial = controller.diaVirtualBookSelected
         ? _diaVirtualBookValue

@@ -397,6 +397,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookLabel => 'Book';
 
   @override
+  String get ungroupedBookGroupLabel => '(unclassified)';
+
+  @override
   String diaBookLabel(Object name) {
     return 'DIA: $name';
   }
