@@ -536,9 +536,17 @@ class DiatarHomePage extends StatelessWidget {
 
   Widget _buildSimplePreviewPane(BuildContext context) {
     final l10n = context.l10n;
+    final ThemeData theme = Theme.of(context);
+    final Color previewBorderColor = controller.globals.projecting
+        ? Colors.red.shade700
+        : theme.dividerColor.withValues(alpha: 0.65);
 
     return Container(
-      color: controller.globals.bkColor,
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: controller.globals.bkColor,
+        border: Border.all(color: previewBorderColor, width: 1.5),
+      ),
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       child: LayoutBuilder(
