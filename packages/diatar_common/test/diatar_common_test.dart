@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:diatar_common/diatar_common.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -283,6 +284,26 @@ void main() {
     expect(startXs.length, greaterThanOrEqualTo(2));
     expect(startXs.first, 16);
     expect(startXs.skip(1), everyElement(32));
+  });
+
+  test('tie underline continuations survive wrapped rows', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(),
+      settings: const AppSettings(),
+    );
+
+    final List<List<bool>> continuations =
+        painter.debugTieUnderlineRowContinuationsForLine(
+      r'pre \(aa bb cc dd ee ff gg hh ii jj kk ll\) post',
+      fontSize: 24,
+      maxWidth: 90,
+    );
+
+    expect(continuations.length, greaterThan(2));
+    expect(continuations.first.first, false);
+    expect(continuations.last.last, false);
+    expect(continuations.any((List<bool> pair) => pair[0] && pair[1]), true);
   });
 
   test('logo background stays green between fade in and fade out', () {
