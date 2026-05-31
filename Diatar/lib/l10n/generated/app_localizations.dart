@@ -683,6 +683,12 @@ abstract class AppLocalizations {
   /// **'Kötet'**
   String get bookLabel;
 
+  /// No description provided for @ungroupedBookGroupLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'(nem besorolt)'**
+  String get ungroupedBookGroupLabel;
+
   /// No description provided for @diaBookLabel.
   ///
   /// In hu, this message translates to:

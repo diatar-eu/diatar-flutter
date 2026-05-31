@@ -1835,6 +1835,16 @@ class DiatarMainController extends ChangeNotifier {
   int _compareBooksLikeAndroid(DtxBook left, DtxBook right) {
     final String lGroup = left.group.trim();
     final String rGroup = right.group.trim();
+    final bool lEmpty = lGroup.isEmpty;
+    final bool rEmpty = rGroup.isEmpty;
+    if (lEmpty != rEmpty) {
+      return lEmpty ? 1 : -1;
+    }
+    final int lGroupPriority = _preferredBookGroupPriority(lGroup);
+    final int rGroupPriority = _preferredBookGroupPriority(rGroup);
+    if (lGroupPriority != rGroupPriority) {
+      return lGroupPriority.compareTo(rGroupPriority);
+    }
     final int groupCmp = lGroup.toLowerCase().compareTo(rGroup.toLowerCase());
     if (groupCmp != 0) {
       return groupCmp;
@@ -1853,6 +1863,18 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     return left.title.toLowerCase().compareTo(right.title.toLowerCase());
+  }
+
+  int _preferredBookGroupPriority(String group) {
+    // Keep these two groups first in every grouped book list.
+    switch (group.trim().toLowerCase()) {
+      case 'népénekes könyvek':
+        return 0;
+      case 'mise és liturgia':
+        return 1;
+      default:
+        return 2;
+    }
   }
 
   DtxBook? get currentBook =>

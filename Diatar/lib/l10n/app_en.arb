@@ -369,6 +369,7 @@
   },
   "noLoadedSlide": "No slide loaded.",
   "bookLabel": "Book",
+  "ungroupedBookGroupLabel": "(unclassified)",
   "diaBookLabel": "DIA: {name}",
   "@diaBookLabel": {
     "placeholders": {

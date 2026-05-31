@@ -100,6 +100,12 @@ class DtxDownloadService {
       return aEmpty ? 1 : -1;
     }
 
+    final int aGroupPriority = _preferredBookGroupPriority(aGroup);
+    final int bGroupPriority = _preferredBookGroupPriority(bGroup);
+    if (aGroupPriority != bGroupPriority) {
+      return aGroupPriority.compareTo(bGroupPriority);
+    }
+
     final int byGroup = aGroup.toLowerCase().compareTo(bGroup.toLowerCase());
     if (byGroup != 0) {
       return byGroup;
@@ -119,6 +125,17 @@ class DtxDownloadService {
       return byLongName;
     }
     return a.fileName.toLowerCase().compareTo(b.fileName.toLowerCase());
+  }
+
+  int _preferredBookGroupPriority(String group) {
+    switch (group.trim().toLowerCase()) {
+      case 'népénekes könyvek':
+        return 0;
+      case 'mise és liturgia':
+        return 1;
+      default:
+        return 2;
+    }
   }
 
   Future<DtxDownloadSummary> downloadUpdates({
