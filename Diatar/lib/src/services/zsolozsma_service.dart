@@ -1194,10 +1194,37 @@ class ZsolozsmaService {
     if (normalized.isEmpty) {
       return null;
     }
-    if (normalized.endsWith('d') && normalized.length > 1) {
-      return normalized.substring(0, normalized.length - 1);
+    String canonical = normalized;
+
+    // breviar overview pages often use symbolic daypart codes.
+    switch (canonical) {
+      case 'mi':
+        return '01';
+      case 'mpc':
+        return '02';
+      case 'mrch':
+        return '03';
+      case 'mpred':
+        return '09';
+      case 'mna':
+        return '0c';
+      case 'mpo':
+        return '0i';
+      case 'mv':
+        return '0k';
+      case 'mk':
+        return '0r';
     }
-    return normalized;
+
+    if (canonical.endsWith('d') && canonical.length > 1) {
+      canonical = canonical.substring(0, canonical.length - 1);
+    }
+
+    if (canonical.length == 1 && RegExp(r'^[0-9a-z]$').hasMatch(canonical)) {
+      canonical = '0$canonical';
+    }
+
+    return canonical;
   }
 
   bool _isSupportedDayPartCode(String code) {
