@@ -1325,6 +1325,30 @@ abstract class AppLocalizations {
   /// **'Elválasztó beszúrása'**
   String get customOrderInsertSeparatorAction;
 
+  /// No description provided for @customOrderClearAllTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Mindent töröl'**
+  String get customOrderClearAllTooltip;
+
+  /// No description provided for @customOrderClearAllConfirmTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Megerősítés'**
+  String get customOrderClearAllConfirmTitle;
+
+  /// No description provided for @customOrderClearAllConfirmMessage.
+  ///
+  /// In hu, this message translates to:
+  /// **'Biztosan törölni szeretnéd az egész saját diasort?'**
+  String get customOrderClearAllConfirmMessage;
+
+  /// No description provided for @customOrderClearAllConfirmButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Mindent töröl'**
+  String get customOrderClearAllConfirmButton;
+
   /// No description provided for @customOrderSeparatorNameLabel.
   ///
   /// In hu, this message translates to:

@@ -729,6 +729,19 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderInsertSeparatorAction => 'Elválasztó beszúrása';
 
   @override
+  String get customOrderClearAllTooltip => 'Mindent töröl';
+
+  @override
+  String get customOrderClearAllConfirmTitle => 'Megerősítés';
+
+  @override
+  String get customOrderClearAllConfirmMessage =>
+      'Biztosan törölni szeretnéd az egész saját diasort?';
+
+  @override
+  String get customOrderClearAllConfirmButton => 'Mindent töröl';
+
+  @override
   String get customOrderSeparatorNameLabel => 'Elválasztó neve';
 
   @override
