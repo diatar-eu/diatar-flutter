@@ -118,6 +118,64 @@ class ProjectorPainter extends CustomPainter {
     return result;
   }
 
+  List<List<bool>> debugTieUnderlineFlagsForLine(
+    String source, {
+    double fontSize = 24,
+    double maxWidth = 120,
+  }) {
+    final List<_RenderLine> lines = _parseOneLine(source);
+    if (lines.isEmpty) {
+      return const <List<bool>>[];
+    }
+
+    final List<_TextRowLayout> rows = _buildTextRows(
+      lines.first,
+      fontSize,
+      maxWidth,
+    );
+    return rows
+        .map(
+          (row) => row.wordIndices
+              .map((int wordIndex) => lines.first.words[wordIndex].tieUnderline)
+              .toList(),
+        )
+        .toList();
+  }
+
+  List<List<bool>> debugTieUnderlineRowContinuationsForLine(
+    String source, {
+    double fontSize = 24,
+    double maxWidth = 120,
+  }) {
+    final List<_RenderLine> lines = _parseOneLine(source);
+    if (lines.isEmpty) {
+      return const <List<bool>>[];
+    }
+
+    final _RenderLine line = lines.first;
+    final List<_TextRowLayout> rows = _buildTextRows(
+      line,
+      fontSize,
+      maxWidth,
+    );
+    return rows.map((row) {
+      if (row.wordIndices.isEmpty) {
+        return const <bool>[false, false];
+      }
+      final int firstWord = row.wordIndices.first;
+      final int lastWord = row.wordIndices.last;
+      final bool fromPrevious =
+          firstWord > 0 &&
+          line.words[firstWord].tieUnderline &&
+          line.words[firstWord - 1].tieUnderline;
+      final bool toNext =
+          lastWord + 1 < line.words.length &&
+          line.words[lastWord].tieUnderline &&
+          line.words[lastWord + 1].tieUnderline;
+      return <bool>[fromPrevious, toNext];
+    }).toList();
+    }
+
   List<double> debugKottaRowStartXsForLine(
     String source, {
     double fontSize = 24,
@@ -648,6 +706,7 @@ class ProjectorPainter extends CustomPainter {
           canvas,
           rowLine,
           rowHighlights,
+          row.wordIndices,
           rowX,
           textY,
           lineFontSize,
@@ -892,20 +951,47 @@ class ProjectorPainter extends CustomPainter {
     Canvas canvas,
     _RenderLine rowLine,
     List<bool> rowHighlights,
+    List<int> rowWordIndices,
     double x,
     double y,
     double fontSize,
   ) {
+    final _TextRowPaintLayout layout = _buildTextRowPaintLayout(
+      rowLine,
+      rowHighlights,
+      fontSize,
+    );
+    layout.painter.paint(canvas, Offset(x, y));
+    _paintTieUnderlines(
+      canvas,
+      layout,
+      rowLine.words,
+      rowWordIndices,
+      x,
+      y,
+      fontSize,
+    );
+  }
+
+  _TextRowPaintLayout _buildTextRowPaintLayout(
+    _RenderLine rowLine,
+    List<bool> rowHighlights,
+    double fontSize,
+  ) {
     final List<InlineSpan> spans = <InlineSpan>[];
+    final List<_TextWordLayout> wordLayouts = <_TextWordLayout>[];
+    int offset = 0;
+
     for (int i = 0; i < rowLine.words.length; i++) {
       final _WordToken word = rowLine.words[i];
       final bool highlighted = i < rowHighlights.length
           ? rowHighlights[i]
           : false;
+      final String display = word.text + (word.spaceAfter ? ' ' : '');
       final Color baseColor = word.color ?? globals.txtColor;
       spans.add(
         TextSpan(
-          text: word.text + (word.spaceAfter ? ' ' : ''),
+          text: display,
           style: TextStyle(
             color: highlighted ? globals.hiColor : baseColor,
             fontSize: fontSize,
@@ -920,14 +1006,269 @@ class ProjectorPainter extends CustomPainter {
           ),
         ),
       );
+      wordLayouts.add(
+        _TextWordLayout(
+          start: offset,
+          end: offset + display.length,
+          tieUnderline: word.tieUnderline,
+          color: baseColor,
+        ),
+      );
+      offset += display.length;
     }
 
-    final TextPainter tp = TextPainter(
+    final TextPainter painter = TextPainter(
       text: TextSpan(children: spans),
       textDirection: TextDirection.ltr,
       textAlign: globals.hCenter ? TextAlign.center : TextAlign.left,
     )..layout();
-    tp.paint(canvas, Offset(x, y));
+    return _TextRowPaintLayout(painter: painter, wordLayouts: wordLayouts);
+  }
+
+  void _paintTieUnderlines(
+    Canvas canvas,
+    _TextRowPaintLayout layout,
+    List<_WordToken> rowWords,
+    List<int> rowWordIndices,
+    double x,
+    double y,
+    double fontSize,
+  ) {
+    final List<ui.LineMetrics> metrics = layout.painter.computeLineMetrics();
+    if (metrics.isEmpty) {
+      return;
+    }
+
+    final ui.LineMetrics metric = metrics.first;
+    final double underlineY = y + metric.baseline + math.max(1.0, fontSize * 0.08);
+    final double thickness = math.max(1.0, fontSize * 0.045);
+    final double capLength = math.max(thickness * 2.5, fontSize * 0.22);
+    final double capLift = math.max(thickness * 1.8, fontSize * 0.11);
+
+    int index = 0;
+    while (index < layout.wordLayouts.length) {
+      final _TextWordLayout startLayout = layout.wordLayouts[index];
+      if (!startLayout.tieUnderline) {
+        index++;
+        continue;
+      }
+
+      int runEnd = index;
+      while (runEnd + 1 < layout.wordLayouts.length &&
+          layout.wordLayouts[runEnd + 1].tieUnderline) {
+        runEnd++;
+      }
+
+      final _TextWordLayout endLayout = layout.wordLayouts[runEnd];
+      final List<ui.TextBox> startBoxes = layout.painter.getBoxesForSelection(
+        TextSelection(baseOffset: startLayout.start, extentOffset: startLayout.end),
+      );
+      final List<ui.TextBox> endBoxes = layout.painter.getBoxesForSelection(
+        TextSelection(baseOffset: endLayout.start, extentOffset: endLayout.end),
+      );
+      if (startBoxes.isEmpty || endBoxes.isEmpty) {
+        index = runEnd + 1;
+        continue;
+      }
+
+      final int startWordIndex = rowWordIndices[index];
+      final int endWordIndex = rowWordIndices[runEnd];
+      final bool continuedFromPrevious =
+          index == 0 &&
+          startWordIndex > 0 &&
+          rowWords[startWordIndex - 1].tieUnderline;
+      final bool continuesToNext =
+          runEnd + 1 == layout.wordLayouts.length &&
+          endWordIndex + 1 < rowWords.length &&
+          rowWords[endWordIndex + 1].tieUnderline;
+
+      final double startX = x + startBoxes.first.left;
+      final double endX = x + endBoxes.last.right;
+      final double bodyStart = continuedFromPrevious
+          ? startX
+          : math.min(startX + capLength, endX);
+      final double bodyEnd = continuesToNext
+          ? endX
+          : math.max(bodyStart, endX - capLength);
+
+      final Paint bodyPaint = Paint()
+        ..color = startLayout.color
+        ..strokeWidth = thickness
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.butt;
+      canvas.drawLine(
+        Offset(bodyStart, underlineY),
+        Offset(bodyEnd, underlineY),
+        bodyPaint,
+      );
+
+      if (!continuedFromPrevious) {
+        _paintTieCap(
+          canvas,
+          startX,
+          bodyStart,
+          underlineY,
+          capLift,
+          thickness,
+          startLayout.color,
+          left: true,
+        );
+      }
+      if (!continuesToNext) {
+        _paintTieCap(
+          canvas,
+          bodyEnd,
+          endX,
+          underlineY,
+          capLift,
+          thickness,
+          startLayout.color,
+          left: false,
+        );
+      }
+
+      index = runEnd + 1;
+    }
+  }
+
+  void _paintKottaTieUnderlines(
+    Canvas canvas, {
+    required List<_WordToken> sourceWords,
+    required List<_KottaTextSlotLayout> slots,
+    required double y,
+    required double fontSize,
+  }) {
+    if (slots.isEmpty) {
+      return;
+    }
+
+    final TextPainter measure = TextPainter(
+      text: TextSpan(
+        text: 'Ag',
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: globals.boldText ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final ui.LineMetrics metric = measure.computeLineMetrics().first;
+    final double underlineY = y + metric.baseline + math.max(1.0, fontSize * 0.08);
+    final double thickness = math.max(1.0, fontSize * 0.045);
+    final double capLength = math.max(thickness * 2.5, fontSize * 0.22);
+    final double capLift = math.max(thickness * 1.8, fontSize * 0.11);
+
+    int index = 0;
+    while (index < slots.length) {
+      final _KottaTextSlotLayout startSlot = slots[index];
+      if (!startSlot.tieUnderline) {
+        index++;
+        continue;
+      }
+
+      int runEnd = index;
+      while (runEnd + 1 < slots.length && slots[runEnd + 1].tieUnderline) {
+        runEnd++;
+      }
+
+      final _KottaTextSlotLayout endSlot = slots[runEnd];
+      final bool continuedFromPrevious =
+          index == 0 &&
+          startSlot.wordIndex > 0 &&
+          sourceWords[startSlot.wordIndex - 1].tieUnderline;
+      final bool continuesToNext =
+          runEnd + 1 == slots.length &&
+          endSlot.wordIndex + 1 < sourceWords.length &&
+          sourceWords[endSlot.wordIndex + 1].tieUnderline;
+
+      final double startX = startSlot.left;
+      final double endX = endSlot.right;
+      final double bodyStart = continuedFromPrevious
+          ? startX
+          : math.min(startX + capLength, endX);
+      final double bodyEnd = continuesToNext
+          ? endX
+          : math.max(bodyStart, endX - capLength);
+
+      final Paint bodyPaint = Paint()
+        ..color = startSlot.color
+        ..strokeWidth = thickness
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.butt;
+      canvas.drawLine(
+        Offset(bodyStart, underlineY),
+        Offset(bodyEnd, underlineY),
+        bodyPaint,
+      );
+
+      if (!continuedFromPrevious) {
+        _paintTieCap(
+          canvas,
+          bodyStart,
+          startX,
+          underlineY,
+          capLift,
+          thickness,
+          startSlot.color,
+          left: true,
+        );
+      }
+      if (!continuesToNext) {
+        _paintTieCap(
+          canvas,
+          bodyEnd,
+          endX,
+          underlineY,
+          capLift,
+          thickness,
+          startSlot.color,
+          left: false,
+        );
+      }
+
+      index = runEnd + 1;
+    }
+  }
+
+  void _paintTieCap(
+    Canvas canvas,
+    double bodyEdgeX,
+    double tipX,
+    double baselineY,
+    double capLift,
+    double thickness,
+    Color color, {
+    required bool left,
+  }) {
+    final double direction = left ? -1.0 : 1.0;
+    final double controlX1 = bodyEdgeX + direction * thickness * 0.8;
+    final double controlX2 = bodyEdgeX + direction * math.max(thickness * 1.6, capLift * 0.45);
+    final Path path = Path()
+      ..moveTo(bodyEdgeX, baselineY)
+      ..cubicTo(
+        controlX1,
+        baselineY - thickness * 0.15,
+        controlX2,
+        baselineY - capLift,
+        tipX,
+        baselineY - capLift * 0.95,
+      )
+      ..cubicTo(
+        controlX2,
+        baselineY - capLift * 0.15,
+        controlX1,
+        baselineY + thickness * 0.2,
+        bodyEdgeX,
+        baselineY,
+      )
+      ..close();
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.fill,
+    );
   }
 
   _RenderLine _applyChordPadding(_RenderLine line, double fontSize) {
@@ -1003,6 +1344,7 @@ class ProjectorPainter extends CustomPainter {
             bold: word.bold,
             italic: word.italic,
             underline: word.underline,
+            tieUnderline: word.tieUnderline,
             strike: word.strike,
             color: word.color,
             chord: word.chord,
@@ -1115,6 +1457,7 @@ class ProjectorPainter extends CustomPainter {
           bold: word.bold,
           italic: word.italic,
           underline: word.underline,
+          tieUnderline: word.tieUnderline,
           strike: word.strike,
           color: word.color,
           chord: start == 0 ? word.chord : null,
@@ -1422,6 +1765,7 @@ class ProjectorPainter extends CustomPainter {
     double leadingInset = 0,
   }) {
     double cx = rowX;
+    final List<_KottaTextSlotLayout> slotLayouts = <_KottaTextSlotLayout>[];
     for (int slotIndex = 0; slotIndex < row.words.length; slotIndex++) {
       final _KottaWordLayout slot = row.words[slotIndex];
       final _WordToken w = line.words[slot.wordIndex];
@@ -1429,9 +1773,11 @@ class ProjectorPainter extends CustomPainter {
           ? highlights[slot.wordIndex]
           : false;
       final Color baseColor = w.color ?? globals.txtColor;
+      final String display = w.text + (w.spaceAfter ? ' ' : '');
+      final double inset = slotIndex == 0 ? leadingInset : 0;
       final TextPainter tp = TextPainter(
         text: TextSpan(
-          text: w.text + (w.spaceAfter ? ' ' : ''),
+          text: display,
           style: TextStyle(
             color: highlighted ? globals.hiColor : baseColor,
             fontSize: fontSize,
@@ -1447,10 +1793,27 @@ class ProjectorPainter extends CustomPainter {
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      final double inset = slotIndex == 0 ? leadingInset : 0;
-      tp.paint(canvas, Offset(cx + inset, y));
+      final double slotLeft = cx + inset;
+      tp.paint(canvas, Offset(slotLeft, y));
+      slotLayouts.add(
+        _KottaTextSlotLayout(
+          wordIndex: slot.wordIndex,
+          left: slotLeft,
+          right: slotLeft + tp.width,
+          tieUnderline: w.tieUnderline,
+          color: baseColor,
+        ),
+      );
       cx += slot.slotWidth + inset;
     }
+
+    _paintKottaTieUnderlines(
+      canvas,
+      sourceWords: line.words,
+      slots: slotLayouts,
+      y: y,
+      fontSize: fontSize,
+    );
   }
 
   List<_KottaRowLayout> _buildKottaRows(
@@ -2893,6 +3256,7 @@ class ProjectorPainter extends CustomPainter {
           bold: last.bold,
           italic: last.italic,
           underline: last.underline,
+          tieUnderline: last.tieUnderline,
           strike: last.strike,
           color: last.color,
           chord: mergedChord,
@@ -2915,6 +3279,7 @@ class ProjectorPainter extends CustomPainter {
           bold: last.bold,
           italic: last.italic,
           underline: last.underline,
+          tieUnderline: last.tieUnderline,
           strike: last.strike,
           color: last.color,
           chord: last.chord,
@@ -2936,6 +3301,7 @@ class ProjectorPainter extends CustomPainter {
           bold: style.bold,
           italic: style.italic,
           underline: style.underline,
+          tieUnderline: style.tieUnderline,
           strike: style.strike,
           color: style.color,
           chord: pendingChord,
@@ -2977,6 +3343,14 @@ class ProjectorPainter extends CustomPainter {
           case 'u':
             flushWord();
             style.underline = false;
+            continue;
+          case '(':
+            flushWord();
+            style.tieUnderline = true;
+            continue;
+          case ')':
+            flushWord();
+            style.tieUnderline = false;
             continue;
           case 'S':
             flushWord();
@@ -3179,6 +3553,7 @@ class _WordToken {
     required this.bold,
     required this.italic,
     required this.underline,
+    required this.tieUnderline,
     required this.strike,
     required this.color,
     this.chord,
@@ -3190,6 +3565,7 @@ class _WordToken {
   final bool bold;
   final bool italic;
   final bool underline;
+  final bool tieUnderline;
   final bool strike;
   final Color? color;
   final String? chord;
@@ -3203,6 +3579,7 @@ class _WordStyle {
   bool bold = false;
   bool italic = false;
   bool underline = false;
+  bool tieUnderline = false;
   bool strike = false;
   Color? color;
 }
@@ -3321,6 +3698,46 @@ class _TextRowLayout {
   final List<int> wordIndices;
   final double width;
   final double indentWidth;
+}
+
+class _TextRowPaintLayout {
+  const _TextRowPaintLayout({
+    required this.painter,
+    required this.wordLayouts,
+  });
+
+  final TextPainter painter;
+  final List<_TextWordLayout> wordLayouts;
+}
+
+class _TextWordLayout {
+  const _TextWordLayout({
+    required this.start,
+    required this.end,
+    required this.tieUnderline,
+    required this.color,
+  });
+
+  final int start;
+  final int end;
+  final bool tieUnderline;
+  final Color color;
+}
+
+class _KottaTextSlotLayout {
+  const _KottaTextSlotLayout({
+    required this.wordIndex,
+    required this.left,
+    required this.right,
+    required this.tieUnderline,
+    required this.color,
+  });
+
+  final int wordIndex;
+  final double left;
+  final double right;
+  final bool tieUnderline;
+  final Color color;
 }
 
 const double _kcGkulcsW = 102.0;
