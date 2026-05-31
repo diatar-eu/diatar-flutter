@@ -39,7 +39,7 @@ class SettingsStore {
       mirror: prefs.getBool(_kMirror) ?? false,
       rotateQuarterTurns: prefs.getInt(_kRotate) ?? 0,
       mqttUser: prefs.getString(_kUser) ?? '',
-      mqttChannel: prefs.getString(_kChannel) ?? '1',
+      mqttChannel: '1',
       receiverUseServerColors: prefs.getBool(_kReceiverUseServerColors) ?? true,
       receiverShowHighlight: prefs.getBool(_kReceiverShowHighlight) ?? true,
       receiverUseAkkord: prefs.getBool(_kReceiverUseAkkord) ?? true,
@@ -65,7 +65,7 @@ class SettingsStore {
     await prefs.setBool(_kMirror, settings.mirror);
     await prefs.setInt(_kRotate, settings.rotateQuarterTurns);
     await prefs.setString(_kUser, settings.mqttUser);
-    await prefs.setString(_kChannel, settings.mqttChannel);
+    await prefs.setString(_kChannel, '1');
     await prefs.setBool(_kReceiverUseServerColors, settings.receiverUseServerColors);
     await prefs.setBool(_kReceiverShowHighlight, settings.receiverShowHighlight);
     await prefs.setBool(_kReceiverUseAkkord, settings.receiverUseAkkord);

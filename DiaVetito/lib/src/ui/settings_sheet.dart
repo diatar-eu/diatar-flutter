@@ -10,11 +10,9 @@ class SettingsSheet extends StatefulWidget {
     super.key,
     required this.initialSettings,
     required this.senderSuggestions,
-    required this.channelSuggestions,
     required this.onApply,
     required this.onRefreshUsers,
     required this.onSenderFilterChanged,
-    required this.onSenderChosen,
     required this.onExitRequested,
     required this.onShutdownRequested,
     required this.onRebootRequested,
@@ -22,11 +20,9 @@ class SettingsSheet extends StatefulWidget {
 
   final AppSettings initialSettings;
   final List<String> senderSuggestions;
-  final List<String> channelSuggestions;
   final ValueChanged<AppSettings> onApply;
   final VoidCallback onRefreshUsers;
   final ValueChanged<String> onSenderFilterChanged;
-  final ValueChanged<String> onSenderChosen;
   final VoidCallback onExitRequested;
   final VoidCallback onShutdownRequested;
   final VoidCallback onRebootRequested;
@@ -76,7 +72,6 @@ class _SettingsSheetState extends State<SettingsSheet> {
   late bool _mirror;
   late bool _boot;
   late int _rotate;
-  late String _channel;
   late bool _receiverUseServerColors;
   late bool _receiverShowHighlight;
   late bool _receiverUseAkkord;
@@ -107,7 +102,6 @@ class _SettingsSheetState extends State<SettingsSheet> {
     _mirror = s.mirror;
     _boot = s.boot;
     _rotate = s.rotateQuarterTurns;
-    _channel = s.mqttChannel;
     _receiverUseServerColors = s.receiverUseServerColors;
     _receiverShowHighlight = s.receiverShowHighlight;
     _receiverUseAkkord = s.receiverUseAkkord;
@@ -437,29 +431,11 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         setBoth(() {
                           _mqttUser.text = sender;
                         });
-                        widget.onSenderChosen(sender);
                       },
                     );
                   },
                 ),
               ),
-            DropdownButtonFormField<String>(
-              initialValue: _channel,
-              decoration: InputDecoration(labelText: l10n.channelLabel),
-              items: <DropdownMenuItem<String>>[
-                const DropdownMenuItem<String>(value: '1', child: Text('1.')),
-                ...widget.channelSuggestions.asMap().entries.map((
-                  MapEntry<int, String> e,
-                ) {
-                  final String value = '${e.key + 1}';
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text('${e.key + 1}. ${e.value}'),
-                  );
-                }),
-              ],
-              onChanged: (String? v) => setBoth(() => _channel = v ?? '1'),
-            ),
           ],
         ];
       },
@@ -797,7 +773,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
     final AppSettings updated = widget.initialSettings.copyWith(
       port: port,
       mqttUser: _ipMode ? '' : _mqttUser.text.trim(),
-      mqttChannel: _channel,
+      mqttChannel: '1',
       clipL:
           double.tryParse(_clipL.text.trim()) ?? widget.initialSettings.clipL,
       clipT:

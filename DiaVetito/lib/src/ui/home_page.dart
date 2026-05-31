@@ -184,13 +184,11 @@ class _HomePageState extends State<HomePage> {
         return SettingsSheet(
           initialSettings: controller.settings,
           senderSuggestions: controller.senderSuggestions,
-          channelSuggestions: controller.channelSuggestions,
           onApply: (settings) {
             controller.applySettings(settings);
           },
           onRefreshUsers: controller.refreshMqttUsers,
           onSenderFilterChanged: controller.updateSenderFilter,
-          onSenderChosen: controller.chooseSender,
           onExitRequested: controller.requestExit,
           onShutdownRequested: controller.requestShutdown,
           onRebootRequested: controller.requestReboot,

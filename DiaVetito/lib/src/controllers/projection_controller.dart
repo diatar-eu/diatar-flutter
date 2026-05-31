@@ -53,7 +53,6 @@ class ProjectionController extends ChangeNotifier {
   ProjectionFrame? blankFrame;
   List<MqttUser> mqttUsers = <MqttUser>[];
   List<String> senderSuggestions = <String>[];
-  List<String> channelSuggestions = const <String>[];
 
   bool initialized = false;
   bool connected = false;
@@ -69,7 +68,7 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
-    settings = await _settingsStore.load();
+    settings = (await _settingsStore.load()).copyWith(mqttChannel: '1');
     globals = _applyReceiverDisplayFilters(globals);
     await _applyTransport();
     await refreshMqttUsers();
@@ -84,10 +83,9 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
-    settings = newSettings;
+    settings = newSettings.copyWith(mqttChannel: '1');
     await _settingsStore.save(settings);
     globals = _applyReceiverDisplayFilters(globals);
-    _updateChannelSuggestionsFor(settings.mqttUser);
     await _applyTransport();
     if (!_disposed) {
       notifyListeners();
@@ -103,11 +101,6 @@ class ProjectionController extends ChangeNotifier {
 
   void updateSenderFilter(String mask) {
     senderSuggestions = _mqtt.usersLike(mask).map((MqttUser u) => u.username).toList();
-    notifyListeners();
-  }
-
-  void chooseSender(String sender) {
-    _updateChannelSuggestionsFor(sender);
     notifyListeners();
   }
 
@@ -151,15 +144,6 @@ class ProjectionController extends ChangeNotifier {
       return;
     }
     _setStatus('statusRebootUnsupported');
-  }
-
-  void _updateChannelSuggestionsFor(String sender) {
-    final MqttUser? u = _mqtt.getUser(sender);
-    if (u == null) {
-      channelSuggestions = const <String>[];
-      return;
-    }
-    channelSuggestions = u.channels.where((String c) => c.trim().isNotEmpty).toList();
   }
 
   void updateViewport(Size size) {
@@ -298,7 +282,7 @@ class ProjectionController extends ChangeNotifier {
             ? const <String, Object>{}
             : <String, Object>{
                 'user': settings.mqttUser,
-                'channel': settings.mqttChannel,
+                'channel': '1',
               },
       );
     } else {
@@ -319,7 +303,6 @@ class ProjectionController extends ChangeNotifier {
     }
     mqttUsers = users;
     senderSuggestions = _mqtt.usersLike(settings.mqttUser).map((MqttUser u) => u.username).toList();
-    _updateChannelSuggestionsFor(settings.mqttUser);
     notifyListeners();
   }
 
@@ -359,13 +342,13 @@ class ProjectionController extends ChangeNotifier {
     } else {
       mqttActive = true;
       await _server.stop();
-      await _mqtt.openReceiver(username: user, channel: settings.mqttChannel);
+      await _mqtt.openReceiver(username: user, channel: '1');
       _setStatus(
         'statusMqttReceiving',
         notify: false,
         params: <String, Object>{
           'user': user,
-          'channel': settings.mqttChannel,
+          'channel': '1',
         },
       );
     }
