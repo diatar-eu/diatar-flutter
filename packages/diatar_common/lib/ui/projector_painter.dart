@@ -383,9 +383,24 @@ class ProjectorPainter extends CustomPainter {
           globals.useKotta &&
           settings.receiverUseKotta &&
           baseLine.words.any((w) => (w.kotta ?? '').isNotEmpty);
-      final _RenderLine line = (!isTitleLine && !hasKotta)
-          ? _applyChordPadding(baseLine, lineFontSize)
-          : baseLine;
+      final _RenderLine line;
+      if (!isTitleLine && !hasKotta) {
+        final _RenderLine paddedLine = _applyChordPadding(baseLine, lineFontSize);
+        final double continuationIndent = globals.hCenter
+            ? 0
+            : _textContinuationIndent(
+                lineFontSize,
+                TextPainter(textDirection: TextDirection.ltr),
+              );
+        line = _splitOverlongWords(
+          paddedLine,
+          lineFontSize,
+          maxWidth,
+          continuationIndent: continuationIndent,
+        );
+      } else {
+        line = baseLine;
+      }
       allLines[lineIndex] = line;
       final double chordBand = (!isTitleLine && !hasKotta)
           ? _lineChordBandHeight(line, lineFontSize)
@@ -701,9 +716,24 @@ class ProjectorPainter extends CustomPainter {
           globals.useKotta &&
           settings.receiverUseKotta &&
           baseLine.words.any((w) => (w.kotta ?? '').isNotEmpty);
-      final _RenderLine line = (!isTitleLine && !hasKotta)
-          ? _applyChordPadding(baseLine, lineFontSize)
-          : baseLine;
+      final _RenderLine line;
+      if (!isTitleLine && !hasKotta) {
+        final _RenderLine paddedLine = _applyChordPadding(baseLine, lineFontSize);
+        final double continuationIndent = globals.hCenter
+            ? 0
+            : _textContinuationIndent(
+                lineFontSize,
+                TextPainter(textDirection: TextDirection.ltr),
+              );
+        line = _splitOverlongWords(
+          paddedLine,
+          lineFontSize,
+          maxWidth,
+          continuationIndent: continuationIndent,
+        );
+      } else {
+        line = baseLine;
+      }
       allLines[lineIndex] = line;
 
       final double chordBand = (!isTitleLine && !hasKotta)
@@ -989,6 +1019,114 @@ class ProjectorPainter extends CustomPainter {
       return line;
     }
     return _RenderLine(words: padded);
+  }
+
+  _RenderLine _splitOverlongWords(
+    _RenderLine line,
+    double fontSize,
+    double maxWidth, {
+    required double continuationIndent,
+  }) {
+    if (line.words.isEmpty) {
+      return line;
+    }
+
+    final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
+    final double splitLimit = math.max(8.0, maxWidth - continuationIndent);
+    bool changed = false;
+    final List<_WordToken> words = <_WordToken>[];
+
+    for (final _WordToken word in line.words) {
+      final double width = _measureWordDisplayWidth(word, fontSize, measure);
+      if (width <= splitLimit || word.text.characters.length <= 1) {
+        words.add(word);
+        continue;
+      }
+
+      final List<_WordToken> chunks = _splitWordToFitWidth(
+        word,
+        fontSize,
+        splitLimit,
+        measure,
+      );
+      if (chunks.length <= 1) {
+        words.add(word);
+        continue;
+      }
+
+      changed = true;
+      words.addAll(chunks);
+    }
+
+    return changed ? _RenderLine(words: words) : line;
+  }
+
+  List<_WordToken> _splitWordToFitWidth(
+    _WordToken word,
+    double fontSize,
+    double maxChunkWidth,
+    TextPainter measure,
+  ) {
+    final List<String> graphemes = word.text.characters.toList();
+    if (graphemes.length <= 1) {
+      return <_WordToken>[word];
+    }
+
+    final List<_WordToken> parts = <_WordToken>[];
+    int start = 0;
+    while (start < graphemes.length) {
+      int low = 1;
+      int high = graphemes.length - start;
+      int bestLen = 0;
+
+      while (low <= high) {
+        final int mid = (low + high) ~/ 2;
+        final bool isLastCandidate = start + mid >= graphemes.length;
+        final String chunk = graphemes.sublist(start, start + mid).join();
+
+        measure.text = TextSpan(
+          text: chunk + (isLastCandidate && word.spaceAfter ? ' ' : ''),
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: (globals.boldText || word.bold)
+                ? FontWeight.bold
+                : FontWeight.normal,
+            fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
+          ),
+        );
+        measure.layout();
+
+        if (measure.width <= maxChunkWidth) {
+          bestLen = mid;
+          low = mid + 1;
+        } else {
+          high = mid - 1;
+        }
+      }
+
+      if (bestLen <= 0) {
+        bestLen = 1;
+      }
+
+      final bool isLast = start + bestLen >= graphemes.length;
+      parts.add(
+        _WordToken(
+          text: graphemes.sublist(start, start + bestLen).join(),
+          bold: word.bold,
+          italic: word.italic,
+          underline: word.underline,
+          strike: word.strike,
+          color: word.color,
+          chord: start == 0 ? word.chord : null,
+          kotta: start == 0 ? word.kotta : null,
+          spaceAfter: isLast ? word.spaceAfter : false,
+        ),
+      );
+
+      start += bestLen;
+    }
+
+    return parts;
   }
 
   void _paintChords(
