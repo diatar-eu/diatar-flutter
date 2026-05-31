@@ -583,8 +583,8 @@ class DiatarHomePage extends StatelessWidget {
     }
     if (projectedCustom != null && projectedCustom.isCustomImage) {
       return _CustomImagePreview(
+        controller: controller,
         imagePath: projectedCustom.customImagePath ?? '',
-        panelTitle: panelTitle,
       );
     }
 
@@ -1611,12 +1611,12 @@ class _CustomTextPreview extends StatelessWidget {
 
 class _CustomImagePreview extends StatelessWidget {
   const _CustomImagePreview({
+    required this.controller,
     required this.imagePath,
-    required this.panelTitle,
   });
 
+  final DiatarMainController controller;
   final String imagePath;
-  final String panelTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -1627,46 +1627,29 @@ class _CustomImagePreview extends StatelessWidget {
     final File f = File(normalized);
     final bool exists = normalized.isNotEmpty && f.existsSync();
 
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final String fullTitle = context.l10n.versePanelTitle(
-          panelTitle,
-          friendlyPath.isEmpty ? '-' : friendlyPath,
-        );
-        final TextPainter titlePainter =
-            TextPainter(
-              text: TextSpan(text: fullTitle),
-              maxLines: 2,
-              textDirection: TextDirection.ltr,
-            )..layout(
-              maxWidth: constraints.maxWidth.isFinite
-                  ? constraints.maxWidth
-                  : 800,
-            );
-        final double titleHeight = titlePainter.height + 10;
-        final double imageHeight = constraints.maxHeight.isFinite
-            ? math.max(0, constraints.maxHeight - titleHeight)
-            : 360;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(fullTitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 10),
-            if (!exists)
-              Text(context.l10n.statusImageNotFound(friendlyPath))
-            else
-              SizedBox(
-                height: imageHeight,
-                width: double.infinity,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(f, fit: BoxFit.contain),
-                ),
-              ),
-          ],
-        );
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragEnd: (DragEndDetails details) {
+        const double swipeThreshold = 300.0;
+        if (details.velocity.pixelsPerSecond.dx.abs() > swipeThreshold) {
+          if (details.velocity.pixelsPerSecond.dx > 0) {
+            controller.prevVerse();
+          } else {
+            controller.nextVerse();
+          }
+        }
       },
+      child: !exists
+          ? Align(
+              alignment: Alignment.topLeft,
+              child: Text(context.l10n.statusImageNotFound(friendlyPath)),
+            )
+          : SizedBox.expand(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(f, fit: BoxFit.contain),
+              ),
+            ),
     );
   }
 }
