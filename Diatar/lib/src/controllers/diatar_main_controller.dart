@@ -233,6 +233,7 @@ class DiatarMainController extends ChangeNotifier {
         ? null
         : stored.baseName;
     _customOrderCursor = customOrderActive ? 0 : -1;
+    _diaVirtualBookSelected = _customOrder.isNotEmpty;
     globals = globals.copyWith(
       bkColor: settings.bkColor,
       txtColor: settings.txtColor,
