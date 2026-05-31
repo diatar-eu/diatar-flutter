@@ -1396,20 +1396,8 @@ class _VersePreview extends StatelessWidget {
           requiredCanvasHeight,
         );
 
-        return GestureDetector(
-          onHorizontalDragEnd: (DragEndDetails details) {
-            // Swipe threshold for velocity
-            const double swipeThreshold = 300.0;
-            if (details.velocity.pixelsPerSecond.dx.abs() > swipeThreshold) {
-              if (details.velocity.pixelsPerSecond.dx > 0) {
-                // Swipe right - previous verse
-                controller.prevVerse();
-              } else {
-                // Swipe left - next verse
-                controller.nextVerse();
-              }
-            }
-          },
+        return _SwipePagingPreview(
+          controller: controller,
           child: constraints.maxHeight.isFinite
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1551,17 +1539,8 @@ class _CustomTextPreview extends StatelessWidget {
           requiredCanvasHeight,
         );
 
-        return GestureDetector(
-          onHorizontalDragEnd: (DragEndDetails details) {
-            const double swipeThreshold = 300.0;
-            if (details.velocity.pixelsPerSecond.dx.abs() > swipeThreshold) {
-              if (details.velocity.pixelsPerSecond.dx > 0) {
-                controller.prevVerse();
-              } else {
-                controller.nextVerse();
-              }
-            }
-          },
+        return _SwipePagingPreview(
+          controller: controller,
           child: constraints.maxHeight.isFinite
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1627,29 +1606,112 @@ class _CustomImagePreview extends StatelessWidget {
     final File f = File(normalized);
     final bool exists = normalized.isNotEmpty && f.existsSync();
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onHorizontalDragEnd: (DragEndDetails details) {
-        const double swipeThreshold = 300.0;
-        if (details.velocity.pixelsPerSecond.dx.abs() > swipeThreshold) {
-          if (details.velocity.pixelsPerSecond.dx > 0) {
-            controller.prevVerse();
-          } else {
-            controller.nextVerse();
-          }
-        }
-      },
-      child: !exists
-          ? Align(
-              alignment: Alignment.topLeft,
-              child: Text(context.l10n.statusImageNotFound(friendlyPath)),
-            )
-          : SizedBox.expand(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.file(f, fit: BoxFit.contain),
-              ),
+    final Widget content = !exists
+        ? Align(
+            alignment: Alignment.topLeft,
+            child: Text(context.l10n.statusImageNotFound(friendlyPath)),
+          )
+        : SizedBox.expand(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.file(f, fit: BoxFit.contain),
             ),
+          );
+
+    return _SwipePagingPreview(
+      controller: controller,
+      child: content,
+    );
+  }
+}
+
+class _SwipePagingPreview extends StatefulWidget {
+  const _SwipePagingPreview({required this.controller, required this.child});
+
+  final DiatarMainController controller;
+  final Widget child;
+
+  @override
+  State<_SwipePagingPreview> createState() => _SwipePagingPreviewState();
+}
+
+class _SwipePagingPreviewState extends State<_SwipePagingPreview> {
+  double _dragDx = 0;
+  bool _isDragging = false;
+
+  bool _isDesktopPlatform(TargetPlatform platform) {
+    return platform == TargetPlatform.windows ||
+        platform == TargetPlatform.linux ||
+        platform == TargetPlatform.macOS;
+  }
+
+  void _resetDrag() {
+    if (!_isDragging && _dragDx == 0) {
+      return;
+    }
+    setState(() {
+      _isDragging = false;
+      _dragDx = 0;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final TargetPlatform platform = Theme.of(context).platform;
+        final bool desktopLike = _isDesktopPlatform(platform);
+        final double width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.of(context).size.width;
+        final double maxDrag = width * (desktopLike ? 0.30 : 0.40);
+        final double distanceThreshold = width * (desktopLike ? 0.20 : 0.14);
+        final double swipeVelocityThreshold = desktopLike ? 420.0 : 220.0;
+
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragStart: (_) {
+            if (_isDragging) {
+              return;
+            }
+            setState(() {
+              _isDragging = true;
+            });
+          },
+          onHorizontalDragUpdate: (DragUpdateDetails details) {
+            setState(() {
+              _dragDx = (_dragDx + details.delta.dx).clamp(-maxDrag, maxDrag);
+            });
+          },
+          onHorizontalDragCancel: _resetDrag,
+          onHorizontalDragEnd: (DragEndDetails details) {
+            final double velocityDx = details.velocity.pixelsPerSecond.dx;
+
+            final bool goPrev =
+                velocityDx > swipeVelocityThreshold ||
+                _dragDx > distanceThreshold;
+            final bool goNext =
+                velocityDx < -swipeVelocityThreshold ||
+                _dragDx < -distanceThreshold;
+
+            _resetDrag();
+
+            if (goPrev) {
+              widget.controller.prevVerse();
+            } else if (goNext) {
+              widget.controller.nextVerse();
+            }
+          },
+          child: AnimatedContainer(
+            duration: _isDragging
+                ? Duration.zero
+                : Duration(milliseconds: desktopLike ? 170 : 190),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(_dragDx, 0, 0),
+            child: widget.child,
+          ),
+        );
+      },
     );
   }
 }
