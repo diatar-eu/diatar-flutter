@@ -193,7 +193,7 @@ class DiatarMainController extends ChangeNotifier {
     settings = await _settingsStore.load();
     lastBlankPath = settings.blankPicPath;
     _disabledSongbooks = await _orderStore.loadDisabled();
-    final ({List<StoredCustomOrderEntry> entries, bool active}) stored =
+    final ({List<StoredCustomOrderEntry> entries, bool active, String? baseName}) stored =
         await _orderStore.loadCurrentCustomOrder();
     _customOrder = stored.entries
         .map(
@@ -209,6 +209,9 @@ class DiatarMainController extends ChangeNotifier {
         )
         .toList();
     customOrderActive = stored.active && _customOrder.isNotEmpty;
+    _lastImportedCustomOrderBaseName = _customOrder.isEmpty
+      ? null
+      : stored.baseName;
     _customOrderCursor = customOrderActive ? 0 : -1;
     globals = globals.copyWith(
       bkColor: settings.bkColor,
@@ -832,6 +835,7 @@ class DiatarMainController extends ChangeNotifier {
           )
           .toList(),
       active: customOrderActive,
+      baseName: _customOrder.isEmpty ? null : _lastImportedCustomOrderBaseName,
     );
   }
 
@@ -1146,6 +1150,7 @@ class DiatarMainController extends ChangeNotifier {
     _customOrder = entries.map(normalizeEntry).toList();
     if (_customOrder.isEmpty) {
       _diaVirtualBookSelected = false;
+      _lastImportedCustomOrderBaseName = null;
     }
     customOrderActive = activate && _customOrder.isNotEmpty;
     if (customOrderActive) {
@@ -1431,6 +1436,7 @@ class DiatarMainController extends ChangeNotifier {
     _lastImportedCustomOrderBaseName = savedName.trim().isEmpty
         ? null
         : savedName;
+    await _persistCurrentCustomOrder();
     _setStatus('statusOrderSaved', <String, String>{'path': safePath});
     notifyListeners();
     return safePath;
@@ -1582,6 +1588,7 @@ class DiatarMainController extends ChangeNotifier {
     _lastImportedCustomOrderBaseName = importedName.trim().isEmpty
         ? null
         : importedName;
+    await _persistCurrentCustomOrder();
     _diaVirtualBookSelected = _customOrder.isNotEmpty;
     _setStatus('statusOrderLoaded', <String, String>{
       'count': '${imported.length}',

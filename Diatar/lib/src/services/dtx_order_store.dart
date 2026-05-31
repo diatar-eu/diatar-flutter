@@ -60,6 +60,8 @@ class DtxOrderStore {
   static const String _kDisabledSongbooks = 'DisabledSongbooks';
   static const String _kCurrentCustomOrder = 'CurrentCustomOrder';
   static const String _kCurrentCustomOrderActive = 'CurrentCustomOrderActive';
+  static const String _kCurrentCustomOrderBaseName =
+      'CurrentCustomOrderBaseName';
   static const String _kCustomOrderPresets = 'CustomOrderPresets';
 
   Future<Set<String>> loadDisabled() async {
@@ -79,17 +81,25 @@ class DtxOrderStore {
   Future<void> saveCurrentCustomOrder(
     List<StoredCustomOrderEntry> entries, {
     required bool active,
+    String? baseName,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String json = jsonEncode(entries.map((StoredCustomOrderEntry e) => e.toJson()).toList());
     await prefs.setString(_kCurrentCustomOrder, json);
     await prefs.setBool(_kCurrentCustomOrderActive, active);
+    final String normalized = (baseName ?? '').trim();
+    await prefs.setString(_kCurrentCustomOrderBaseName, normalized);
   }
 
-  Future<({List<StoredCustomOrderEntry> entries, bool active})> loadCurrentCustomOrder() async {
+  Future<({List<StoredCustomOrderEntry> entries, bool active, String? baseName})> loadCurrentCustomOrder() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String raw = prefs.getString(_kCurrentCustomOrder) ?? '[]';
     final bool active = prefs.getBool(_kCurrentCustomOrderActive) ?? false;
+    final String baseNameRaw =
+        prefs.getString(_kCurrentCustomOrderBaseName) ?? '';
+    final String? baseName = baseNameRaw.trim().isEmpty
+        ? null
+        : baseNameRaw.trim();
 
     final List<StoredCustomOrderEntry> entries = <StoredCustomOrderEntry>[];
     try {
@@ -104,7 +114,7 @@ class DtxOrderStore {
       }
     } catch (_) {}
 
-    return (entries: entries, active: active);
+    return (entries: entries, active: active, baseName: baseName);
   }
 
   Future<Map<String, List<StoredCustomOrderEntry>>> loadCustomOrderPresets() async {
