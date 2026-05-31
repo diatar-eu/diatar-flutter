@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
-import 'package:flutter_archive/flutter_archive.dart' as fa;
+import 'package:archive/archive_io.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 
@@ -270,7 +270,38 @@ class ZsolozsmaService {
         );
       }
     } else {
-      diag.writeln('nameFallbackSkipped=true');
+      final List<ZsolozsmaDayPart> extractedOverview =
+          await _listDayPartsFromExtractedOverview(
+        storageDir: storageDir,
+        date: date,
+      );
+      diag.writeln('extractedOverviewMatches=${extractedOverview.length}');
+      if (extractedOverview.isNotEmpty) {
+        return ZsolozsmaDayPartsLoadResult(
+          parts: extractedOverview,
+          diagnostics: diag.toString().trimRight(),
+        );
+      }
+
+      final Directory? extractedYearDir = await _prepareExtractedYearDirectory(
+        storageDir: storageDir,
+        yearZip: yearZip,
+      );
+      if (extractedYearDir == null) {
+        diag.writeln('nameFallbackSkipped=true');
+      } else {
+        final List<ZsolozsmaDayPart> byName = _listDayPartsFromExtractedNames(
+          rootDir: extractedYearDir,
+          yymmdd: yymmdd,
+        );
+        diag.writeln('nameFallbackExtractedMatches=${byName.length}');
+        if (byName.isNotEmpty) {
+          return ZsolozsmaDayPartsLoadResult(
+            parts: byName,
+            diagnostics: diag.toString().trimRight(),
+          );
+        }
+      }
     }
 
     return ZsolozsmaDayPartsLoadResult(
@@ -286,9 +317,13 @@ class ZsolozsmaService {
   }) async {
     final StringBuffer diag = StringBuffer();
     final String isoDate = _formatIsoDate(date);
+    final String yymmdd =
+      '${(date.year % 100).toString().padLeft(2, '0')}'
+      '${date.month.toString().padLeft(2, '0')}'
+      '${date.day.toString().padLeft(2, '0')}';
     final String href = part.href.trim();
     final String hrefBase = _fileName(href);
-    final String? partCode = _extractPartCode(hrefBase);
+    final String? partCode = _extractPartCodeFromHref(href);
     diag.writeln('date=$isoDate');
     diag.writeln('storageDir=${storageDir.path}');
     diag.writeln('href=$href');
@@ -340,15 +375,44 @@ class ZsolozsmaService {
       try {
         final Archive archive = _decodeArchive(await yearZip.readAsBytes());
         diag.writeln('archiveDecode=ok');
-        final ArchiveFile? file = _findArchiveFileByHref(
+        ArchiveFile? file = _findArchiveFileByHref(
           archive: archive,
           href: href,
         );
+        if (file == null && partCode != null) {
+          file = _findArchiveFileByPartCode(
+            archive: archive,
+            yymmdd: yymmdd,
+            partCode: partCode,
+          );
+          if (file != null) {
+            diag.writeln('archivePartCodeFile=${file.name}');
+          }
+        }
         if (file == null) {
           diag.writeln('archiveHrefFile=not_found');
         } else {
           diag.writeln('archiveHrefFile=${file.name}');
-          final String decoded = _decodeBytes(file.content);
+          diag.writeln('archiveHrefCompression=${file.compression?.name ?? '-'}');
+          diag.writeln('archiveHrefIsCompressed=${file.isCompressed}');
+          diag.writeln('archiveHrefSize=${file.size}');
+          String decoded = _decodeBytes(file.content);
+          diag.writeln('archiveHrefDecodedLength=${decoded.length}');
+          diag.writeln('archiveHrefDecodedHead=${_diagnosticHead(decoded)}');
+          if (!_looksLikeHtml(decoded)) {
+            final String? lzmaDecoded = _decodeZipMethod14Bytes(
+              file.content,
+              uncompressedSize: file.size,
+            );
+            if (lzmaDecoded != null) {
+              decoded = lzmaDecoded;
+              diag.writeln('archiveHrefLzmaFallback=ok');
+              diag.writeln('archiveHrefDecodedLength=${decoded.length}');
+              diag.writeln('archiveHrefDecodedHead=${_diagnosticHead(decoded)}');
+            } else {
+              diag.writeln('archiveHrefLzmaFallback=failed');
+            }
+          }
           if (_looksLikeHtml(decoded)) {
             diag.writeln('archiveHrefLooksLikeHtml=true');
             return ZsolozsmaDayPartHtmlResult(
@@ -376,6 +440,23 @@ class ZsolozsmaService {
             html: extracted.html,
             diagnostics: diag.toString().trimRight(),
           );
+        }
+        if (partCode != null) {
+          final _ExtractedDayHtml? byCode = await _loadPartCodeHtmlViaExtraction(
+            storageDir: storageDir,
+            yearZip: yearZip,
+            yymmdd: yymmdd,
+            partCode: partCode,
+          );
+          if (byCode != null && _looksLikeHtml(byCode.html)) {
+            diag.writeln('extractPartCode=ok');
+            diag.writeln('extractPartCodeFile=${byCode.dayFilePath}');
+            return ZsolozsmaDayPartHtmlResult(
+              html: byCode.html,
+              diagnostics: diag.toString().trimRight(),
+            );
+          }
+          diag.writeln('extractPartCode=failed');
         }
         diag.writeln('extractHref=failed');
       } catch (e) {
@@ -432,30 +513,12 @@ class ZsolozsmaService {
     required File yearZip,
     required String daySuffix,
   }) async {
-    final String yearName = _fileName(yearZip.path).replaceAll('.zip', '');
-    final Directory cacheRoot = Directory('${storageDir.path}/_unzipped');
-    final Directory yearDir = Directory('${cacheRoot.path}/$yearName');
-
-    final bool mustExtract =
-        !await yearDir.exists() ||
-        await _hasNewerZipThanExtraction(zipFile: yearZip, extractedDir: yearDir);
-
-    if (mustExtract) {
-      try {
-        if (await yearDir.exists()) {
-          await yearDir.delete(recursive: true);
-        }
-        await yearDir.create(recursive: true);
-        await fa.ZipFile.extractToDirectory(
-          zipFile: yearZip,
-          destinationDir: yearDir,
-        );
-      } catch (_) {
-        if (await yearDir.exists()) {
-          await yearDir.delete(recursive: true);
-        }
-        return null;
-      }
+    final Directory? yearDir = await _prepareExtractedYearDirectory(
+      storageDir: storageDir,
+      yearZip: yearZip,
+    );
+    if (yearDir == null) {
+      return null;
     }
 
     final String? dayFilePath = await _findExtractedDayFile(
@@ -467,8 +530,15 @@ class ZsolozsmaService {
     }
     final File dayFile = File(dayFilePath);
     final List<int> content = await dayFile.readAsBytes();
+    final int? uncompressedSize = await _findArchiveEntrySizeByName(
+      yearZip: yearZip,
+      entryName: _fileName(dayFilePath),
+    );
     return _ExtractedDayHtml(
-      html: _decodeBytes(content),
+      html: _decodeArchiveTextBytes(
+        content,
+        uncompressedSize: uncompressedSize,
+      ),
       dayFilePath: dayFilePath,
     );
   }
@@ -478,30 +548,12 @@ class ZsolozsmaService {
     required File yearZip,
     required String href,
   }) async {
-    final String yearName = _fileName(yearZip.path).replaceAll('.zip', '');
-    final Directory cacheRoot = Directory('${storageDir.path}/_unzipped');
-    final Directory yearDir = Directory('${cacheRoot.path}/$yearName');
-
-    final bool mustExtract =
-        !await yearDir.exists() ||
-        await _hasNewerZipThanExtraction(zipFile: yearZip, extractedDir: yearDir);
-
-    if (mustExtract) {
-      try {
-        if (await yearDir.exists()) {
-          await yearDir.delete(recursive: true);
-        }
-        await yearDir.create(recursive: true);
-        await fa.ZipFile.extractToDirectory(
-          zipFile: yearZip,
-          destinationDir: yearDir,
-        );
-      } catch (_) {
-        if (await yearDir.exists()) {
-          await yearDir.delete(recursive: true);
-        }
-        return null;
-      }
+    final Directory? yearDir = await _prepareExtractedYearDirectory(
+      storageDir: storageDir,
+      yearZip: yearZip,
+    );
+    if (yearDir == null) {
+      return null;
     }
 
     final String? path = await _findExtractedFileByHref(
@@ -511,9 +563,47 @@ class ZsolozsmaService {
     if (path == null) {
       return null;
     }
-    final List<int> content = await File(path).readAsBytes();
+    final String html = await _loadAndResolveLocalHtml(
+      rootDir: yearDir,
+      filePath: path,
+      yearZip: yearZip,
+    );
     return _ExtractedDayHtml(
-      html: _decodeBytes(content),
+      html: html,
+      dayFilePath: path,
+    );
+  }
+
+  Future<_ExtractedDayHtml?> _loadPartCodeHtmlViaExtraction({
+    required Directory storageDir,
+    required File yearZip,
+    required String yymmdd,
+    required String partCode,
+  }) async {
+    final Directory? yearDir = await _prepareExtractedYearDirectory(
+      storageDir: storageDir,
+      yearZip: yearZip,
+    );
+    if (yearDir == null) {
+      return null;
+    }
+
+    final String? path = await _findExtractedFileByPartCode(
+      rootDir: yearDir,
+      yymmdd: yymmdd,
+      partCode: partCode,
+    );
+    if (path == null) {
+      return null;
+    }
+
+    final String html = await _loadAndResolveLocalHtml(
+      rootDir: yearDir,
+      filePath: path,
+      yearZip: yearZip,
+    );
+    return _ExtractedDayHtml(
+      html: html,
       dayFilePath: path,
     );
   }
@@ -525,6 +615,37 @@ class ZsolozsmaService {
     final DateTime zipTime = await zipFile.lastModified();
     final DateTime extractedTime = (await extractedDir.stat()).modified;
     return zipTime.isAfter(extractedTime);
+  }
+
+  Future<Directory?> _prepareExtractedYearDirectory({
+    required Directory storageDir,
+    required File yearZip,
+  }) async {
+    final String yearName = _fileName(yearZip.path).replaceAll('.zip', '');
+    final Directory cacheRoot = Directory('${storageDir.path}/_unzipped');
+    final Directory yearDir = Directory('${cacheRoot.path}/$yearName');
+
+    final bool mustExtract =
+        !await yearDir.exists() ||
+        await _hasNewerZipThanExtraction(zipFile: yearZip, extractedDir: yearDir);
+
+    if (!mustExtract) {
+      return yearDir;
+    }
+
+    try {
+      if (await yearDir.exists()) {
+        await yearDir.delete(recursive: true);
+      }
+      await yearDir.create(recursive: true);
+      await extractFileToDisk(yearZip.path, yearDir.path);
+      return yearDir;
+    } catch (_) {
+      if (await yearDir.exists()) {
+        await yearDir.delete(recursive: true);
+      }
+      return null;
+    }
   }
 
   Future<String?> _findExtractedDayFile({
@@ -565,12 +686,331 @@ class ZsolozsmaService {
     return null;
   }
 
+  Future<String?> _findExtractedFileByPartCode({
+    required Directory rootDir,
+    required String yymmdd,
+    required String partCode,
+  }) async {
+    final String expectedBase = '${yymmdd}_$partCode.htm'.toUpperCase();
+    final String suffix = '_$partCode.HTM';
+    await for (final FileSystemEntity entity in rootDir.list(recursive: true)) {
+      if (entity is! File) {
+        continue;
+      }
+      final String base = _fileName(entity.path).toUpperCase();
+      if (base == expectedBase || base.endsWith(suffix)) {
+        return entity.path;
+      }
+    }
+    return null;
+  }
+
+  Future<List<ZsolozsmaDayPart>> _listDayPartsFromExtractedOverview({
+    required Directory storageDir,
+    required DateTime date,
+  }) async {
+    final File yearZip = File('${storageDir.path}/${date.year}.zip');
+    final Directory? yearDir = await _prepareExtractedYearDirectory(
+      storageDir: storageDir,
+      yearZip: yearZip,
+    );
+    if (yearDir == null) {
+      return const <ZsolozsmaDayPart>[];
+    }
+
+    final String yymmdd = _extractDayPrefixFromDate(date);
+    final String? path = await _findExtractedDayFile(
+      rootDir: yearDir,
+      daySuffix: '$yymmdd.HTM',
+    );
+    if (path == null) {
+      return const <ZsolozsmaDayPart>[];
+    }
+
+    final int? uncompressedSize = await _findArchiveEntrySizeByName(
+      yearZip: yearZip,
+      entryName: _fileName(path),
+    );
+    final String html = _decodeArchiveTextBytes(
+      await File(path).readAsBytes(),
+      uncompressedSize: uncompressedSize,
+    );
+    final dom.Document document = html_parser.parse(html);
+    return _extractDayPartsFromDocument(
+      document: document,
+      date: date,
+      yymmdd: yymmdd,
+    );
+  }
+
+  Future<String> _loadAndResolveLocalHtml({
+    required Directory rootDir,
+    required String filePath,
+    required File yearZip,
+  }) async {
+    String currentHtml = await _readArchiveTextFromExtractedPath(
+      yearZip: yearZip,
+      filePath: filePath,
+    );
+    String currentPath = filePath;
+    final Set<String> visited = <String>{};
+
+    for (int i = 0; i < 3; i++) {
+      final String? preferredPath = await _findPreferredDisplayToggleLocalPath(
+        html: currentHtml,
+        rootDir: rootDir,
+        currentPath: currentPath,
+      );
+      if (preferredPath == null) {
+        break;
+      }
+      if (!visited.add(preferredPath)) {
+        break;
+      }
+
+      final File preferredFile = File(preferredPath);
+      if (!await preferredFile.exists()) {
+        break;
+      }
+
+      final String preferredHtml = await _readArchiveTextFromExtractedPath(
+        yearZip: yearZip,
+        filePath: preferredPath,
+      );
+      if (!_looksLikeValidPrayerHtml(preferredHtml)) {
+        break;
+      }
+
+      currentHtml = preferredHtml;
+      currentPath = preferredPath;
+    }
+
+    return currentHtml;
+  }
+
+  Future<String?> _findPreferredDisplayToggleLocalPath({
+    required String html,
+    required Directory rootDir,
+    required String currentPath,
+  }) async {
+    final dom.Document doc = html_parser.parse(html);
+    String? endingPath;
+    String? gloriaPath;
+
+    for (final dom.Element anchor in doc.querySelectorAll('a[href]')) {
+      final String text = _stripHtml(anchor.text).toLowerCase();
+      final bool isDisplayLink =
+          text.contains('megjelenites:') || text.contains('megjelenítés:');
+      if (!isDisplayLink) {
+        continue;
+      }
+
+      final String href = (anchor.attributes['href'] ?? '').trim();
+      if (href.isEmpty) {
+        continue;
+      }
+
+      final String? resolved = await _resolveLocalHrefTarget(
+        rootDir: rootDir,
+        currentPath: currentPath,
+        href: href,
+      );
+      if (resolved == null) {
+        continue;
+      }
+
+      final bool isEndingShowLink =
+          (text.contains('imaora befejezesenek') ||
+              text.contains('imaóra befejezésének')) &&
+          (text.contains('megjelenites') || text.contains('megjelenítés'));
+      if (isEndingShowLink) {
+        endingPath ??= resolved;
+        continue;
+      }
+
+      final bool isGloriaLink =
+          text.contains('dicsoseg az atyanak') ||
+          text.contains('dicsőség az atyának');
+      if (isGloriaLink) {
+        gloriaPath ??= resolved;
+      }
+    }
+
+    return endingPath ?? gloriaPath;
+  }
+
+  Future<String?> _resolveLocalHrefTarget({
+    required Directory rootDir,
+    required String currentPath,
+    required String href,
+  }) async {
+    final String trimmed = href.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    final Uri? uri = Uri.tryParse(trimmed);
+    if (uri != null) {
+      final String qt = uri.queryParameters['qt'] ?? '';
+      final String p = (uri.queryParameters['p'] ?? '').trim().toLowerCase();
+      if (qt == 'pdt' && p.isNotEmpty && p != '*') {
+        final String? dayPrefix = _extractDayPrefixFromPath(currentPath);
+        if (dayPrefix != null) {
+          final String? candidate = await _findExtractedFileByPartCode(
+            rootDir: rootDir,
+            yymmdd: dayPrefix,
+            partCode: _canonicalDayPartCodeFromPart(p) ?? p,
+          );
+          if (candidate != null) {
+            return candidate;
+          }
+        }
+      }
+
+      if (uri.scheme == 'http' || uri.scheme == 'https') {
+        return null;
+      }
+    }
+
+    final Uri baseUri = Uri.file(currentPath);
+    final Uri resolved = baseUri.resolve(trimmed);
+    if (resolved.scheme == 'file') {
+      return resolved.toFilePath();
+    }
+
+    final String localName = _fileName(resolved.toString()).toLowerCase();
+    if (localName.isNotEmpty) {
+      for (final FileSystemEntity entity in rootDir.listSync(recursive: true)) {
+        if (entity is! File) {
+          continue;
+        }
+        if (_fileName(entity.path).toLowerCase() == localName) {
+          return entity.path;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String? _extractDayPrefixFromPath(String path) {
+    final String baseName = _fileName(path);
+    final RegExpMatch? match = RegExp(
+      r'^([0-9]{6})_',
+      caseSensitive: false,
+    ).firstMatch(baseName);
+    return match?.group(1);
+  }
+
   String _decodeBytes(List<int> bytes) {
     try {
       return utf8.decode(bytes);
     } catch (_) {
       return latin1.decode(bytes, allowInvalid: true);
     }
+  }
+
+  String _decodeArchiveTextBytes(
+    List<int> bytes, {
+    int? uncompressedSize,
+  }) {
+    final String decoded = _decodeBytes(bytes);
+    if (_looksLikeHtml(decoded)) {
+      return decoded;
+    }
+
+    final String? lzmaDecoded = _decodeZipMethod14Bytes(
+      bytes,
+      uncompressedSize: uncompressedSize,
+    );
+    if (lzmaDecoded != null) {
+      return lzmaDecoded;
+    }
+
+    return decoded;
+  }
+
+  String? _decodeZipMethod14Bytes(
+    List<int> bytes, {
+    required int? uncompressedSize,
+  }) {
+    if (uncompressedSize == null || uncompressedSize <= 0 || bytes.length < 9) {
+      return null;
+    }
+
+    final int propertiesSize = bytes[2] | (bytes[3] << 8);
+    if (propertiesSize != 5 || bytes.length <= 4 + propertiesSize) {
+      return null;
+    }
+
+    final List<int> properties = bytes.sublist(4, 4 + propertiesSize);
+    final int packed = properties[0];
+    final int positionBits = packed ~/ 45;
+    final int remainder = packed - (positionBits * 45);
+    final int literalPositionBits = remainder ~/ 9;
+    final int literalContextBits = remainder - (literalPositionBits * 9);
+
+    try {
+      final LzmaDecoder decoder = LzmaDecoder();
+      decoder.reset(
+        positionBits: positionBits,
+        literalPositionBits: literalPositionBits,
+        literalContextBits: literalContextBits,
+        resetDictionary: true,
+      );
+      final List<int> compressedBytes = bytes.sublist(4 + propertiesSize);
+      final Uint8List decodedBytes = decoder.decode(
+        InputMemoryStream(Uint8List.fromList(compressedBytes)),
+        uncompressedSize,
+      );
+      return _decodeBytes(decodedBytes);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<int?> _findArchiveEntrySizeByName({
+    required File yearZip,
+    required String entryName,
+  }) async {
+    try {
+      final Archive archive = _decodeArchive(await yearZip.readAsBytes());
+      final String targetName = _fileName(entryName).toUpperCase();
+      for (final ArchiveFile file in archive.files) {
+        if (!file.isFile) {
+          continue;
+        }
+        if (_fileName(file.name).toUpperCase() == targetName) {
+          return file.size;
+        }
+      }
+    } catch (_) {
+      return null;
+    }
+
+    return null;
+  }
+
+  Future<String> _readArchiveTextFromExtractedPath({
+    required File yearZip,
+    required String filePath,
+  }) async {
+    final int? uncompressedSize = await _findArchiveEntrySizeByName(
+      yearZip: yearZip,
+      entryName: _fileName(filePath),
+    );
+    return _decodeArchiveTextBytes(
+      await File(filePath).readAsBytes(),
+      uncompressedSize: uncompressedSize,
+    );
+  }
+
+  String _diagnosticHead(String text, {int maxLength = 120}) {
+    final String normalized = text.replaceAll('\n', ' ').replaceAll('\r', ' ');
+    if (normalized.length <= maxLength) {
+      return normalized;
+    }
+    return normalized.substring(0, maxLength);
   }
 
   String _stripHtml(String raw) {
@@ -596,54 +1036,68 @@ class ZsolozsmaService {
     required DateTime date,
     String? yymmdd,
   }) {
+    final String dayPrefix = yymmdd ?? _extractDayPrefixFromDate(date);
+    final Set<String> seenCodes = <String>{};
     final List<ZsolozsmaDayPart> fromForms = <ZsolozsmaDayPart>[];
-    final Set<String> seenForms = <String>{};
 
     for (final dom.Element form in document.querySelectorAll('form[action]')) {
       final String action = (form.attributes['action'] ?? '').trim();
-      if (!_matchesDayPartTarget(rawTarget: action, date: date, yymmdd: yymmdd)) {
-        continue;
-      }
-
-      final String href = _normalizeDayPartTarget(action);
-      if (href.isEmpty || !seenForms.add(href)) {
+      final String? code = _canonicalDayPartCode(action);
+      if (code == null || !_isSupportedDayPartCode(code) || !seenCodes.add(code)) {
         continue;
       }
 
       final dom.Element? input = form.querySelector('input[type="submit"]');
-      final String title = _preferredDayPartTitle(
+      final String title = _titleForPartCode(
+        code: code,
+        fallback: _preferredDayPartTitle(
         primary: input?.attributes['title'],
         secondary: input?.attributes['value'],
-        fallback: href,
+        fallback: code,
+      ),
       );
-      fromForms.add(ZsolozsmaDayPart(title: title, href: href));
+      fromForms.add(ZsolozsmaDayPart(
+        title: title,
+        href: _normalizedDayPartHref(dayPrefix: dayPrefix, code: code),
+      ));
     }
 
     if (fromForms.isNotEmpty) {
+      fromForms.sort(_compareDayPartOrder);
       return fromForms;
     }
 
     final List<ZsolozsmaDayPart> fromAnchors = <ZsolozsmaDayPart>[];
-    final Set<String> seenAnchors = <String>{};
 
     for (final dom.Element anchor in document.querySelectorAll('a[href]')) {
       final String href = (anchor.attributes['href'] ?? '').trim();
-      if (!_matchesDayPartTarget(rawTarget: href, date: date, yymmdd: yymmdd)) {
-        continue;
-      }
-      if (!seenAnchors.add(href)) {
+      final String? code = _canonicalDayPartCode(href);
+      if (code == null || !_isSupportedDayPartCode(code) || !seenCodes.add(code)) {
         continue;
       }
 
-      final String title = _preferredDayPartTitle(
+      final String title = _titleForPartCode(
+        code: code,
+        fallback: _preferredDayPartTitle(
         primary: anchor.attributes['title'],
         secondary: anchor.text,
-        fallback: href,
+        fallback: code,
+      ),
       );
-      fromAnchors.add(ZsolozsmaDayPart(title: title, href: href));
+      fromAnchors.add(ZsolozsmaDayPart(
+        title: title,
+        href: _normalizedDayPartHref(dayPrefix: dayPrefix, code: code),
+      ));
     }
 
+    fromAnchors.sort(_compareDayPartOrder);
     return fromAnchors;
+  }
+
+  String _extractDayPrefixFromDate(DateTime date) {
+    return '${(date.year % 100).toString().padLeft(2, '0')}'
+        '${date.month.toString().padLeft(2, '0')}'
+        '${date.day.toString().padLeft(2, '0')}';
   }
 
   bool _matchesDayPartTarget({
@@ -685,9 +1139,12 @@ class ZsolozsmaService {
         year == '${date.year}';
   }
 
-  String _normalizeDayPartTarget(String rawTarget) {
+  String _normalizeDayPartTarget(
+    String rawTarget,
+  ) {
     final String target = rawTarget.trim();
     final Uri? uri = Uri.tryParse(target);
+
     final bool isCgi =
         target.startsWith('/cgi-bin/l.cgi') ||
         target.contains('/cgi-bin/l.cgi') ||
@@ -696,6 +1153,91 @@ class ZsolozsmaService {
       return _normalizeHref(target);
     }
     return target;
+  }
+
+  String _normalizedDayPartHref({
+    required String dayPrefix,
+    required String code,
+  }) {
+    return '${dayPrefix}_$code.htm';
+  }
+
+  String? _canonicalDayPartCode(String rawTarget) {
+    final String target = rawTarget.trim();
+    if (target.isEmpty) {
+      return null;
+    }
+
+    final Uri? uri = Uri.tryParse(target);
+    if (uri != null) {
+      final String qt = uri.queryParameters['qt'] ?? '';
+      final String p = (uri.queryParameters['p'] ?? '').trim().toLowerCase();
+      if (qt == 'pdt' && p.isNotEmpty && p != '*') {
+        return _canonicalDayPartCodeFromPart(p);
+      }
+    }
+
+    final String base = _fileName(target).toLowerCase();
+    final RegExpMatch? match = RegExp(
+      r'^[0-9]{6}_([0-9a-z]+)\.htm$',
+      caseSensitive: false,
+    ).firstMatch(base);
+    if (match == null) {
+      return null;
+    }
+
+    return _canonicalDayPartCodeFromPart(match.group(1)!);
+  }
+
+  String? _canonicalDayPartCodeFromPart(String partCode) {
+    final String normalized = partCode.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    if (normalized.endsWith('d') && normalized.length > 1) {
+      return normalized.substring(0, normalized.length - 1);
+    }
+    return normalized;
+  }
+
+  bool _isSupportedDayPartCode(String code) {
+    switch (code) {
+      case '01':
+      case '02':
+      case '03':
+      case '09':
+      case '0c':
+      case '0i':
+      case '0k':
+      case '0r':
+        return true;
+    }
+    return false;
+  }
+
+  String _titleForPartCode({
+    required String code,
+    required String fallback,
+  }) {
+    switch (code) {
+      case '01':
+        return 'Imádságra hívás';
+      case '02':
+        return 'Olvasmányos imaóra';
+      case '03':
+        return 'Reggeli dicséret';
+      case '09':
+        return 'Délelőtt';
+      case '0c':
+        return 'Délben';
+      case '0i':
+        return 'Délután';
+      case '0k':
+        return 'Esti dicséret';
+      case '0r':
+        return 'Befejező imaóra';
+    }
+    return fallback;
   }
 
   String _preferredDayPartTitle({
@@ -742,6 +1284,37 @@ class ZsolozsmaService {
       caseSensitive: false,
     ).firstMatch(hrefBase);
     return match?.group(1)?.toLowerCase();
+  }
+
+  String? _extractPartCodeFromHref(String href) {
+    final Uri? uri = Uri.tryParse(href.trim());
+    if (uri != null) {
+      final String p = (uri.queryParameters['p'] ?? '').trim().toLowerCase();
+      if (p.isNotEmpty && p != '*' && RegExp(r'^[0-9a-z]+$').hasMatch(p)) {
+        return p;
+      }
+    }
+    final String hrefBase = _fileName(href);
+    return _extractPartCode(hrefBase);
+  }
+
+  ArchiveFile? _findArchiveFileByPartCode({
+    required Archive archive,
+    required String yymmdd,
+    required String partCode,
+  }) {
+    final String expectedBase = '${yymmdd}_$partCode.htm'.toUpperCase();
+    final String suffix = '_$partCode.HTM';
+    for (final ArchiveFile file in archive.files) {
+      if (!file.isFile) {
+        continue;
+      }
+      final String base = _fileName(file.name).toUpperCase();
+      if (base == expectedBase || base.endsWith(suffix)) {
+        return file;
+      }
+    }
+    return null;
   }
 
   Uri _buildDayPartUri({
@@ -994,25 +1567,78 @@ class ZsolozsmaService {
         continue;
       }
       final String baseName = _fileName(file.name);
-      final String upper = baseName.toUpperCase();
-      if (!upper.endsWith('.HTM')) {
+      final String? code = _canonicalDayPartCode(baseName);
+      if (code == null || !_isSupportedDayPartCode(code) || !seen.add(code)) {
         continue;
       }
 
-      final String expectedPrefix = '${yymmdd.toUpperCase()}_';
-      if (!upper.startsWith(expectedPrefix)) {
-        continue;
-      }
-
-      if (!seen.add(baseName)) {
-        continue;
-      }
-
-      result.add(ZsolozsmaDayPart(title: baseName, href: baseName));
+      result.add(ZsolozsmaDayPart(
+        title: _titleForPartCode(code: code, fallback: baseName),
+        href: _normalizedDayPartHref(dayPrefix: yymmdd, code: code),
+      ));
     }
 
-    result.sort((a, b) => a.href.compareTo(b.href));
+    result.sort(_compareDayPartOrder);
     return result;
+  }
+
+  List<ZsolozsmaDayPart> _listDayPartsFromExtractedNames({
+    required Directory rootDir,
+    required String yymmdd,
+  }) {
+    final Set<String> seen = <String>{};
+    final List<ZsolozsmaDayPart> result = <ZsolozsmaDayPart>[];
+
+    for (final FileSystemEntity entity in rootDir.listSync(recursive: true)) {
+      if (entity is! File) {
+        continue;
+      }
+      final String baseName = _fileName(entity.path);
+      final String? code = _canonicalDayPartCode(baseName);
+      if (code == null || !_isSupportedDayPartCode(code) || !seen.add(code)) {
+        continue;
+      }
+      result.add(ZsolozsmaDayPart(
+        title: _titleForPartCode(code: code, fallback: baseName),
+        href: _normalizedDayPartHref(dayPrefix: yymmdd, code: code),
+      ));
+    }
+
+    result.sort(_compareDayPartOrder);
+    return result;
+  }
+
+  int _compareDayPartOrder(ZsolozsmaDayPart left, ZsolozsmaDayPart right) {
+    final int leftOrder = _dayPartOrderIndex(left.href);
+    final int rightOrder = _dayPartOrderIndex(right.href);
+    if (leftOrder != rightOrder) {
+      return leftOrder.compareTo(rightOrder);
+    }
+    return left.href.compareTo(right.href);
+  }
+
+  int _dayPartOrderIndex(String href) {
+    final String? code = _canonicalDayPartCode(href);
+    switch (code) {
+      case '01':
+        return 0;
+      case '02':
+        return 1;
+      case '03':
+        return 2;
+      case '09':
+        return 3;
+      case '0c':
+        return 4;
+      case '0i':
+        return 5;
+      case '0k':
+        return 6;
+      case '0r':
+        return 7;
+      default:
+        return 999;
+    }
   }
 
   String _fileName(String path) {

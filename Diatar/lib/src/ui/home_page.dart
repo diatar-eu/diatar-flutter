@@ -819,11 +819,11 @@ class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
                       dense: true,
                       title: Text(part.title),
                       onTap: () async {
-                        await widget.controller.selectZsolozsmaPart(
+                        final bool loaded = await widget.controller.selectZsolozsmaPart(
                           _selectedDate,
                           part,
                         );
-                        if (context.mounted) {
+                        if (loaded && context.mounted) {
                           Navigator.of(context).pop();
                         }
                       },
