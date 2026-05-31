@@ -58,6 +58,9 @@ class CustomOrderEntry {
     this.customTextTitle,
     this.customTextBody,
     this.customImagePath,
+    this.customType,
+    this.customData = const <String, dynamic>{},
+    this.storageExtras = const <String, dynamic>{},
   });
 
   final String fileName;
@@ -67,12 +70,16 @@ class CustomOrderEntry {
   final String? customTextTitle;
   final String? customTextBody;
   final String? customImagePath;
+  final String? customType;
+  final Map<String, dynamic> customData;
+  final Map<String, dynamic> storageExtras;
 
   bool get isSeparator =>
       fileName == separatorFileName && songIndex == separatorSongIndex;
-  bool get isCustomText => customTextBody != null;
-  bool get isCustomImage => customImagePath != null;
-  bool get isSongEntry => !isSeparator && !isCustomText && !isCustomImage;
+  bool get isCustomText =>
+      customType == 'text' || customTextBody != null || customTextTitle != null;
+  bool get isCustomImage => customType == 'image' || customImagePath != null;
+  bool get isSongEntry => !isSeparator && songIndex >= 0;
 
   CustomOrderEntry copyWith({
     String? fileName,
@@ -82,6 +89,9 @@ class CustomOrderEntry {
     String? customTextTitle,
     String? customTextBody,
     String? customImagePath,
+    String? customType,
+    Map<String, dynamic>? customData,
+    Map<String, dynamic>? storageExtras,
   }) {
     return CustomOrderEntry(
       fileName: fileName ?? this.fileName,
@@ -91,6 +101,9 @@ class CustomOrderEntry {
       customTextTitle: customTextTitle ?? this.customTextTitle,
       customTextBody: customTextBody ?? this.customTextBody,
       customImagePath: customImagePath ?? this.customImagePath,
+      customType: customType ?? this.customType,
+      customData: customData ?? this.customData,
+      storageExtras: storageExtras ?? this.storageExtras,
     );
   }
 }
@@ -149,11 +162,11 @@ class DiatarMainController extends ChangeNotifier {
 
   String? get lastImportedCustomOrderBaseName =>
       _lastImportedCustomOrderBaseName;
-    bool get customOrderLooksLikeZsolozsma =>
+  bool get customOrderLooksLikeZsolozsma =>
       _customOrder.isNotEmpty &&
       _customOrder.every(
-      (CustomOrderEntry entry) =>
-        entry.isCustomText && entry.label.startsWith('[Zsolozsma]'),
+        (CustomOrderEntry entry) =>
+            entry.isCustomText && entry.label.startsWith('[Zsolozsma]'),
       );
   String get zsolozsmaLastDiagnostics => _zsolozsmaLastDiagnostics;
   bool get hasImportedCustomOrderDia => _customOrder.isNotEmpty;
@@ -193,8 +206,12 @@ class DiatarMainController extends ChangeNotifier {
     settings = await _settingsStore.load();
     lastBlankPath = settings.blankPicPath;
     _disabledSongbooks = await _orderStore.loadDisabled();
-    final ({List<StoredCustomOrderEntry> entries, bool active, String? baseName}) stored =
-        await _orderStore.loadCurrentCustomOrder();
+    final ({
+      List<StoredCustomOrderEntry> entries,
+      bool active,
+      String? baseName,
+    })
+    stored = await _orderStore.loadCurrentCustomOrder();
     _customOrder = stored.entries
         .map(
           (StoredCustomOrderEntry e) => CustomOrderEntry(
@@ -205,13 +222,16 @@ class DiatarMainController extends ChangeNotifier {
             customTextTitle: e.customTextTitle,
             customTextBody: e.customTextBody,
             customImagePath: e.customImagePath,
+            customType: e.customType,
+            customData: e.customData,
+            storageExtras: e.additionalFields,
           ),
         )
         .toList();
     customOrderActive = stored.active && _customOrder.isNotEmpty;
     _lastImportedCustomOrderBaseName = _customOrder.isEmpty
-      ? null
-      : stored.baseName;
+        ? null
+        : stored.baseName;
     _customOrderCursor = customOrderActive ? 0 : -1;
     globals = globals.copyWith(
       bkColor: settings.bkColor,
@@ -407,9 +427,7 @@ class DiatarMainController extends ChangeNotifier {
     return count;
   }
 
-  Future<ZsolozsmaSyncResult> syncZsolozsmaArchives({
-    int? centerYear,
-  }) async {
+  Future<ZsolozsmaSyncResult> syncZsolozsmaArchives({int? centerYear}) async {
     final int year = centerYear ?? DateTime.now().year;
     final Directory dir = await _resolveZsolozsmaDirectory();
     final ZsolozsmaSyncResult result = await _zsolozsmaService
@@ -439,11 +457,8 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     try {
-      final ZsolozsmaDayPartsLoadResult loadResult =
-          await _zsolozsmaService.listDayPartsWithDiagnostics(
-        storageDir: dir,
-        date: day,
-      );
+      final ZsolozsmaDayPartsLoadResult loadResult = await _zsolozsmaService
+          .listDayPartsWithDiagnostics(storageDir: dir, date: day);
       final List<ZsolozsmaDayPart> parts = loadResult.parts;
       _zsolozsmaLastDiagnostics = loadResult.diagnostics;
       final String dateLabel = _formatDateIso(day);
@@ -462,9 +477,7 @@ class DiatarMainController extends ChangeNotifier {
     } catch (e) {
       _zsolozsmaLastDiagnostics =
           'date=${_formatDateIso(day)}\nerror=$e\nstorageDir=${dir.path}';
-      _setStatus('statusZsolozsmaDayError', <String, String>{
-        'error': '$e',
-      });
+      _setStatus('statusZsolozsmaDayError', <String, String>{'error': '$e'});
       notifyListeners();
       rethrow;
     }
@@ -476,12 +489,8 @@ class DiatarMainController extends ChangeNotifier {
     _logZsolozsmaDebug(
       'select part start date=${_formatDateIso(day)} title=${part.title} href=${part.href}',
     );
-    final ZsolozsmaDayPartHtmlResult loadResult =
-        await _zsolozsmaService.loadDayPartHtml(
-          storageDir: dir,
-          date: day,
-          part: part,
-        );
+    final ZsolozsmaDayPartHtmlResult loadResult = await _zsolozsmaService
+        .loadDayPartHtml(storageDir: dir, date: day, part: part);
     _zsolozsmaLastDiagnostics = loadResult.diagnostics;
     _logZsolozsmaDebug('part load diagnostics:\n${loadResult.diagnostics}');
 
@@ -510,6 +519,7 @@ class DiatarMainController extends ChangeNotifier {
             label: '[Zsolozsma] ${slide.title}',
             customTextTitle: slide.title,
             customTextBody: slide.lines.join('\n'),
+            customType: 'text',
           ),
         )
         .toList();
@@ -536,7 +546,9 @@ class DiatarMainController extends ChangeNotifier {
       'title': part.title,
       'count': '${entries.length}',
     });
-    _logZsolozsmaDebug('part loaded successfully title=${part.title} count=${entries.length}');
+    _logZsolozsmaDebug(
+      'part loaded successfully title=${part.title} count=${entries.length}',
+    );
     notifyListeners();
     return true;
   }
@@ -651,6 +663,9 @@ class DiatarMainController extends ChangeNotifier {
       verseIndex = 0;
       highPos = 0;
       _customOrder = _customOrder.where((CustomOrderEntry e) {
+        if (!e.isSongEntry) {
+          return true;
+        }
         final int bIx = books.indexWhere(
           (DtxBook b) => b.fileName == e.fileName,
         );
@@ -831,6 +846,9 @@ class DiatarMainController extends ChangeNotifier {
               customTextTitle: e.customTextTitle,
               customTextBody: e.customTextBody,
               customImagePath: e.customImagePath,
+              customType: e.customType,
+              customData: e.customData,
+              additionalFields: e.storageExtras,
             ),
           )
           .toList(),
@@ -868,6 +886,9 @@ class DiatarMainController extends ChangeNotifier {
             customTextTitle: e.customTextTitle,
             customTextBody: e.customTextBody,
             customImagePath: e.customImagePath,
+            customType: e.customType,
+            customData: e.customData,
+            storageExtras: e.additionalFields,
           ),
         )
         .toList();
@@ -893,6 +914,9 @@ class DiatarMainController extends ChangeNotifier {
             customTextTitle: e.customTextTitle,
             customTextBody: e.customTextBody,
             customImagePath: e.customImagePath,
+            customType: e.customType,
+            customData: e.customData,
+            additionalFields: e.storageExtras,
           ),
         )
         .toList();
@@ -1076,7 +1100,9 @@ class DiatarMainController extends ChangeNotifier {
             candidate.label == entry.label &&
             candidate.customTextTitle == entry.customTextTitle &&
             candidate.customTextBody == entry.customTextBody &&
-            candidate.customImagePath == entry.customImagePath;
+            candidate.customImagePath == entry.customImagePath &&
+            candidate.customType == entry.customType &&
+            mapEquals(candidate.customData, entry.customData);
       }
       return candidate.fileName == entry.fileName &&
           candidate.songIndex == entry.songIndex &&
@@ -1513,6 +1539,7 @@ class DiatarMainController extends ChangeNotifier {
             verseIndex: 0,
             label: '[Kep] ${_fileNameFromPath(kep)}',
             customImagePath: resolved,
+            customType: 'image',
           ),
         );
         continue;
@@ -1531,6 +1558,7 @@ class DiatarMainController extends ChangeNotifier {
             label: '[Szoveg] $effectiveTitle',
             customTextTitle: effectiveTitle,
             customTextBody: textLines.join('\n'),
+            customType: 'text',
           ),
         );
         continue;
@@ -2504,6 +2532,7 @@ class DiatarMainController extends ChangeNotifier {
       label: '[Szoveg] $effectiveTitle',
       customTextTitle: effectiveTitle,
       customTextBody: lines.join('\n'),
+      customType: 'text',
     );
 
     await _appendCustomOrderEntry(entry);
@@ -2534,6 +2563,7 @@ class DiatarMainController extends ChangeNotifier {
       verseIndex: 0,
       label: '[Kep] $fileName',
       customImagePath: normalized,
+      customType: 'image',
     );
 
     await _appendCustomOrderEntry(entry);
