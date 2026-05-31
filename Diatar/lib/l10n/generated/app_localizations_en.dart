@@ -727,6 +727,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderInsertSeparatorAction => 'Insert separator';
 
   @override
+  String get customOrderClearAllTooltip => 'Clear all';
+
+  @override
+  String get customOrderClearAllConfirmTitle => 'Confirmation';
+
+  @override
+  String get customOrderClearAllConfirmMessage =>
+      'Are you sure you want to delete the entire custom slide order?';
+
+  @override
+  String get customOrderClearAllConfirmButton => 'Clear all';
+
+  @override
   String get customOrderSeparatorNameLabel => 'Separator name';
 
   @override

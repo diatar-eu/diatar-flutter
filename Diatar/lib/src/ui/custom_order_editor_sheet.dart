@@ -203,6 +203,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                       onPressed: _pickAndSendImageSlide,
                       icon: const Icon(Icons.image),
                     ),
+                    IconButton(
+                      tooltip: l10n.customOrderClearAllTooltip,
+                      onPressed: _entries.isEmpty ? null : _confirmAndClearAll,
+                      icon: const Icon(Icons.delete_sweep, color: Colors.red),
+                    ),
                   ],
                 ),
               ),
@@ -793,6 +798,40 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     setState(() {
       final int insertIndex = _selectedInsertInsertionIndex();
       _entries.insert(insertIndex, entry);
+    });
+    await _commitEntries();
+  }
+
+  Future<void> _confirmAndClearAll() async {
+    if (_entries.isEmpty) {
+      return;
+    }
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        final dialogL10n = dialogContext.l10n;
+        return AlertDialog(
+          title: Text(dialogL10n.customOrderClearAllConfirmTitle),
+          content: Text(dialogL10n.customOrderClearAllConfirmMessage),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(dialogL10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(dialogL10n.customOrderClearAllConfirmButton),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _entries = <CustomOrderEntry>[];
     });
     await _commitEntries();
   }
