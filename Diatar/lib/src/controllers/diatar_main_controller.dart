@@ -467,9 +467,12 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
-  Future<void> selectZsolozsmaPart(DateTime date, ZsolozsmaDayPart part) async {
+  Future<bool> selectZsolozsmaPart(DateTime date, ZsolozsmaDayPart part) async {
     final DateTime day = DateTime(date.year, date.month, date.day);
     final Directory dir = await _resolveZsolozsmaDirectory();
+    _logZsolozsmaDebug(
+      'select part start date=${_formatDateIso(day)} title=${part.title} href=${part.href}',
+    );
     final ZsolozsmaDayPartHtmlResult loadResult =
         await _zsolozsmaService.loadDayPartHtml(
           storageDir: dir,
@@ -477,17 +480,24 @@ class DiatarMainController extends ChangeNotifier {
           part: part,
         );
     _zsolozsmaLastDiagnostics = loadResult.diagnostics;
+    _logZsolozsmaDebug('part load diagnostics:\n${loadResult.diagnostics}');
 
     final String? html = loadResult.html;
     if (html == null || html.trim().isEmpty) {
+      _logZsolozsmaDebug('part load returned empty html for ${part.title}');
       _setStatus('statusZsolozsmaPartLoadError', <String, String>{
         'title': part.title,
       });
       notifyListeners();
-      return;
+      return false;
     }
 
+    _logZsolozsmaDebug('loaded html length=${html.length}');
+
     final List<ZsolozsmaSlide> slides = _zsolozsmaDecoder.decode(html);
+    _logZsolozsmaDebug(
+      'decoded slides=${slides.length} titles=${slides.take(5).map((ZsolozsmaSlide slide) => slide.title).join(' | ')}',
+    );
     final List<CustomOrderEntry> entries = slides
         .map(
           (ZsolozsmaSlide slide) => CustomOrderEntry(
@@ -501,10 +511,21 @@ class DiatarMainController extends ChangeNotifier {
         )
         .toList();
 
+    if (entries.isEmpty) {
+      _logZsolozsmaDebug('decoded entries are empty for ${part.title}');
+      _setStatus('statusZsolozsmaPartLoadError', <String, String>{
+        'title': part.title,
+      });
+      notifyListeners();
+      return false;
+    }
+
     await applyCustomOrder(entries, activate: true);
+    _logZsolozsmaDebug('applyCustomOrder complete entries=${entries.length}');
     _diaVirtualBookSelected = entries.isNotEmpty;
     if (entries.isNotEmpty) {
       _selectByCustomOrderCursor(0, sync: true);
+      _logZsolozsmaDebug('selected first custom order entry');
     }
 
     _setStatus('statusZsolozsmaPartLoaded', <String, String>{
@@ -512,7 +533,13 @@ class DiatarMainController extends ChangeNotifier {
       'title': part.title,
       'count': '${entries.length}',
     });
+    _logZsolozsmaDebug('part loaded successfully title=${part.title} count=${entries.length}');
     notifyListeners();
+    return true;
+  }
+
+  void _logZsolozsmaDebug(String message) {
+    debugPrint('[Zsolozsma] $message');
   }
 
   String _formatDateIso(DateTime date) {
