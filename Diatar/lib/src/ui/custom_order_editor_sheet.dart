@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
@@ -47,7 +48,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   DiatarMainController get controller => widget.controller;
 
   String _entrySignature(CustomOrderEntry entry) {
-    return '${entry.fileName}|${entry.songIndex}|${entry.verseIndex}|${entry.customTextTitle ?? ''}|${entry.customTextBody ?? ''}|${entry.customImagePath ?? ''}|${entry.label}';
+    return '${entry.fileName}|${entry.songIndex}|${entry.verseIndex}|${entry.customTextTitle ?? ''}|${entry.customTextBody ?? ''}|${entry.customImagePath ?? ''}|${entry.customType ?? ''}|${jsonEncode(entry.customData)}|${entry.label}';
   }
 
   bool _sameEntries(List<CustomOrderEntry> left, List<CustomOrderEntry> right) {
