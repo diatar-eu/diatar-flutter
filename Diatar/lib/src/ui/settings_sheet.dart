@@ -745,36 +745,18 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     bool obscure = false,
     TextInputType keyboardType = TextInputType.text,
   }) async {
-    final TextEditingController controller = TextEditingController(
-      text: initialValue,
-    );
     final String? result = await showDialog<String>(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(title),
-          content: TextField(
-            controller: controller,
-            obscureText: obscure,
-            keyboardType: keyboardType,
-            autofocus: true,
-            decoration: InputDecoration(labelText: label),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(context.l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(controller.text.trim()),
-              child: Text(context.l10n.ok),
-            ),
-          ],
+        return _TextInputDialog(
+          title: title,
+          label: label,
+          initialValue: initialValue,
+          obscure: obscure,
+          keyboardType: keyboardType,
         );
       },
     );
-    controller.dispose();
     if (result == null || result.trim().isEmpty) {
       return null;
     }
@@ -2223,5 +2205,63 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       }
     }
     return id;
+  }
+}
+
+class _TextInputDialog extends StatefulWidget {
+  const _TextInputDialog({
+    required this.title,
+    required this.label,
+    this.initialValue = '',
+    this.obscure = false,
+    this.keyboardType = TextInputType.text,
+  });
+
+  final String title;
+  final String label;
+  final String initialValue;
+  final bool obscure;
+  final TextInputType keyboardType;
+
+  @override
+  State<_TextInputDialog> createState() => _TextInputDialogState();
+}
+
+class _TextInputDialogState extends State<_TextInputDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        obscureText: widget.obscure,
+        keyboardType: widget.keyboardType,
+        decoration: InputDecoration(labelText: widget.label),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(context.l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: Text(context.l10n.ok),
+        ),
+      ],
+    );
   }
 }
