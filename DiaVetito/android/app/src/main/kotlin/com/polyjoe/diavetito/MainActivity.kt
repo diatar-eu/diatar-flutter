@@ -1,4 +1,4 @@
-package com.example.diatar_app
+package com.polyjoe.diavetito
 
 import io.flutter.embedding.android.FlutterActivity
 

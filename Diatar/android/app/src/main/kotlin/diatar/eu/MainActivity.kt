@@ -1,4 +1,4 @@
-package eu.diatar.diavetito
+package diatar.eu
 
 import io.flutter.embedding.android.FlutterActivity
 
