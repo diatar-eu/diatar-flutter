@@ -661,7 +661,7 @@
   "userFieldNewEmail": "Új e-mail",
   "userFieldCurrentUsername": "Jelenlegi felhasználónév",
   "userFieldNewUsername": "Új felhasználónév",
-  "userActionRegisterSuccess": "Sikeres regisztráció. Ellenőrizd az e-mail fiókot a megerősítéshez.",
+  "userActionRegisterSuccess": "Sikeres adatfelvétel. A regisztráció véglegesítéséhez nézze meg az e-mail-fiókját.",
   "userActionResendVerificationSuccess": "Megerősítő e-mail újraküldve.",
   "userActionDeleteUserSuccess": "Felhasználó törölve.",
   "userActionChangePasswordSuccess": "Jelszó sikeresen módosítva.",

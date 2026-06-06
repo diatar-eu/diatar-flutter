@@ -78,7 +78,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   bool _showInternetPassword = false;
   bool _internetActionRunning = false;
   void Function(void Function())? _setInternetSectionState;
-  final MqttUserApiService _userApi = MqttUserApiService();
+  late final MqttUserApiService _userApi;
   late Color _bkColor;
   late Color _txtColor;
   late Color _blankColor;
@@ -89,6 +89,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   @override
   void initState() {
     super.initState();
+    _userApi = MqttUserApiService(acceptLanguageProvider: _currentAcceptLanguage);
     _loadAppVersion();
     final AppSettings s = widget.initialSettings;
     _search = TextEditingController();
@@ -133,6 +134,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _txtColor = s.txtColor;
     _blankColor = s.blankColor;
     _hiColor = s.hiColor;
+  }
+
+  String? _currentAcceptLanguage() {
+    final String languageCode = context.l10n.localeName.trim();
+    if (languageCode.isEmpty) {
+      return null;
+    }
+    return languageCode.split(RegExp(r'[_-]')).first;
   }
 
   Future<void> _loadAppVersion() async {
@@ -776,9 +785,22 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(successMessage)));
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(context.l10n.settingsInternetTitle),
+            content: Text(successMessage),
+            actions: <Widget>[
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(context.l10n.ok),
+              ),
+            ],
+          );
+        },
+      );
     } catch (e) {
       if (!mounted) {
         return;

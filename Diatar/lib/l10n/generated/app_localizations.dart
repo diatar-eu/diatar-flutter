@@ -1880,7 +1880,7 @@ abstract class AppLocalizations {
   /// No description provided for @userActionRegisterSuccess.
   ///
   /// In hu, this message translates to:
-  /// **'Sikeres regisztráció. Ellenőrizd az e-mail fiókot a megerősítéshez.'**
+  /// **'Sikeres adatfelvétel. A regisztráció véglegesítéséhez nézze meg az e-mail-fiókját.'**
   String get userActionRegisterSuccess;
 
   /// No description provided for @userActionResendVerificationSuccess.
