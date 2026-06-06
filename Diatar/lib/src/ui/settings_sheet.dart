@@ -77,6 +77,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   String _capturedSongHotkey = '';
   bool _showInternetPassword = false;
   bool _internetActionRunning = false;
+  void Function(void Function())? _setInternetSectionState;
   final MqttUserApiService _userApi = MqttUserApiService();
   late Color _bkColor;
   late Color _txtColor;
@@ -419,6 +420,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     return _openSectionSheet(
       title: context.l10n.settingsInternetTitle,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
+        _setInternetSectionState = setBoth;
         final l10n = context.l10n;
         return <Widget>[
           SwitchListTile(
@@ -505,41 +507,24 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           ],
         ];
       },
-    );
+    ).whenComplete(() => _setInternetSectionState = null);
   }
 
   Future<void> _registerUser() async {
     final l10n = context.l10n;
-    final String? email = await _askText(
+    final _RegistrationInput? registration = await _askRegistrationInput(
       title: l10n.userActionRegister,
-      label: l10n.userFieldEmail,
-      keyboardType: TextInputType.emailAddress,
+      initialUsername: _mqttUser.text.trim(),
     );
-    if (email == null) {
-      return;
-    }
-    final String? username = await _askText(
-      title: l10n.userActionRegister,
-      label: l10n.userFieldUsername,
-      initialValue: _mqttUser.text.trim(),
-    );
-    if (username == null) {
-      return;
-    }
-    final String? password = await _askText(
-      title: l10n.userActionRegister,
-      label: l10n.userFieldPassword,
-      obscure: true,
-    );
-    if (password == null) {
+    if (registration == null) {
       return;
     }
     await _runUserApiAction(
       successMessage: l10n.userActionRegisterSuccess,
       action: () => _userApi.createUser(
-        username: username,
-        password: password,
-        email: email,
+        username: registration.username,
+        password: registration.password,
+        email: registration.email,
       ),
     );
   }
@@ -763,6 +748,21 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     return result.trim();
   }
 
+  Future<_RegistrationInput?> _askRegistrationInput({
+    required String title,
+    required String initialUsername,
+  }) {
+    return showDialog<_RegistrationInput>(
+      context: context,
+      builder: (BuildContext context) {
+        return _RegistrationInputDialog(
+          title: title,
+          initialUsername: initialUsername,
+        );
+      },
+    );
+  }
+
   Future<void> _runUserApiAction({
     required String successMessage,
     required Future<void> Function() action,
@@ -770,7 +770,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     if (_internetActionRunning) {
       return;
     }
-    setState(() => _internetActionRunning = true);
+    _setInternetActionRunning(true);
     try {
       await action();
       if (!mounted) {
@@ -783,13 +783,36 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(context.l10n.userApiError('$e'))));
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(context.l10n.settingsInternetTitle),
+            content: Text(context.l10n.userApiError('$e')),
+            actions: <Widget>[
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(context.l10n.ok),
+              ),
+            ],
+          );
+        },
+      );
     } finally {
-      if (mounted) {
-        setState(() => _internetActionRunning = false);
-      }
+      _setInternetActionRunning(false);
+    }
+  }
+
+  void _setInternetActionRunning(bool value) {
+    final void Function(void Function())? setInternetSectionState =
+        _setInternetSectionState;
+    if (setInternetSectionState != null) {
+      setInternetSectionState(() => _internetActionRunning = value);
+      return;
+    }
+    if (mounted) {
+      setState(() => _internetActionRunning = value);
     }
   }
 
@@ -2260,6 +2283,118 @@ class _TextInputDialogState extends State<_TextInputDialog> {
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
           child: Text(context.l10n.ok),
+        ),
+      ],
+    );
+  }
+}
+
+class _RegistrationInput {
+  const _RegistrationInput({
+    required this.username,
+    required this.password,
+    required this.email,
+  });
+
+  final String username;
+  final String password;
+  final String email;
+}
+
+class _RegistrationInputDialog extends StatefulWidget {
+  const _RegistrationInputDialog({
+    required this.title,
+    required this.initialUsername,
+  });
+
+  final String title;
+  final String initialUsername;
+
+  @override
+  State<_RegistrationInputDialog> createState() => _RegistrationInputDialogState();
+}
+
+class _RegistrationInputDialogState extends State<_RegistrationInputDialog> {
+  late final TextEditingController _usernameController;
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  bool _showPassword = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController = TextEditingController(text: widget.initialUsername);
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final String username = _usernameController.text.trim();
+    final String password = _passwordController.text.trim();
+    final String email = _emailController.text.trim();
+    if (username.isEmpty || password.isEmpty || email.isEmpty) {
+      return;
+    }
+    Navigator.of(context).pop(
+      _RegistrationInput(username: username, password: password, email: email),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TextField(
+            controller: _usernameController,
+            decoration: InputDecoration(labelText: l10n.userFieldUsername),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _passwordController,
+            obscureText: !_showPassword,
+            decoration: InputDecoration(
+              labelText: l10n.userFieldPassword,
+              suffixIcon: IconButton(
+                tooltip: _showPassword
+                    ? l10n.passwordHideTooltip
+                    : l10n.passwordShowTooltip,
+                onPressed: () => setState(() => _showPassword = !_showPassword),
+                icon: Icon(
+                  _showPassword ? Icons.visibility_off : Icons.visibility,
+                ),
+              ),
+            ),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(labelText: l10n.userFieldEmail),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(l10n.ok),
         ),
       ],
     );
