@@ -661,7 +661,7 @@
   "userFieldNewEmail": "New e-mail",
   "userFieldCurrentUsername": "Current username",
   "userFieldNewUsername": "New username",
-  "userActionRegisterSuccess": "Registration successful. Check your e-mail inbox for verification.",
+  "userActionRegisterSuccess": "Registration successful. Please check your e-mail inbox to complete verification.",
   "userActionResendVerificationSuccess": "Verification e-mail resent.",
   "userActionDeleteUserSuccess": "User deleted.",
   "userActionChangePasswordSuccess": "Password changed successfully.",

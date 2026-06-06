@@ -1034,7 +1034,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userActionRegisterSuccess =>
-      'Registration successful. Check your e-mail inbox for verification.';
+      'Registration successful. Please check your e-mail inbox to complete verification.';
 
   @override
   String get userActionResendVerificationSuccess =>

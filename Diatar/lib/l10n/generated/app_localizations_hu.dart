@@ -1036,7 +1036,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get userActionRegisterSuccess =>
-      'Sikeres regisztráció. Ellenőrizd az e-mail fiókot a megerősítéshez.';
+      'Sikeres adatfelvétel. A regisztráció véglegesítéséhez nézze meg az e-mail-fiókját.';
 
   @override
   String get userActionResendVerificationSuccess =>

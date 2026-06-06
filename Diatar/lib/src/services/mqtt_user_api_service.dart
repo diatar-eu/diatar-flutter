@@ -6,6 +6,10 @@ class MqttUserApiService {
   static const String _baseUrl = 'https://mqtt.diatar.eu';
   static const int _maxRedirects = 5;
 
+  MqttUserApiService({String? Function()? acceptLanguageProvider})
+      : _acceptLanguageProvider = acceptLanguageProvider;
+
+  final String? Function()? _acceptLanguageProvider;
   final HttpClient _client = HttpClient();
 
   Future<void> createUser({
@@ -87,6 +91,12 @@ class MqttUserApiService {
       request.followRedirects = false;
       request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      final String? acceptLanguage = _normalizeLanguageCode(
+        _acceptLanguageProvider?.call(),
+      );
+      if (acceptLanguage != null) {
+        request.headers.set(HttpHeaders.acceptLanguageHeader, acceptLanguage);
+      }
       request.write(jsonEncode(payload));
 
       final HttpClientResponse response = await request
@@ -171,5 +181,13 @@ class MqttUserApiService {
       return null;
     }
     return messages.join('\n');
+  }
+
+  String? _normalizeLanguageCode(String? languageCode) {
+    final String normalized = languageCode?.trim() ?? '';
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return normalized.split(RegExp(r'[_-]')).first;
   }
 }
