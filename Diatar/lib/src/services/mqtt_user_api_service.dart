@@ -127,6 +127,10 @@ class MqttUserApiService {
     try {
       final dynamic decoded = jsonDecode(body);
       if (decoded is Map<String, dynamic>) {
+        final String? validationErrors = _extractValidationErrors(decoded['errors']);
+        if (validationErrors != null) {
+          return validationErrors;
+        }
         final dynamic message =
             decoded['message'] ?? decoded['error'] ?? decoded['title'] ?? decoded['detail'];
         if (message is String && message.trim().isNotEmpty) {
@@ -135,5 +139,37 @@ class MqttUserApiService {
       }
     } catch (_) {}
     return 'HTTP $statusCode: $body';
+  }
+
+  String? _extractValidationErrors(dynamic errors) {
+    if (errors is! Map) {
+      return null;
+    }
+
+    final List<String> messages = <String>[];
+    errors.forEach((dynamic key, dynamic value) {
+      final String field = key?.toString().trim() ?? '';
+      if (value is List) {
+        for (final dynamic item in value) {
+          final String text = item?.toString().trim() ?? '';
+          if (text.isEmpty) {
+            continue;
+          }
+          messages.add(field.isEmpty ? text : '$field: $text');
+        }
+        return;
+      }
+
+      final String text = value?.toString().trim() ?? '';
+      if (text.isEmpty) {
+        return;
+      }
+      messages.add(field.isEmpty ? text : '$field: $text');
+    });
+
+    if (messages.isEmpty) {
+      return null;
+    }
+    return messages.join('\n');
   }
 }
