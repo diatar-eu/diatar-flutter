@@ -163,14 +163,12 @@ List<_DiaSongGroup> _buildDiaSongGroups(DiatarMainController controller) {
         final String candidateLabel = _entryShortLabel(controller, candidate);
         final ({String prefix, String suffix})? candidateSplit =
             _splitSlashLabel(candidateLabel);
-        if (candidateSplit == null || candidateSplit.prefix != firstSplit.prefix) {
+        if (candidateSplit == null ||
+            candidateSplit.prefix != firstSplit.prefix) {
           break;
         }
         verses.add(
-          _DiaVerseEntry(
-            customOrderIndex: j,
-            label: candidateSplit.suffix,
-          ),
+          _DiaVerseEntry(customOrderIndex: j, label: candidateSplit.suffix),
         );
         j++;
       }
@@ -239,6 +237,156 @@ int _selectedDiaSongGroupIndex(
     ),
   );
   return idx >= 0 ? idx : 0;
+}
+
+enum _TransportIndicatorState { off, connecting, connected, error }
+
+bool _isTransportErrorStatus(String code) {
+  return _isMqttErrorStatus(code) || _isTcpErrorStatus(code);
+}
+
+String _statusParam(Map<String, String> params, String key) {
+  return params[key] ?? '';
+}
+
+String _transportErrorMessage(
+  BuildContext context,
+  DiatarMainController controller,
+) {
+  final l10n = context.l10n;
+  final String code = controller.statusCode;
+  final Map<String, String> params = controller.statusParams;
+  switch (code) {
+    case 'statusSenderMqttConnectFailed':
+      return l10n.statusSenderMqttConnectFailed;
+    case 'statusSenderMqttError':
+      return l10n.statusSenderMqttError(_statusParam(params, 'error'));
+    case 'statusSenderTcpError':
+      return l10n.statusSenderTcpError(_statusParam(params, 'error'));
+    case 'statusSenderOpenPortFailed':
+      return l10n.statusSenderOpenPortFailed(
+        int.tryParse(_statusParam(params, 'port')) ?? 0,
+        _statusParam(params, 'error'),
+      );
+    case 'statusSenderError':
+      return l10n.statusSenderError(_statusParam(params, 'message'));
+    default:
+      return l10n.statusSenderError(code);
+  }
+}
+
+String _transportStateLabel(
+  BuildContext context,
+  _TransportIndicatorState state,
+) {
+  final l10n = context.l10n;
+  switch (state) {
+    case _TransportIndicatorState.off:
+      return l10n.internetStatusOff;
+    case _TransportIndicatorState.connecting:
+      return l10n.internetStatusConnecting;
+    case _TransportIndicatorState.connected:
+      return l10n.internetStatusOn;
+    case _TransportIndicatorState.error:
+      return l10n.internetStatusError;
+  }
+}
+
+String _statusTooltip(
+  BuildContext context, {
+  required String title,
+  required _TransportIndicatorState state,
+}) {
+  return context.l10n.connectionStatusTooltip(
+    title,
+    _transportStateLabel(context, state),
+  );
+}
+
+bool _isMqttErrorStatus(String code) {
+  return code == 'statusSenderMqttConnectFailed' ||
+      code == 'statusSenderMqttError' ||
+      code == 'statusSenderError';
+}
+
+bool _isTcpErrorStatus(String code) {
+  return code == 'statusSenderTcpError' ||
+      code == 'statusSenderOpenPortFailed' ||
+      code == 'statusSenderError';
+}
+
+_TransportIndicatorState _mqttIndicatorState(DiatarMainController controller) {
+  if (!controller.mqttActive) {
+    return _TransportIndicatorState.off;
+  }
+  if (controller.mqttConnected) {
+    return _TransportIndicatorState.connected;
+  }
+  if (controller.mqttHasError) {
+    return _TransportIndicatorState.error;
+  }
+  return _TransportIndicatorState.connecting;
+}
+
+_TransportIndicatorState _localNetworkIndicatorState(
+  DiatarMainController controller,
+) {
+  if (!controller.tcpActive) {
+    return _TransportIndicatorState.off;
+  }
+  if (controller.tcpConnected) {
+    return _TransportIndicatorState.connected;
+  }
+  if (controller.tcpHasError) {
+    return _TransportIndicatorState.error;
+  }
+  return _TransportIndicatorState.connecting;
+}
+
+Color _statusColorFor(_TransportIndicatorState state, ThemeData theme) {
+  switch (state) {
+    case _TransportIndicatorState.off:
+      return theme.disabledColor;
+    case _TransportIndicatorState.connecting:
+      return Colors.amber;
+    case _TransportIndicatorState.connected:
+      return Colors.green;
+    case _TransportIndicatorState.error:
+      return Colors.red;
+  }
+}
+
+Widget _statusIcon({
+  required IconData icon,
+  required _TransportIndicatorState state,
+  required ThemeData theme,
+}) {
+  final Color color = _statusColorFor(state, theme);
+  final BorderSide border = switch (state) {
+    _TransportIndicatorState.off => BorderSide.none,
+    _TransportIndicatorState.connecting => BorderSide(
+      color: Colors.amber.withValues(alpha: 0.85),
+      width: 1.0,
+    ),
+    _TransportIndicatorState.connected => BorderSide(
+      color: Colors.green.withValues(alpha: 0.85),
+      width: 1.0,
+    ),
+    _TransportIndicatorState.error => BorderSide(
+      color: Colors.red.withValues(alpha: 0.9),
+      width: 1.4,
+    ),
+  };
+  return Container(
+    width: 22,
+    height: 22,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      border: Border.fromBorderSide(border),
+    ),
+    child: Icon(icon, size: 16, color: color),
+  );
 }
 
 List<_BookDropdownEntry> _buildBookDropdownEntries(
@@ -419,11 +567,17 @@ class DiatarHomePage extends StatelessWidget {
 
     return Column(
       children: <Widget>[
+        _TransportErrorSnackListener(controller: controller),
         _BookDropdown(controller: controller),
         const SizedBox(height: 8),
         _SongDropdown(controller: controller),
         const SizedBox(height: 8),
-        _VerseDropdown(controller: controller),
+        Row(
+          children: <Widget>[
+            Expanded(child: _VerseDropdown(controller: controller)),
+            const SizedBox(width: 30),
+          ],
+        ),
         const SizedBox(height: 10),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -679,6 +833,52 @@ class DiatarHomePage extends StatelessWidget {
   }
 }
 
+class _TransportErrorSnackListener extends StatefulWidget {
+  const _TransportErrorSnackListener({required this.controller});
+
+  final DiatarMainController controller;
+
+  @override
+  State<_TransportErrorSnackListener> createState() =>
+      _TransportErrorSnackListenerState();
+}
+
+class _TransportErrorSnackListenerState
+    extends State<_TransportErrorSnackListener> {
+  String _lastErrorSignature = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final DiatarMainController controller = widget.controller;
+    final String code = controller.statusCode;
+    final bool isError = _isTransportErrorStatus(code);
+    final String signature =
+        '$code|${controller.statusParams.entries.map((MapEntry<String, String> e) => '${e.key}=${e.value}').join(';')}';
+
+    if (!isError) {
+      _lastErrorSignature = '';
+      return const SizedBox.shrink();
+    }
+
+    if (signature != _lastErrorSignature) {
+      _lastErrorSignature = signature;
+      final String message = _transportErrorMessage(context, controller);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        final messenger = ScaffoldMessenger.maybeOf(context);
+        if (messenger == null) {
+          return;
+        }
+        messenger.showSnackBar(SnackBar(content: Text(message)));
+      });
+    }
+
+    return const SizedBox.shrink();
+  }
+}
+
 class _DownloadSongbooksDialog extends StatefulWidget {
   const _DownloadSongbooksDialog({required this.controller});
 
@@ -829,10 +1029,8 @@ class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
                       dense: true,
                       title: Text(part.title),
                       onTap: () async {
-                        final bool loaded = await widget.controller.selectZsolozsmaPart(
-                          _selectedDate,
-                          part,
-                        );
+                        final bool loaded = await widget.controller
+                            .selectZsolozsmaPart(_selectedDate, part);
                         if (loaded && context.mounted) {
                           Navigator.of(context).pop();
                         }
@@ -942,10 +1140,11 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                   );
                 }
 
-                final List<_DownloadListEntry> entries = _buildDownloadListEntries(
-                  items,
-                  l10n.ungroupedBookGroupLabel,
-                );
+                final List<_DownloadListEntry> entries =
+                    _buildDownloadListEntries(
+                      items,
+                      l10n.ungroupedBookGroupLabel,
+                    );
 
                 return ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 360),
@@ -1048,9 +1247,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.importDtxFilesError)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.importDtxFilesError)));
     }
   }
 }
@@ -1068,10 +1267,10 @@ class _BookDropdown extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final bool hasDia = controller.hasImportedCustomOrderDia;
     final String fallbackDiaName = controller.customOrderLooksLikeZsolozsma
-      ? context.l10n.zsolozsmaTooltip
-      : context.l10n.customOrderUnnamedFileName;
+        ? context.l10n.zsolozsmaTooltip
+        : context.l10n.customOrderUnnamedFileName;
     final String diaName =
-      controller.lastImportedCustomOrderBaseName ?? fallbackDiaName;
+        controller.lastImportedCustomOrderBaseName ?? fallbackDiaName;
     final List<_BookDropdownEntry> entries = _buildBookDropdownEntries(
       controller.books,
       context.l10n.ungroupedBookGroupLabel,
@@ -1079,89 +1278,110 @@ class _BookDropdown extends StatelessWidget {
     final int initial = controller.diaVirtualBookSelected
         ? _diaVirtualBookValue
         : controller.bookIndex;
-    return DropdownButtonFormField<int>(
-      initialValue: initial,
-      decoration: InputDecoration(
-        labelText: context.l10n.bookLabel,
-        border: const OutlineInputBorder(),
-      ),
-      isExpanded: true,
-      items: <DropdownMenuItem<int>>[
-        if (hasDia)
-          DropdownMenuItem<int>(
-            value: _diaVirtualBookValue,
-            child: SizedBox(
-              width: double.infinity,
-              child: Text(
-                context.l10n.diaBookLabel(diaName),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: DropdownButtonFormField<int>(
+            initialValue: initial,
+            decoration: InputDecoration(
+              labelText: context.l10n.bookLabel,
+              border: const OutlineInputBorder(),
             ),
+            isExpanded: true,
+            items: <DropdownMenuItem<int>>[
+              if (hasDia)
+                DropdownMenuItem<int>(
+                  value: _diaVirtualBookValue,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      context.l10n.diaBookLabel(diaName),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ),
+              ...entries.asMap().entries.map((
+                MapEntry<int, _BookDropdownEntry> e,
+              ) {
+                final _BookDropdownEntry entry = e.value;
+                if (entry.isHeader) {
+                  return DropdownMenuItem<int>(
+                    value: -(e.key + 1),
+                    enabled: false,
+                    child: Text(
+                      '[${entry.group!}]',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  );
+                }
+                return DropdownMenuItem<int>(
+                  value: entry.bookIndex,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Text(
+                        entry.title!,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+            selectedItemBuilder: (BuildContext context) {
+              return <Widget>[
+                if (hasDia)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      context.l10n.diaBookLabel(diaName),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ...entries.map((_BookDropdownEntry entry) {
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      entry.title ?? '[${entry.group!}]',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  );
+                }),
+              ];
+            },
+            onChanged: (int? value) {
+              if (value == _diaVirtualBookValue) {
+                controller.selectDiaVirtualBook();
+                return;
+              }
+              if (value != null && value >= 0) {
+                controller.setBookIndex(value);
+              }
+            },
           ),
-        ...entries.asMap().entries.map((MapEntry<int, _BookDropdownEntry> e) {
-          final _BookDropdownEntry entry = e.value;
-          if (entry.isHeader) {
-            return DropdownMenuItem<int>(
-              value: -(e.key + 1),
-              enabled: false,
-              child: Text(
-                '[${entry.group!}]',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            );
-          }
-          return DropdownMenuItem<int>(
-            value: entry.bookIndex,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: Text(
-                  entry.title!,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              ),
-            ),
-          );
-        }),
+        ),
+        const SizedBox(width: 8),
+        Tooltip(
+          message: _statusTooltip(
+            context,
+            title: context.l10n.settingsInternetTitle,
+            state: _mqttIndicatorState(controller),
+          ),
+          child: _statusIcon(
+            icon: Icons.public,
+            state: _mqttIndicatorState(controller),
+            theme: theme,
+          ),
+        ),
       ],
-      selectedItemBuilder: (BuildContext context) {
-        return <Widget>[
-          if (hasDia)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                context.l10n.diaBookLabel(diaName),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ),
-          ...entries.map((_BookDropdownEntry entry) {
-            return Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                entry.title ?? '[${entry.group!}]',
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            );
-          }),
-        ];
-      },
-      onChanged: (int? value) {
-        if (value == _diaVirtualBookValue) {
-          controller.selectDiaVirtualBook();
-          return;
-        }
-        if (value != null && value >= 0) {
-          controller.setBookIndex(value);
-        }
-      },
     );
   }
 }
@@ -1183,36 +1403,60 @@ class _SongDropdown extends StatelessWidget {
         groups,
         selectedCursor,
       );
-      return DropdownButtonFormField<int>(
-        initialValue: selectedGroup.clamp(0, groups.length - 1),
-        decoration: InputDecoration(
-          labelText: context.l10n.songLabel,
-          border: const OutlineInputBorder(),
-        ),
-        isExpanded: true,
-        items: groups.asMap().entries.map((MapEntry<int, _DiaSongGroup> e) {
-          return DropdownMenuItem<int>(
-            value: e.key,
-            child: SizedBox(
-              width: double.infinity,
-              child: Text(
-                e.value.label,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
+      final ThemeData theme = Theme.of(context);
+      return Row(
+        children: <Widget>[
+          Expanded(
+            child: DropdownButtonFormField<int>(
+              initialValue: selectedGroup.clamp(0, groups.length - 1),
+              decoration: InputDecoration(
+                labelText: context.l10n.songLabel,
+                border: const OutlineInputBorder(),
               ),
+              isExpanded: true,
+              items: groups.asMap().entries.map((
+                MapEntry<int, _DiaSongGroup> e,
+              ) {
+                return DropdownMenuItem<int>(
+                  value: e.key,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      e.value.label,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: (int? value) {
+                if (value == null || value < 0 || value >= groups.length) {
+                  return;
+                }
+                final List<_DiaVerseEntry> verses = groups[value].verses;
+                if (verses.isEmpty) {
+                  return;
+                }
+                controller.selectCustomOrderEntryAt(
+                  verses.first.customOrderIndex,
+                );
+              },
             ),
-          );
-        }).toList(),
-        onChanged: (int? value) {
-          if (value == null || value < 0 || value >= groups.length) {
-            return;
-          }
-          final List<_DiaVerseEntry> verses = groups[value].verses;
-          if (verses.isEmpty) {
-            return;
-          }
-          controller.selectCustomOrderEntryAt(verses.first.customOrderIndex);
-        },
+          ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message: _statusTooltip(
+              context,
+              title: context.l10n.settingsLocalNetworkTitle,
+              state: _localNetworkIndicatorState(controller),
+            ),
+            child: _statusIcon(
+              icon: Icons.lan,
+              state: _localNetworkIndicatorState(controller),
+              theme: theme,
+            ),
+          ),
+        ],
       );
     }
 
@@ -1221,30 +1465,54 @@ class _SongDropdown extends StatelessWidget {
     if (songs.isEmpty) {
       return const SizedBox.shrink();
     }
-    return DropdownButtonFormField<int>(
-      initialValue: controller.songIndex.clamp(0, songs.length - 1),
-      decoration: InputDecoration(
-        labelText: context.l10n.songLabel,
-        border: const OutlineInputBorder(),
-      ),
-      isExpanded: true,
-      items: songs.asMap().entries.map((MapEntry<int, DtxSong> e) {
-        final String title = e.value.separator
-            ? '-- ${e.value.title} --'
-            : e.value.title;
-        return DropdownMenuItem<int>(
-          value: e.key,
-          child: SizedBox(
-            width: double.infinity,
-            child: Text(title, overflow: TextOverflow.ellipsis, maxLines: 1),
+    final ThemeData theme = Theme.of(context);
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: DropdownButtonFormField<int>(
+            initialValue: controller.songIndex.clamp(0, songs.length - 1),
+            decoration: InputDecoration(
+              labelText: context.l10n.songLabel,
+              border: const OutlineInputBorder(),
+            ),
+            isExpanded: true,
+            items: songs.asMap().entries.map((MapEntry<int, DtxSong> e) {
+              final String title = e.value.separator
+                  ? '-- ${e.value.title} --'
+                  : e.value.title;
+              return DropdownMenuItem<int>(
+                value: e.key,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Text(
+                    title,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+              );
+            }).toList(),
+            onChanged: (int? value) {
+              if (value != null) {
+                controller.setSongIndex(value);
+              }
+            },
           ),
-        );
-      }).toList(),
-      onChanged: (int? value) {
-        if (value != null) {
-          controller.setSongIndex(value);
-        }
-      },
+        ),
+        const SizedBox(width: 8),
+        Tooltip(
+          message: _statusTooltip(
+            context,
+            title: context.l10n.settingsLocalNetworkTitle,
+            state: _localNetworkIndicatorState(controller),
+          ),
+          child: _statusIcon(
+            icon: Icons.lan,
+            state: _localNetworkIndicatorState(controller),
+            theme: theme,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1631,10 +1899,7 @@ class _CustomImagePreview extends StatelessWidget {
             ),
           );
 
-    return _SwipePagingPreview(
-      controller: controller,
-      child: content,
-    );
+    return _SwipePagingPreview(controller: controller, child: content);
   }
 }
 

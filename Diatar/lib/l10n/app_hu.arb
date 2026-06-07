@@ -538,6 +538,15 @@
   "internetUserActionsTitle": "Felhasználói műveletek (API)",
   "internetStatusOn": "Be",
   "internetStatusOff": "Ki",
+  "internetStatusConnecting": "Kapcsolódás",
+  "internetStatusError": "Hiba",
+  "connectionStatusTooltip": "{name}: {status}",
+  "@connectionStatusTooltip": {
+    "placeholders": {
+      "name": {},
+      "status": {}
+    }
+  },
   "valueNotSet": "-",
   "tcpNoTargets": "Nincs célpont",
   "tcpTargetsCount": "{count} célpont",

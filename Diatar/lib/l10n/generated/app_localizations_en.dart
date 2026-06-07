@@ -818,6 +818,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get internetStatusOff => 'Off';
 
   @override
+  String get internetStatusConnecting => 'Connecting';
+
+  @override
+  String get internetStatusError => 'Error';
+
+  @override
+  String connectionStatusTooltip(Object name, Object status) {
+    return '$name: $status';
+  }
+
+  @override
   String get valueNotSet => '-';
 
   @override

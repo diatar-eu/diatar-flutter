@@ -820,6 +820,17 @@ class AppLocalizationsHu extends AppLocalizations {
   String get internetStatusOff => 'Ki';
 
   @override
+  String get internetStatusConnecting => 'Kapcsolódás';
+
+  @override
+  String get internetStatusError => 'Hiba';
+
+  @override
+  String connectionStatusTooltip(Object name, Object status) {
+    return '$name: $status';
+  }
+
+  @override
   String get valueNotSet => '-';
 
   @override
