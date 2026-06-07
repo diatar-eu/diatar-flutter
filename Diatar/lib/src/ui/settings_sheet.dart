@@ -620,30 +620,24 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   Future<void> _changePassword() async {
     final l10n = context.l10n;
-    final String? username = await _askText(
+    final _ChangePasswordInput? input = await _askChangePasswordInput(
       title: l10n.userActionChangePassword,
-      label: l10n.userFieldUsername,
-      initialValue: _mqttUser.text.trim(),
+      initialUsername: _mqttUser.text.trim(),
     );
-    if (username == null) {
+    if (input == null) {
       return;
     }
-    final String? password = await _askText(
-      title: l10n.userActionChangePassword,
-      label: l10n.userFieldCurrentPassword,
-      obscure: true,
-    );
-    if (password == null) {
+
+    final String username = input.username;
+    final String password = input.password;
+    final String newPassword = input.newPassword;
+    if (username.isEmpty || password.isEmpty || newPassword.isEmpty) {
+      await _showInternetResultDialog(
+        l10n.userActionValidationRequiredPasswordFields,
+      );
       return;
     }
-    final String? newPassword = await _askText(
-      title: l10n.userActionChangePassword,
-      label: l10n.userFieldNewPassword,
-      obscure: true,
-    );
-    if (newPassword == null) {
-      return;
-    }
+
     await _runUserApiAction(
       successMessage: l10n.userActionChangePasswordSuccess,
       action: () => _userApi.changePassword(
@@ -793,6 +787,21 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       context: context,
       builder: (BuildContext context) {
         return _DeleteUserInputDialog(
+          title: title,
+          initialUsername: initialUsername,
+        );
+      },
+    );
+  }
+
+  Future<_ChangePasswordInput?> _askChangePasswordInput({
+    required String title,
+    required String initialUsername,
+  }) {
+    return showDialog<_ChangePasswordInput>(
+      context: context,
+      builder: (BuildContext context) {
+        return _ChangePasswordInputDialog(
           title: title,
           initialUsername: initialUsername,
         );
@@ -2378,6 +2387,18 @@ class _DeleteUserInput {
   final String password;
 }
 
+class _ChangePasswordInput {
+  const _ChangePasswordInput({
+    required this.username,
+    required this.password,
+    required this.newPassword,
+  });
+
+  final String username;
+  final String password;
+  final String newPassword;
+}
+
 class _RegistrationInputDialog extends StatefulWidget {
   const _RegistrationInputDialog({
     required this.title,
@@ -2612,6 +2633,119 @@ class _DeleteUserInputDialogState extends State<_DeleteUserInputDialog> {
                 onPressed: () => setState(() => _showPassword = !_showPassword),
                 icon: Icon(
                   _showPassword ? Icons.visibility_off : Icons.visibility,
+                ),
+              ),
+            ),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(l10n.ok),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChangePasswordInputDialog extends StatefulWidget {
+  const _ChangePasswordInputDialog({
+    required this.title,
+    required this.initialUsername,
+  });
+
+  final String title;
+  final String initialUsername;
+
+  @override
+  State<_ChangePasswordInputDialog> createState() =>
+      _ChangePasswordInputDialogState();
+}
+
+class _ChangePasswordInputDialogState
+    extends State<_ChangePasswordInputDialog> {
+  late final TextEditingController _usernameController;
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  bool _showPassword = false;
+  bool _showNewPassword = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController = TextEditingController(text: widget.initialUsername);
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _newPasswordController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    Navigator.of(context).pop(
+      _ChangePasswordInput(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text.trim(),
+        newPassword: _newPasswordController.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TextField(
+            controller: _usernameController,
+            decoration: InputDecoration(labelText: l10n.userFieldUsername),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _passwordController,
+            obscureText: !_showPassword,
+            decoration: InputDecoration(
+              labelText: l10n.userFieldCurrentPassword,
+              suffixIcon: IconButton(
+                tooltip: _showPassword
+                    ? l10n.passwordHideTooltip
+                    : l10n.passwordShowTooltip,
+                onPressed: () => setState(() => _showPassword = !_showPassword),
+                icon: Icon(
+                  _showPassword ? Icons.visibility_off : Icons.visibility,
+                ),
+              ),
+            ),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _newPasswordController,
+            obscureText: !_showNewPassword,
+            decoration: InputDecoration(
+              labelText: l10n.userFieldNewPassword,
+              suffixIcon: IconButton(
+                tooltip: _showNewPassword
+                    ? l10n.passwordHideTooltip
+                    : l10n.passwordShowTooltip,
+                onPressed: () =>
+                    setState(() => _showNewPassword = !_showNewPassword),
+                icon: Icon(
+                  _showNewPassword ? Icons.visibility_off : Icons.visibility,
                 ),
               ),
             ),

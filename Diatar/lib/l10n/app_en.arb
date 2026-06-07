@@ -664,6 +664,7 @@
   "userActionRegisterSuccess": "Registration successful. Please check your e-mail inbox to complete verification.",
   "userActionResendVerificationSuccess": "Verification e-mail resent. Please check your e-mails.",
   "userActionValidationRequiredFields": "Username and e-mail are required.",
+  "userActionValidationRequiredPasswordFields": "Username, current password and new password are required.",
   "userActionValidationInvalidEmail": "Invalid e-mail address.",
   "userActionDeleteUserSuccess": "User deleted.",
   "userActionChangePasswordSuccess": "Password changed successfully.",
