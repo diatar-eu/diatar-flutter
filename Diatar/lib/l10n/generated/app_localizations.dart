@@ -1493,6 +1493,24 @@ abstract class AppLocalizations {
   /// **'Ki'**
   String get internetStatusOff;
 
+  /// No description provided for @internetStatusConnecting.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kapcsolódás'**
+  String get internetStatusConnecting;
+
+  /// No description provided for @internetStatusError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hiba'**
+  String get internetStatusError;
+
+  /// No description provided for @connectionStatusTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'{name}: {status}'**
+  String connectionStatusTooltip(Object name, Object status);
+
   /// No description provided for @valueNotSet.
   ///
   /// In hu, this message translates to:

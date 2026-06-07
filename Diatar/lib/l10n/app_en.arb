@@ -538,6 +538,15 @@
   "internetUserActionsTitle": "User actions (API)",
   "internetStatusOn": "On",
   "internetStatusOff": "Off",
+  "internetStatusConnecting": "Connecting",
+  "internetStatusError": "Error",
+  "connectionStatusTooltip": "{name}: {status}",
+  "@connectionStatusTooltip": {
+    "placeholders": {
+      "name": {},
+      "status": {}
+    }
+  },
   "valueNotSet": "-",
   "tcpNoTargets": "No targets",
   "tcpTargetsCount": "{count} targets",

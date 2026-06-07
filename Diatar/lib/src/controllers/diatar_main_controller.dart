@@ -136,6 +136,14 @@ class DiatarMainController extends ChangeNotifier {
   bool senderRunning = false;
   bool senderConnected = false;
   bool mqttActive = false;
+  bool mqttConnected = false;
+  bool tcpConnected = false;
+  bool mqttHasError = false;
+  bool tcpHasError = false;
+  DateTime? mqttConnectAttemptAt;
+  DateTime? tcpConnectAttemptAt;
+  int _mqttErrorSeq = 0;
+  int _tcpErrorSeq = 0;
   String statusCode = 'statusStarting';
   Map<String, String> _statusParams = <String, String>{};
   String lastPicPath = '';
@@ -176,6 +184,17 @@ class DiatarMainController extends ChangeNotifier {
       !_startupDownloadDialogHandled &&
       !loading &&
       statusCode == 'statusNoDtxFiles';
+  bool get tcpActive => settings.tcpClientEnabled;
+  bool get tcpConfigured =>
+      tcpActive &&
+      settings.tcpTargets
+          .map((String target) => target.trim())
+          .any((String target) => target.isNotEmpty);
+
+  void _refreshSenderFlags() {
+    senderRunning = _sender.running || _mqttSender.running;
+    senderConnected = tcpConnected || mqttConnected;
+  }
 
   void markStartupDownloadDialogHandled() {
     _startupDownloadDialogHandled = true;
@@ -314,47 +333,73 @@ class DiatarMainController extends ChangeNotifier {
 
   void _configureSender() {
     _sender.onStatusChanged = (bool connected) {
-      senderConnected = connected;
+      tcpConnected = connected;
+      if (connected) {
+        tcpHasError = false;
+      }
+      _refreshSenderFlags();
       notifyListeners();
     };
     _sender.onError = (String code, Map<String, String> params) {
-      switch (code) {
-        case 'senderTcpError':
-          _setStatus('statusSenderTcpError', <String, String>{
-            'error': params['error'] ?? '',
-          });
-          break;
-        case 'senderOpenPortFailed':
-          _setStatus('statusSenderOpenPortFailed', <String, String>{
-            'port': params['port'] ?? '0',
-            'error': params['error'] ?? '',
-          });
-          break;
-        default:
-          _setStatus('statusSenderError', <String, String>{'message': code});
-          break;
-      }
-      notifyListeners();
+      _tcpErrorSeq++;
+      final int token = _tcpErrorSeq;
+      Future<void>.delayed(const Duration(seconds: 2), () {
+        if (token != _tcpErrorSeq || !tcpActive || tcpConnected) {
+          return;
+        }
+        tcpHasError = true;
+        switch (code) {
+          case 'senderTcpError':
+            _setStatus('statusSenderTcpError', <String, String>{
+              'error': params['error'] ?? '',
+            });
+            break;
+          case 'senderOpenPortFailed':
+            _setStatus('statusSenderOpenPortFailed', <String, String>{
+              'port': params['port'] ?? '0',
+              'error': params['error'] ?? '',
+            });
+            break;
+          default:
+            _setStatus('statusSenderError', <String, String>{'message': code});
+            break;
+        }
+        _refreshSenderFlags();
+        notifyListeners();
+      });
     };
     _mqttSender.onStatusChanged = (bool connected) {
-      senderConnected = connected;
+      mqttConnected = connected;
+      if (connected) {
+        mqttHasError = false;
+      }
+      _refreshSenderFlags();
       notifyListeners();
     };
     _mqttSender.onError = (String code, Map<String, String> params) {
-      switch (code) {
-        case 'senderMqttConnectFailed':
-          _setStatus('statusSenderMqttConnectFailed');
-          break;
-        case 'senderMqttError':
-          _setStatus('statusSenderMqttError', <String, String>{
-            'error': params['error'] ?? '',
-          });
-          break;
-        default:
-          _setStatus('statusSenderError', <String, String>{'message': code});
-          break;
-      }
-      notifyListeners();
+      _mqttErrorSeq++;
+      final int token = _mqttErrorSeq;
+      Future<void>.delayed(const Duration(seconds: 2), () {
+        if (token != _mqttErrorSeq || !mqttActive || mqttConnected) {
+          return;
+        }
+        mqttHasError = true;
+        switch (code) {
+          case 'senderMqttConnectFailed':
+            _setStatus('statusSenderMqttConnectFailed');
+            break;
+          case 'senderMqttError':
+            _setStatus('statusSenderMqttError', <String, String>{
+              'error': params['error'] ?? '',
+            });
+            break;
+          default:
+            _setStatus('statusSenderError', <String, String>{'message': code});
+            break;
+        }
+        _refreshSenderFlags();
+        notifyListeners();
+      });
     };
   }
 
@@ -567,41 +612,55 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<void> _applyTransport() async {
     final String user = settings.mqttUser.trim();
+    _mqttErrorSeq++;
+    _tcpErrorSeq++;
     mqttActive = user.isNotEmpty;
     if (mqttActive) {
-      await _sender.stop();
+      mqttConnected = false;
+      mqttHasError = false;
+      mqttConnectAttemptAt = DateTime.now();
       await _mqttSender.open(
         username: user,
         password: settings.mqttPassword,
         channel: settings.mqttChannel,
       );
-      senderRunning = _mqttSender.running;
-      _setStatus('statusMqttSending', <String, String>{
-        'user': user,
-        'channel': settings.mqttChannel,
-      });
-    } else {
-      await _mqttSender.close();
-      if (settings.tcpEnabled) {
-        await _sender.restart(settings.tcpTargets);
-        await _sender.sendScreenSize(
-          width: _screenWidth,
-          height: _screenHeight,
-        );
-      } else {
-        await _sender.stop();
+      if (mqttConnected) {
+        _setStatus('statusMqttSending', <String, String>{
+          'user': user,
+          'channel': settings.mqttChannel,
+        });
       }
-      senderRunning = _sender.running;
-      _setStatus('statusTcpSending', <String, String>{
-        'port': _tcpTargetsStatusLabel(settings),
-      });
+    } else {
+      mqttConnectAttemptAt = null;
+      mqttConnected = false;
+      mqttHasError = false;
+      await _mqttSender.close();
     }
+
+    if (tcpConfigured) {
+      tcpConnected = false;
+      tcpHasError = false;
+      tcpConnectAttemptAt = DateTime.now();
+      await _sender.restart(settings.tcpTargets);
+      await _sender.sendScreenSize(width: _screenWidth, height: _screenHeight);
+      if (tcpConnected) {
+        _setStatus('statusTcpSending', <String, String>{
+          'port': _tcpTargetsStatusLabel(settings),
+        });
+      }
+    } else {
+      tcpConnectAttemptAt = null;
+      tcpConnected = false;
+      tcpHasError = false;
+      await _sender.stop();
+    }
+    _refreshSenderFlags();
   }
 
   bool get _projectionOutputLocked => settings.projectionLocked;
 
   String _tcpTargetsStatusLabel(AppSettings value) {
-    if (!value.tcpEnabled || value.tcpTargets.isEmpty) {
+    if (!value.tcpClientEnabled || value.tcpTargets.isEmpty) {
       return '-';
     }
     final List<String> targets = value.tcpTargets
@@ -629,7 +688,7 @@ class DiatarMainController extends ChangeNotifier {
     _screenWidth = normalizedW;
     _screenHeight = normalizedH;
 
-    if (!mqttActive && !_projectionOutputLocked) {
+    if (tcpConfigured && !_projectionOutputLocked) {
       await _sender.sendScreenSize(width: _screenWidth, height: _screenHeight);
     }
   }
@@ -2368,13 +2427,15 @@ class DiatarMainController extends ChangeNotifier {
         showing: showing,
         wordToHighlight: highPos,
       );
-    } else {
+    }
+    if (tcpConfigured) {
       await _sender.sendState(
         globals,
         showing: showing,
         wordToHighlight: highPos,
       );
     }
+    _refreshSenderFlags();
   }
 
   void highlightNext() {
@@ -2401,13 +2462,15 @@ class DiatarMainController extends ChangeNotifier {
         showing: showing,
         wordToHighlight: highPos,
       );
-    } else {
+    }
+    if (tcpConfigured) {
       await _sender.sendState(
         globals,
         showing: showing,
         wordToHighlight: highPos,
       );
     }
+    _refreshSenderFlags();
   }
 
   Future<void> _syncCurrentDia() async {
@@ -2441,8 +2504,8 @@ class DiatarMainController extends ChangeNotifier {
         wordToHighlight: highPos,
       );
       await _mqttSender.sendText(title: title, lines: lines);
-      senderRunning = _mqttSender.running;
-    } else {
+    }
+    if (tcpConfigured) {
       await _sender.sendState(
         globals,
         showing: showing,
@@ -2454,8 +2517,8 @@ class DiatarMainController extends ChangeNotifier {
         wordToHighlight: highPos,
       );
       await _sender.sendIdle();
-      senderRunning = _sender.running;
     }
+    _refreshSenderFlags();
     notifyListeners();
   }
 
@@ -2499,8 +2562,8 @@ class DiatarMainController extends ChangeNotifier {
           wordToHighlight: 0,
         );
         await _mqttSender.sendText(title: title, lines: payloadLines);
-        senderRunning = _mqttSender.running;
-      } else {
+      }
+      if (tcpConfigured) {
         await _sender.sendState(globals, showing: showing, wordToHighlight: 0);
         await _sender.sendText(
           title: title,
@@ -2508,8 +2571,8 @@ class DiatarMainController extends ChangeNotifier {
           wordToHighlight: 0,
         );
         await _sender.sendIdle();
-        senderRunning = _sender.running;
       }
+      _refreshSenderFlags();
       _setStatus('statusCustomTextSent', <String, String>{'title': title});
       notifyListeners();
       return;
@@ -2632,8 +2695,8 @@ class DiatarMainController extends ChangeNotifier {
           wordToHighlight: highPos,
         );
         await _mqttSender.sendText(title: effectiveTitle, lines: nonEmptyLines);
-        senderRunning = _mqttSender.running;
-      } else {
+      }
+      if (tcpConfigured) {
         await _sender.sendState(
           globals,
           showing: showing,
@@ -2645,8 +2708,8 @@ class DiatarMainController extends ChangeNotifier {
           wordToHighlight: highPos,
         );
         await _sender.sendIdle();
-        senderRunning = _sender.running;
       }
+      _refreshSenderFlags();
       _setStatus('statusCustomTextSent', <String, String>{
         'title': effectiveTitle,
       });
@@ -2687,9 +2750,11 @@ class DiatarMainController extends ChangeNotifier {
       }
       if (mqttActive) {
         await _mqttSender.sendPic(bytes, ext: ext);
-      } else {
+      }
+      if (tcpConfigured) {
         await _sender.sendPic(bytes, ext: ext);
       }
+      _refreshSenderFlags();
       lastPicPath = normalized;
       _setStatus('statusImageSent', <String, String>{
         'name': file.uri.pathSegments.isNotEmpty
@@ -2741,7 +2806,8 @@ class DiatarMainController extends ChangeNotifier {
           showing: showing,
           wordToHighlight: highPos,
         );
-      } else {
+      }
+      if (tcpConfigured) {
         await _sender.sendBlank(bytes, ext: ext);
         await _sender.sendState(
           globals,
@@ -2749,6 +2815,7 @@ class DiatarMainController extends ChangeNotifier {
           wordToHighlight: highPos,
         );
       }
+      _refreshSenderFlags();
       lastBlankPath = normalized;
       settings = settings.copyWith(blankPicPath: normalized);
       await _settingsStore.save(settings);
@@ -2779,7 +2846,8 @@ class DiatarMainController extends ChangeNotifier {
           showing: showing,
           wordToHighlight: highPos,
         );
-      } else {
+      }
+      if (tcpConfigured) {
         await _sender.sendBlank(Uint8List(0), ext: '');
         await _sender.sendState(
           globals,
@@ -2787,6 +2855,7 @@ class DiatarMainController extends ChangeNotifier {
           wordToHighlight: highPos,
         );
       }
+      _refreshSenderFlags();
       _setStatus('statusBlankCleared');
       notifyListeners();
     } catch (e) {
@@ -2809,13 +2878,15 @@ class DiatarMainController extends ChangeNotifier {
           showing: showing,
           wordToHighlight: highPos,
         );
-      } else {
+      }
+      if (tcpConfigured) {
         await _sender.sendState(
           globals,
           showing: showing,
           wordToHighlight: highPos,
         );
       }
+      _refreshSenderFlags();
 
       // End-program commands are one-shot signals in Android too.
       globals = globals.copyWith(endProgram: 0);
