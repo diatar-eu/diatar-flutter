@@ -1040,7 +1040,14 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get userActionResendVerificationSuccess =>
-      'Megerősítő e-mail újraküldve.';
+      'Megerősítő e-mail újraküldve. Kérjük, ellenőrizze az e-mailjeit.';
+
+  @override
+  String get userActionValidationRequiredFields =>
+      'A felhasználónév és az e-mail megadása kötelező.';
+
+  @override
+  String get userActionValidationInvalidEmail => 'Érvénytelen e-mail-cím.';
 
   @override
   String get userActionDeleteUserSuccess => 'Felhasználó törölve.';

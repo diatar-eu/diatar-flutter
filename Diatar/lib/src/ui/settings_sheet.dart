@@ -38,6 +38,8 @@ class DiatarSettingsSheet extends StatefulWidget {
 }
 
 class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
+  static final RegExp _simpleEmailPattern = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+
   late final TextEditingController _search;
   late final TextEditingController _tcpTargets;
   late final TextEditingController _mqttUser;
@@ -540,22 +542,24 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   Future<void> _resendVerification() async {
     final l10n = context.l10n;
-    final String? username = await _askText(
+    final _ResendVerificationInput? input = await _askResendVerificationInput(
       title: l10n.userActionResendVerification,
-      label: l10n.userFieldUsername,
-      initialValue: _mqttUser.text.trim(),
     );
-    if (username == null) {
+    if (input == null) {
       return;
     }
-    final String? email = await _askText(
-      title: l10n.userActionResendVerification,
-      label: l10n.userFieldEmail,
-      keyboardType: TextInputType.emailAddress,
-    );
-    if (email == null) {
+
+    final String username = input.username;
+    final String email = input.email;
+    if (username.isEmpty || email.isEmpty) {
+      await _showInternetResultDialog(l10n.userActionValidationRequiredFields);
       return;
     }
+    if (!_simpleEmailPattern.hasMatch(email)) {
+      await _showInternetResultDialog(l10n.userActionValidationInvalidEmail);
+      return;
+    }
+
     await _runUserApiAction(
       successMessage: l10n.userActionResendVerificationSuccess,
       action: () =>
@@ -772,6 +776,36 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
+  Future<_ResendVerificationInput?> _askResendVerificationInput({
+    required String title,
+  }) {
+    return showDialog<_ResendVerificationInput>(
+      context: context,
+      builder: (BuildContext context) {
+        return _ResendVerificationInputDialog(title: title);
+      },
+    );
+  }
+
+  Future<void> _showInternetResultDialog(String message) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(context.l10n.settingsInternetTitle),
+          content: Text(message),
+          actions: <Widget>[
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(context.l10n.ok),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _runUserApiAction({
     required String successMessage,
     required Future<void> Function() action,
@@ -785,42 +819,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       if (!mounted) {
         return;
       }
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text(context.l10n.settingsInternetTitle),
-            content: Text(successMessage),
-            actions: <Widget>[
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(context.l10n.ok),
-              ),
-            ],
-          );
-        },
-      );
+      await _showInternetResultDialog(successMessage);
     } catch (e) {
       if (!mounted) {
         return;
       }
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text(context.l10n.settingsInternetTitle),
-            content: Text(context.l10n.userApiError('$e')),
-            actions: <Widget>[
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(context.l10n.ok),
-              ),
-            ],
-          );
-        },
-      );
+      await _showInternetResultDialog(context.l10n.userApiError('$e'));
     } finally {
       _setInternetActionRunning(false);
     }
@@ -2323,6 +2327,13 @@ class _RegistrationInput {
   final String email;
 }
 
+class _ResendVerificationInput {
+  const _ResendVerificationInput({required this.username, required this.email});
+
+  final String username;
+  final String email;
+}
+
 class _RegistrationInputDialog extends StatefulWidget {
   const _RegistrationInputDialog({
     required this.title,
@@ -2397,6 +2408,74 @@ class _RegistrationInputDialogState extends State<_RegistrationInputDialog> {
                 ),
               ),
             ),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(labelText: l10n.userFieldEmail),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(l10n.ok),
+        ),
+      ],
+    );
+  }
+}
+
+class _ResendVerificationInputDialog extends StatefulWidget {
+  const _ResendVerificationInputDialog({required this.title});
+
+  final String title;
+
+  @override
+  State<_ResendVerificationInputDialog> createState() =>
+      _ResendVerificationInputDialogState();
+}
+
+class _ResendVerificationInputDialogState
+    extends State<_ResendVerificationInputDialog> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    Navigator.of(context).pop(
+      _ResendVerificationInput(
+        username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TextField(
+            controller: _usernameController,
+            decoration: InputDecoration(labelText: l10n.userFieldUsername),
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 12),
