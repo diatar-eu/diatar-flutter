@@ -6,13 +6,30 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:diavetito/src/app.dart';
+import 'package:diavetito/l10n/generated/app_localizations.dart';
 
 void main() {
   testWidgets('app renders settings button', (WidgetTester tester) async {
     await tester.pumpWidget(const DiaVetitoApp());
     await tester.pumpAndSettle();
-    expect(find.text('Beallitasok'), findsOneWidget);
+
+    final AppLocalizations hu = await AppLocalizations.delegate.load(
+      const Locale('hu'),
+    );
+    final AppLocalizations en = await AppLocalizations.delegate.load(
+      const Locale('en'),
+    );
+
+    await tester.tap(find.byType(GestureDetector).first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(hu.settingsTitleReceiver).evaluate().length +
+          find.text(en.settingsTitleReceiver).evaluate().length,
+      1,
+    );
   });
 }
