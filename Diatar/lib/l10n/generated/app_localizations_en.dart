@@ -1076,6 +1076,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get userApiUnauthorized =>
+      'Authentication failed. Check the username and password.';
+
+  @override
+  String get userApiUnknownError => 'Unexpected API error.';
+
+  @override
   String get settingsHotkeyPressAnyKey => 'Press any key combination...';
 
   @override

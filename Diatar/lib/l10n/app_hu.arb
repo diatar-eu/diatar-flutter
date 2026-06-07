@@ -678,6 +678,8 @@
       "error": {}
     }
   },
+  "userApiUnauthorized": "Sikertelen hitelesítés. Ellenőrizze a felhasználónevet és a jelszót.",
+  "userApiUnknownError": "Váratlan API-hiba.",
   "settingsHotkeyPressAnyKey": "Nyomj meg bármelyik billentyű kombinációt...",
   "settingsHotkeyDialogTitle": "Gyorsbillentyű rögzítése",
   "settingsHotkeyConfirm": "Megerősítés",

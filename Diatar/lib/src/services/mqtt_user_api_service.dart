@@ -2,6 +2,19 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+class MqttUserApiException implements Exception {
+  const MqttUserApiException({
+    required this.message,
+    this.statusCode,
+  });
+
+  final String message;
+  final int? statusCode;
+
+  @override
+  String toString() => message;
+}
+
 class MqttUserApiService {
   static const String _baseUrl = 'https://mqtt.diatar.eu';
   static const int _maxRedirects = 5;
@@ -106,7 +119,10 @@ class MqttUserApiService {
       if (_isRedirect(response.statusCode)) {
         final String location = response.headers.value(HttpHeaders.locationHeader) ?? '';
         if (location.isEmpty) {
-          throw Exception('HTTP ${response.statusCode}');
+          throw MqttUserApiException(
+            message: 'HTTP ${response.statusCode}',
+            statusCode: response.statusCode,
+          );
         }
         uri = uri.resolve(location);
         continue;
@@ -114,12 +130,15 @@ class MqttUserApiService {
 
       final String body = await utf8.decoder.bind(response).join();
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception(_extractError(body, response.statusCode));
+        throw MqttUserApiException(
+          message: _extractError(body, response.statusCode),
+          statusCode: response.statusCode,
+        );
       }
       return;
     }
 
-    throw Exception('Too many redirects');
+    throw const MqttUserApiException(message: 'Too many redirects');
   }
 
   bool _isRedirect(int statusCode) {

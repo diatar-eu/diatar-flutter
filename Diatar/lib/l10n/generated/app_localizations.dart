@@ -1949,6 +1949,18 @@ abstract class AppLocalizations {
   /// **'API hiba: {error}'**
   String userApiError(Object error);
 
+  /// No description provided for @userApiUnauthorized.
+  ///
+  /// In hu, this message translates to:
+  /// **'Sikertelen hitelesítés. Ellenőrizze a felhasználónevet és a jelszót.'**
+  String get userApiUnauthorized;
+
+  /// No description provided for @userApiUnknownError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Váratlan API-hiba.'**
+  String get userApiUnknownError;
+
   /// No description provided for @settingsHotkeyPressAnyKey.
   ///
   /// In hu, this message translates to:
