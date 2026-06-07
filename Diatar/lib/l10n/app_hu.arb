@@ -666,6 +666,7 @@
   "userActionValidationRequiredFields": "A felhasználónév és az e-mail megadása kötelező.",
   "userActionValidationRequiredPasswordFields": "A felhasználónév, a jelenlegi jelszó és az új jelszó megadása kötelező.",
   "userActionValidationRequiredChangeEmailFields": "A felhasználónév, a jelenlegi jelszó és az új e-mail megadása kötelező.",
+  "userActionValidationRequiredChangeUsernameFields": "A jelenlegi felhasználónév, a jelszó és az új felhasználónév megadása kötelező.",
   "userActionValidationInvalidEmail": "Érvénytelen e-mail-cím.",
   "userActionDeleteUserSuccess": "Felhasználó törölve.",
   "userActionChangePasswordSuccess": "Jelszó sikeresen módosítva.",

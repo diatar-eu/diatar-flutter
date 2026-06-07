@@ -1055,6 +1055,10 @@ class AppLocalizationsHu extends AppLocalizations {
       'A felhasználónév, a jelenlegi jelszó és az új e-mail megadása kötelező.';
 
   @override
+  String get userActionValidationRequiredChangeUsernameFields =>
+      'A jelenlegi felhasználónév, a jelszó és az új felhasználónév megadása kötelező.';
+
+  @override
   String get userActionValidationInvalidEmail => 'Érvénytelen e-mail-cím.';
 
   @override

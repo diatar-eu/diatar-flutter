@@ -38,7 +38,9 @@ class DiatarSettingsSheet extends StatefulWidget {
 }
 
 class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
-  static final RegExp _simpleEmailPattern = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+  static final RegExp _simpleEmailPattern = RegExp(
+    r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+  );
 
   late final TextEditingController _search;
   late final TextEditingController _tcpTargets;
@@ -91,7 +93,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   @override
   void initState() {
     super.initState();
-    _userApi = MqttUserApiService(acceptLanguageProvider: _currentAcceptLanguage);
+    _userApi = MqttUserApiService(
+      acceptLanguageProvider: _currentAcceptLanguage,
+    );
     _loadAppVersion();
     final AppSettings s = widget.initialSettings;
     _search = TextEditingController();
@@ -153,7 +157,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     }
     setState(() {
       final parts = info.version.split('.');
-      _appVersion = parts.length >= 2 ? '${parts[0]}.${parts[1]}' : info.version;
+      _appVersion = parts.length >= 2
+          ? '${parts[0]}.${parts[1]}'
+          : info.version;
       _buildNumber = info.buildNumber;
     });
   }
@@ -201,8 +207,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ? l10n.themeDark
         : l10n.themeLight;
     final String blankSummary = _blankPicPath.text.trim().isEmpty
-      ? l10n.valueNotSet
-      : shortFriendlyPathLabel(_blankPicPath.text.trim(), l10n);
+        ? l10n.valueNotSet
+        : shortFriendlyPathLabel(_blankPicPath.text.trim(), l10n);
     final bool desktopHotkeysAvailable = _isDesktopPlatform();
     final bool showInternet = _matches(
       query,
@@ -346,9 +352,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     _settingsTile(
                       leading: const Icon(Icons.folder),
                       title: Text(l10n.settingsFilesTitle),
-                      subtitle: Text(
-                        l10n.settingsFilesSummary(blankSummary),
-                      ),
+                      subtitle: Text(l10n.settingsFilesSummary(blankSummary)),
                       onTap: _openFileSettings,
                     ),
                   if (showFiles && (showGeneral || showHotkeys))
@@ -685,71 +689,47 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   Future<void> _changeUsername() async {
     final l10n = context.l10n;
-    final String? username = await _askText(
+    final _ChangeUsernameInput? input = await _askChangeUsernameInput(
       title: l10n.userActionChangeUsername,
-      label: l10n.userFieldCurrentUsername,
-      initialValue: _mqttUser.text.trim(),
+      initialUsername: _mqttUser.text.trim(),
     );
-    if (username == null) {
+    if (input == null) {
       return;
     }
-    final String? password = await _askText(
-      title: l10n.userActionChangeUsername,
-      label: l10n.userFieldCurrentPassword,
-      obscure: true,
-    );
-    if (password == null) {
+    final String username = input.username;
+    final String password = input.password;
+    final String newUsername = input.newUsername;
+    if (username.isEmpty || password.isEmpty || newUsername.isEmpty) {
+      await _showInternetResultDialog(
+        l10n.userActionValidationRequiredChangeUsernameFields,
+      );
       return;
     }
-    final String? newUsername = await _askText(
-      title: l10n.userActionChangeUsername,
-      label: l10n.userFieldNewUsername,
-    );
-    if (newUsername == null) {
-      return;
-    }
-    final String? newPassword = await _askText(
-      title: l10n.userActionChangeUsername,
-      label: l10n.userFieldNewPassword,
-      obscure: true,
-    );
-    if (newPassword == null) {
-      return;
-    }
+
     await _runUserApiAction(
       successMessage: l10n.userActionChangeUsernameSuccess,
       action: () => _userApi.changeUsername(
         username: username,
         password: password,
         newUsername: newUsername,
-        newPassword: newPassword,
+        newPassword: password,
       ),
     );
   }
 
-  Future<String?> _askText({
+  Future<_ChangeUsernameInput?> _askChangeUsernameInput({
     required String title,
-    required String label,
-    String initialValue = '',
-    bool obscure = false,
-    TextInputType keyboardType = TextInputType.text,
-  }) async {
-    final String? result = await showDialog<String>(
+    required String initialUsername,
+  }) {
+    return showDialog<_ChangeUsernameInput>(
       context: context,
       builder: (BuildContext context) {
-        return _TextInputDialog(
+        return _ChangeUsernameInputDialog(
           title: title,
-          label: label,
-          initialValue: initialValue,
-          obscure: obscure,
-          keyboardType: keyboardType,
+          initialUsername: initialUsername,
         );
       },
     );
-    if (result == null || result.trim().isEmpty) {
-      return null;
-    }
-    return result.trim();
   }
 
   Future<_RegistrationInput?> _askRegistrationInput({
@@ -877,7 +857,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       if (error.statusCode == 401) {
         return l10n.userApiUnauthorized;
       }
-      return error.message.trim().isEmpty ? l10n.userApiUnknownError : error.message;
+      return error.message.trim().isEmpty
+          ? l10n.userApiUnknownError
+          : error.message;
     }
 
     final String message = error
@@ -947,7 +929,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           const SizedBox(height: 8),
           Text(
             l10n.tcpTargetsHelp,
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ];
       },
@@ -1039,7 +1023,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             key: ValueKey<String>('path_$label|$trimmed'),
             initialValue: friendly,
             readOnly: true,
-            decoration: InputDecoration(labelText: label, helperText: helperText),
+            decoration: InputDecoration(
+              labelText: label,
+              helperText: helperText,
+            ),
           ),
         ),
         IconButton(
@@ -1897,7 +1884,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                             alignment: Alignment.centerRight,
                             child: FilledButton(
                               onPressed: () {
-                                final bool canClose = onConfirmClose?.call() ?? true;
+                                final bool canClose =
+                                    onConfirmClose?.call() ?? true;
                                 if (canClose) {
                                   Navigator.of(context).pop();
                                 }
@@ -2317,64 +2305,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 }
 
-class _TextInputDialog extends StatefulWidget {
-  const _TextInputDialog({
-    required this.title,
-    required this.label,
-    this.initialValue = '',
-    this.obscure = false,
-    this.keyboardType = TextInputType.text,
-  });
-
-  final String title;
-  final String label;
-  final String initialValue;
-  final bool obscure;
-  final TextInputType keyboardType;
-
-  @override
-  State<_TextInputDialog> createState() => _TextInputDialogState();
-}
-
-class _TextInputDialogState extends State<_TextInputDialog> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialValue);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.title),
-      content: TextField(
-        controller: _controller,
-        obscureText: widget.obscure,
-        keyboardType: widget.keyboardType,
-        decoration: InputDecoration(labelText: widget.label),
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(context.l10n.cancel),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
-          child: Text(context.l10n.ok),
-        ),
-      ],
-    );
-  }
-}
-
 class _RegistrationInput {
   const _RegistrationInput({
     required this.username,
@@ -2425,6 +2355,18 @@ class _ChangePasswordInput {
   final String newPassword;
 }
 
+class _ChangeUsernameInput {
+  const _ChangeUsernameInput({
+    required this.username,
+    required this.password,
+    required this.newUsername,
+  });
+
+  final String username;
+  final String password;
+  final String newUsername;
+}
+
 class _RegistrationInputDialog extends StatefulWidget {
   const _RegistrationInputDialog({
     required this.title,
@@ -2435,7 +2377,8 @@ class _RegistrationInputDialog extends StatefulWidget {
   final String initialUsername;
 
   @override
-  State<_RegistrationInputDialog> createState() => _RegistrationInputDialogState();
+  State<_RegistrationInputDialog> createState() =>
+      _RegistrationInputDialogState();
 }
 
 class _RegistrationInputDialogState extends State<_RegistrationInputDialog> {
@@ -2516,10 +2459,7 @@ class _RegistrationInputDialogState extends State<_RegistrationInputDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l10n.cancel),
         ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(l10n.ok),
-        ),
+        FilledButton(onPressed: _submit, child: Text(l10n.ok)),
       ],
     );
   }
@@ -2623,10 +2563,105 @@ class _ChangeEmailInputDialogState extends State<_ChangeEmailInputDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l10n.cancel),
         ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(l10n.ok),
+        FilledButton(onPressed: _submit, child: Text(l10n.ok)),
+      ],
+    );
+  }
+}
+
+class _ChangeUsernameInputDialog extends StatefulWidget {
+  const _ChangeUsernameInputDialog({
+    required this.title,
+    required this.initialUsername,
+  });
+
+  final String title;
+  final String initialUsername;
+
+  @override
+  State<_ChangeUsernameInputDialog> createState() =>
+      _ChangeUsernameInputDialogState();
+}
+
+class _ChangeUsernameInputDialogState
+    extends State<_ChangeUsernameInputDialog> {
+  late final TextEditingController _usernameController;
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _newUsernameController = TextEditingController();
+  bool _showPassword = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController = TextEditingController(text: widget.initialUsername);
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _newUsernameController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    Navigator.of(context).pop(
+      _ChangeUsernameInput(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text.trim(),
+        newUsername: _newUsernameController.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TextField(
+            controller: _usernameController,
+            decoration: InputDecoration(
+              labelText: l10n.userFieldCurrentUsername,
+            ),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _passwordController,
+            obscureText: !_showPassword,
+            decoration: InputDecoration(
+              labelText: l10n.userFieldCurrentPassword,
+              suffixIcon: IconButton(
+                tooltip: _showPassword
+                    ? l10n.passwordHideTooltip
+                    : l10n.passwordShowTooltip,
+                onPressed: () => setState(() => _showPassword = !_showPassword),
+                icon: Icon(
+                  _showPassword ? Icons.visibility_off : Icons.visibility,
+                ),
+              ),
+            ),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _newUsernameController,
+            decoration: InputDecoration(labelText: l10n.userFieldNewUsername),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
         ),
+        FilledButton(onPressed: _submit, child: Text(l10n.ok)),
       ],
     );
   }
@@ -2691,10 +2726,7 @@ class _ResendVerificationInputDialogState
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l10n.cancel),
         ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(l10n.ok),
-        ),
+        FilledButton(onPressed: _submit, child: Text(l10n.ok)),
       ],
     );
   }
@@ -2779,10 +2811,7 @@ class _DeleteUserInputDialogState extends State<_DeleteUserInputDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l10n.cancel),
         ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(l10n.ok),
-        ),
+        FilledButton(onPressed: _submit, child: Text(l10n.ok)),
       ],
     );
   }
@@ -2892,10 +2921,7 @@ class _ChangePasswordInputDialogState
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l10n.cancel),
         ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(l10n.ok),
-        ),
+        FilledButton(onPressed: _submit, child: Text(l10n.ok)),
       ],
     );
   }

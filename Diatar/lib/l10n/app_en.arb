@@ -666,6 +666,7 @@
   "userActionValidationRequiredFields": "Username and e-mail are required.",
   "userActionValidationRequiredPasswordFields": "Username, current password and new password are required.",
   "userActionValidationRequiredChangeEmailFields": "Username, current password and new e-mail are required.",
+  "userActionValidationRequiredChangeUsernameFields": "Current username, password and new username are required.",
   "userActionValidationInvalidEmail": "Invalid e-mail address.",
   "userActionDeleteUserSuccess": "User deleted.",
   "userActionChangePasswordSuccess": "Password changed successfully.",
