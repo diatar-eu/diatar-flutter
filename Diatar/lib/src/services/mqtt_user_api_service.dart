@@ -47,6 +47,16 @@ class MqttUserApiService {
     });
   }
 
+  Future<void> requestPasswordReset({
+    required String username,
+    required String email,
+  }) {
+    return _post('/api/v1/users/request-password-reset', <String, String>{
+      'username': username,
+      'email': email,
+    });
+  }
+
   Future<void> deleteUser({
     required String username,
     required String password,

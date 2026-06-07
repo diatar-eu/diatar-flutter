@@ -999,6 +999,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get userActionResendVerification => 'E-mail újraküldés';
 
   @override
+  String get userActionForgotPassword => 'Elfelejtett jelszó';
+
+  @override
   String get userActionDeleteUser => 'Felhasználó törlése';
 
   @override
@@ -1041,6 +1044,10 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get userActionResendVerificationSuccess =>
       'Megerősítő e-mail újraküldve. Kérjük, ellenőrizze az e-mailjeit.';
+
+  @override
+  String get userActionForgotPasswordSuccess =>
+      'Ha a fiók létezik, jelszó-visszaállító e-mailt küldtünk.';
 
   @override
   String get userActionValidationRequiredFields =>
