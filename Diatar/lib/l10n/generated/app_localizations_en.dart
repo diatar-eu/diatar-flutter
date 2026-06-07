@@ -1045,6 +1045,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Username and e-mail are required.';
 
   @override
+  String get userActionValidationRequiredPasswordFields =>
+      'Username, current password and new password are required.';
+
+  @override
   String get userActionValidationInvalidEmail => 'Invalid e-mail address.';
 
   @override

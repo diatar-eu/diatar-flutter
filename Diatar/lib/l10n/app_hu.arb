@@ -664,6 +664,7 @@
   "userActionRegisterSuccess": "Sikeres adatfelvétel. A regisztráció véglegesítéséhez nézze meg az e-mail-fiókját.",
   "userActionResendVerificationSuccess": "Megerősítő e-mail újraküldve. Kérjük, ellenőrizze az e-mailjeit.",
   "userActionValidationRequiredFields": "A felhasználónév és az e-mail megadása kötelező.",
+  "userActionValidationRequiredPasswordFields": "A felhasználónév, a jelenlegi jelszó és az új jelszó megadása kötelező.",
   "userActionValidationInvalidEmail": "Érvénytelen e-mail-cím.",
   "userActionDeleteUserSuccess": "Felhasználó törölve.",
   "userActionChangePasswordSuccess": "Jelszó sikeresen módosítva.",
