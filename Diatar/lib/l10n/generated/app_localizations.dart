@@ -1805,6 +1805,12 @@ abstract class AppLocalizations {
   /// **'E-mail újraküldés'**
   String get userActionResendVerification;
 
+  /// No description provided for @userActionForgotPassword.
+  ///
+  /// In hu, this message translates to:
+  /// **'Elfelejtett jelszó'**
+  String get userActionForgotPassword;
+
   /// No description provided for @userActionDeleteUser.
   ///
   /// In hu, this message translates to:
@@ -1888,6 +1894,12 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Megerősítő e-mail újraküldve. Kérjük, ellenőrizze az e-mailjeit.'**
   String get userActionResendVerificationSuccess;
+
+  /// No description provided for @userActionForgotPasswordSuccess.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ha a fiók létezik, jelszó-visszaállító e-mailt küldtünk.'**
+  String get userActionForgotPasswordSuccess;
 
   /// No description provided for @userActionValidationRequiredFields.
   ///

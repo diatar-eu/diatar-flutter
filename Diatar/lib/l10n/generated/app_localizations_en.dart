@@ -997,6 +997,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userActionResendVerification => 'Resend e-mail';
 
   @override
+  String get userActionForgotPassword => 'Forgot password';
+
+  @override
   String get userActionDeleteUser => 'Delete user';
 
   @override
@@ -1039,6 +1042,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get userActionResendVerificationSuccess =>
       'Verification e-mail resent. Please check your e-mails.';
+
+  @override
+  String get userActionForgotPasswordSuccess =>
+      'If the account exists, a password reset e-mail has been sent.';
 
   @override
   String get userActionValidationRequiredFields =>

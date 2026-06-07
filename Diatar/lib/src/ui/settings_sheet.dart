@@ -495,6 +495,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 label: Text(l10n.userActionResendVerification),
               ),
               OutlinedButton.icon(
+                onPressed: _internetActionRunning ? null : _forgotPassword,
+                icon: const Icon(Icons.lock_reset),
+                label: Text(l10n.userActionForgotPassword),
+              ),
+              OutlinedButton.icon(
                 onPressed: _internetActionRunning ? null : _deleteUser,
                 icon: const Icon(Icons.person_remove_alt_1),
                 label: Text(l10n.userActionDeleteUser),
@@ -619,6 +624,33 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     await _runUserApiAction(
       successMessage: l10n.userActionDeleteUserSuccess,
       action: () => _userApi.deleteUser(username: username, password: password),
+    );
+  }
+
+  Future<void> _forgotPassword() async {
+    final l10n = context.l10n;
+    final _ResendVerificationInput? input = await _askResendVerificationInput(
+      title: l10n.userActionForgotPassword,
+    );
+    if (input == null) {
+      return;
+    }
+
+    final String username = input.username;
+    final String email = input.email;
+    if (username.isEmpty || email.isEmpty) {
+      await _showInternetResultDialog(l10n.userActionValidationRequiredFields);
+      return;
+    }
+    if (!_simpleEmailPattern.hasMatch(email)) {
+      await _showInternetResultDialog(l10n.userActionValidationInvalidEmail);
+      return;
+    }
+
+    await _runUserApiAction(
+      successMessage: l10n.userActionForgotPasswordSuccess,
+      action: () =>
+          _userApi.requestPasswordReset(username: username, email: email),
     );
   }
 
