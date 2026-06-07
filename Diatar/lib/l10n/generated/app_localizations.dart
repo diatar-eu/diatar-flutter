@@ -1907,6 +1907,12 @@ abstract class AppLocalizations {
   /// **'A felhasználónév, a jelenlegi jelszó és az új e-mail megadása kötelező.'**
   String get userActionValidationRequiredChangeEmailFields;
 
+  /// No description provided for @userActionValidationRequiredChangeUsernameFields.
+  ///
+  /// In hu, this message translates to:
+  /// **'A jelenlegi felhasználónév, a jelszó és az új felhasználónév megadása kötelező.'**
+  String get userActionValidationRequiredChangeUsernameFields;
+
   /// No description provided for @userActionValidationInvalidEmail.
   ///
   /// In hu, this message translates to:
