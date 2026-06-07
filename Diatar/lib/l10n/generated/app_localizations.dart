@@ -1886,8 +1886,20 @@ abstract class AppLocalizations {
   /// No description provided for @userActionResendVerificationSuccess.
   ///
   /// In hu, this message translates to:
-  /// **'Megerősítő e-mail újraküldve.'**
+  /// **'Megerősítő e-mail újraküldve. Kérjük, ellenőrizze az e-mailjeit.'**
   String get userActionResendVerificationSuccess;
+
+  /// No description provided for @userActionValidationRequiredFields.
+  ///
+  /// In hu, this message translates to:
+  /// **'A felhasználónév és az e-mail megadása kötelező.'**
+  String get userActionValidationRequiredFields;
+
+  /// No description provided for @userActionValidationInvalidEmail.
+  ///
+  /// In hu, this message translates to:
+  /// **'Érvénytelen e-mail-cím.'**
+  String get userActionValidationInvalidEmail;
 
   /// No description provided for @userActionDeleteUserSuccess.
   ///

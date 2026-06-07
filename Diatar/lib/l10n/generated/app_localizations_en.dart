@@ -1038,7 +1038,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userActionResendVerificationSuccess =>
-      'Verification e-mail resent.';
+      'Verification e-mail resent. Please check your e-mails.';
+
+  @override
+  String get userActionValidationRequiredFields =>
+      'Username and e-mail are required.';
+
+  @override
+  String get userActionValidationInvalidEmail => 'Invalid e-mail address.';
 
   @override
   String get userActionDeleteUserSuccess => 'User deleted.';
