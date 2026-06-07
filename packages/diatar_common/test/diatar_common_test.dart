@@ -9,7 +9,8 @@ void main() {
   test('default app settings are valid', () {
     const AppSettings s = AppSettings();
     expect(s.port, 1024);
-    expect(s.tcpEnabled, true);
+    expect(s.tcpEnabled, false);
+    expect(s.copyWith(tcpTargets: const <String>['127.0.0.1']).tcpEnabled, true);
   });
 
   test('packet parser rebuilds records from split chunks', () {
@@ -282,8 +283,8 @@ void main() {
     );
 
     expect(startXs.length, greaterThanOrEqualTo(2));
-    expect(startXs.first, 16);
-    expect(startXs.skip(1), everyElement(32));
+    expect(startXs.first, 0);
+    expect(startXs.skip(1), everyElement(16));
   });
 
   test('tie underline continuations survive wrapped rows', () {
@@ -315,7 +316,7 @@ void main() {
 
     expect(
       painter.debugLogoBackgroundColorForPhase(31),
-      const Color(0xFF46E887),
+      const Color(0xFF46E08C),
     );
     expect(
       painter.debugLogoBackgroundColorForPhase(32),
