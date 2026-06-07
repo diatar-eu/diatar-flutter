@@ -1049,6 +1049,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Username, current password and new password are required.';
 
   @override
+  String get userActionValidationRequiredChangeEmailFields =>
+      'Username, current password and new e-mail are required.';
+
+  @override
   String get userActionValidationInvalidEmail => 'Invalid e-mail address.';
 
   @override
@@ -1059,7 +1063,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Password changed successfully.';
 
   @override
-  String get userActionChangeEmailSuccess => 'E-mail change request sent.';
+  String get userActionChangeEmailSuccess =>
+      'E-mail change request sent. Please check your e-mail inbox to complete verification.';
 
   @override
   String get userActionChangeUsernameSuccess => 'Username changed.';

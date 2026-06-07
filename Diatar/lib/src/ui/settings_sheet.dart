@@ -650,30 +650,29 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   Future<void> _changeEmail() async {
     final l10n = context.l10n;
-    final String? username = await _askText(
+    final _ChangeEmailInput? input = await _askChangeEmailInput(
       title: l10n.userActionChangeEmail,
-      label: l10n.userFieldUsername,
       initialValue: _mqttUser.text.trim(),
     );
-    if (username == null) {
+    if (input == null) {
       return;
     }
-    final String? password = await _askText(
-      title: l10n.userActionChangeEmail,
-      label: l10n.userFieldPassword,
-      obscure: true,
-    );
-    if (password == null) {
+
+    final String username = input.username;
+    final String password = input.password;
+    final String newEmail = input.newEmail;
+    if (username.isEmpty || password.isEmpty || newEmail.isEmpty) {
+      await _showInternetResultDialog(
+        l10n.userActionValidationRequiredChangeEmailFields,
+      );
       return;
     }
-    final String? newEmail = await _askText(
-      title: l10n.userActionChangeEmail,
-      label: l10n.userFieldNewEmail,
-      keyboardType: TextInputType.emailAddress,
-    );
-    if (newEmail == null) {
+
+    if (!_simpleEmailPattern.hasMatch(newEmail)) {
+      await _showInternetResultDialog(l10n.userActionValidationInvalidEmail);
       return;
     }
+
     await _runUserApiAction(
       successMessage: l10n.userActionChangeEmailSuccess,
       action: () => _userApi.changeEmail(
@@ -763,6 +762,21 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         return _RegistrationInputDialog(
           title: title,
           initialUsername: initialUsername,
+        );
+      },
+    );
+  }
+
+  Future<_ChangeEmailInput?> _askChangeEmailInput({
+    required String title,
+    required String initialValue,
+  }) {
+    return showDialog<_ChangeEmailInput>(
+      context: context,
+      builder: (BuildContext context) {
+        return _ChangeEmailInputDialog(
+          title: title,
+          initialUsername: initialValue,
         );
       },
     );
@@ -2373,6 +2387,18 @@ class _RegistrationInput {
   final String email;
 }
 
+class _ChangeEmailInput {
+  const _ChangeEmailInput({
+    required this.username,
+    required this.password,
+    required this.newEmail,
+  });
+
+  final String username;
+  final String password;
+  final String newEmail;
+}
+
 class _ResendVerificationInput {
   const _ResendVerificationInput({required this.username, required this.email});
 
@@ -2480,6 +2506,113 @@ class _RegistrationInputDialogState extends State<_RegistrationInputDialog> {
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             decoration: InputDecoration(labelText: l10n.userFieldEmail),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(l10n.ok),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChangeEmailInputDialog extends StatefulWidget {
+  const _ChangeEmailInputDialog({
+    required this.title,
+    required this.initialUsername,
+  });
+
+  final String title;
+  final String initialUsername;
+
+  @override
+  State<_ChangeEmailInputDialog> createState() =>
+      _ChangeEmailInputDialogState();
+}
+
+class _ChangeEmailInputDialogState extends State<_ChangeEmailInputDialog> {
+  late final TextEditingController _usernameController;
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _newEmailController = TextEditingController();
+  bool _showPassword = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController = TextEditingController(text: widget.initialUsername);
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _newEmailController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final String username = _usernameController.text.trim();
+    final String password = _passwordController.text.trim();
+    final String newEmail = _newEmailController.text.trim();
+    if (username.isEmpty || password.isEmpty || newEmail.isEmpty) {
+      return;
+    }
+    Navigator.of(context).pop(
+      _ChangeEmailInput(
+        username: username,
+        password: password,
+        newEmail: newEmail,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TextField(
+            controller: _usernameController,
+            decoration: InputDecoration(
+              labelText: l10n.userFieldCurrentUsername,
+            ),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _passwordController,
+            obscureText: !_showPassword,
+            decoration: InputDecoration(
+              labelText: l10n.userFieldCurrentPassword,
+              suffixIcon: IconButton(
+                tooltip: _showPassword
+                    ? l10n.passwordHideTooltip
+                    : l10n.passwordShowTooltip,
+                onPressed: () => setState(() => _showPassword = !_showPassword),
+                icon: Icon(
+                  _showPassword ? Icons.visibility_off : Icons.visibility,
+                ),
+              ),
+            ),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _newEmailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(labelText: l10n.userFieldNewEmail),
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _submit(),
           ),

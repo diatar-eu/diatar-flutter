@@ -1901,6 +1901,12 @@ abstract class AppLocalizations {
   /// **'A felhasználónév, a jelenlegi jelszó és az új jelszó megadása kötelező.'**
   String get userActionValidationRequiredPasswordFields;
 
+  /// No description provided for @userActionValidationRequiredChangeEmailFields.
+  ///
+  /// In hu, this message translates to:
+  /// **'A felhasználónév, a jelenlegi jelszó és az új e-mail megadása kötelező.'**
+  String get userActionValidationRequiredChangeEmailFields;
+
   /// No description provided for @userActionValidationInvalidEmail.
   ///
   /// In hu, this message translates to:
@@ -1922,7 +1928,7 @@ abstract class AppLocalizations {
   /// No description provided for @userActionChangeEmailSuccess.
   ///
   /// In hu, this message translates to:
-  /// **'E-mail-cím módosítási kérés elküldve.'**
+  /// **'E-mail-cím módosítási kérés elküldve. A véglegesítéshez nézze meg az e-mail-fiókját.'**
   String get userActionChangeEmailSuccess;
 
   /// No description provided for @userActionChangeUsernameSuccess.
