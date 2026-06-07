@@ -569,20 +569,18 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   Future<void> _deleteUser() async {
     final l10n = context.l10n;
-    final String? username = await _askText(
+    final _DeleteUserInput? input = await _askDeleteUserInput(
       title: l10n.userActionDeleteUser,
-      label: l10n.userFieldUsername,
-      initialValue: _mqttUser.text.trim(),
+      initialUsername: _mqttUser.text.trim(),
     );
-    if (username == null) {
+    if (input == null) {
       return;
     }
-    final String? password = await _askText(
-      title: l10n.userActionDeleteUser,
-      label: l10n.userFieldPassword,
-      obscure: true,
-    );
-    if (password == null) {
+
+    final String username = input.username;
+    final String password = input.password;
+    if (username.isEmpty || password.isEmpty) {
+      await _showInternetResultDialog(l10n.userActionValidationRequiredFields);
       return;
     }
 
@@ -787,6 +785,21 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
+  Future<_DeleteUserInput?> _askDeleteUserInput({
+    required String title,
+    required String initialUsername,
+  }) {
+    return showDialog<_DeleteUserInput>(
+      context: context,
+      builder: (BuildContext context) {
+        return _DeleteUserInputDialog(
+          title: title,
+          initialUsername: initialUsername,
+        );
+      },
+    );
+  }
+
   Future<void> _showInternetResultDialog(String message) {
     return showDialog<void>(
       context: context,
@@ -824,10 +837,34 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       if (!mounted) {
         return;
       }
-      await _showInternetResultDialog(context.l10n.userApiError('$e'));
+      final AppLocalizations l10n = context.l10n;
+      await _showInternetResultDialog(
+        l10n.userApiError(_mapUserApiErrorMessage(error: e, l10n: l10n)),
+      );
     } finally {
       _setInternetActionRunning(false);
     }
+  }
+
+  String _mapUserApiErrorMessage({
+    required Object error,
+    required AppLocalizations l10n,
+  }) {
+    if (error is MqttUserApiException) {
+      if (error.statusCode == 401) {
+        return l10n.userApiUnauthorized;
+      }
+      return error.message.trim().isEmpty ? l10n.userApiUnknownError : error.message;
+    }
+
+    final String message = error
+        .toString()
+        .replaceFirst(RegExp(r'^Exception:\s*'), '')
+        .trim();
+    if (message.isEmpty) {
+      return l10n.userApiUnknownError;
+    }
+    return message;
   }
 
   void _setInternetActionRunning(bool value) {
@@ -2334,6 +2371,13 @@ class _ResendVerificationInput {
   final String email;
 }
 
+class _DeleteUserInput {
+  const _DeleteUserInput({required this.username, required this.password});
+
+  final String username;
+  final String password;
+}
+
 class _RegistrationInputDialog extends StatefulWidget {
   const _RegistrationInputDialog({
     required this.title,
@@ -2483,6 +2527,94 @@ class _ResendVerificationInputDialogState
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             decoration: InputDecoration(labelText: l10n.userFieldEmail),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(l10n.ok),
+        ),
+      ],
+    );
+  }
+}
+
+class _DeleteUserInputDialog extends StatefulWidget {
+  const _DeleteUserInputDialog({
+    required this.title,
+    required this.initialUsername,
+  });
+
+  final String title;
+  final String initialUsername;
+
+  @override
+  State<_DeleteUserInputDialog> createState() => _DeleteUserInputDialogState();
+}
+
+class _DeleteUserInputDialogState extends State<_DeleteUserInputDialog> {
+  late final TextEditingController _usernameController;
+  final TextEditingController _passwordController = TextEditingController();
+  bool _showPassword = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController = TextEditingController(text: widget.initialUsername);
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    Navigator.of(context).pop(
+      _DeleteUserInput(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TextField(
+            controller: _usernameController,
+            decoration: InputDecoration(labelText: l10n.userFieldUsername),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _passwordController,
+            obscureText: !_showPassword,
+            decoration: InputDecoration(
+              labelText: l10n.userFieldPassword,
+              suffixIcon: IconButton(
+                tooltip: _showPassword
+                    ? l10n.passwordHideTooltip
+                    : l10n.passwordShowTooltip,
+                onPressed: () => setState(() => _showPassword = !_showPassword),
+                icon: Icon(
+                  _showPassword ? Icons.visibility_off : Icons.visibility,
+                ),
+              ),
+            ),
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _submit(),
           ),

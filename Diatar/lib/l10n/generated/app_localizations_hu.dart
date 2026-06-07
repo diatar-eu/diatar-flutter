@@ -1078,6 +1078,13 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
+  String get userApiUnauthorized =>
+      'Sikertelen hitelesítés. Ellenőrizze a felhasználónevet és a jelszót.';
+
+  @override
+  String get userApiUnknownError => 'Váratlan API-hiba.';
+
+  @override
   String get settingsHotkeyPressAnyKey =>
       'Nyomj meg bármelyik billentyű kombinációt...';
 
