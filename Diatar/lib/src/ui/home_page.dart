@@ -1623,6 +1623,7 @@ class _VersePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool showTitle = controller.settings.projUseTitle;
     final RecTextRecord previewRecord = RecTextRecord(
       scholaLine: '',
       title: '',
@@ -1664,7 +1665,7 @@ class _VersePreview extends StatelessWidget {
           maxLines: 2,
           textDirection: TextDirection.ltr,
         )..layout(maxWidth: width);
-        final double titleHeight = titlePainter.height + 10;
+        final double titleHeight = showTitle ? titlePainter.height + 10 : 0;
         final double fallbackCanvasHeight = math.max(
           120,
           viewportHeightForMeasure - titleHeight,
@@ -1683,17 +1684,19 @@ class _VersePreview extends StatelessWidget {
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      verseTitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: controller.globals.txtColor.withValues(
-                          alpha: 0.75,
+                    if (showTitle) ...<Widget>[
+                      Text(
+                        verseTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: controller.globals.txtColor.withValues(
+                            alpha: 0.75,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
+                      const SizedBox(height: 10),
+                    ],
                     Expanded(
                       child: SizedBox(
                         width: width,
@@ -1705,17 +1708,19 @@ class _VersePreview extends StatelessWidget {
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      verseTitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: controller.globals.txtColor.withValues(
-                          alpha: 0.75,
+                    if (showTitle) ...<Widget>[
+                      Text(
+                        verseTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: controller.globals.txtColor.withValues(
+                            alpha: 0.75,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
+                      const SizedBox(height: 10),
+                    ],
                     SizedBox(
                       width: width,
                       height: scrollCanvasHeight,
@@ -1769,6 +1774,7 @@ class _CustomTextPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool showTitle = controller.settings.projUseTitle;
     final RecTextRecord previewRecord = RecTextRecord(
       scholaLine: '',
       title: '',
@@ -1800,7 +1806,7 @@ class _CustomTextPreview extends StatelessWidget {
           maxLines: 2,
           textDirection: TextDirection.ltr,
         )..layout(maxWidth: width);
-        final double titleHeight = titlePainter.height + 10;
+        final double titleHeight = showTitle ? titlePainter.height + 10 : 0;
         final double viewportHeightForMeasure = constraints.maxHeight.isFinite
             ? constraints.maxHeight
             : (MediaQuery.of(context).size.height -
@@ -1826,13 +1832,15 @@ class _CustomTextPreview extends StatelessWidget {
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      fullTitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: titleStyle,
-                    ),
-                    const SizedBox(height: 10),
+                    if (showTitle) ...<Widget>[
+                      Text(
+                        fullTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: titleStyle,
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     Expanded(
                       child: SizedBox(
                         width: width,
@@ -1844,13 +1852,15 @@ class _CustomTextPreview extends StatelessWidget {
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      fullTitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: titleStyle,
-                    ),
-                    const SizedBox(height: 10),
+                    if (showTitle) ...<Widget>[
+                      Text(
+                        fullTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: titleStyle,
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     SizedBox(
                       width: width,
                       height: scrollCanvasHeight,
