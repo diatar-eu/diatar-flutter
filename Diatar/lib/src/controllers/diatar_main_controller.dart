@@ -1518,14 +1518,18 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     await diaFile.writeAsString(out.toString(), encoding: utf8);
-    final String savedName = _stripFileExtension(_fileNameFromPath(safePath));
+    await markCustomOrderDiaExportSaved(safePath);
+    return safePath;
+  }
+
+  Future<void> markCustomOrderDiaExportSaved(String path) async {
+    final String savedName = _stripFileExtension(_fileNameFromPath(path));
     _lastImportedCustomOrderBaseName = savedName.trim().isEmpty
         ? null
         : savedName;
     await _persistCurrentCustomOrder();
-    _setStatus('statusOrderSaved', <String, String>{'path': safePath});
+    _setStatus('statusOrderSaved', <String, String>{'path': path});
     notifyListeners();
-    return safePath;
   }
 
   Future<int> importCustomOrderFromDia(

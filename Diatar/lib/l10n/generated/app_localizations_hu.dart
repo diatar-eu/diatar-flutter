@@ -773,6 +773,18 @@ class AppLocalizationsHu extends AppLocalizations {
   String get saveDia => 'Mentés';
 
   @override
+  String get customOrderSaveDiaErrorTitle => 'Mentés sikertelen';
+
+  @override
+  String get customOrderSaveDiaPermissionDenied =>
+      'A kiválasztott mappa létezik, de az Android megtagadta az írási hozzáférést. Újabb Android-verziókon a közös mappákba (például /Belső tárhely/Diatar) történő közvetlen fájlírást a scoped storage blokkolhatja akkor is, ha a mappa kiválasztható. Válassz a rendszer mentési ablakából ajánlott helyet, vagy alkalmazás-specifikus mappát.';
+
+  @override
+  String customOrderSaveDiaGenericError(Object error) {
+    return 'A DIA fájl mentése nem sikerült. Részletek: $error';
+  }
+
+  @override
   String get customOrderDiaFileNameLabel => 'Fájlnév';
 
   @override

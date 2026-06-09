@@ -512,6 +512,14 @@
   "textSlideBodyLabel": "Szöveg (soronként)",
   "loadDia": "Betöltés",
   "saveDia": "Mentés",
+  "customOrderSaveDiaErrorTitle": "Mentés sikertelen",
+  "customOrderSaveDiaPermissionDenied": "A kiválasztott mappa létezik, de az Android megtagadta az írási hozzáférést. Újabb Android-verziókon a közös mappákba (például /Belső tárhely/Diatar) történő közvetlen fájlírást a scoped storage blokkolhatja akkor is, ha a mappa kiválasztható. Válassz a rendszer mentési ablakából ajánlott helyet, vagy alkalmazás-specifikus mappát.",
+  "customOrderSaveDiaGenericError": "A DIA fájl mentése nem sikerült. Részletek: {error}",
+  "@customOrderSaveDiaGenericError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "customOrderDiaFileNameLabel": "Fájlnév",
   "customOrderUnnamedFileName": "Névtelen",
   "savedPath": "Mentve: {path}",
