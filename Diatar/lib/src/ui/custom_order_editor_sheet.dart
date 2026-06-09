@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../controllers/diatar_main_controller.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
 import '../utils/friendly_path.dart';
 
@@ -28,6 +29,10 @@ class CustomOrderEditorPanel extends StatefulWidget {
 }
 
 class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
+  static const MethodChannel _androidDiaSaveChannel = MethodChannel(
+    'diatar.eu/dia_save',
+  );
+
   late List<CustomOrderEntry> _entries;
   String? _selectedInsertBookFileName;
   int? _selectedInsertSongIndex;
@@ -1028,6 +1033,27 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       }
 
       if (!nativeSaveDialogAvailable) {
+        if (Platform.isAndroid) {
+          final String? savedPath = await _saveDiaWithAndroidSystemDialog(
+            defaultFileName: defaultFileName,
+          );
+          if (savedPath == null || !mounted) {
+            return;
+          }
+          await controller.markCustomOrderDiaExportSaved(savedPath);
+          if (!mounted) {
+            return;
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                l10n.savedPath(formatFriendlyPathLabel(savedPath, l10n)),
+              ),
+            ),
+          );
+          return;
+        }
+
         final _DiaSaveTarget? chosenTarget = await _askDiaSaveTarget(
           initialName: defaultBaseName,
           initialDirectory: initialDir ?? '',
@@ -1075,10 +1101,78 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.statusLoadError('$e'))));
+      await _showDiaSaveErrorDialog(e);
     }
+  }
+
+  Future<String?> _saveDiaWithAndroidSystemDialog({
+    required String defaultFileName,
+  }) async {
+    final Directory tempDir = await Directory.systemTemp.createTemp(
+      'diatar_dia_export_',
+    );
+    try {
+      final String tempPath =
+          '${tempDir.path}${Platform.pathSeparator}$defaultFileName';
+      final String exportedTempPath = await controller.exportCustomOrderToDia(
+        tempPath,
+      );
+      final Uint8List data = await File(exportedTempPath).readAsBytes();
+      return _androidDiaSaveChannel.invokeMethod<String>(
+        'saveDiaFile',
+        <String, Object?>{
+          'fileName': defaultFileName,
+          'bytes': data,
+        },
+      );
+    } finally {
+      try {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      } catch (_) {
+        // Ignore temp cleanup failures.
+      }
+    }
+  }
+
+  Future<void> _showDiaSaveErrorDialog(Object error) async {
+    if (!mounted) {
+      return;
+    }
+    final l10n = context.l10n;
+    final String details = _formatDiaSaveErrorDetails(error, l10n);
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.customOrderSaveDiaErrorTitle),
+          content: Text(details),
+          actions: <Widget>[
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.ok),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _formatDiaSaveErrorDetails(Object error, AppLocalizations l10n) {
+    final String raw = '$error';
+    final String lowered = raw.toLowerCase();
+    final bool permissionLikeError =
+        error is FileSystemException &&
+        (error.osError?.errorCode == 13 ||
+            lowered.contains('permission denied') ||
+            lowered.contains('operation not permitted') ||
+            lowered.contains('eacces') ||
+            lowered.contains('eperm'));
+    if (Platform.isAndroid && permissionLikeError) {
+      return l10n.customOrderSaveDiaPermissionDenied;
+    }
+    return l10n.customOrderSaveDiaGenericError(raw);
   }
 
   String _normalizeDiaBaseName(String raw, {required String fallback}) {

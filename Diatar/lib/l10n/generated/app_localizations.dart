@@ -1409,6 +1409,24 @@ abstract class AppLocalizations {
   /// **'Mentés'**
   String get saveDia;
 
+  /// No description provided for @customOrderSaveDiaErrorTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Mentés sikertelen'**
+  String get customOrderSaveDiaErrorTitle;
+
+  /// No description provided for @customOrderSaveDiaPermissionDenied.
+  ///
+  /// In hu, this message translates to:
+  /// **'A kiválasztott mappa létezik, de az Android megtagadta az írási hozzáférést. Újabb Android-verziókon a közös mappákba (például /Belső tárhely/Diatar) történő közvetlen fájlírást a scoped storage blokkolhatja akkor is, ha a mappa kiválasztható. Válassz a rendszer mentési ablakából ajánlott helyet, vagy alkalmazás-specifikus mappát.'**
+  String get customOrderSaveDiaPermissionDenied;
+
+  /// No description provided for @customOrderSaveDiaGenericError.
+  ///
+  /// In hu, this message translates to:
+  /// **'A DIA fájl mentése nem sikerült. Részletek: {error}'**
+  String customOrderSaveDiaGenericError(Object error);
+
   /// No description provided for @customOrderDiaFileNameLabel.
   ///
   /// In hu, this message translates to:

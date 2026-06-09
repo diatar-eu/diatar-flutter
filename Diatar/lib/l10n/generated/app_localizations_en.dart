@@ -771,6 +771,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveDia => 'Save';
 
   @override
+  String get customOrderSaveDiaErrorTitle => 'Save failed';
+
+  @override
+  String get customOrderSaveDiaPermissionDenied =>
+      'The selected folder exists, but Android denied write access. On newer Android versions, direct file write to shared folders (for example /Internal storage/Diatar) may be blocked by scoped storage, even if the folder can be selected. Please choose a location offered by the system save dialog or an app-specific folder.';
+
+  @override
+  String customOrderSaveDiaGenericError(Object error) {
+    return 'Could not save DIA file. Details: $error';
+  }
+
+  @override
   String get customOrderDiaFileNameLabel => 'File name';
 
   @override
