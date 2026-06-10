@@ -164,6 +164,12 @@ abstract class AppLocalizations {
   /// **'TCP port: {port}'**
   String settingsLocalNetworkSubtitle(Object port);
 
+  /// No description provided for @settingsLocalNetworkIpLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Eszköz IP: {ip}'**
+  String settingsLocalNetworkIpLabel(Object ip);
+
   /// No description provided for @projectionImageTitle.
   ///
   /// In hu, this message translates to:

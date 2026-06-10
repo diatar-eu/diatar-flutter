@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -84,11 +86,13 @@ class _SettingsSheetState extends State<SettingsSheet> {
   late Color _hiColor;
   String _appVersion = '-';
   String _buildNumber = '-';
+  String _localIp = '-';
 
   @override
   void initState() {
     super.initState();
     _loadAppVersion();
+    _loadLocalIp();
     final AppSettings s = widget.initialSettings;
     _search = TextEditingController();
     _port = TextEditingController(text: s.port.toString());
@@ -119,6 +123,22 @@ class _SettingsSheetState extends State<SettingsSheet> {
         _ipMode = _mqttUser.text.trim().isEmpty;
       });
     });
+  }
+
+  Future<void> _loadLocalIp() async {
+    try {
+      final List<NetworkInterface> interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+      );
+      for (final NetworkInterface interface in interfaces) {
+        for (final InternetAddress addr in interface.addresses) {
+          if (!addr.isLoopback) {
+            if (mounted) setState(() => _localIp = addr.address);
+            return;
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadAppVersion() async {
@@ -260,10 +280,21 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     _settingsTile(
                       leading: const Icon(Icons.lan),
                       title: Text(l10n.settingsLocalNetworkTitle),
-                      subtitle: Text(
-                        l10n.settingsLocalNetworkSubtitle(
-                          _port.text.trim().isEmpty ? '-' : _port.text.trim(),
-                        ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            l10n.settingsLocalNetworkSubtitle(
+                              _port.text.trim().isEmpty
+                                  ? '-'
+                                  : _port.text.trim(),
+                            ),
+                          ),
+                          Text(
+                            l10n.settingsLocalNetworkIpLabel(_localIp),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ),
                       onTap: _openLocalNetworkSettings,
                     ),

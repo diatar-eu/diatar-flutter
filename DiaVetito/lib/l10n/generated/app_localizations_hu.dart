@@ -50,6 +50,11 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
+  String settingsLocalNetworkIpLabel(Object ip) {
+    return 'Eszköz IP: $ip';
+  }
+
+  @override
   String get projectionImageTitle => 'Vetítési kép';
 
   @override

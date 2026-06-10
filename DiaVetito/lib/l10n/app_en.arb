@@ -34,6 +34,12 @@
       "port": {}
     }
   },
+  "settingsLocalNetworkIpLabel": "Device IP: {ip}",
+  "@settingsLocalNetworkIpLabel": {
+    "placeholders": {
+      "ip": {}
+    }
+  },
   "projectionImageTitle": "Projection image",
   "projectionImageSummary": "Rotation: {rotation}, Mirroring: {mirror}",
   "@projectionImageSummary": {
