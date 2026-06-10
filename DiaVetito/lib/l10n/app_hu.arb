@@ -34,6 +34,12 @@
       "port": {}
     }
   },
+  "settingsLocalNetworkIpLabel": "Eszköz IP: {ip}",
+  "@settingsLocalNetworkIpLabel": {
+    "placeholders": {
+      "ip": {}
+    }
+  },
   "projectionImageTitle": "Vetítési kép",
   "projectionImageSummary": "Forgatás: {rotation}, Tükrözés: {mirror}",
   "@projectionImageSummary": {

@@ -50,6 +50,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String settingsLocalNetworkIpLabel(Object ip) {
+    return 'Device IP: $ip';
+  }
+
+  @override
   String get projectionImageTitle => 'Projection image';
 
   @override
