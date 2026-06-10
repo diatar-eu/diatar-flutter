@@ -502,11 +502,16 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           .toList();
     }
 
+    int lastInsertedIndex = 0;
     setState(() {
       final int insertIndex = _selectedInsertInsertionIndex();
       _entries.insertAll(insertIndex, toInsert);
+      lastInsertedIndex = insertIndex + toInsert.length - 1;
     });
     await _commitEntries();
+    if (mounted) {
+      controller.selectCustomOrderEntryAt(lastInsertedIndex);
+    }
   }
 
   Future<void> _openSearchDialog() async {
@@ -671,10 +676,17 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             ),
           );
 
+    int insertedCount = 0;
+    int insertedStartIndex = 0;
     setState(() {
+      insertedStartIndex = _entries.length;
       _entries.addAll(toInsert);
+      insertedCount = toInsert.length;
     });
     await _commitEntries();
+    if (mounted && insertedCount > 0) {
+      controller.selectCustomOrderEntryAt(insertedStartIndex + insertedCount - 1);
+    }
   }
 
   Future<void> _pickAndSendImageSlide() async {
@@ -736,11 +748,16 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       customTextBody: lines.join('\n'),
     );
 
+    int lastInsertedIndex = 0;
     setState(() {
       final int insertIndex = _selectedInsertInsertionIndex();
       _entries.insert(insertIndex, entry);
+      lastInsertedIndex = insertIndex;
     });
     await _commitEntries();
+    if (mounted) {
+      controller.selectCustomOrderEntryAt(lastInsertedIndex);
+    }
   }
 
   Future<void> _insertSeparator() async {
@@ -799,11 +816,16 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       customTextTitle: separatorName,
     );
 
+    int lastInsertedIndex = 0;
     setState(() {
       final int insertIndex = _selectedInsertInsertionIndex();
       _entries.insert(insertIndex, entry);
+      lastInsertedIndex = insertIndex;
     });
     await _commitEntries();
+    if (mounted) {
+      controller.selectCustomOrderEntryAt(lastInsertedIndex);
+    }
   }
 
   Future<void> _confirmAndClearAll() async {
