@@ -218,6 +218,48 @@ abstract class AppLocalizations {
   /// **'Letöltés'**
   String get downloadTitle;
 
+  /// No description provided for @downloadManagerNameColumn.
+  ///
+  /// In hu, this message translates to:
+  /// **'DTX'**
+  String get downloadManagerNameColumn;
+
+  /// No description provided for @downloadManagerUpdateColumn.
+  ///
+  /// In hu, this message translates to:
+  /// **'Frissítés'**
+  String get downloadManagerUpdateColumn;
+
+  /// No description provided for @downloadManagerExcludedColumn.
+  ///
+  /// In hu, this message translates to:
+  /// **'Mellőzött'**
+  String get downloadManagerExcludedColumn;
+
+  /// No description provided for @downloadManagerUserImportedTag.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasználói import'**
+  String get downloadManagerUserImportedTag;
+
+  /// No description provided for @downloadManagerUpdateAvailable.
+  ///
+  /// In hu, this message translates to:
+  /// **'Frissíthető'**
+  String get downloadManagerUpdateAvailable;
+
+  /// No description provided for @downloadManagerUpToDate.
+  ///
+  /// In hu, this message translates to:
+  /// **'Naprakész'**
+  String get downloadManagerUpToDate;
+
+  /// No description provided for @downloadUserImportedGroup.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasználói importált fájlok'**
+  String get downloadUserImportedGroup;
+
   /// No description provided for @downloadMessage.
   ///
   /// In hu, this message translates to:
@@ -1618,6 +1660,18 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Hiba a .dtx importálás során'**
   String get importDtxFilesError;
+
+  /// No description provided for @importDtxFilesErrorDetailed.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hiba a .dtx importálás során: {reason}'**
+  String importDtxFilesErrorDetailed(Object reason);
+
+  /// No description provided for @importDtxFilesPartial.
+  ///
+  /// In hu, this message translates to:
+  /// **'{count} .dtx fájl beimportálva, {failed} sikertelen: {reason}'**
+  String importDtxFilesPartial(int count, int failed, Object reason);
 
   /// No description provided for @settingsGeneralTitle.
   ///

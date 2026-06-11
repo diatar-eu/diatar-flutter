@@ -71,6 +71,27 @@ class AppLocalizationsHu extends AppLocalizations {
   String get downloadTitle => 'Letöltés';
 
   @override
+  String get downloadManagerNameColumn => 'DTX';
+
+  @override
+  String get downloadManagerUpdateColumn => 'Frissítés';
+
+  @override
+  String get downloadManagerExcludedColumn => 'Mellőzött';
+
+  @override
+  String get downloadManagerUserImportedTag => 'Felhasználói import';
+
+  @override
+  String get downloadManagerUpdateAvailable => 'Frissíthető';
+
+  @override
+  String get downloadManagerUpToDate => 'Naprakész';
+
+  @override
+  String get downloadUserImportedGroup => 'Felhasználói importált fájlok';
+
+  @override
   String get downloadMessage =>
       'A letöltési párbeszéd később visszahelyezhető.';
 
@@ -900,6 +921,16 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get importDtxFilesError => 'Hiba a .dtx importálás során';
+
+  @override
+  String importDtxFilesErrorDetailed(Object reason) {
+    return 'Hiba a .dtx importálás során: $reason';
+  }
+
+  @override
+  String importDtxFilesPartial(int count, int failed, Object reason) {
+    return '$count .dtx fájl beimportálva, $failed sikertelen: $reason';
+  }
 
   @override
   String get settingsGeneralTitle => 'Általános';

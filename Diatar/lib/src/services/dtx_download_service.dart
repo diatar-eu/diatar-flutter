@@ -12,6 +12,10 @@ class DtxDownloadItem {
     required this.order,
     required this.longName,
     required this.shortName,
+    this.isInstalled = false,
+    this.updateAvailable = false,
+    this.isOfficial = true,
+    this.isUserProvided = false,
   });
 
   final String fileName;
@@ -21,6 +25,10 @@ class DtxDownloadItem {
   final int order;
   final String longName;
   final String shortName;
+  final bool isInstalled;
+  final bool updateAvailable;
+  final bool isOfficial;
+  final bool isUserProvided;
 }
 
 class DtxDownloadProgress {
@@ -62,33 +70,82 @@ class DtxDownloadService {
   static const String _stampPrefix = 'dtx_stamp_';
 
   Future<List<DtxDownloadItem>> listUpdates({required Directory targetDir}) async {
+    final List<DtxDownloadItem> all = await listAll(targetDir: targetDir);
+    return all
+        .where(
+          (DtxDownloadItem item) => item.isOfficial && item.updateAvailable,
+        )
+        .toList();
+  }
+
+  Future<List<DtxDownloadItem>> listAll({required Directory targetDir}) async {
     await targetDir.create(recursive: true);
 
     final List<_RemoteDtx> remoteList = await _fetchRemoteList();
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final List<DtxDownloadItem> updates = <DtxDownloadItem>[];
+    final List<DtxDownloadItem> items = <DtxDownloadItem>[];
 
-    for (final _RemoteDtx item in remoteList) {
-      final File local = File('${targetDir.path}/${item.fileName}');
-      final String oldStamp = prefs.getString('$_stampPrefix${item.fileName}') ?? '';
-      final bool upToDate = local.existsSync() && oldStamp == item.timestamp;
-      if (!upToDate) {
-        updates.add(
-          DtxDownloadItem(
-            fileName: item.fileName,
-            timestamp: item.timestamp,
-            size: item.size,
-            group: item.group,
-            order: item.order,
-            longName: item.longName,
-            shortName: item.shortName,
-          ),
-        );
+    final Map<String, File> localByName = <String, File>{};
+    for (final FileSystemEntity entity in targetDir.listSync()) {
+      if (entity is! File) {
+        continue;
       }
+      final String name = entity.uri.pathSegments.isNotEmpty
+          ? entity.uri.pathSegments.last
+          : entity.path;
+      if (!name.toLowerCase().endsWith('.dtx')) {
+        continue;
+      }
+      localByName[name] = entity;
     }
 
-    updates.sort(_compareDownloadItems);
-    return updates;
+    for (final _RemoteDtx item in remoteList) {
+      final File? local = localByName.remove(item.fileName);
+      final bool installed = local != null;
+      final String oldStamp =
+          prefs.getString('$_stampPrefix${item.fileName}') ?? '';
+      final bool upToDate = installed && oldStamp == item.timestamp;
+      items.add(
+        DtxDownloadItem(
+          fileName: item.fileName,
+          timestamp: item.timestamp,
+          size: item.size,
+          group: item.group,
+          order: item.order,
+          longName: item.longName,
+          shortName: item.shortName,
+          isInstalled: installed,
+          updateAvailable: !upToDate,
+          isOfficial: true,
+          isUserProvided: false,
+        ),
+      );
+    }
+
+    for (final MapEntry<String, File> entry in localByName.entries) {
+      final String fileName = entry.key;
+      final int localSize = entry.value.existsSync()
+          ? entry.value.lengthSync()
+          : 0;
+      items.add(
+        DtxDownloadItem(
+          fileName: fileName,
+          timestamp: '',
+          size: localSize,
+          group: '',
+          order: 0,
+          longName: fileName,
+          shortName: fileName,
+          isInstalled: true,
+          updateAvailable: false,
+          isOfficial: false,
+          isUserProvided: true,
+        ),
+      );
+    }
+
+    items.sort(_compareDownloadItems);
+    return items;
   }
 
   int _compareDownloadItems(DtxDownloadItem a, DtxDownloadItem b) {
@@ -145,7 +202,10 @@ class DtxDownloadService {
   }) async {
     await targetDir.create(recursive: true);
 
-    final List<DtxDownloadItem> updates = selected ?? await listUpdates(targetDir: targetDir);
+    final List<DtxDownloadItem> updates =
+      (selected ?? await listUpdates(targetDir: targetDir))
+        .where((DtxDownloadItem item) => item.isOfficial)
+        .toList();
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     int downloaded = 0;
@@ -181,6 +241,28 @@ class DtxDownloadService {
     }
 
     return DtxDownloadSummary(downloaded: downloaded, skipped: skipped);
+  }
+
+  Future<int> deleteLocalFiles({
+    required Directory targetDir,
+    required Iterable<String> fileNames,
+  }) async {
+    await targetDir.create(recursive: true);
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    int deleted = 0;
+    final Set<String> uniqueNames = fileNames
+        .map((String name) => name.trim())
+        .where((String name) => name.isNotEmpty)
+        .toSet();
+    for (final String name in uniqueNames) {
+      final File local = File('${targetDir.path}/$name');
+      if (await local.exists()) {
+        await local.delete();
+        deleted++;
+      }
+      await prefs.remove('$_stampPrefix$name');
+    }
+    return deleted;
   }
 
   Future<List<_RemoteDtx>> _fetchRemoteList() async {

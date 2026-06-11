@@ -20,6 +20,13 @@
   "addImageSlideTooltip": "Add image",
   "downloadBooksTooltip": "Download songbooks",
   "downloadTitle": "Download",
+  "downloadManagerNameColumn": "DTX",
+  "downloadManagerUpdateColumn": "Update",
+  "downloadManagerExcludedColumn": "Excluded",
+  "downloadManagerUserImportedTag": "User imported",
+  "downloadManagerUpdateAvailable": "Update available",
+  "downloadManagerUpToDate": "Up to date",
+  "downloadUserImportedGroup": "User imported files",
   "downloadMessage": "The download dialog can be restored later.",
   "refreshTooltip": "Refresh",
   "ok": "OK",
@@ -613,6 +620,24 @@
     }
   },
   "importDtxFilesError": "Error importing .dtx file(s)",
+  "importDtxFilesErrorDetailed": "Error importing .dtx file(s): {reason}",
+  "@importDtxFilesErrorDetailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "importDtxFilesPartial": "{count} .dtx file(s) imported, {failed} failed: {reason}",
+  "@importDtxFilesPartial": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "reason": {}
+    }
+  },
   "settingsGeneralTitle": "General",
   "settingsGeneralSummary": "Theme: {theme}, Language: {language}",
   "@settingsGeneralSummary": {

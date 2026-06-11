@@ -26,13 +26,23 @@ class _BookDropdownEntry {
   bool get isHeader => group != null;
 }
 
-class _DownloadListEntry {
-  const _DownloadListEntry.header(this.group) : item = null;
+class _DtxManagerDialogResult {
+  const _DtxManagerDialogResult({
+    required this.downloadSelected,
+    required this.excludedSelected,
+  });
 
-  const _DownloadListEntry.item(this.item) : group = null;
+  final Set<String> downloadSelected;
+  final Set<String> excludedSelected;
+}
+
+class _DtxManagerListEntry {
+  const _DtxManagerListEntry.header(this.group) : item = null;
+
+  const _DtxManagerListEntry.item(this.item) : group = null;
 
   final String? group;
-  final DtxDownloadItem? item;
+  final DtxManageItem? item;
 
   bool get isHeader => group != null;
 }
@@ -404,24 +414,6 @@ List<_BookDropdownEntry> _buildBookDropdownEntries(
       lastGroup = displayGroup;
     }
     entries.add(_BookDropdownEntry.book(bookIndex: index, title: book.title));
-  }
-  return entries;
-}
-
-List<_DownloadListEntry> _buildDownloadListEntries(
-  List<DtxDownloadItem> items,
-  String ungroupedLabel,
-) {
-  final List<_DownloadListEntry> entries = <_DownloadListEntry>[];
-  String? lastGroup;
-  for (final DtxDownloadItem item in items) {
-    final String rawGroup = item.group.trim();
-    final String displayGroup = rawGroup.isEmpty ? ungroupedLabel : rawGroup;
-    if (displayGroup != lastGroup) {
-      entries.add(_DownloadListEntry.header(displayGroup));
-      lastGroup = displayGroup;
-    }
-    entries.add(_DownloadListEntry.item(item));
   }
   return entries;
 }
@@ -811,16 +803,21 @@ class DiatarHomePage extends StatelessWidget {
   }
 
   Future<void> _openDownloadDialog(BuildContext context) async {
-    final List<DtxDownloadItem>? selected =
-        await showDialog<List<DtxDownloadItem>>(
+    final _DtxManagerDialogResult? selected =
+        await showDialog<_DtxManagerDialogResult>(
           context: context,
           builder: (BuildContext context) =>
               _DownloadSongbooksDialog(controller: controller),
         );
-    if (selected == null || selected.isEmpty) {
+    if (selected == null) {
       return;
     }
-    unawaited(controller.downloadSongBooks(selected: selected));
+    unawaited(
+      controller.applyDtxManagerSelection(
+        downloadSelected: selected.downloadSelected,
+        excludedSelected: selected.excludedSelected,
+      ),
+    );
   }
 
   Future<void> _openZsolozsmaDialog(BuildContext context) {
@@ -1053,32 +1050,79 @@ class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
 }
 
 class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
-  late Future<List<DtxDownloadItem>> _candidatesFuture;
-  final Set<String> _selectedFiles = <String>{};
+  late Future<List<DtxManageItem>> _itemsFuture;
+  final Set<String> _downloadSelected = <String>{};
+  final Set<String> _excludedFiles = <String>{};
   bool _selectionInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _candidatesFuture = widget.controller.loadDownloadCandidates();
+    _itemsFuture = widget.controller.loadDtxManagerItems();
   }
 
   void _reload() {
     setState(() {
       _selectionInitialized = false;
-      _selectedFiles.clear();
-      _candidatesFuture = widget.controller.loadDownloadCandidates();
+      _downloadSelected.clear();
+      _excludedFiles.clear();
+      _itemsFuture = widget.controller.loadDtxManagerItems();
     });
   }
 
-  List<DtxDownloadItem> _effectiveSelected(List<DtxDownloadItem> items) {
-    if (!_selectionInitialized) {
-      // Default behavior: before first interaction every candidate is selected.
-      return items;
+  String _displayGroup(DtxManageItem managed, BuildContext context) {
+    final l10n = context.l10n;
+    if (managed.item.isUserProvided) {
+      return l10n.downloadUserImportedGroup;
     }
-    return items
-        .where((DtxDownloadItem item) => _selectedFiles.contains(item.fileName))
+    final String rawGroup = managed.item.group.trim();
+    return rawGroup.isEmpty ? l10n.ungroupedBookGroupLabel : rawGroup;
+  }
+
+  bool? _groupDownloadValue(List<DtxManageItem> items) {
+    final List<DtxManageItem> eligible = items
+        .where((DtxManageItem item) => item.item.isOfficial && item.item.updateAvailable)
         .toList();
+    if (eligible.isEmpty) {
+      return false;
+    }
+    final int selectedCount = eligible
+        .where((DtxManageItem item) => _downloadSelected.contains(item.item.fileName))
+        .length;
+    if (selectedCount == 0) {
+      return false;
+    }
+    if (selectedCount == eligible.length) {
+      return true;
+    }
+    return null;
+  }
+
+  bool? _groupExcludedValue(List<DtxManageItem> items) {
+    if (items.isEmpty) {
+      return false;
+    }
+    final int selectedCount = items
+        .where((DtxManageItem item) => _excludedFiles.contains(item.item.fileName))
+        .length;
+    if (selectedCount == 0) {
+      return false;
+    }
+    if (selectedCount == items.length) {
+      return true;
+    }
+    return null;
+  }
+
+  String _subtitleFor(DtxDownloadItem item, BuildContext context) {
+    final l10n = context.l10n;
+    if (item.isUserProvided) {
+      return l10n.downloadManagerUserImportedTag;
+    }
+    if (item.updateAvailable) {
+      return l10n.downloadManagerUpdateAvailable;
+    }
+    return l10n.downloadManagerUpToDate;
   }
 
   @override
@@ -1096,13 +1140,13 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
         ],
       ),
       content: SizedBox(
-        width: 460,
-        child: FutureBuilder<List<DtxDownloadItem>>(
-          future: _candidatesFuture,
+        width: 700,
+        child: FutureBuilder<List<DtxManageItem>>(
+          future: _itemsFuture,
           builder:
               (
                 BuildContext context,
-                AsyncSnapshot<List<DtxDownloadItem>> snapshot,
+                AsyncSnapshot<List<DtxManageItem>> snapshot,
               ) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Padding(
@@ -1122,13 +1166,27 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                   return Text(l10n.statusDownloadError('${snapshot.error}'));
                 }
 
-                final List<DtxDownloadItem> items =
-                    snapshot.data ?? const <DtxDownloadItem>[];
+                final List<DtxManageItem> items =
+                    snapshot.data ?? const <DtxManageItem>[];
                 if (!_selectionInitialized) {
-                  _selectedFiles
+                  _downloadSelected
                     ..clear()
                     ..addAll(
-                      items.map((DtxDownloadItem item) => item.fileName),
+                      items
+                          .where(
+                            (DtxManageItem managed) =>
+                                managed.item.isOfficial &&
+                                managed.item.updateAvailable &&
+                                !managed.excluded,
+                          )
+                          .map((DtxManageItem managed) => managed.item.fileName),
+                    );
+                  _excludedFiles
+                    ..clear()
+                    ..addAll(
+                      items
+                          .where((DtxManageItem managed) => managed.excluded)
+                          .map((DtxManageItem managed) => managed.item.fileName),
                     );
                   _selectionInitialized = true;
                 }
@@ -1140,55 +1198,231 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                   );
                 }
 
-                final List<_DownloadListEntry> entries =
-                    _buildDownloadListEntries(
-                      items,
-                      l10n.ungroupedBookGroupLabel,
-                    );
+                final Map<String, List<DtxManageItem>> grouped =
+                    <String, List<DtxManageItem>>{};
+                for (final DtxManageItem managed in items) {
+                  final String group = _displayGroup(managed, context);
+                  grouped.putIfAbsent(group, () => <DtxManageItem>[]).add(managed);
+                }
+
+                final List<_DtxManagerListEntry> entries =
+                    <_DtxManagerListEntry>[];
+                for (final MapEntry<String, List<DtxManageItem>> entry
+                    in grouped.entries) {
+                  entries.add(_DtxManagerListEntry.header(entry.key));
+                  for (final DtxManageItem managed in entry.value) {
+                    entries.add(_DtxManagerListEntry.item(managed));
+                  }
+                }
 
                 return ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 360),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: entries.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final _DownloadListEntry entry = entries[index];
-                      if (entry.isHeader) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8, bottom: 2),
-                          child: Text(
-                            '[${entry.group!}]',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
+                  constraints: const BoxConstraints(maxHeight: 420),
+                  child: Column(
+                    children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                l10n.downloadManagerNameColumn,
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                            ),
+                            SizedBox(
+                              width: 92,
+                              child: Text(
+                                l10n.downloadManagerUpdateColumn,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                            ),
+                            SizedBox(
+                              width: 92,
+                              child: Text(
+                                l10n.downloadManagerExcludedColumn,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: entries.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final _DtxManagerListEntry entry = entries[index];
+                            if (entry.isHeader) {
+                              final List<DtxManageItem> groupItems =
+                                  grouped[entry.group!] ?? const <DtxManageItem>[];
+                              final bool hasDownloadEligible = groupItems.any(
+                                (DtxManageItem item) =>
+                                    item.item.isOfficial && item.item.updateAvailable,
+                              );
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8, bottom: 2),
+                                child: Row(
+                                  children: <Widget>[
+                                    Expanded(
+                                      child: Text(
+                                        '[${entry.group!}]',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 92,
+                                      child: Center(
+                                        child: Checkbox(
+                                          tristate: true,
+                                          value: _groupDownloadValue(groupItems),
+                                          onChanged: hasDownloadEligible
+                                              ? (bool? checked) {
+                                                  setState(() {
+                                                    for (final DtxManageItem item
+                                                        in groupItems) {
+                                                      if (!item.item.isOfficial ||
+                                                          !item.item.updateAvailable) {
+                                                        continue;
+                                                      }
+                                                      if (checked == true) {
+                                                        _downloadSelected
+                                                            .add(item.item.fileName);
+                                                        _excludedFiles.remove(
+                                                          item.item.fileName,
+                                                        );
+                                                      } else {
+                                                        _downloadSelected.remove(
+                                                          item.item.fileName,
+                                                        );
+                                                      }
+                                                    }
+                                                  });
+                                                }
+                                              : null,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 92,
+                                      child: Center(
+                                        child: Checkbox(
+                                          tristate: true,
+                                          value: _groupExcludedValue(groupItems),
+                                          onChanged: (bool? checked) {
+                                            setState(() {
+                                              for (final DtxManageItem item
+                                                  in groupItems) {
+                                                if (checked == true) {
+                                                  _excludedFiles.add(
+                                                    item.item.fileName,
+                                                  );
+                                                  _downloadSelected.remove(
+                                                    item.item.fileName,
+                                                  );
+                                                } else {
+                                                  _excludedFiles.remove(
+                                                    item.item.fileName,
+                                                  );
+                                                }
+                                              }
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                          ),
-                        );
-                      }
+                              );
+                            }
 
-                      final DtxDownloadItem item = entry.item!;
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 16),
-                        child: CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          value: _selectedFiles.contains(item.fileName),
-                          title: Text(item.longName),
-                          subtitle: Text(item.timestamp),
-                          onChanged: (bool? checked) {
-                            setState(() {
-                              if (checked ?? false) {
-                                _selectedFiles.add(item.fileName);
-                              } else {
-                                _selectedFiles.remove(item.fileName);
-                              }
-                            });
+                            final DtxManageItem managed = entry.item!;
+                            final DtxDownloadItem item = managed.item;
+                            final bool canUpdate =
+                                item.isOfficial && item.updateAvailable;
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 12),
+                              child: Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: ListTile(
+                                      dense: true,
+                                      contentPadding: EdgeInsets.zero,
+                                      title: Text(item.longName),
+                                      subtitle: Text(_subtitleFor(item, context)),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 92,
+                                    child: Center(
+                                      child: canUpdate
+                                          ? Checkbox(
+                                              value: _downloadSelected.contains(
+                                                item.fileName,
+                                              ),
+                                              onChanged: (bool? checked) {
+                                                setState(() {
+                                                  if (checked ?? false) {
+                                                    _downloadSelected.add(
+                                                      item.fileName,
+                                                    );
+                                                    _excludedFiles.remove(
+                                                      item.fileName,
+                                                    );
+                                                  } else {
+                                                    _downloadSelected.remove(
+                                                      item.fileName,
+                                                    );
+                                                  }
+                                                });
+                                              },
+                                            )
+                                          : const Icon(
+                                              Icons.remove,
+                                              size: 16,
+                                            ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 92,
+                                    child: Center(
+                                      child: Checkbox(
+                                        value: _excludedFiles.contains(
+                                          item.fileName,
+                                        ),
+                                        onChanged: (bool? checked) {
+                                          setState(() {
+                                            if (checked ?? false) {
+                                              _excludedFiles.add(item.fileName);
+                                              _downloadSelected.remove(
+                                                item.fileName,
+                                              );
+                                            } else {
+                                              _excludedFiles.remove(
+                                                item.fileName,
+                                              );
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
                           },
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
                 );
               },
@@ -1203,26 +1437,16 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
           onPressed: () => _importDtxFiles(context),
           child: Text(l10n.importDtxFilesButton),
         ),
-        FutureBuilder<List<DtxDownloadItem>>(
-          future: _candidatesFuture,
-          builder:
-              (
-                BuildContext context,
-                AsyncSnapshot<List<DtxDownloadItem>> snapshot,
-              ) {
-                final List<DtxDownloadItem> items =
-                    snapshot.data ?? const <DtxDownloadItem>[];
-                final List<DtxDownloadItem> selected = _effectiveSelected(
-                  items,
-                );
-                return FilledButton(
-                  onPressed:
-                      selected.isEmpty || widget.controller.downloadInProgress
-                      ? null
-                      : () => Navigator.of(context).pop(selected),
-                  child: Text(l10n.apply),
-                );
-              },
+        FilledButton(
+          onPressed: widget.controller.downloadInProgress
+              ? null
+              : () => Navigator.of(context).pop(
+                  _DtxManagerDialogResult(
+                    downloadSelected: Set<String>.from(_downloadSelected),
+                    excludedSelected: Set<String>.from(_excludedFiles),
+                  ),
+                ),
+          child: Text(l10n.apply),
         ),
       ],
     );
@@ -1233,23 +1457,60 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
       label: 'DTX',
       extensions: <String>['dtx'],
     );
-    final List<XFile> files = await openFiles(
-      acceptedTypeGroups: <XTypeGroup>[dtxType],
-    );
+    final List<XFile> files = Platform.isAndroid
+        ? await openFiles()
+        : await openFiles(acceptedTypeGroups: <XTypeGroup>[dtxType]);
     if (files.isEmpty || !context.mounted) {
       return;
     }
     try {
-      final int count = await widget.controller.importDtxFiles(files);
+      final DtxImportResult result = await widget.controller.importDtxFiles(
+        files,
+      );
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.importDtxFilesSuccess(count))),
+      final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+      if (result.importedCount > 0 && !result.hasFailures) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.importDtxFilesSuccess(result.importedCount)),
+          ),
+        );
+        _reload();
+        return;
+      }
+
+      if (result.importedCount > 0 && result.hasFailures) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              context.l10n.importDtxFilesPartial(
+                result.importedCount,
+                result.failedCount,
+                result.shortFailureSummary(),
+              ),
+            ),
+          ),
+        );
+        _reload();
+        return;
+      }
+
+      final String reason = result.shortFailureSummary();
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.l10n.importDtxFilesErrorDetailed(reason))),
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(context.l10n.importDtxFilesError)));
+      final String details = e.toString().trim();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            details.isEmpty
+                ? context.l10n.importDtxFilesError
+                : context.l10n.importDtxFilesErrorDetailed(details),
+          ),
+        ),
+      );
     }
   }
 }
