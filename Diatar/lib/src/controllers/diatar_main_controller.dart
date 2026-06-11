@@ -108,6 +108,36 @@ class CustomOrderEntry {
   }
 }
 
+class DtxImportResult {
+  const DtxImportResult({required this.importedCount, required this.failures});
+
+  final int importedCount;
+  final List<String> failures;
+
+  int get failedCount => failures.length;
+
+  bool get hasFailures => failures.isNotEmpty;
+
+  String shortFailureSummary({int maxItems = 3}) {
+    final List<String> items = failures.take(maxItems).toList();
+    if (items.isEmpty) {
+      return '';
+    }
+    if (failures.length > maxItems) {
+      final int rest = failures.length - maxItems;
+      return '${items.join('; ')} (+$rest more)';
+    }
+    return items.join('; ');
+  }
+}
+
+class DtxManageItem {
+  const DtxManageItem({required this.item, required this.excluded});
+
+  final DtxDownloadItem item;
+  final bool excluded;
+}
+
 class DiatarMainController extends ChangeNotifier {
   final DtxParser _parser = const DtxParser();
   final SettingsStore _settingsStore = SettingsStore();
@@ -448,29 +478,73 @@ class DiatarMainController extends ChangeNotifier {
     return Directory('${docs.path}/zsolozsma');
   }
 
+  String _displayNameForImportedFile(XFile xf, int index) {
+    final String directName = xf.name.trim();
+    if (directName.isNotEmpty) {
+      return directName;
+    }
+
+    final Uri? parsed = Uri.tryParse(xf.path);
+    if (parsed != null && parsed.pathSegments.isNotEmpty) {
+      final String last = Uri.decodeComponent(parsed.pathSegments.last).trim();
+      if (last.isNotEmpty) {
+        return last;
+      }
+    }
+
+    final String normalized = xf.path.replaceAll('\\', '/').trim();
+    if (normalized.isNotEmpty) {
+      final List<String> segments = normalized.split('/');
+      final String last = segments.isNotEmpty ? segments.last.trim() : '';
+      if (last.isNotEmpty) {
+        return last;
+      }
+    }
+
+    return 'imported_${index + 1}.dtx';
+  }
+
+  String _safeImportFileName(String value, int index) {
+    String name = value.trim();
+    if (name.isEmpty) {
+      name = 'imported_${index + 1}.dtx';
+    }
+    name = name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    if (!name.toLowerCase().endsWith('.dtx')) {
+      name = '$name.dtx';
+    }
+    return name;
+  }
+
   /// Copies the given [files] (picked via file picker) into the internal DTX
-  /// directory, then reloads books. Returns the number of files copied.
-  Future<int> importDtxFiles(List<XFile> files) async {
+  /// directory, then reloads books.
+  Future<DtxImportResult> importDtxFiles(List<XFile> files) async {
     final Directory dtxDir = await _resolveDtxDirectory();
     await dtxDir.create(recursive: true);
+    final List<String> failures = <String>[];
+    final Set<String> importedFileNames = <String>{};
     int count = 0;
-    for (final XFile xf in files) {
-      final String name = xf.name.trim();
-      if (!name.toLowerCase().endsWith('.dtx')) {
-        continue;
-      }
+    for (int i = 0; i < files.length; i++) {
+      final XFile xf = files[i];
+      final String originalName = _displayNameForImportedFile(xf, i);
+      final String targetName = _safeImportFileName(originalName, i);
       try {
         final List<int> bytes = await xf.readAsBytes();
-        await File('${dtxDir.path}/$name').writeAsBytes(bytes);
+        final String content = utf8.decode(bytes, allowMalformed: true);
+        _parser.parse(fileName: targetName, content: content);
+        await File('${dtxDir.path}/$targetName').writeAsBytes(bytes);
+        importedFileNames.add(targetName);
         count++;
-      } catch (_) {
-        // Skip files that cannot be read.
+      } catch (e) {
+        failures.add('$originalName: $e');
       }
     }
     if (count > 0) {
+      _disabledSongbooks.removeAll(importedFileNames);
+      await _orderStore.saveDisabled(_disabledSongbooks);
       await reloadBooks();
     }
-    return count;
+    return DtxImportResult(importedCount: count, failures: failures);
   }
 
   Future<ZsolozsmaSyncResult> syncZsolozsmaArchives({int? centerYear}) async {
@@ -1445,6 +1519,21 @@ class DiatarMainController extends ChangeNotifier {
     return _downloadService.listUpdates(targetDir: dtxDir);
   }
 
+  Future<List<DtxManageItem>> loadDtxManagerItems() async {
+    final Directory dtxDir = await _resolveDtxDirectory();
+    final List<DtxDownloadItem> all = await _downloadService.listAll(
+      targetDir: dtxDir,
+    );
+    return all
+        .map(
+          (DtxDownloadItem item) => DtxManageItem(
+            item: item,
+            excluded: _disabledSongbooks.contains(item.fileName),
+          ),
+        )
+        .toList();
+  }
+
   Future<String> exportCustomOrderToDia(String path) async {
     final String safePath = path.toLowerCase().endsWith('.dia')
         ? path
@@ -1846,6 +1935,104 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     return sections;
+  }
+
+  Future<void> applyDtxManagerSelection({
+    required Set<String> downloadSelected,
+    required Set<String> excludedSelected,
+  }) async {
+    loading = true;
+    downloadInProgress = true;
+    downloadCurrentFile = 0;
+    downloadTotalFiles = 0;
+    downloadCurrentName = '';
+    downloadCurrentFraction = 0;
+    _setStatus('statusDownloadListLoading');
+    notifyListeners();
+
+    try {
+      final Directory dtxDir = await _resolveDtxDirectory();
+      final List<DtxDownloadItem> all = await _downloadService.listAll(
+        targetDir: dtxDir,
+      );
+      final Map<String, DtxDownloadItem> byFile = <String, DtxDownloadItem>{
+        for (final DtxDownloadItem item in all) item.fileName: item,
+      };
+
+      final Set<String> effectiveDownload = downloadSelected
+          .map((String name) => name.trim())
+          .where((String name) => name.isNotEmpty)
+          .where((String name) {
+            final DtxDownloadItem? item = byFile[name];
+            return item != null && item.isOfficial && item.updateAvailable;
+          })
+          .toSet();
+
+      downloadTotalFiles = effectiveDownload.length;
+
+      final Set<String> effectiveExcluded = excludedSelected
+          .map((String name) => name.trim())
+          .where((String name) => name.isNotEmpty)
+          .toSet();
+
+      final Set<String> filesToDelete = effectiveExcluded.where((String name) {
+        final DtxDownloadItem? item = byFile[name];
+        return item != null && item.isInstalled;
+      }).toSet();
+
+      final List<DtxDownloadItem> selectedForDownload = effectiveDownload
+          .map((String name) => byFile[name]!)
+          .toList();
+
+      final int deletedCount = await _downloadService.deleteLocalFiles(
+        targetDir: dtxDir,
+        fileNames: filesToDelete,
+      );
+
+      DtxDownloadSummary summary = const DtxDownloadSummary(
+        downloaded: 0,
+        skipped: 0,
+      );
+      if (selectedForDownload.isNotEmpty) {
+        summary = await _downloadService.downloadUpdates(
+          targetDir: dtxDir,
+          selected: selectedForDownload,
+          onProgress: (DtxDownloadProgress progress) {
+            downloadCurrentFile = progress.currentFile;
+            downloadTotalFiles = progress.totalFiles;
+            downloadCurrentName = progress.fileName;
+            downloadCurrentFraction = progress.fraction;
+            _setStatus('statusDownloadProgress', <String, String>{
+              'current': '${progress.currentFile}',
+              'total': '${progress.totalFiles}',
+              'name': progress.fileName,
+              'percent': (progress.fraction * 100).toStringAsFixed(0),
+            });
+            notifyListeners();
+          },
+        );
+      }
+
+      effectiveExcluded.removeAll(effectiveDownload);
+      _disabledSongbooks = effectiveExcluded;
+      await _orderStore.saveDisabled(_disabledSongbooks);
+
+      await reloadBooks();
+      if (summary.downloaded == 0 && deletedCount == 0) {
+        _setStatus('statusDownloadSummaryNone');
+      } else {
+        _setStatus('statusDownloadSummary', <String, String>{
+          'downloaded': '${summary.downloaded}',
+          'skipped': '${summary.skipped}',
+        });
+      }
+    } catch (e) {
+      _setStatus('statusDownloadError', <String, String>{'error': '$e'});
+    } finally {
+      downloadInProgress = false;
+      loading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> downloadSongBooks({List<DtxDownloadItem>? selected}) async {

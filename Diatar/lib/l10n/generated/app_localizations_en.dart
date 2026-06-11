@@ -71,6 +71,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadTitle => 'Download';
 
   @override
+  String get downloadManagerNameColumn => 'DTX';
+
+  @override
+  String get downloadManagerUpdateColumn => 'Update';
+
+  @override
+  String get downloadManagerExcludedColumn => 'Excluded';
+
+  @override
+  String get downloadManagerUserImportedTag => 'User imported';
+
+  @override
+  String get downloadManagerUpdateAvailable => 'Update available';
+
+  @override
+  String get downloadManagerUpToDate => 'Up to date';
+
+  @override
+  String get downloadUserImportedGroup => 'User imported files';
+
+  @override
   String get downloadMessage => 'The download dialog can be restored later.';
 
   @override
@@ -898,6 +919,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get importDtxFilesError => 'Error importing .dtx file(s)';
+
+  @override
+  String importDtxFilesErrorDetailed(Object reason) {
+    return 'Error importing .dtx file(s): $reason';
+  }
+
+  @override
+  String importDtxFilesPartial(int count, int failed, Object reason) {
+    return '$count .dtx file(s) imported, $failed failed: $reason';
+  }
 
   @override
   String get settingsGeneralTitle => 'General';

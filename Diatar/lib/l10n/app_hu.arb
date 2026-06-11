@@ -20,6 +20,13 @@
   "addImageSlideTooltip": "Kép hozzáadása",
   "downloadBooksTooltip": "Énektárak letöltése",
   "downloadTitle": "Letöltés",
+  "downloadManagerNameColumn": "DTX",
+  "downloadManagerUpdateColumn": "Frissítés",
+  "downloadManagerExcludedColumn": "Mellőzött",
+  "downloadManagerUserImportedTag": "Felhasználói import",
+  "downloadManagerUpdateAvailable": "Frissíthető",
+  "downloadManagerUpToDate": "Naprakész",
+  "downloadUserImportedGroup": "Felhasználói importált fájlok",
   "downloadMessage": "A letöltési párbeszéd később visszahelyezhető.",
   "refreshTooltip": "Frissítés",
   "ok": "Rendben",
@@ -613,6 +620,24 @@
     }
   },
   "importDtxFilesError": "Hiba a .dtx importálás során",
+  "importDtxFilesErrorDetailed": "Hiba a .dtx importálás során: {reason}",
+  "@importDtxFilesErrorDetailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "importDtxFilesPartial": "{count} .dtx fájl beimportálva, {failed} sikertelen: {reason}",
+  "@importDtxFilesPartial": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "reason": {}
+    }
+  },
   "settingsGeneralTitle": "Általános",
   "settingsGeneralSummary": "Téma: {theme}, Nyelv: {language}",
   "@settingsGeneralSummary": {
