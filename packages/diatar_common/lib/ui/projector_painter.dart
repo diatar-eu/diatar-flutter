@@ -415,10 +415,11 @@ class ProjectorPainter extends CustomPainter {
       }
     }
 
-    final double titleFontSize = (globals.titleSize.toDouble() * 2.5).clamp(
-      8.0,
-      72.0,
-    );
+    final double requestedTitleFontSize = (globals.titleSize.toDouble() * 2.5)
+      .clamp(8.0, 72.0);
+    final double titleFontSize = math
+      .min(requestedTitleFontSize, fontSize)
+      .clamp(8.0, 72.0);
     final double lineSpacing = globals.spacing100 / 100.0;
 
     final List<TextPainter> painters = <TextPainter>[];
@@ -752,10 +753,11 @@ class ProjectorPainter extends CustomPainter {
 
     final List<_RenderLine> allLines = _parseRenderLines(sourceLines);
 
-    final double titleFontSize = (globals.titleSize.toDouble() * 2.5).clamp(
-      8.0,
-      72.0,
-    );
+    final double requestedTitleFontSize = (globals.titleSize.toDouble() * 2.5)
+      .clamp(8.0, 72.0);
+    final double titleFontSize = math
+      .min(requestedTitleFontSize, fontSize)
+      .clamp(8.0, 72.0);
     final double lineSpacing = globals.spacing100 / 100.0;
 
     final List<List<_TextRowLayout>> textRowsByLine = <List<_TextRowLayout>>[];
