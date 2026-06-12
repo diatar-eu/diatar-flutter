@@ -2219,6 +2219,7 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview> {
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
+          onTap: widget.controller.toggleShowing,
           onHorizontalDragStart: (_) {
             if (_isDragging) {
               return;
