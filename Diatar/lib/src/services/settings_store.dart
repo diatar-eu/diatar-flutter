@@ -8,6 +8,7 @@ class SettingsStore {
   static const String _kTcpTargets = 'TcpTargets';
   static const String _kUser = 'Username';
   static const String _kPassword = 'Password';
+  static const String _kInternetRelayEnabled = 'InternetRelayEnabled';
   static const String _kChannel = 'Channel';
   static const String _kBlankPicPath = 'BlankPicPath';
   static const String _kDiaExportPath = 'DiaExportPath';
@@ -45,7 +46,11 @@ class SettingsStore {
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String mqttUser = prefs.getString(_kUser) ?? '';
-    final String mqttPassword = mqttUser.trim().isEmpty
+    final bool internetRelayEnabled =
+      prefs.getBool(_kInternetRelayEnabled) ?? mqttUser.trim().isNotEmpty;
+    final String mqttPassword = !internetRelayEnabled
+      ? ''
+      : mqttUser.trim().isEmpty
         ? ''
         : (prefs.getString(_kPassword) ?? '');
     final int legacyPort = prefs.getInt(_kPort) ?? 1024;
@@ -70,6 +75,7 @@ class SettingsStore {
       rotateQuarterTurns: 0,
       mqttUser: mqttUser,
       mqttPassword: mqttPassword,
+      internetRelayEnabled: internetRelayEnabled,
       mqttChannel: '1',
       dtxPath: '',
       blankPicPath: prefs.getString(_kBlankPicPath) ?? '',
@@ -121,9 +127,12 @@ class SettingsStore {
     await prefs.setBool(_kTcpClientEnabled, settings.tcpClientEnabled);
     await prefs.setStringList(_kTcpTargets, tcpTargets);
     await prefs.setString(_kUser, settings.mqttUser);
+    await prefs.setBool(_kInternetRelayEnabled, settings.internetRelayEnabled);
     await prefs.setString(
       _kPassword,
-      settings.mqttUser.trim().isEmpty ? '' : settings.mqttPassword,
+      settings.internetRelayEnabled && settings.mqttUser.trim().isNotEmpty
+          ? settings.mqttPassword
+          : '',
     );
     await prefs.setString(_kChannel, '1');
     await prefs.setString(_kBlankPicPath, settings.blankPicPath);

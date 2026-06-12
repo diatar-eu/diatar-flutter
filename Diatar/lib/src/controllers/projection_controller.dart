@@ -220,7 +220,7 @@ class ProjectionController extends ChangeNotifier {
     }
     connected = isConnected;
     if (mqttActive) {
-      if (settings.mqttUser.trim().isEmpty) {
+      if (settings.mqttUser.trim().isEmpty || !settings.internetRelayEnabled) {
         _setStatus('projectionStatusMqttOff');
       } else {
         _setStatus('projectionStatusMqttReceiving', <String, String>{
@@ -278,7 +278,7 @@ class ProjectionController extends ChangeNotifier {
 
   Future<void> _applyTransport() async {
     final String user = settings.mqttUser.trim();
-    if (user.isEmpty) {
+    if (!settings.internetRelayEnabled || user.isEmpty) {
       mqttActive = false;
       await _mqtt.closeReceiver();
       await _server.restart(settings.port);

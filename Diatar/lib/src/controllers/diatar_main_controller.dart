@@ -688,7 +688,7 @@ class DiatarMainController extends ChangeNotifier {
     final String user = settings.mqttUser.trim();
     _mqttErrorSeq++;
     _tcpErrorSeq++;
-    mqttActive = user.isNotEmpty;
+    mqttActive = settings.internetRelayEnabled && user.isNotEmpty;
     if (mqttActive) {
       mqttConnected = false;
       mqttHasError = false;

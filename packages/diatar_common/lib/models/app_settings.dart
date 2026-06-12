@@ -15,6 +15,7 @@ class AppSettings {
     this.rotateQuarterTurns = 0,
     this.mqttUser = '',
     this.mqttPassword = '',
+    this.internetRelayEnabled = false,
     this.mqttChannel = '1',
     this.dtxPath = '',
     this.blankPicPath = '',
@@ -71,6 +72,7 @@ class AppSettings {
   final int rotateQuarterTurns;
   final String mqttUser;
   final String mqttPassword;
+  final bool internetRelayEnabled;
   final String mqttChannel;
   final String dtxPath;
   final String blankPicPath;
@@ -116,7 +118,7 @@ class AppSettings {
   Color get hiColor => _hiColor ?? const Color(0xFF00FFFF);
 
   bool get tcpEnabled =>
-      mqttUser.trim().isEmpty && tcpClientEnabled && tcpTargets.isNotEmpty;
+      !internetRelayEnabled && tcpClientEnabled && tcpTargets.isNotEmpty;
 
   EdgeInsets get clipInsets => EdgeInsets.fromLTRB(clipL, clipT, clipR, clipB);
 
@@ -134,6 +136,7 @@ class AppSettings {
     int? rotateQuarterTurns,
     String? mqttUser,
     String? mqttPassword,
+    bool? internetRelayEnabled,
     String? mqttChannel,
     String? dtxPath,
     String? blankPicPath,
@@ -187,6 +190,7 @@ class AppSettings {
       rotateQuarterTurns: rotateQuarterTurns ?? this.rotateQuarterTurns,
       mqttUser: mqttUser ?? this.mqttUser,
       mqttPassword: mqttPassword ?? this.mqttPassword,
+      internetRelayEnabled: internetRelayEnabled ?? this.internetRelayEnabled,
       mqttChannel: mqttChannel ?? this.mqttChannel,
       dtxPath: dtxPath ?? this.dtxPath,
       blankPicPath: blankPicPath ?? this.blankPicPath,
