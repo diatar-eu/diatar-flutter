@@ -127,7 +127,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projUseKotta = s.projUseKotta;
     _projUseTitle = s.projUseTitle;
     _projBoldText = s.projBoldText;
-    _internetRelayEnabled = s.mqttUser.trim().isNotEmpty;
+    _internetRelayEnabled = s.internetRelayEnabled;
     _localNetworkEnabled = s.tcpClientEnabled;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
     _desktopSongHotkeys = Map<String, String>.from(s.desktopSongHotkeys);
@@ -1937,7 +1937,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 
   void _save() {
-    final String mqttUser = _internetRelayEnabled ? _mqttUser.text.trim() : '';
+    final String mqttUser = _mqttUser.text.trim();
     final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
     final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
     final String? tcpError = _localNetworkEnabled
@@ -1977,6 +1977,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       port: firstPort,
       tcpClientEnabled: _localNetworkEnabled,
       tcpTargets: tcpTargets,
+      internetRelayEnabled: _internetRelayEnabled,
       mqttUser: mqttUser,
       mqttPassword: mqttPassword,
       mqttChannel: '1',
