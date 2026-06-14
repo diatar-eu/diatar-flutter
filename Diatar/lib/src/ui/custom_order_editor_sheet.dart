@@ -510,7 +510,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
     await _commitEntries();
     if (mounted) {
-      controller.selectCustomOrderEntryAt(lastInsertedIndex);
+      controller.selectCustomOrderEntryForEditing(lastInsertedIndex);
     }
   }
 
@@ -685,7 +685,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
     await _commitEntries();
     if (mounted && insertedCount > 0) {
-      controller.selectCustomOrderEntryAt(insertedStartIndex + insertedCount - 1);
+      controller.selectCustomOrderEntryForEditing(
+        insertedStartIndex + insertedCount - 1,
+      );
     }
   }
 
@@ -756,7 +758,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
     await _commitEntries();
     if (mounted) {
-      controller.selectCustomOrderEntryAt(lastInsertedIndex);
+      controller.selectCustomOrderEntryForEditing(lastInsertedIndex);
     }
   }
 
@@ -824,7 +826,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
     await _commitEntries();
     if (mounted) {
-      controller.selectCustomOrderEntryAt(lastInsertedIndex);
+      controller.selectCustomOrderEntryForEditing(lastInsertedIndex);
     }
   }
 
@@ -995,7 +997,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<void> _commitEntries() async {
-    await controller.applyCustomOrder(_entries, activate: true);
+    await controller.applyCustomOrder(
+      _entries,
+      activate: true,
+      syncProjection: false,
+    );
     if (!mounted) {
       return;
     }
@@ -1312,9 +1318,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           minTileHeight: 30,
           selected: controller.isCustomOrderIndexCurrent(index),
           selectedTileColor: Colors.blue.withValues(alpha: 0.12),
-          onTap: () => unawaited(
-            controller.projectCustomOrderEntry(entry, preferredCursor: index),
-          ),
+          onTap: () => controller.selectCustomOrderEntryForEditing(index),
           leading: ReorderableDragStartListener(
             index: index,
             child: const Icon(Icons.drag_handle),

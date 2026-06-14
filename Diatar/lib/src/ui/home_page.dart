@@ -799,7 +799,7 @@ class DiatarHomePage extends StatelessWidget {
       builder: (BuildContext context) {
         return CustomOrderEditorSheet(controller: controller);
       },
-    );
+    ).whenComplete(controller.syncProjectionToCurrentDia);
   }
 
   Future<void> _openDownloadDialog(BuildContext context) async {
