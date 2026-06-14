@@ -1024,11 +1024,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       );
       final String defaultFileName = '$defaultBaseName.dia';
       final String configuredDir = controller.settings.diaExportPath.trim();
-      final bool hadConfiguredDir = configuredDir.isNotEmpty;
-      final String? initialDir =
-          configuredDir.isNotEmpty && Directory(configuredDir).existsSync()
-          ? configuredDir
+        final String? initialDir = configuredDir.isNotEmpty
+          ? _existingDirectoryPathOrNull(configuredDir)
           : null;
+        final bool hadUsableConfiguredDir = initialDir != null;
 
       try {
         final FileSaveLocation? target = await getSaveLocation(
@@ -1037,17 +1036,17 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           initialDirectory: initialDir,
         );
         targetPath = target?.path;
-        if (!hadConfiguredDir &&
+        if (!hadUsableConfiguredDir &&
             targetPath != null &&
             targetPath.trim().isNotEmpty) {
           final String selectedDir = File(targetPath).parent.path.trim();
-          if (selectedDir.isNotEmpty) {
-            final Directory selectedDirectory = Directory(selectedDir);
-            if (await selectedDirectory.exists()) {
-              await controller.applySettings(
-                controller.settings.copyWith(diaExportPath: selectedDir),
-              );
-            }
+          final String? existingSelectedDir = _existingDirectoryPathOrNull(
+            selectedDir,
+          );
+          if (existingSelectedDir != null) {
+            await controller.applySettings(
+              controller.settings.copyWith(diaExportPath: existingSelectedDir),
+            );
           }
         }
       } on UnimplementedError {
@@ -1095,7 +1094,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         if (!await exportDir.exists()) {
           return;
         }
-        if (!hadConfiguredDir) {
+        if (!hadUsableConfiguredDir) {
           await controller.applySettings(
             controller.settings.copyWith(diaExportPath: exportDir.path),
           );
@@ -1205,6 +1204,18 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         ? base.substring(0, base.length - 4)
         : base;
     return normalized.trim().isEmpty ? fallback : normalized;
+  }
+
+  String? _existingDirectoryPathOrNull(String rawPath) {
+    final String trimmed = rawPath.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    final Directory directory = Directory(trimmed);
+    if (!directory.existsSync()) {
+      return null;
+    }
+    return directory.path;
   }
 
   Future<_DiaSaveTarget?> _askDiaSaveTarget({
