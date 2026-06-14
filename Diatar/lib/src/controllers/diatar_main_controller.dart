@@ -1613,7 +1613,16 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> markCustomOrderDiaExportSaved(String path) async {
-    final String savedName = _stripFileExtension(_fileNameFromPath(path));
+    // URI-decode to handle Android content URIs like
+    // content://...document/primary%3ADocuments%2Fsorrend.dia
+    // where %2F is an encoded '/' within the document-ID segment.
+    String decodedPath;
+    try {
+      decodedPath = Uri.decodeComponent(path);
+    } catch (_) {
+      decodedPath = path;
+    }
+    final String savedName = _stripFileExtension(_fileNameFromPath(decodedPath));
     _lastImportedCustomOrderBaseName = savedName.trim().isEmpty
         ? null
         : savedName;
