@@ -679,8 +679,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     int insertedCount = 0;
     int insertedStartIndex = 0;
     setState(() {
-      insertedStartIndex = _entries.length;
-      _entries.addAll(toInsert);
+      insertedStartIndex = _selectedInsertInsertionIndex();
+      _entries.insertAll(insertedStartIndex, toInsert);
       insertedCount = toInsert.length;
     });
     await _commitEntries();
