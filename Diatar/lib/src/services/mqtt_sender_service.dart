@@ -96,6 +96,19 @@ class MqttSenderService {
     onStatusChanged(false);
   }
 
+  Future<void> clearRetainedMessages() async {
+    final MqttServerClient? client = _client;
+    if (client == null) {
+      return;
+    }
+    await _publishEmpty(_topicState);
+    await _publishEmpty(_topicDia);
+    await _publishEmpty(_topicBlank);
+    _cachedState = null;
+    _cachedText = null;
+    _cachedBlank = null;
+  }
+
   Future<void> sendState(ProjectionGlobals globals, {required bool showing, required int wordToHighlight}) async {
     _cachedState = encodeStateRecord(globals, projecting: showing, wordToHighlight: wordToHighlight);
     await _publish(_topicState, _cachedState);
@@ -130,6 +143,15 @@ class MqttSenderService {
     }
     final Uint8Buffer buffer = Uint8Buffer()..addAll(payload);
     final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder()..addBuffer(buffer);
+    client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!, retain: true);
+  }
+
+  Future<void> _publishEmpty(String topic) async {
+    final MqttServerClient? client = _client;
+    if (client == null || topic.isEmpty) {
+      return;
+    }
+    final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder();
     client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!, retain: true);
   }
 }

@@ -708,6 +708,7 @@ class DiatarMainController extends ChangeNotifier {
       mqttConnectAttemptAt = null;
       mqttConnected = false;
       mqttHasError = false;
+      await _mqttSender.clearRetainedMessages();
       await _mqttSender.close();
     }
 
@@ -3093,6 +3094,7 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> requestExit() async {
+    await _mqttSender.clearRetainedMessages();
     await _sender.stop();
     await _mqttSender.close();
     await SystemNavigator.pop();
