@@ -944,6 +944,19 @@ class DiatarMainController extends ChangeNotifier {
     _selectByCustomOrderCursor(index, sync: true);
   }
 
+  void selectCustomOrderEntryForEditing(int index) {
+    if (index < 0 || index >= _customOrder.length) {
+      return;
+    }
+    customOrderActive = _customOrder.isNotEmpty;
+    _diaVirtualBookSelected = _customOrder.isNotEmpty;
+    _customOrderCursor = index;
+    _setStatus('statusCustomOrderSelected', <String, String>{
+      'label': _customOrder[index].label,
+    });
+    notifyListeners();
+  }
+
   void selectDiaVirtualBook() {
     if (_customOrder.isEmpty) {
       return;
@@ -1301,6 +1314,7 @@ class DiatarMainController extends ChangeNotifier {
   Future<void> applyCustomOrder(
     List<CustomOrderEntry> entries, {
     required bool activate,
+    bool syncProjection = true,
   }) async {
     final int previousCursor = _customOrderCursor;
     final CustomOrderEntry? previousEntry =
@@ -1328,19 +1342,22 @@ class DiatarMainController extends ChangeNotifier {
       } else {
         _customOrderCursor = -1;
       }
-      if (_customOrderCursor >= 0) {
+      if (syncProjection && _customOrderCursor >= 0) {
         _selectByCustomOrderCursor(_customOrderCursor, sync: false);
       }
       await _persistCurrentCustomOrder();
-      if (_customOrderCursor >= 0 &&
+      if (syncProjection &&
+          _customOrderCursor >= 0 &&
           _customOrderCursor < _customOrder.length &&
           !_customOrder[_customOrderCursor].isSongEntry) {
         await _projectCustomOrderEntry(
           _customOrder[_customOrderCursor],
           cursor: _customOrderCursor,
         );
-      } else {
+      } else if (syncProjection) {
         await _syncCurrentDia();
+      } else {
+        notifyListeners();
       }
     } else {
       _customOrderCursor = -1;
@@ -1348,6 +1365,10 @@ class DiatarMainController extends ChangeNotifier {
       await _persistCurrentCustomOrder();
       notifyListeners();
     }
+  }
+
+  Future<void> syncProjectionToCurrentDia() {
+    return _syncCurrentDia();
   }
 
   Future<void> projectCustomOrderEntry(
