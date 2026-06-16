@@ -503,7 +503,7 @@ class ProjectorPainter extends CustomPainter {
             text: word.text + (word.spaceAfter ? ' ' : ''),
             style: TextStyle(
               color: highlighted ? globals.hiColor : baseColor,
-              fontSize: lineFontSize,
+              fontSize: _effectiveWordFontSize(word, lineFontSize),
               fontWeight: (globals.boldText || word.bold)
                   ? FontWeight.bold
                   : FontWeight.normal,
@@ -928,7 +928,7 @@ class ProjectorPainter extends CustomPainter {
           text: word.text + (word.spaceAfter ? ' ' : ''),
           style: TextStyle(
             color: baseColor,
-            fontSize: fontSize,
+            fontSize: _effectiveWordFontSize(word, fontSize),
             fontWeight: (globals.boldText || word.bold)
                 ? FontWeight.bold
                 : FontWeight.normal,
@@ -996,7 +996,7 @@ class ProjectorPainter extends CustomPainter {
           text: display,
           style: TextStyle(
             color: highlighted ? globals.hiColor : baseColor,
-            fontSize: fontSize,
+            fontSize: _effectiveWordFontSize(word, fontSize),
             fontWeight: (globals.boldText || word.bold)
                 ? FontWeight.bold
                 : FontWeight.normal,
@@ -1352,6 +1352,7 @@ class ProjectorPainter extends CustomPainter {
             chord: word.chord,
             kotta: word.kotta,
             spaceAfter: word.spaceAfter,
+            fontScale: word.fontScale,
           ),
         );
       } else {
@@ -1377,6 +1378,7 @@ class ProjectorPainter extends CustomPainter {
 
     final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
     final double splitLimit = math.max(8.0, maxWidth - continuationIndent);
+    const double minWordScale = 0.82;
     bool changed = false;
     final List<_WordToken> words = <_WordToken>[];
 
@@ -1384,6 +1386,20 @@ class ProjectorPainter extends CustomPainter {
       final double width = _measureWordDisplayWidth(word, fontSize, measure);
       if (width <= splitLimit || word.text.characters.length <= 1) {
         words.add(word);
+        continue;
+      }
+
+      final _WordToken? shrunk = _shrinkWordToFitWidth(
+        word,
+        fontSize,
+        splitLimit,
+        minWordScale,
+        measure,
+        currentWidth: width,
+      );
+      if (shrunk != null) {
+        changed = true;
+        words.add(shrunk);
         continue;
       }
 
@@ -1403,6 +1419,46 @@ class ProjectorPainter extends CustomPainter {
     }
 
     return changed ? _RenderLine(words: words) : line;
+  }
+
+  _WordToken? _shrinkWordToFitWidth(
+    _WordToken word,
+    double fontSize,
+    double maxWidth,
+    double minWordScale,
+    TextPainter measure, {
+    required double currentWidth,
+  }) {
+    if ((word.chord ?? '').trim().isNotEmpty ||
+        (word.kotta ?? '').trim().isNotEmpty) {
+      return null;
+    }
+    if (word.fontScale <= minWordScale) {
+      return null;
+    }
+
+    final double targetScale =
+        (word.fontScale * (maxWidth / currentWidth)).clamp(minWordScale, 1.0);
+    if ((word.fontScale - targetScale).abs() < 0.001) {
+      return null;
+    }
+
+    final _WordToken scaled = _WordToken(
+      text: word.text,
+      bold: word.bold,
+      italic: word.italic,
+      underline: word.underline,
+      tieUnderline: word.tieUnderline,
+      strike: word.strike,
+      color: word.color,
+      chord: word.chord,
+      kotta: word.kotta,
+      spaceAfter: word.spaceAfter,
+      fontScale: targetScale,
+    );
+
+    final double scaledWidth = _measureWordDisplayWidth(scaled, fontSize, measure);
+    return scaledWidth <= maxWidth + 0.5 ? scaled : null;
   }
 
   List<_WordToken> _splitWordToFitWidth(
@@ -1431,7 +1487,7 @@ class ProjectorPainter extends CustomPainter {
         measure.text = TextSpan(
           text: chunk + (isLastCandidate && word.spaceAfter ? ' ' : ''),
           style: TextStyle(
-            fontSize: fontSize,
+            fontSize: _effectiveWordFontSize(word, fontSize),
             fontWeight: (globals.boldText || word.bold)
                 ? FontWeight.bold
                 : FontWeight.normal,
@@ -1465,6 +1521,7 @@ class ProjectorPainter extends CustomPainter {
           chord: start == 0 ? word.chord : null,
           kotta: start == 0 ? word.kotta : null,
           spaceAfter: isLast ? word.spaceAfter : false,
+          fontScale: word.fontScale,
         ),
       );
 
@@ -1494,7 +1551,7 @@ class ProjectorPainter extends CustomPainter {
       measure.text = TextSpan(
         text: display,
         style: TextStyle(
-          fontSize: fontSize,
+          fontSize: _effectiveWordFontSize(w, fontSize),
           fontWeight: (globals.boldText || w.bold)
               ? FontWeight.bold
               : FontWeight.normal,
@@ -2158,7 +2215,7 @@ class ProjectorPainter extends CustomPainter {
     measure.text = TextSpan(
       text: display,
       style: TextStyle(
-        fontSize: fontSize,
+        fontSize: _effectiveWordFontSize(word, fontSize),
         fontWeight: (globals.boldText || word.bold)
             ? FontWeight.bold
             : FontWeight.normal,
@@ -2167,6 +2224,10 @@ class ProjectorPainter extends CustomPainter {
     );
     measure.layout();
     return measure.width;
+  }
+
+  double _effectiveWordFontSize(_WordToken word, double baseFontSize) {
+    return baseFontSize * word.fontScale.clamp(0.1, 1.0);
   }
 
   double _kottaRawWidth(String kotta, double lineGap, _KottaDrawState state) {
@@ -3264,6 +3325,7 @@ class ProjectorPainter extends CustomPainter {
           chord: mergedChord,
           kotta: mergedKotta,
           spaceAfter: last.spaceAfter,
+          fontScale: last.fontScale,
         ),
       );
       pendingChord = null;
@@ -3287,6 +3349,7 @@ class ProjectorPainter extends CustomPainter {
           chord: last.chord,
           kotta: last.kotta,
           spaceAfter: true,
+          fontScale: last.fontScale,
         ),
       );
     }
@@ -3309,6 +3372,7 @@ class ProjectorPainter extends CustomPainter {
           chord: pendingChord,
           kotta: pendingKotta,
           spaceAfter: addSpaceAfter,
+          fontScale: 1,
         ),
       );
       pendingChord = null;
@@ -3561,6 +3625,7 @@ class _WordToken {
     this.chord,
     this.kotta,
     this.spaceAfter = false,
+    this.fontScale = 1,
   });
 
   final String text;
@@ -3573,6 +3638,7 @@ class _WordToken {
   final String? chord;
   final String? kotta;
   final bool spaceAfter;
+  final double fontScale;
 
   bool get countAsWord => text.trim().isNotEmpty;
 }
