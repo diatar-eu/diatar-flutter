@@ -63,6 +63,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late int _projBlankTrans;
   late int _appThemeMode;
   late String _appLanguage;
+  late bool _homeShowHighlightControls;
   late bool _projAutoSize;
   late bool _projHCenter;
   late bool _projVCenter;
@@ -120,6 +121,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projBlankTrans = s.projBlankTrans.clamp(0, 100);
     _appThemeMode = s.appThemeMode.clamp(0, 1);
     _appLanguage = _isSupportedLanguage(s.appLanguage) ? s.appLanguage : '';
+    _homeShowHighlightControls = s.homeShowHighlightControls;
     _projAutoSize = s.projAutoSize;
     _projHCenter = s.projHCenter;
     _projVCenter = s.projVCenter;
@@ -1777,6 +1779,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
+            value: _homeShowHighlightControls,
+            onChanged: (bool v) => setBoth(() => _homeShowHighlightControls = v),
+            title: Text(l10n.wordHighlight),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
             value: _projBoldText,
             onChanged: (bool v) => setBoth(() => _projBoldText = v),
             title: Text(l10n.boldText),
@@ -2038,6 +2046,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       projBgMode: _projBgMode.clamp(0, 4),
       projBackTrans: _projBackTrans.clamp(0, 100),
       projBlankTrans: _projBlankTrans.clamp(0, 100),
+      homeShowHighlightControls: _homeShowHighlightControls,
       appThemeMode: _appThemeMode.clamp(0, 1),
       appLanguage: _appLanguage,
       desktopActionHotkeys: Map<String, String>.from(_desktopActionHotkeys),

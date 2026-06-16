@@ -36,8 +36,8 @@
   "projectionOff": "Projection OFF",
   "previous": "Previous",
   "next": "Next",
-  "highlightPrev": "Highlight -",
-  "highlightNext": "Highlight +",
+  "highlightPrev": "Word highlight ←",
+  "highlightNext": "Word highlight →",
   "positionLabel": "Position: {current}/{total}",
   "@positionLabel": {
     "placeholders": {
@@ -481,6 +481,7 @@
   "vCenter": "Vertical center align",
   "showChords": "Show chords",
   "showKotta": "Show notation",
+  "wordHighlight": "Word highlight",
   "boldText": "Bold text",
   "colorsTitle": "Colors",
   "backgroundColor": "Background",

@@ -120,10 +120,10 @@ class AppLocalizationsHu extends AppLocalizations {
   String get next => 'Következő';
 
   @override
-  String get highlightPrev => 'Highlight -';
+  String get highlightPrev => 'Szókiemelés ←';
 
   @override
-  String get highlightNext => 'Highlight +';
+  String get highlightNext => 'Szókiemelés →';
 
   @override
   String positionLabel(int current, int total) {
@@ -676,6 +676,9 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get showKotta => 'Kotta mutatása';
+
+  @override
+  String get wordHighlight => 'Szókiemelés';
 
   @override
   String get boldText => 'Félkövér szöveg';

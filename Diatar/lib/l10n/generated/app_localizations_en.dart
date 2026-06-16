@@ -119,10 +119,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get next => 'Next';
 
   @override
-  String get highlightPrev => 'Highlight -';
+  String get highlightPrev => 'Word highlight ←';
 
   @override
-  String get highlightNext => 'Highlight +';
+  String get highlightNext => 'Word highlight →';
 
   @override
   String positionLabel(int current, int total) {
@@ -674,6 +674,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get showKotta => 'Show notation';
+
+  @override
+  String get wordHighlight => 'Word highlight';
 
   @override
   String get boldText => 'Bold text';
