@@ -76,6 +76,8 @@ class _DiaSongGroup {
 
 const int _diaVirtualBookValue = -1000000;
 
+enum _ProjectionDisplayToggle { kotta, chords }
+
 String _basename(String path) {
   final String normalized = path.replaceAll('\\', '/');
   final List<String> parts = normalized
@@ -493,8 +495,8 @@ class DiatarHomePage extends StatelessWidget {
           const double minPreviewWidth = 320.0;
           const double minControlsWidth = 300.0;
           const double preferredControlsWidth = 460.0;
-          // 9 circle buttons (with lock toggle) + 8 gaps + side paddings.
-          const double controlsRowMinWidthForButtons = 538.0;
+          // 10 circle buttons (including display options) + 9 gaps + side paddings.
+          const double controlsRowMinWidthForButtons = 596.0;
 
           final double maxControlsWidth = math.max(
             minControlsWidth,
@@ -625,6 +627,37 @@ class DiatarHomePage extends StatelessWidget {
                     : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 8),
+              Builder(
+                builder: (BuildContext menuContext) {
+                  final bool nothingShown =
+                      !controller.settings.projUseKotta &&
+                      !controller.settings.projUseAkkord;
+                  final Color displayButtonColor = nothingShown
+                      ? const Color(0xFFF9A825)
+                      : Theme.of(menuContext).colorScheme.onSurfaceVariant;
+                  return _actionIconButton(
+                    menuContext,
+                    child: Text(
+                      '\u266B',
+                      style: TextStyle(
+                        fontSize: 23,
+                        fontWeight: FontWeight.w700,
+                        decoration: nothingShown
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
+                        decorationThickness: 2.0,
+                      ),
+                    ),
+                    tooltip: '${l10n.showKotta} / ${l10n.showChords}',
+                    onPressed: () => unawaited(
+                      _showProjectionDisplayMenu(menuContext),
+                    ),
+                    backgroundColor: displayButtonColor.withValues(alpha: 0.15),
+                    foregroundColor: displayButtonColor,
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
               _actionIconButton(
                 context,
                 icon: Icons.chevron_right,
@@ -638,26 +671,28 @@ class DiatarHomePage extends StatelessWidget {
                 tooltip: l10n.songNext,
                 onPressed: controller.nextSong,
               ),
-              const SizedBox(width: 8),
-              _actionIconButton(
-                context,
-                child: const Text(
-                  '\u2796',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+              if (controller.settings.homeShowHighlightControls) ...<Widget>[
+                const SizedBox(width: 8),
+                _actionIconButton(
+                  context,
+                  child: const Text(
+                    '\u2796',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                  ),
+                  tooltip: l10n.highlightPrev,
+                  onPressed: controller.highlightPrev,
                 ),
-                tooltip: l10n.highlightPrev,
-                onPressed: controller.highlightPrev,
-              ),
-              const SizedBox(width: 8),
-              _actionIconButton(
-                context,
-                child: const Text(
-                  '\u2795',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                const SizedBox(width: 8),
+                _actionIconButton(
+                  context,
+                  child: const Text(
+                    '\u2795',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                  ),
+                  tooltip: l10n.highlightNext,
+                  onPressed: controller.highlightNext,
                 ),
-                tooltip: l10n.highlightNext,
-                onPressed: controller.highlightNext,
-              ),
+              ],
             ],
           ),
         ),
@@ -678,6 +713,71 @@ class DiatarHomePage extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  Future<void> _showProjectionDisplayMenu(BuildContext buttonContext) async {
+    final RenderObject? buttonObject = buttonContext.findRenderObject();
+    if (buttonObject is! RenderBox) {
+      return;
+    }
+    final OverlayState? overlay = Overlay.of(buttonContext);
+    if (overlay == null) {
+      return;
+    }
+    final RenderObject? overlayObject = overlay.context.findRenderObject();
+    if (overlayObject is! RenderBox) {
+      return;
+    }
+
+    final Offset topLeft = buttonObject.localToGlobal(
+      Offset.zero,
+      ancestor: overlayObject,
+    );
+    final Offset bottomRight = buttonObject.localToGlobal(
+      buttonObject.size.bottomRight(Offset.zero),
+      ancestor: overlayObject,
+    );
+
+    final _ProjectionDisplayToggle? selected = await showMenu<
+      _ProjectionDisplayToggle
+    >(
+      context: buttonContext,
+      position: RelativeRect.fromRect(
+        Rect.fromPoints(topLeft, bottomRight),
+        Offset.zero & overlayObject.size,
+      ),
+      items: <PopupMenuEntry<_ProjectionDisplayToggle>>[
+        CheckedPopupMenuItem<_ProjectionDisplayToggle>(
+          value: _ProjectionDisplayToggle.kotta,
+          checked: controller.settings.projUseKotta,
+          child: Text(buttonContext.l10n.showKotta),
+        ),
+        CheckedPopupMenuItem<_ProjectionDisplayToggle>(
+          value: _ProjectionDisplayToggle.chords,
+          checked: controller.settings.projUseAkkord,
+          child: Text(buttonContext.l10n.showChords),
+        ),
+      ],
+    );
+
+    if (selected == null) {
+      return;
+    }
+
+    switch (selected) {
+      case _ProjectionDisplayToggle.kotta:
+        await controller.applySettings(
+          controller.settings.copyWith(
+            projUseKotta: !controller.settings.projUseKotta,
+          ),
+        );
+      case _ProjectionDisplayToggle.chords:
+        await controller.applySettings(
+          controller.settings.copyWith(
+            projUseAkkord: !controller.settings.projUseAkkord,
+          ),
+        );
+    }
   }
 
   Widget _buildSimplePreviewPane(BuildContext context) {

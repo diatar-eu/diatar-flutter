@@ -36,8 +36,8 @@
   "projectionOff": "Vetítés KI",
   "previous": "Előző",
   "next": "Következő",
-  "highlightPrev": "Highlight -",
-  "highlightNext": "Highlight +",
+  "highlightPrev": "Szókiemelés ←",
+  "highlightNext": "Szókiemelés →",
   "positionLabel": "Pozíció: {current}/{total}",
   "@positionLabel": {
     "placeholders": {
@@ -481,6 +481,7 @@
   "vCenter": "Függőleges középre igazítás",
   "showChords": "Akkordok mutatása",
   "showKotta": "Kotta mutatása",
+  "wordHighlight": "Szókiemelés",
   "boldText": "Félkövér szöveg",
   "colorsTitle": "Színek",
   "backgroundColor": "Háttér",

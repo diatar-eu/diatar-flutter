@@ -37,6 +37,7 @@ class SettingsStore {
   static const String _kProjBackTrans = 'ProjBackTrans';
   static const String _kProjBlankTrans = 'ProjBlankTrans';
   static const String _kHomeViewMode = 'HomeViewMode';
+  static const String _kHomeShowHighlightControls = 'HomeShowHighlightControls';
   static const String _kAppThemeMode = 'AppThemeMode';
   static const String _kAppLanguage = 'AppLanguage';
   static const String _kProjectionLocked = 'ProjectionLocked';
@@ -101,6 +102,8 @@ class SettingsStore {
       projBackTrans: prefs.getInt(_kProjBackTrans) ?? 0,
       projBlankTrans: prefs.getInt(_kProjBlankTrans) ?? 0,
       homeViewMode: prefs.getInt(_kHomeViewMode) ?? 0,
+        homeShowHighlightControls:
+          prefs.getBool(_kHomeShowHighlightControls) ?? false,
       appThemeMode: prefs.getInt(_kAppThemeMode) ?? 0,
       appLanguage: prefs.getString(_kAppLanguage) ?? '',
       projectionLocked: prefs.getBool(_kProjectionLocked) ?? false,
@@ -158,6 +161,10 @@ class SettingsStore {
     await prefs.setInt(_kProjBackTrans, settings.projBackTrans);
     await prefs.setInt(_kProjBlankTrans, settings.projBlankTrans);
     await prefs.setInt(_kHomeViewMode, settings.homeViewMode);
+    await prefs.setBool(
+      _kHomeShowHighlightControls,
+      settings.homeShowHighlightControls,
+    );
     await prefs.setInt(_kAppThemeMode, settings.appThemeMode);
     await prefs.setString(_kAppLanguage, settings.appLanguage);
     await prefs.setBool(_kProjectionLocked, settings.projectionLocked);

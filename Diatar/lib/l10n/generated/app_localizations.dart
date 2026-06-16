@@ -317,13 +317,13 @@ abstract class AppLocalizations {
   /// No description provided for @highlightPrev.
   ///
   /// In hu, this message translates to:
-  /// **'Highlight -'**
+  /// **'Szókiemelés ←'**
   String get highlightPrev;
 
   /// No description provided for @highlightNext.
   ///
   /// In hu, this message translates to:
-  /// **'Highlight +'**
+  /// **'Szókiemelés →'**
   String get highlightNext;
 
   /// No description provided for @positionLabel.
@@ -1222,6 +1222,12 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Kotta mutatása'**
   String get showKotta;
+
+  /// No description provided for @wordHighlight.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szókiemelés'**
+  String get wordHighlight;
 
   /// No description provided for @boldText.
   ///
