@@ -307,6 +307,145 @@ void main() {
     expect(continuations.any((List<bool> pair) => pair[0] && pair[1]), true);
   });
 
+  test('kotta control sequences do not create intra-word wrap points', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: false, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: false),
+    );
+
+    final List<String> rows = painter.debugTextWrappedRowsForLine(
+      r' \\K-5kGE2[?r81f;Ki\\K1d;ált\\K1f]?;sunk, K\\K[?2a;risz\\K2a]?;tus \\K[?2h;hí\\K2g]?;ve\\Kr42a|!;i: m\\K-5[?r82a]?;ely \\K[?2g;ér\\K1e;ez\\K1f]?;zük, h\\K[?2g]?;ogy \\K[?1f;kö\\K1e]?;ze\\Kr41d;leg\\K|!;,',
+      fontSize: 24,
+      maxWidth: 130,
+    );
+
+    bool hasBadSplit(String leftSuffix, String rightPrefix) {
+      for (int i = 0; i + 1 < rows.length; i++) {
+        if (rows[i].endsWith(leftSuffix) && rows[i + 1].startsWith(rightPrefix)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    expect(hasBadSplit('Krisz', 'tus'), false);
+    expect(hasBadSplit('h', 'ogy'), false);
+  });
+
+  test('soft hyphen stays hidden when no wrap occurs', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: false, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: false),
+    );
+
+    final List<String> rows = painter.debugTextWrappedRowsForLine(
+      r'fo\-lyamatos szoveg',
+      fontSize: 24,
+      maxWidth: 400,
+    );
+
+    expect(rows, isNotEmpty);
+    expect(rows.any((row) => row.contains('-')), false);
+    expect(rows.join(' '), contains('folyamatos'));
+  });
+
+  test('soft hyphen is shown only when wrap occurs at that point', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: false, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: false),
+    );
+
+    final List<String> rows = painter.debugTextWrappedRowsForLine(
+      r'fo\-lyamatos',
+      fontSize: 24,
+      maxWidth: 45,
+    );
+
+    expect(rows.length, greaterThanOrEqualTo(2));
+    expect(rows.first.endsWith('-'), true);
+    expect(rows.join(''), 'fo-lyamatos');
+  });
+
+  test('escaped space is non-breaking inside word', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: false, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: false),
+    );
+
+    final List<String> rows = painter.debugTextWrappedRowsForLine(
+      r'ab\ cd ef',
+      fontSize: 24,
+      maxWidth: 60,
+    );
+
+    bool splitEscapedSpace = false;
+    for (int i = 0; i + 1 < rows.length; i++) {
+      if (rows[i].endsWith('ab') && rows[i + 1].startsWith('cd')) {
+        splitEscapedSpace = true;
+        break;
+      }
+    }
+    expect(splitEscapedSpace, false);
+  });
+
+  test('preferred break marker does not force hard break when line fits', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: false, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: false),
+    );
+
+    final List<String> rows = painter.debugTextWrappedRowsForLine(
+      r'alfa\.beta',
+      fontSize: 24,
+      maxWidth: 400,
+    );
+
+    expect(rows, hasLength(1));
+    expect(rows.first, contains('alfa'));
+    expect(rows.first, contains('beta'));
+  });
+
+  test('preferred break marker is chosen when wrapping is needed', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: false, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: false),
+    );
+
+    final List<String> rows = painter.debugTextWrappedRowsForLine(
+      r'aa\.bb cc',
+      fontSize: 24,
+      maxWidth: 70,
+    );
+
+    expect(rows.length, greaterThanOrEqualTo(2));
+    expect(rows.first, 'aa');
+    expect(rows[1], startsWith('bb'));
+  });
+
+  test('normal hyphen creates wrap opportunity like space', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: false, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: false),
+    );
+
+    final List<String> rows = painter.debugTextWrappedRowsForLine(
+      'ab-cd ef',
+      fontSize: 24,
+      maxWidth: 55,
+    );
+
+    expect(rows.length, greaterThanOrEqualTo(2));
+    expect(rows.first.endsWith('-'), true);
+    expect(rows[1].startsWith('cd'), true);
+  });
+
   test('logo background stays green between fade in and fade out', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: const LogoFrame(0),

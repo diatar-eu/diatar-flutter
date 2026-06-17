@@ -719,7 +719,7 @@ class DiatarHomePage extends StatelessWidget {
     if (buttonObject is! RenderBox) {
       return;
     }
-    final OverlayState? overlay = Overlay.of(buttonContext);
+    final OverlayState overlay = Overlay.of(buttonContext);
     if (overlay == null) {
       return;
     }

@@ -176,6 +176,35 @@ class ProjectorPainter extends CustomPainter {
     }).toList();
     }
 
+  List<String> debugTextWrappedRowsForLine(
+    String source, {
+    double fontSize = 24,
+    double maxWidth = 120,
+  }) {
+    final List<_RenderLine> lines = _parseOneLine(source);
+    if (lines.isEmpty) {
+      return const <String>[];
+    }
+
+    final List<_TextRowLayout> rows = _buildTextRows(
+      lines.first,
+      fontSize,
+      maxWidth,
+    );
+    return rows
+        .map(
+          (row) => row.wordIndices
+              .map((int wi) {
+                final _WordToken w = lines.first.words[wi];
+                return w.text + (w.spaceAfter ? ' ' : '');
+              })
+              .join()
+              .trimRight() +
+              (row.endHyphen ? '-' : ''),
+        )
+        .toList();
+  }
+
   List<double> debugKottaRowStartXsForLine(
     String source, {
     double fontSize = 24,
@@ -401,16 +430,31 @@ class ProjectorPainter extends CustomPainter {
     final List<_RenderLine> allLines = _parseRenderLines(sourceLines);
 
     double fontSize = globals.fontSize.toDouble();
+    bool preferPreferredBreaks = true;
     if (globals.autoResize) {
       while (fontSize > 8) {
-        final double required = _measureTextRequiredHeightForFontSize(
+        final double preferredRequired = _measureTextRequiredHeightForFontSize(
           size,
           frame,
           fontSize,
+          preferPreferredBreaks: true,
         );
-        if (required <= size.height * 0.95) {
+        if (preferredRequired <= size.height * 0.95) {
+          preferPreferredBreaks = true;
           break;
         }
+
+        final double fallbackRequired = _measureTextRequiredHeightForFontSize(
+          size,
+          frame,
+          fontSize,
+          preferPreferredBreaks: false,
+        );
+        if (fallbackRequired <= size.height * 0.95) {
+          preferPreferredBreaks = false;
+          break;
+        }
+
         fontSize -= 1;
       }
     }
@@ -473,7 +517,12 @@ class ProjectorPainter extends CustomPainter {
             )
           : const <_KottaRowLayout>[];
       final List<_TextRowLayout> lineTextRows = (!isTitleLine && !hasKotta)
-          ? _buildTextRows(line, lineFontSize, maxWidth)
+          ? _buildTextRows(
+              line,
+              lineFontSize,
+              maxWidth,
+              preferPreferredBreaks: preferPreferredBreaks,
+            )
           : const <_TextRowLayout>[];
       final List<bool> lineHighlights = <bool>[];
 
@@ -708,6 +757,7 @@ class ProjectorPainter extends CustomPainter {
           rowLine,
           rowHighlights,
           row.wordIndices,
+          row.endHyphen,
           rowX,
           textY,
           lineFontSize,
@@ -720,27 +770,47 @@ class ProjectorPainter extends CustomPainter {
 
   double _measureTextRequiredHeight(Size size, TextFrame frame) {
     double fontSize = globals.fontSize.toDouble();
+    bool preferPreferredBreaks = true;
     if (globals.autoResize) {
       while (fontSize > 8) {
-        final double required = _measureTextRequiredHeightForFontSize(
+        final double preferredRequired = _measureTextRequiredHeightForFontSize(
           size,
           frame,
           fontSize,
+          preferPreferredBreaks: true,
         );
-        if (required <= size.height * 0.95) {
+        if (preferredRequired <= size.height * 0.95) {
+          preferPreferredBreaks = true;
+          break;
+        }
+        final double fallbackRequired = _measureTextRequiredHeightForFontSize(
+          size,
+          frame,
+          fontSize,
+          preferPreferredBreaks: false,
+        );
+        if (fallbackRequired <= size.height * 0.95) {
+          preferPreferredBreaks = false;
           break;
         }
         fontSize -= 1;
       }
     }
 
-    return _measureTextRequiredHeightForFontSize(size, frame, fontSize);
+    return _measureTextRequiredHeightForFontSize(
+      size,
+      frame,
+      fontSize,
+      preferPreferredBreaks: preferPreferredBreaks,
+    );
   }
 
   double _measureTextRequiredHeightForFontSize(
     Size size,
     TextFrame frame,
-    double fontSize,
+    double fontSize, {
+    bool preferPreferredBreaks = true,
+  }
   ) {
     final double maxWidth = math.max(40, size.width);
 
@@ -809,7 +879,12 @@ class ProjectorPainter extends CustomPainter {
             )
           : const <_KottaRowLayout>[];
       final List<_TextRowLayout> lineTextRows = (!isTitleLine && !hasKotta)
-          ? _buildTextRows(line, lineFontSize, maxWidth)
+          ? _buildTextRows(
+              line,
+              lineFontSize,
+              maxWidth,
+              preferPreferredBreaks: preferPreferredBreaks,
+            )
           : const <_TextRowLayout>[];
 
       textRowsByLine.add(lineTextRows);
@@ -954,6 +1029,7 @@ class ProjectorPainter extends CustomPainter {
     _RenderLine rowLine,
     List<bool> rowHighlights,
     List<int> rowWordIndices,
+    bool drawEndHyphen,
     double x,
     double y,
     double fontSize,
@@ -973,6 +1049,28 @@ class ProjectorPainter extends CustomPainter {
       y,
       fontSize,
     );
+    if (drawEndHyphen && rowLine.words.isNotEmpty) {
+      final _WordToken lastWord = rowLine.words.last;
+      final bool highlighted = rowHighlights.isNotEmpty
+          ? rowHighlights.last
+          : false;
+      final Color baseColor = lastWord.color ?? globals.txtColor;
+      final TextPainter hyphen = TextPainter(
+        text: TextSpan(
+          text: '-',
+          style: TextStyle(
+            color: highlighted ? globals.hiColor : baseColor,
+            fontSize: _effectiveWordFontSize(lastWord, fontSize),
+            fontWeight: (globals.boldText || lastWord.bold)
+                ? FontWeight.bold
+                : FontWeight.normal,
+            fontStyle: lastWord.italic ? FontStyle.italic : FontStyle.normal,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      hyphen.paint(canvas, Offset(x + layout.painter.width, y));
+    }
   }
 
   _TextRowPaintLayout _buildTextRowPaintLayout(
@@ -1352,6 +1450,9 @@ class ProjectorPainter extends CustomPainter {
             chord: word.chord,
             kotta: word.kotta,
             spaceAfter: word.spaceAfter,
+            breakAfter: word.breakAfter,
+            preferredBreakAfter: word.preferredBreakAfter,
+            softHyphenAfter: word.softHyphenAfter,
             fontScale: word.fontScale,
           ),
         );
@@ -1454,6 +1555,9 @@ class ProjectorPainter extends CustomPainter {
       chord: word.chord,
       kotta: word.kotta,
       spaceAfter: word.spaceAfter,
+      breakAfter: word.breakAfter,
+      preferredBreakAfter: word.preferredBreakAfter,
+      softHyphenAfter: word.softHyphenAfter,
       fontScale: targetScale,
     );
 
@@ -1521,6 +1625,9 @@ class ProjectorPainter extends CustomPainter {
           chord: start == 0 ? word.chord : null,
           kotta: start == 0 ? word.kotta : null,
           spaceAfter: isLast ? word.spaceAfter : false,
+          breakAfter: isLast ? word.breakAfter : false,
+          preferredBreakAfter: isLast ? word.preferredBreakAfter : false,
+          softHyphenAfter: isLast ? word.softHyphenAfter : false,
           fontScale: word.fontScale,
         ),
       );
@@ -1873,6 +1980,31 @@ class ProjectorPainter extends CustomPainter {
       y: y,
       fontSize: fontSize,
     );
+
+    if (row.endHyphen && row.words.isNotEmpty) {
+      final _WordToken lastWord = line.words[row.words.last.wordIndex];
+      final bool highlighted = row.words.last.wordIndex < highlights.length
+          ? highlights[row.words.last.wordIndex]
+          : false;
+      final Color baseColor = lastWord.color ?? globals.txtColor;
+      final double hyphenX =
+          slotLayouts.isEmpty ? rowX : slotLayouts.last.right;
+      final TextPainter hyphen = TextPainter(
+        text: TextSpan(
+          text: '-',
+          style: TextStyle(
+            color: highlighted ? globals.hiColor : baseColor,
+            fontSize: _effectiveWordFontSize(lastWord, fontSize),
+            fontWeight: (globals.boldText || lastWord.bold)
+                ? FontWeight.bold
+                : FontWeight.normal,
+            fontStyle: lastWord.italic ? FontStyle.italic : FontStyle.normal,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      hyphen.paint(canvas, Offset(hyphenX, y));
+    }
   }
 
   List<_KottaRowLayout> _buildKottaRows(
@@ -1913,7 +2045,8 @@ class ProjectorPainter extends CustomPainter {
       pendingWord.add(_KottaWordLayout(wordIndex: i, slotWidth: slotWidth));
       pendingWordWidth += slotWidth;
 
-      final bool endsWord = w.spaceAfter || i == line.words.length - 1;
+      final bool endsWord =
+          w.breakAfter || w.softHyphenAfter || i == line.words.length - 1;
       if (!endsWord) {
         continue;
       }
@@ -1923,15 +2056,25 @@ class ProjectorPainter extends CustomPainter {
           : math.max(8.0, wrapWidth - continuationIndent);
       if (currentWords.isNotEmpty &&
           (currentWidth + pendingWordWidth) > currentRowLimit) {
+        final int lastWordIndex = currentWords.last.wordIndex;
+        final bool endHyphen = line.words[lastWordIndex].softHyphenAfter;
+        final double hyphenWidth = endHyphen
+            ? _measureHyphenDisplayWidth(
+                line.words[lastWordIndex],
+                fontSize,
+                measure,
+              )
+            : 0;
         rows.add(
           _KottaRowLayout(
             words: List<_KottaWordLayout>.from(currentWords),
-            width: currentWidth,
+            width: currentWidth + hyphenWidth,
             prefix: currentPrefix,
+            endHyphen: endHyphen,
           ),
         );
-        currentWords.clear();
         currentPrefix = _kottaRowPrefixForState(pendingWordStartState, lineGap);
+        currentWords.clear();
         currentWidth = currentPrefix.width;
       }
 
@@ -2028,6 +2171,7 @@ class ProjectorPainter extends CustomPainter {
           width: prefix.width + inlinePrefix.width + contentWidth,
           prefix: prefix,
           inlinePrefix: inlinePrefix,
+          endHyphen: row.endHyphen,
         ),
       );
     }
@@ -2139,7 +2283,9 @@ class ProjectorPainter extends CustomPainter {
   List<_TextRowLayout> _buildTextRows(
     _RenderLine line,
     double fontSize,
-    double maxWidth,
+    double maxWidth, {
+    bool preferPreferredBreaks = true,
+  }
   ) {
     if (line.words.isEmpty) {
       return const <_TextRowLayout>[];
@@ -2152,29 +2298,79 @@ class ProjectorPainter extends CustomPainter {
         : _textContinuationIndent(fontSize, measure);
     final List<_TextRowLayout> rows = <_TextRowLayout>[];
     final List<int> currentWordIndices = <int>[];
+    final List<int> pendingWordIndices = <int>[];
     double currentWidth = 0;
+    double pendingWordWidth = 0;
 
     for (int i = 0; i < line.words.length; i++) {
       final _WordToken w = line.words[i];
       final double slotWidth = _measureWordDisplayWidth(w, fontSize, measure);
+      pendingWordIndices.add(i);
+      pendingWordWidth += slotWidth;
+
+      final bool endsWord =
+          w.breakAfter || w.softHyphenAfter || i == line.words.length - 1;
+      if (!endsWord) {
+        continue;
+      }
+
       final double currentRowLimit = rows.isEmpty
           ? wrapWidth
           : math.max(8.0, wrapWidth - continuationIndent);
       if (currentWordIndices.isNotEmpty &&
-          (currentWidth + slotWidth) > currentRowLimit) {
+          (currentWidth + pendingWordWidth) > currentRowLimit) {
+        int breakWordIndex = currentWordIndices.last;
+        if (preferPreferredBreaks) {
+          for (int j = currentWordIndices.length - 1; j >= 0; j--) {
+            final int candidateIndex = currentWordIndices[j];
+            if (line.words[candidateIndex].preferredBreakAfter) {
+              breakWordIndex = candidateIndex;
+              break;
+            }
+          }
+        }
+
+        final int breakPos = currentWordIndices.indexOf(breakWordIndex);
+        final List<int> rowWordIndices =
+            List<int>.from(currentWordIndices.take(breakPos + 1));
+        final List<int> carryWordIndices =
+            List<int>.from(currentWordIndices.skip(breakPos + 1));
+        final double rowBaseWidth = rowWordIndices.fold<double>(
+          0,
+          (sum, idx) => sum + _measureWordDisplayWidth(line.words[idx], fontSize, measure),
+        );
+        final double carryWordsWidth = carryWordIndices.fold<double>(
+          0,
+          (sum, idx) => sum + _measureWordDisplayWidth(line.words[idx], fontSize, measure),
+        );
+
+        final int lastWordIndex = breakWordIndex;
+        final bool endHyphen = line.words[lastWordIndex].softHyphenAfter;
+        final double hyphenWidth = endHyphen
+            ? _measureHyphenDisplayWidth(
+                line.words[lastWordIndex],
+                fontSize,
+                measure,
+              )
+            : 0;
         rows.add(
           _TextRowLayout(
-            wordIndices: List<int>.from(currentWordIndices),
-            width: currentWidth,
+            wordIndices: rowWordIndices,
+            width: rowBaseWidth + hyphenWidth,
             indentWidth: rows.isEmpty ? 0 : continuationIndent,
+            endHyphen: endHyphen,
           ),
         );
-        currentWordIndices.clear();
-        currentWidth = 0;
+        currentWordIndices
+          ..clear()
+          ..addAll(carryWordIndices);
+        currentWidth = carryWordsWidth;
       }
 
-      currentWordIndices.add(i);
-      currentWidth += slotWidth;
+      currentWordIndices.addAll(pendingWordIndices);
+      currentWidth += pendingWordWidth;
+      pendingWordIndices.clear();
+      pendingWordWidth = 0;
     }
 
     if (currentWordIndices.isNotEmpty) {
@@ -2214,6 +2410,25 @@ class ProjectorPainter extends CustomPainter {
     final String display = word.text + (word.spaceAfter ? ' ' : '');
     measure.text = TextSpan(
       text: display,
+      style: TextStyle(
+        fontSize: _effectiveWordFontSize(word, fontSize),
+        fontWeight: (globals.boldText || word.bold)
+            ? FontWeight.bold
+            : FontWeight.normal,
+        fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
+      ),
+    );
+    measure.layout();
+    return measure.width;
+  }
+
+  double _measureHyphenDisplayWidth(
+    _WordToken word,
+    double fontSize,
+    TextPainter measure,
+  ) {
+    measure.text = TextSpan(
+      text: '-',
       style: TextStyle(
         fontSize: _effectiveWordFontSize(word, fontSize),
         fontWeight: (globals.boldText || word.bold)
@@ -3325,6 +3540,9 @@ class ProjectorPainter extends CustomPainter {
           chord: mergedChord,
           kotta: mergedKotta,
           spaceAfter: last.spaceAfter,
+          breakAfter: last.breakAfter,
+          preferredBreakAfter: last.preferredBreakAfter,
+          softHyphenAfter: last.softHyphenAfter,
           fontScale: last.fontScale,
         ),
       );
@@ -3349,12 +3567,45 @@ class ProjectorPainter extends CustomPainter {
           chord: last.chord,
           kotta: last.kotta,
           spaceAfter: true,
+          breakAfter: true,
+          preferredBreakAfter: last.preferredBreakAfter,
+          softHyphenAfter: last.softHyphenAfter,
           fontScale: last.fontScale,
         ),
       );
     }
 
-    void flushWord({bool addSpaceAfter = false}) {
+    void markPrevSoftHyphenAfter() {
+      if (words.isEmpty) {
+        return;
+      }
+      final _WordToken last = words.removeLast();
+      words.add(
+        _WordToken(
+          text: last.text,
+          bold: last.bold,
+          italic: last.italic,
+          underline: last.underline,
+          tieUnderline: last.tieUnderline,
+          strike: last.strike,
+          color: last.color,
+          chord: last.chord,
+          kotta: last.kotta,
+          spaceAfter: last.spaceAfter,
+          breakAfter: true,
+          preferredBreakAfter: last.preferredBreakAfter,
+          softHyphenAfter: true,
+          fontScale: last.fontScale,
+        ),
+      );
+    }
+
+    void flushWord({
+      bool addSpaceAfter = false,
+      bool addBreakAfter = false,
+      bool addPreferredBreakAfter = false,
+      bool addSoftHyphenAfter = false,
+    }) {
       final String txt = sb.toString();
       sb.clear();
       if (txt.trim().isEmpty) {
@@ -3372,6 +3623,9 @@ class ProjectorPainter extends CustomPainter {
           chord: pendingChord,
           kotta: pendingKotta,
           spaceAfter: addSpaceAfter,
+          breakAfter: addBreakAfter,
+          preferredBreakAfter: addPreferredBreakAfter,
+          softHyphenAfter: addSoftHyphenAfter,
           fontScale: 1,
         ),
       );
@@ -3427,15 +3681,25 @@ class ProjectorPainter extends CustomPainter {
             style.strike = false;
             continue;
           case '.':
-            flushWord();
-            result.add(_RenderLine(words: List<_WordToken>.from(words)));
-            words.clear();
+            flushWord(
+              addSpaceAfter: true,
+              addBreakAfter: true,
+              addPreferredBreakAfter: true,
+            );
             continue;
           case '_':
             sb.write('-');
             continue;
+          case '-':
+            if (sb.isNotEmpty) {
+              flushWord(addSoftHyphenAfter: true);
+            } else {
+              attachPendingToPrevWord();
+              markPrevSoftHyphenAfter();
+            }
+            continue;
           case ' ': // non-breaking space marker
-            sb.write('-');
+            sb.write('\u00A0');
             continue;
           case 'G':
             flushWord();
@@ -3492,13 +3756,16 @@ class ProjectorPainter extends CustomPainter {
 
       if (ch == ' ') {
         if (sb.isNotEmpty) {
-          flushWord(addSpaceAfter: true);
+          flushWord(addSpaceAfter: true, addBreakAfter: true);
         } else {
           attachPendingToPrevWord();
           // Space can arrive right after an escaped control block (\K, \G, etc.).
           // In that case there is no buffered text, so mark the previous token.
           markPrevSpaceAfter();
         }
+      } else if (ch == '-') {
+        sb.write('-');
+        flushWord(addBreakAfter: true);
       } else {
         sb.write(ch);
       }
@@ -3625,6 +3892,9 @@ class _WordToken {
     this.chord,
     this.kotta,
     this.spaceAfter = false,
+    this.breakAfter = false,
+    this.preferredBreakAfter = false,
+    this.softHyphenAfter = false,
     this.fontScale = 1,
   });
 
@@ -3638,6 +3908,9 @@ class _WordToken {
   final String? chord;
   final String? kotta;
   final bool spaceAfter;
+  final bool breakAfter;
+  final bool preferredBreakAfter;
+  final bool softHyphenAfter;
   final double fontScale;
 
   bool get countAsWord => text.trim().isNotEmpty;
@@ -3750,11 +4023,13 @@ class _KottaRowLayout {
     required this.width,
     this.prefix = const _KottaRowPrefix.empty(),
     this.inlinePrefix = const _KottaRowPrefix.empty(),
+    this.endHyphen = false,
   });
   final List<_KottaWordLayout> words;
   final double width;
   final _KottaRowPrefix prefix;
   final _KottaRowPrefix inlinePrefix;
+  final bool endHyphen;
 }
 
 class _TextRowLayout {
@@ -3762,10 +4037,12 @@ class _TextRowLayout {
     required this.wordIndices,
     required this.width,
     this.indentWidth = 0,
+    this.endHyphen = false,
   });
   final List<int> wordIndices;
   final double width;
   final double indentWidth;
+  final bool endHyphen;
 }
 
 class _TextRowPaintLayout {
