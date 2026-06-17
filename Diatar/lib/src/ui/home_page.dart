@@ -563,9 +563,9 @@ class DiatarHomePage extends StatelessWidget {
       children: <Widget>[
         _TransportErrorSnackListener(controller: controller),
         _BookDropdown(controller: controller),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         _SongDropdown(controller: controller),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Row(
           children: <Widget>[
             Expanded(child: _VerseDropdown(controller: controller)),
@@ -1647,6 +1647,11 @@ class _BookDropdown extends StatelessWidget {
             decoration: InputDecoration(
               labelText: context.l10n.bookLabel,
               border: const OutlineInputBorder(),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
             ),
             isExpanded: true,
             items: <DropdownMenuItem<int>>[
@@ -1773,6 +1778,11 @@ class _SongDropdown extends StatelessWidget {
               decoration: InputDecoration(
                 labelText: context.l10n.songLabel,
                 border: const OutlineInputBorder(),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               isExpanded: true,
               items: groups.asMap().entries.map((
@@ -1835,6 +1845,11 @@ class _SongDropdown extends StatelessWidget {
             decoration: InputDecoration(
               labelText: context.l10n.songLabel,
               border: const OutlineInputBorder(),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
             ),
             isExpanded: true,
             items: songs.asMap().entries.map((MapEntry<int, DtxSong> e) {
@@ -1911,6 +1926,11 @@ class _VerseDropdown extends StatelessWidget {
         decoration: InputDecoration(
           labelText: context.l10n.verseLabel,
           border: const OutlineInputBorder(),
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
         ),
         isExpanded: true,
         items: verses.asMap().entries.map((MapEntry<int, _DiaVerseEntry> e) {
@@ -1945,6 +1965,11 @@ class _VerseDropdown extends StatelessWidget {
       decoration: InputDecoration(
         labelText: context.l10n.verseLabel,
         border: const OutlineInputBorder(),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 8,
+        ),
       ),
       isExpanded: true,
       items: verses.asMap().entries.map((MapEntry<int, DtxVerse> e) {
@@ -2384,8 +2409,8 @@ Widget _actionIconButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         shape: const CircleBorder(),
-        padding: const EdgeInsets.all(10),
-        minimumSize: const Size(50, 50),
+        padding: const EdgeInsets.all(7),
+        minimumSize: const Size(44, 44),
         side: BorderSide(
           color:
               foregroundColor ?? (selected ? colors.onPrimary : colors.outline),
@@ -2397,7 +2422,7 @@ Widget _actionIconButton(
         foregroundColor:
             foregroundColor ?? (selected ? colors.onPrimary : null),
       ),
-      child: child ?? Icon(icon!, size: 26),
+      child: child ?? Icon(icon!, size: 22),
     ),
   );
 }
