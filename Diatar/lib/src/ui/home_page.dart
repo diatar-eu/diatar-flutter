@@ -649,9 +649,8 @@ class DiatarHomePage extends StatelessWidget {
                       ),
                     ),
                     tooltip: '${l10n.showKotta} / ${l10n.showChords}',
-                    onPressed: () => unawaited(
-                      _showProjectionDisplayMenu(menuContext),
-                    ),
+                    onPressed: () =>
+                        unawaited(_showProjectionDisplayMenu(menuContext)),
                     backgroundColor: displayButtonColor.withValues(alpha: 0.15),
                     foregroundColor: displayButtonColor,
                   );
@@ -738,27 +737,26 @@ class DiatarHomePage extends StatelessWidget {
       ancestor: overlayObject,
     );
 
-    final _ProjectionDisplayToggle? selected = await showMenu<
-      _ProjectionDisplayToggle
-    >(
-      context: buttonContext,
-      position: RelativeRect.fromRect(
-        Rect.fromPoints(topLeft, bottomRight),
-        Offset.zero & overlayObject.size,
-      ),
-      items: <PopupMenuEntry<_ProjectionDisplayToggle>>[
-        CheckedPopupMenuItem<_ProjectionDisplayToggle>(
-          value: _ProjectionDisplayToggle.kotta,
-          checked: controller.settings.projUseKotta,
-          child: Text(buttonContext.l10n.showKotta),
-        ),
-        CheckedPopupMenuItem<_ProjectionDisplayToggle>(
-          value: _ProjectionDisplayToggle.chords,
-          checked: controller.settings.projUseAkkord,
-          child: Text(buttonContext.l10n.showChords),
-        ),
-      ],
-    );
+    final _ProjectionDisplayToggle? selected =
+        await showMenu<_ProjectionDisplayToggle>(
+          context: buttonContext,
+          position: RelativeRect.fromRect(
+            Rect.fromPoints(topLeft, bottomRight),
+            Offset.zero & overlayObject.size,
+          ),
+          items: <PopupMenuEntry<_ProjectionDisplayToggle>>[
+            CheckedPopupMenuItem<_ProjectionDisplayToggle>(
+              value: _ProjectionDisplayToggle.kotta,
+              checked: controller.settings.projUseKotta,
+              child: Text(buttonContext.l10n.showKotta),
+            ),
+            CheckedPopupMenuItem<_ProjectionDisplayToggle>(
+              value: _ProjectionDisplayToggle.chords,
+              checked: controller.settings.projUseAkkord,
+              child: Text(buttonContext.l10n.showChords),
+            ),
+          ],
+        );
 
     if (selected == null) {
       return;
@@ -1181,13 +1179,19 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
 
   bool? _groupDownloadValue(List<DtxManageItem> items) {
     final List<DtxManageItem> eligible = items
-        .where((DtxManageItem item) => item.item.isOfficial && item.item.updateAvailable)
+        .where(
+          (DtxManageItem item) =>
+              item.item.isOfficial && item.item.updateAvailable,
+        )
         .toList();
     if (eligible.isEmpty) {
       return false;
     }
     final int selectedCount = eligible
-        .where((DtxManageItem item) => _downloadSelected.contains(item.item.fileName))
+        .where(
+          (DtxManageItem item) =>
+              _downloadSelected.contains(item.item.fileName),
+        )
         .length;
     if (selectedCount == 0) {
       return false;
@@ -1203,7 +1207,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
       return false;
     }
     final int selectedCount = items
-        .where((DtxManageItem item) => _excludedFiles.contains(item.item.fileName))
+        .where(
+          (DtxManageItem item) => _excludedFiles.contains(item.item.fileName),
+        )
         .length;
     if (selectedCount == 0) {
       return false;
@@ -1279,14 +1285,18 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                                 managed.item.updateAvailable &&
                                 !managed.excluded,
                           )
-                          .map((DtxManageItem managed) => managed.item.fileName),
+                          .map(
+                            (DtxManageItem managed) => managed.item.fileName,
+                          ),
                     );
                   _excludedFiles
                     ..clear()
                     ..addAll(
                       items
                           .where((DtxManageItem managed) => managed.excluded)
-                          .map((DtxManageItem managed) => managed.item.fileName),
+                          .map(
+                            (DtxManageItem managed) => managed.item.fileName,
+                          ),
                     );
                   _selectionInitialized = true;
                 }
@@ -1302,7 +1312,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                     <String, List<DtxManageItem>>{};
                 for (final DtxManageItem managed in items) {
                   final String group = _displayGroup(managed, context);
-                  grouped.putIfAbsent(group, () => <DtxManageItem>[]).add(managed);
+                  grouped
+                      .putIfAbsent(group, () => <DtxManageItem>[])
+                      .add(managed);
                 }
 
                 final List<_DtxManagerListEntry> entries =
@@ -1356,13 +1368,18 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                             final _DtxManagerListEntry entry = entries[index];
                             if (entry.isHeader) {
                               final List<DtxManageItem> groupItems =
-                                  grouped[entry.group!] ?? const <DtxManageItem>[];
+                                  grouped[entry.group!] ??
+                                  const <DtxManageItem>[];
                               final bool hasDownloadEligible = groupItems.any(
                                 (DtxManageItem item) =>
-                                    item.item.isOfficial && item.item.updateAvailable,
+                                    item.item.isOfficial &&
+                                    item.item.updateAvailable,
                               );
                               return Padding(
-                                padding: const EdgeInsets.only(top: 8, bottom: 2),
+                                padding: const EdgeInsets.only(
+                                  top: 8,
+                                  bottom: 2,
+                                ),
                                 child: Row(
                                   children: <Widget>[
                                     Expanded(
@@ -1373,9 +1390,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                                             .bodyMedium
                                             ?.copyWith(
                                               fontWeight: FontWeight.w600,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
                                             ),
                                       ),
                                     ),
@@ -1384,26 +1401,37 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                                       child: Center(
                                         child: Checkbox(
                                           tristate: true,
-                                          value: _groupDownloadValue(groupItems),
+                                          value: _groupDownloadValue(
+                                            groupItems,
+                                          ),
                                           onChanged: hasDownloadEligible
                                               ? (bool? checked) {
                                                   setState(() {
-                                                    for (final DtxManageItem item
+                                                    for (final DtxManageItem
+                                                        item
                                                         in groupItems) {
-                                                      if (!item.item.isOfficial ||
-                                                          !item.item.updateAvailable) {
+                                                      if (!item
+                                                              .item
+                                                              .isOfficial ||
+                                                          !item
+                                                              .item
+                                                              .updateAvailable) {
                                                         continue;
                                                       }
                                                       if (checked == true) {
-                                                        _downloadSelected
-                                                            .add(item.item.fileName);
+                                                        _downloadSelected.add(
+                                                          item.item.fileName,
+                                                        );
                                                         _excludedFiles.remove(
                                                           item.item.fileName,
                                                         );
                                                       } else {
-                                                        _downloadSelected.remove(
-                                                          item.item.fileName,
-                                                        );
+                                                        _downloadSelected
+                                                            .remove(
+                                                              item
+                                                                  .item
+                                                                  .fileName,
+                                                            );
                                                       }
                                                     }
                                                   });
@@ -1417,7 +1445,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                                       child: Center(
                                         child: Checkbox(
                                           tristate: true,
-                                          value: _groupExcludedValue(groupItems),
+                                          value: _groupExcludedValue(
+                                            groupItems,
+                                          ),
                                           onChanged: (bool? checked) {
                                             setState(() {
                                               for (final DtxManageItem item
@@ -1458,7 +1488,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                                       dense: true,
                                       contentPadding: EdgeInsets.zero,
                                       title: Text(item.longName),
-                                      subtitle: Text(_subtitleFor(item, context)),
+                                      subtitle: Text(
+                                        _subtitleFor(item, context),
+                                      ),
                                     ),
                                   ),
                                   SizedBox(
@@ -1486,10 +1518,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
                                                 });
                                               },
                                             )
-                                          : const Icon(
-                                              Icons.remove,
-                                              size: 16,
-                                            ),
+                                          : const Icon(Icons.remove, size: 16),
                                     ),
                                   ),
                                   SizedBox(
@@ -1572,7 +1601,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
       if (result.importedCount > 0 && !result.hasFailures) {
         messenger.showSnackBar(
           SnackBar(
-            content: Text(context.l10n.importDtxFilesSuccess(result.importedCount)),
+            content: Text(
+              context.l10n.importDtxFilesSuccess(result.importedCount),
+            ),
           ),
         );
         _reload();
@@ -1597,7 +1628,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
 
       final String reason = result.shortFailureSummary();
       messenger.showSnackBar(
-        SnackBar(content: Text(context.l10n.importDtxFilesErrorDetailed(reason))),
+        SnackBar(
+          content: Text(context.l10n.importDtxFilesErrorDetailed(reason)),
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -1966,10 +1999,7 @@ class _VerseDropdown extends StatelessWidget {
         labelText: context.l10n.verseLabel,
         border: const OutlineInputBorder(),
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 8,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       isExpanded: true,
       items: verses.asMap().entries.map((MapEntry<int, DtxVerse> e) {
@@ -2311,7 +2341,6 @@ class _SwipePagingPreview extends StatefulWidget {
 
 class _SwipePagingPreviewState extends State<_SwipePagingPreview> {
   double _dragDx = 0;
-  bool _isDragging = false;
 
   bool _isDesktopPlatform(TargetPlatform platform) {
     return platform == TargetPlatform.windows ||
@@ -2320,13 +2349,10 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview> {
   }
 
   void _resetDrag() {
-    if (!_isDragging && _dragDx == 0) {
+    if (_dragDx == 0) {
       return;
     }
-    setState(() {
-      _isDragging = false;
-      _dragDx = 0;
-    });
+    _dragDx = 0;
   }
 
   @override
@@ -2345,18 +2371,11 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview> {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.controller.toggleShowing,
-          onHorizontalDragStart: (_) {
-            if (_isDragging) {
-              return;
-            }
-            setState(() {
-              _isDragging = true;
-            });
-          },
+          onHorizontalDragStart: (_) => _dragDx = 0,
           onHorizontalDragUpdate: (DragUpdateDetails details) {
-            setState(() {
-              _dragDx = (_dragDx + details.delta.dx).clamp(-maxDrag, maxDrag);
-            });
+            _dragDx = (_dragDx + details.delta.dx)
+                .clamp(-maxDrag, maxDrag)
+                .toDouble();
           },
           onHorizontalDragCancel: _resetDrag,
           onHorizontalDragEnd: (DragEndDetails details) {
@@ -2377,14 +2396,7 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview> {
               widget.controller.nextVerse();
             }
           },
-          child: AnimatedContainer(
-            duration: _isDragging
-                ? Duration.zero
-                : Duration(milliseconds: desktopLike ? 170 : 190),
-            curve: Curves.easeOutCubic,
-            transform: Matrix4.translationValues(_dragDx, 0, 0),
-            child: widget.child,
-          ),
+          child: widget.child,
         );
       },
     );
