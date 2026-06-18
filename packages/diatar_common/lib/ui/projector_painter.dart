@@ -1205,8 +1205,8 @@ class ProjectorPainter extends CustomPainter {
       if (!continuedFromPrevious) {
         _paintTieCap(
           canvas,
-          startX,
           bodyStart,
+          startX,
           underlineY,
           capLift,
           thickness,
