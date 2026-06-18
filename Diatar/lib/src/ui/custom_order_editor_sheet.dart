@@ -712,11 +712,16 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       customImagePath: file.path,
     );
 
+    int lastInsertedIndex = 0;
     setState(() {
       final int insertIndex = _selectedInsertInsertionIndex();
       _entries.insert(insertIndex, entry);
+      lastInsertedIndex = insertIndex;
     });
     await _commitEntries();
+    if (mounted) {
+      controller.selectCustomOrderEntryForEditing(lastInsertedIndex);
+    }
   }
 
   Future<void> _openCustomTextSlideDialog() async {
