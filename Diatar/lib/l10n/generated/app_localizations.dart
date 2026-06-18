@@ -604,37 +604,37 @@ abstract class AppLocalizations {
   /// No description provided for @statusBlankPathEmpty.
   ///
   /// In hu, this message translates to:
-  /// **'A blank kép fájl útvonala üres.'**
+  /// **'A háttérkép fájl útvonala üres.'**
   String get statusBlankPathEmpty;
 
   /// No description provided for @statusBlankNotFound.
   ///
   /// In hu, this message translates to:
-  /// **'A blank kép fájl nem található: {path}'**
+  /// **'A háttérkép fájl nem található: {path}'**
   String statusBlankNotFound(Object path);
 
   /// No description provided for @statusBlankSet.
   ///
   /// In hu, this message translates to:
-  /// **'Blank kép beállítva: {name}'**
+  /// **'Háttérkép beállítva: {name}'**
   String statusBlankSet(Object name);
 
   /// No description provided for @statusBlankSendError.
   ///
   /// In hu, this message translates to:
-  /// **'Blank kép küldési hiba: {error}'**
+  /// **'Háttérkép küldési hiba: {error}'**
   String statusBlankSendError(Object error);
 
   /// No description provided for @statusBlankCleared.
   ///
   /// In hu, this message translates to:
-  /// **'Blank kép törölve.'**
+  /// **'Háttérkép törölve.'**
   String get statusBlankCleared;
 
   /// No description provided for @statusBlankClearError.
   ///
   /// In hu, this message translates to:
-  /// **'Blank kép törlési hiba: {error}'**
+  /// **'Háttérkép törlési hiba: {error}'**
   String statusBlankClearError(Object error);
 
   /// No description provided for @statusShutdownCommandSent.
@@ -956,7 +956,7 @@ abstract class AppLocalizations {
   /// No description provided for @blankImagePath.
   ///
   /// In hu, this message translates to:
-  /// **'Blank kép útvonal'**
+  /// **'Háttérkép útvonal'**
   String get blankImagePath;
 
   /// No description provided for @diaExportFolderPath.
@@ -1160,7 +1160,7 @@ abstract class AppLocalizations {
   /// No description provided for @blankOpacity.
   ///
   /// In hu, this message translates to:
-  /// **'Blank átlátszóság'**
+  /// **'Háttérkép átlátszóság'**
   String get blankOpacity;
 
   /// No description provided for @autoSize.
@@ -1222,6 +1222,12 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Kotta mutatása'**
   String get showKotta;
+
+  /// No description provided for @showBackgroundImage.
+  ///
+  /// In hu, this message translates to:
+  /// **'Háttérkép mutatása'**
+  String get showBackgroundImage;
 
   /// No description provided for @wordHighlight.
   ///
@@ -1646,7 +1652,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsFilesSummary.
   ///
   /// In hu, this message translates to:
-  /// **'Üres kép: {blank}'**
+  /// **'Háttérkép: {blank}'**
   String settingsFilesSummary(Object blank);
 
   /// No description provided for @importDtxFilesButton.

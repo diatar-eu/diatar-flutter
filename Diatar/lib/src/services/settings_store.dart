@@ -36,6 +36,7 @@ class SettingsStore {
   static const String _kProjBgMode = 'ProjBgMode';
   static const String _kProjBackTrans = 'ProjBackTrans';
   static const String _kProjBlankTrans = 'ProjBlankTrans';
+  static const String _kProjShowBackgroundImage = 'ProjShowBackgroundImage';
   static const String _kHomeViewMode = 'HomeViewMode';
   static const String _kHomeShowHighlightControls = 'HomeShowHighlightControls';
   static const String _kAppThemeMode = 'AppThemeMode';
@@ -101,6 +102,8 @@ class SettingsStore {
       projBgMode: prefs.getInt(_kProjBgMode) ?? 0,
       projBackTrans: prefs.getInt(_kProjBackTrans) ?? 0,
       projBlankTrans: prefs.getInt(_kProjBlankTrans) ?? 0,
+        projShowBackgroundImage:
+          prefs.getBool(_kProjShowBackgroundImage) ?? true,
       homeViewMode: prefs.getInt(_kHomeViewMode) ?? 0,
         homeShowHighlightControls:
           prefs.getBool(_kHomeShowHighlightControls) ?? false,
@@ -160,6 +163,10 @@ class SettingsStore {
     await prefs.setInt(_kProjBgMode, settings.projBgMode);
     await prefs.setInt(_kProjBackTrans, settings.projBackTrans);
     await prefs.setInt(_kProjBlankTrans, settings.projBlankTrans);
+    await prefs.setBool(
+      _kProjShowBackgroundImage,
+      settings.projShowBackgroundImage,
+    );
     await prefs.setInt(_kHomeViewMode, settings.homeViewMode);
     await prefs.setBool(
       _kHomeShowHighlightControls,

@@ -40,6 +40,7 @@ class AppSettings {
     this.projBgMode = 0,
     this.projBackTrans = 0,
     this.projBlankTrans = 0,
+    this.projShowBackgroundImage = true,
     this.homeViewMode = 0,
     this.homeShowHighlightControls = false,
     this.appThemeMode = 0,
@@ -98,6 +99,7 @@ class AppSettings {
   final int projBgMode;
   final int projBackTrans;
   final int projBlankTrans;
+  final bool projShowBackgroundImage;
   final int homeViewMode;
   final bool homeShowHighlightControls;
   final int appThemeMode;
@@ -163,6 +165,7 @@ class AppSettings {
     int? projBgMode,
     int? projBackTrans,
     int? projBlankTrans,
+    bool? projShowBackgroundImage,
     int? homeViewMode,
     bool? homeShowHighlightControls,
     int? appThemeMode,
@@ -218,6 +221,8 @@ class AppSettings {
       projBgMode: projBgMode ?? this.projBgMode,
       projBackTrans: projBackTrans ?? this.projBackTrans,
       projBlankTrans: projBlankTrans ?? this.projBlankTrans,
+        projShowBackgroundImage:
+          projShowBackgroundImage ?? this.projShowBackgroundImage,
       homeViewMode: homeViewMode ?? this.homeViewMode,
         homeShowHighlightControls:
           homeShowHighlightControls ?? this.homeShowHighlightControls,

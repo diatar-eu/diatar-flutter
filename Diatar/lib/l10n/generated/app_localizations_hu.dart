@@ -340,29 +340,29 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
-  String get statusBlankPathEmpty => 'A blank kép fájl útvonala üres.';
+  String get statusBlankPathEmpty => 'A háttérkép fájl útvonala üres.';
 
   @override
   String statusBlankNotFound(Object path) {
-    return 'A blank kép fájl nem található: $path';
+    return 'A háttérkép fájl nem található: $path';
   }
 
   @override
   String statusBlankSet(Object name) {
-    return 'Blank kép beállítva: $name';
+    return 'Háttérkép beállítva: $name';
   }
 
   @override
   String statusBlankSendError(Object error) {
-    return 'Blank kép küldési hiba: $error';
+    return 'Háttérkép küldési hiba: $error';
   }
 
   @override
-  String get statusBlankCleared => 'Blank kép törölve.';
+  String get statusBlankCleared => 'Háttérkép törölve.';
 
   @override
   String statusBlankClearError(Object error) {
-    return 'Blank kép törlési hiba: $error';
+    return 'Háttérkép törlési hiba: $error';
   }
 
   @override
@@ -542,7 +542,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get themeLight => 'Világos';
 
   @override
-  String get blankImagePath => 'Blank kép útvonal';
+  String get blankImagePath => 'Háttérkép útvonal';
 
   @override
   String get diaExportFolderPath => 'DIA mentési mappa';
@@ -644,7 +644,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get backgroundOpacity => 'Háttér átlátszóság';
 
   @override
-  String get blankOpacity => 'Blank átlátszóság';
+  String get blankOpacity => 'Háttérkép átlátszóság';
 
   @override
   String get autoSize => 'Automatikus méretezés';
@@ -676,6 +676,9 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get showKotta => 'Kotta mutatása';
+
+  @override
+  String get showBackgroundImage => 'Háttérkép mutatása';
 
   @override
   String get wordHighlight => 'Szókiemelés';
@@ -911,7 +914,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String settingsFilesSummary(Object blank) {
-    return 'Üres kép: $blank';
+    return 'Háttérkép: $blank';
   }
 
   @override

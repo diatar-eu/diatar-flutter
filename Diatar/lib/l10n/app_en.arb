@@ -306,27 +306,27 @@
       "error": {}
     }
   },
-  "statusBlankPathEmpty": "Blank image file path is empty.",
-  "statusBlankNotFound": "Blank image file not found: {path}",
+  "statusBlankPathEmpty": "Background image file path is empty.",
+  "statusBlankNotFound": "Background image file not found: {path}",
   "@statusBlankNotFound": {
     "placeholders": {
       "path": {}
     }
   },
-  "statusBlankSet": "Blank image set: {name}",
+  "statusBlankSet": "Background image set: {name}",
   "@statusBlankSet": {
     "placeholders": {
       "name": {}
     }
   },
-  "statusBlankSendError": "Blank image send error: {error}",
+  "statusBlankSendError": "Background image send error: {error}",
   "@statusBlankSendError": {
     "placeholders": {
       "error": {}
     }
   },
-  "statusBlankCleared": "Blank image cleared.",
-  "statusBlankClearError": "Blank image clear error: {error}",
+  "statusBlankCleared": "Background image cleared.",
+  "statusBlankClearError": "Background image clear error: {error}",
   "@statusBlankClearError": {
     "placeholders": {
       "error": {}
@@ -440,7 +440,7 @@
   "languageSystem": "System default",
   "languageHungarian": "Hungarian",
   "languageEnglish": "English",
-  "blankImagePath": "Blank image path",
+  "blankImagePath": "Background image path",
   "diaExportFolderPath": "DIA export folder",
   "fileChoose": "Choose file",
   "copyPathTooltip": "Copy original path",
@@ -470,7 +470,7 @@
   "bgModeCascade": "Cascade",
   "bgModeMirror": "Mirror",
   "backgroundOpacity": "Background opacity",
-  "blankOpacity": "Blank opacity",
+  "blankOpacity": "Background image opacity",
   "autoSize": "Auto sizing",
   "scrollableProjection": "Scrollable projection",
   "scrollableProjectionHint": "If turned off, text is auto-sized to fit the projection area.",
@@ -481,6 +481,7 @@
   "vCenter": "Vertical center align",
   "showChords": "Show chords",
   "showKotta": "Show notation",
+  "showBackgroundImage": "Show background image",
   "wordHighlight": "Word highlight",
   "boldText": "Bold text",
   "colorsTitle": "Colors",
@@ -605,7 +606,7 @@
     }
   },
   "settingsFilesTitle": "Songbooks and files",
-  "settingsFilesSummary": "Blank image: {blank}",
+  "settingsFilesSummary": "Background image: {blank}",
   "@settingsFilesSummary": {
     "placeholders": {
       "blank": {}
