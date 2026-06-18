@@ -76,7 +76,7 @@ class _DiaSongGroup {
 
 const int _diaVirtualBookValue = -1000000;
 
-enum _ProjectionDisplayToggle { kotta, chords }
+enum _ProjectionDisplayToggle { kotta, chords, backgroundImage }
 
 String _basename(String path) {
   final String normalized = path.replaceAll('\\', '/');
@@ -648,7 +648,8 @@ class DiatarHomePage extends StatelessWidget {
                         decorationThickness: 2.0,
                       ),
                     ),
-                    tooltip: '${l10n.showKotta} / ${l10n.showChords}',
+                    tooltip:
+                      '${l10n.showKotta} / ${l10n.showChords} / ${l10n.showBackgroundImage}',
                     onPressed: () =>
                         unawaited(_showProjectionDisplayMenu(menuContext)),
                     backgroundColor: displayButtonColor.withValues(alpha: 0.15),
@@ -720,9 +721,6 @@ class DiatarHomePage extends StatelessWidget {
       return;
     }
     final OverlayState overlay = Overlay.of(buttonContext);
-    if (overlay == null) {
-      return;
-    }
     final RenderObject? overlayObject = overlay.context.findRenderObject();
     if (overlayObject is! RenderBox) {
       return;
@@ -755,6 +753,11 @@ class DiatarHomePage extends StatelessWidget {
               checked: controller.settings.projUseAkkord,
               child: Text(buttonContext.l10n.showChords),
             ),
+            CheckedPopupMenuItem<_ProjectionDisplayToggle>(
+              value: _ProjectionDisplayToggle.backgroundImage,
+              checked: controller.settings.projShowBackgroundImage,
+              child: Text(buttonContext.l10n.showBackgroundImage),
+            ),
           ],
         );
 
@@ -775,6 +778,8 @@ class DiatarHomePage extends StatelessWidget {
             projUseAkkord: !controller.settings.projUseAkkord,
           ),
         );
+      case _ProjectionDisplayToggle.backgroundImage:
+        await controller.toggleBackgroundImageVisible();
     }
   }
 

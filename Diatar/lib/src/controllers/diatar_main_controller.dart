@@ -251,6 +251,9 @@ class DiatarMainController extends ChangeNotifier {
     return fallback;
   }
 
+  bool get _hasConfiguredBackgroundImage =>
+      settings.blankPicPath.trim().isNotEmpty;
+
   Future<void> init() async {
     settings = await _settingsStore.load();
     lastBlankPath = settings.blankPicPath;
@@ -288,6 +291,9 @@ class DiatarMainController extends ChangeNotifier {
       txtColor: settings.txtColor,
       blankColor: settings.blankColor,
       hiColor: settings.hiColor,
+      isBlankPic: _hasConfiguredBackgroundImage,
+      showBlankPic:
+          _hasConfiguredBackgroundImage && settings.projShowBackgroundImage,
       projecting: showing,
       fontSize: settings.projFontSize,
       titleSize: settings.projTitleSize,
@@ -366,6 +372,7 @@ class DiatarMainController extends ChangeNotifier {
       tcpConnected = connected;
       if (connected) {
         tcpHasError = false;
+        unawaited(_syncBackgroundImageAfterConnect());
       }
       _refreshSenderFlags();
       notifyListeners();
@@ -402,6 +409,7 @@ class DiatarMainController extends ChangeNotifier {
       mqttConnected = connected;
       if (connected) {
         mqttHasError = false;
+        unawaited(_syncBackgroundImageAfterConnect());
       }
       _refreshSenderFlags();
       notifyListeners();
@@ -442,6 +450,9 @@ class DiatarMainController extends ChangeNotifier {
       txtColor: settings.txtColor,
       blankColor: settings.blankColor,
       hiColor: settings.hiColor,
+      isBlankPic: _hasConfiguredBackgroundImage,
+      showBlankPic:
+          _hasConfiguredBackgroundImage && settings.projShowBackgroundImage,
       fontSize: settings.projFontSize,
       titleSize: settings.projTitleSize,
       leftIndent: settings.projLeftIndent,
@@ -466,6 +477,53 @@ class DiatarMainController extends ChangeNotifier {
     await _applyTransport();
     notifyListeners();
     await _syncCurrentDia();
+    await _syncBackgroundImageAfterConnect();
+  }
+
+  Future<void> _sendProjectionState() async {
+    if (mqttActive) {
+      await _mqttSender.sendState(
+        globals,
+        showing: showing,
+        wordToHighlight: highPos,
+      );
+    }
+    if (tcpConfigured) {
+      await _sender.sendState(
+        globals,
+        showing: showing,
+        wordToHighlight: highPos,
+      );
+    }
+    _refreshSenderFlags();
+  }
+
+  Future<void> _syncBackgroundImageAfterConnect() async {
+    final String path = settings.blankPicPath.trim();
+    final bool enabled = settings.projShowBackgroundImage;
+
+    globals = globals.copyWith(
+      isBlankPic: path.isNotEmpty,
+      showBlankPic: path.isNotEmpty && enabled,
+    );
+
+    if (_projectionOutputLocked) {
+      return;
+    }
+
+    if (path.isEmpty || !enabled) {
+      await _sendProjectionState();
+      notifyListeners();
+      return;
+    }
+
+    await sendBlankFromPath(
+      path,
+      showBackgroundImage: enabled,
+      persistPath: false,
+      updateStatus: false,
+    );
+    notifyListeners();
   }
 
   Future<Directory> _resolveDtxDirectory() async {
@@ -2990,67 +3048,118 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
-  Future<void> sendBlankFromPath(String path) async {
+  Future<void> sendBlankFromPath(
+    String path, {
+    bool showBackgroundImage = true,
+    bool persistPath = true,
+    bool updateStatus = true,
+  }) async {
     final String normalized = path.trim();
     if (normalized.isEmpty) {
-      _setStatus('statusBlankPathEmpty');
-      notifyListeners();
+      globals = globals.copyWith(isBlankPic: false, showBlankPic: false);
+      if (updateStatus) {
+        _setStatus('statusBlankPathEmpty');
+        notifyListeners();
+      }
       return;
     }
 
     try {
       final File file = File(normalized);
       if (!await file.exists()) {
-        _setStatus('statusBlankNotFound', <String, String>{'path': normalized});
-        notifyListeners();
+        globals = globals.copyWith(isBlankPic: false, showBlankPic: false);
+        if (updateStatus) {
+          _setStatus('statusBlankNotFound', <String, String>{
+            'path': normalized,
+          });
+          notifyListeners();
+        }
         return;
       }
 
       final Uint8List bytes = await file.readAsBytes();
       final String ext = _fileExtension(normalized);
-      globals = globals.copyWith(isBlankPic: true, showBlankPic: true);
+      globals = globals.copyWith(
+        isBlankPic: true,
+        showBlankPic: showBackgroundImage,
+      );
       if (_projectionOutputLocked) {
         lastBlankPath = normalized;
+        if (persistPath) {
+          settings = settings.copyWith(blankPicPath: normalized);
+          await _settingsStore.save(settings);
+        }
+        if (updateStatus) {
+          _setStatus('statusBlankSet', <String, String>{
+            'name': file.uri.pathSegments.isNotEmpty
+                ? file.uri.pathSegments.last
+                : normalized,
+          });
+          notifyListeners();
+        }
+        return;
+      }
+      if (mqttActive) {
+        await _mqttSender.sendBlank(bytes, ext: ext);
+      }
+      if (tcpConfigured) {
+        await _sender.sendBlank(bytes, ext: ext);
+      }
+      await _sendProjectionState();
+      lastBlankPath = normalized;
+      if (persistPath) {
         settings = settings.copyWith(blankPicPath: normalized);
         await _settingsStore.save(settings);
+      }
+      if (updateStatus) {
         _setStatus('statusBlankSet', <String, String>{
           'name': file.uri.pathSegments.isNotEmpty
               ? file.uri.pathSegments.last
               : normalized,
         });
         notifyListeners();
-        return;
       }
-      if (mqttActive) {
-        await _mqttSender.sendBlank(bytes, ext: ext);
-        await _mqttSender.sendState(
-          globals,
-          showing: showing,
-          wordToHighlight: highPos,
-        );
-      }
-      if (tcpConfigured) {
-        await _sender.sendBlank(bytes, ext: ext);
-        await _sender.sendState(
-          globals,
-          showing: showing,
-          wordToHighlight: highPos,
-        );
-      }
-      _refreshSenderFlags();
-      lastBlankPath = normalized;
-      settings = settings.copyWith(blankPicPath: normalized);
-      await _settingsStore.save(settings);
-      _setStatus('statusBlankSet', <String, String>{
-        'name': file.uri.pathSegments.isNotEmpty
-            ? file.uri.pathSegments.last
-            : normalized,
-      });
-      notifyListeners();
     } catch (e) {
-      _setStatus('statusBlankSendError', <String, String>{'error': '$e'});
-      notifyListeners();
+      if (updateStatus) {
+        _setStatus('statusBlankSendError', <String, String>{'error': '$e'});
+        notifyListeners();
+      }
     }
+  }
+
+  Future<void> setBackgroundImageVisible(bool visible) async {
+    settings = settings.copyWith(projShowBackgroundImage: visible);
+    await _settingsStore.save(settings);
+
+    final String path = settings.blankPicPath.trim();
+    final bool hasPath = path.isNotEmpty;
+    globals = globals.copyWith(
+      isBlankPic: hasPath,
+      showBlankPic: hasPath && visible,
+    );
+
+    if (_projectionOutputLocked) {
+      notifyListeners();
+      return;
+    }
+
+    if (!hasPath || !visible) {
+      await _sendProjectionState();
+      notifyListeners();
+      return;
+    }
+
+    await sendBlankFromPath(
+      path,
+      showBackgroundImage: true,
+      persistPath: false,
+      updateStatus: false,
+    );
+    notifyListeners();
+  }
+
+  Future<void> toggleBackgroundImageVisible() async {
+    await setBackgroundImageVisible(!settings.projShowBackgroundImage);
   }
 
   Future<void> clearBlankImage() async {

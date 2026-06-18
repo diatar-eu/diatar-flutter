@@ -254,11 +254,8 @@ class ProjectionController extends ChangeNotifier {
     if (globals.projecting) {
       return diaFrame;
     }
-    if (blankFrame != null) {
+    if (globals.isBlankPic && globals.showBlankPic && blankFrame != null) {
       return blankFrame;
-    }
-    if (diaFrame is ImageFrame) {
-      return diaFrame;
     }
     return null;
   }

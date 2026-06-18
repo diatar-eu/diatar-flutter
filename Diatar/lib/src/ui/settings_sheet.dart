@@ -69,6 +69,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _projVCenter;
   late bool _projUseAkkord;
   late bool _projUseKotta;
+  late bool _projShowBackgroundImage;
   late bool _projUseTitle;
   late bool _projBoldText;
   late bool _internetRelayEnabled;
@@ -127,6 +128,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projVCenter = s.projVCenter;
     _projUseAkkord = s.projUseAkkord;
     _projUseKotta = s.projUseKotta;
+    _projShowBackgroundImage = s.projShowBackgroundImage;
     _projUseTitle = s.projUseTitle;
     _projBoldText = s.projBoldText;
     _internetRelayEnabled = s.internetRelayEnabled;
@@ -222,7 +224,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       query,
       'vetites betu meret cim hatter opacity',
     );
-    final bool showFiles = _matches(query, 'enektar fajlok dtx ures kep blank');
+    final bool showFiles = _matches(
+      query,
+      'enektar fajlok dtx hatterkep hatter kep blank',
+    );
     final bool showGeneral = _matches(query, 'altalanos tema nyelv language');
     final bool showHotkeys =
         desktopHotkeysAvailable &&
@@ -1779,6 +1784,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
+            value: _projShowBackgroundImage,
+            onChanged: (bool v) => setBoth(() => _projShowBackgroundImage = v),
+            title: Text(l10n.showBackgroundImage),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
             value: _homeShowHighlightControls,
             onChanged: (bool v) => setBoth(() => _homeShowHighlightControls = v),
             title: Text(l10n.wordHighlight),
@@ -2040,6 +2051,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       projVCenter: _projVCenter,
       projUseAkkord: _projUseAkkord,
       projUseKotta: _projUseKotta,
+      projShowBackgroundImage: _projShowBackgroundImage,
       projUseTitle: _projUseTitle,
       projKottaArany: _projKottaArany.clamp(10, 200),
       projAkkordArany: _projAkkordArany.clamp(10, 200),

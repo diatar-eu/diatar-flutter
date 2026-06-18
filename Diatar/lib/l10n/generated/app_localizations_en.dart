@@ -338,29 +338,29 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get statusBlankPathEmpty => 'Blank image file path is empty.';
+  String get statusBlankPathEmpty => 'Background image file path is empty.';
 
   @override
   String statusBlankNotFound(Object path) {
-    return 'Blank image file not found: $path';
+    return 'Background image file not found: $path';
   }
 
   @override
   String statusBlankSet(Object name) {
-    return 'Blank image set: $name';
+    return 'Background image set: $name';
   }
 
   @override
   String statusBlankSendError(Object error) {
-    return 'Blank image send error: $error';
+    return 'Background image send error: $error';
   }
 
   @override
-  String get statusBlankCleared => 'Blank image cleared.';
+  String get statusBlankCleared => 'Background image cleared.';
 
   @override
   String statusBlankClearError(Object error) {
-    return 'Blank image clear error: $error';
+    return 'Background image clear error: $error';
   }
 
   @override
@@ -540,7 +540,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeLight => 'Light';
 
   @override
-  String get blankImagePath => 'Blank image path';
+  String get blankImagePath => 'Background image path';
 
   @override
   String get diaExportFolderPath => 'DIA export folder';
@@ -642,7 +642,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backgroundOpacity => 'Background opacity';
 
   @override
-  String get blankOpacity => 'Blank opacity';
+  String get blankOpacity => 'Background image opacity';
 
   @override
   String get autoSize => 'Auto sizing';
@@ -674,6 +674,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get showKotta => 'Show notation';
+
+  @override
+  String get showBackgroundImage => 'Show background image';
 
   @override
   String get wordHighlight => 'Word highlight';
@@ -909,7 +912,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String settingsFilesSummary(Object blank) {
-    return 'Blank image: $blank';
+    return 'Background image: $blank';
   }
 
   @override

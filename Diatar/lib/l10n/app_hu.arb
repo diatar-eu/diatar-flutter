@@ -306,27 +306,27 @@
       "error": {}
     }
   },
-  "statusBlankPathEmpty": "A blank kép fájl útvonala üres.",
-  "statusBlankNotFound": "A blank kép fájl nem található: {path}",
+  "statusBlankPathEmpty": "A háttérkép fájl útvonala üres.",
+  "statusBlankNotFound": "A háttérkép fájl nem található: {path}",
   "@statusBlankNotFound": {
     "placeholders": {
       "path": {}
     }
   },
-  "statusBlankSet": "Blank kép beállítva: {name}",
+  "statusBlankSet": "Háttérkép beállítva: {name}",
   "@statusBlankSet": {
     "placeholders": {
       "name": {}
     }
   },
-  "statusBlankSendError": "Blank kép küldési hiba: {error}",
+  "statusBlankSendError": "Háttérkép küldési hiba: {error}",
   "@statusBlankSendError": {
     "placeholders": {
       "error": {}
     }
   },
-  "statusBlankCleared": "Blank kép törölve.",
-  "statusBlankClearError": "Blank kép törlési hiba: {error}",
+  "statusBlankCleared": "Háttérkép törölve.",
+  "statusBlankClearError": "Háttérkép törlési hiba: {error}",
   "@statusBlankClearError": {
     "placeholders": {
       "error": {}
@@ -436,7 +436,7 @@
   "uiTheme": "Felhasználói felület témája",
   "themeDark": "Sötét",
   "themeLight": "Világos",
-  "blankImagePath": "Blank kép útvonal",
+  "blankImagePath": "Háttérkép útvonal",
   "diaExportFolderPath": "DIA mentési mappa",
   "fileChoose": "Fájl választása",
   "copyPathTooltip": "Eredeti útvonal másolása",
@@ -470,7 +470,7 @@
   "bgModeCascade": "Cascade",
   "bgModeMirror": "Mirror",
   "backgroundOpacity": "Háttér átlátszóság",
-  "blankOpacity": "Blank átlátszóság",
+  "blankOpacity": "Háttérkép átlátszóság",
   "autoSize": "Automatikus méretezés",
   "scrollableProjection": "Görgethető vetítés",
   "scrollableProjectionHint": "Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.",
@@ -481,6 +481,7 @@
   "vCenter": "Függőleges középre igazítás",
   "showChords": "Akkordok mutatása",
   "showKotta": "Kotta mutatása",
+  "showBackgroundImage": "Háttérkép mutatása",
   "wordHighlight": "Szókiemelés",
   "boldText": "Félkövér szöveg",
   "colorsTitle": "Színek",
@@ -605,7 +606,7 @@
     }
   },
   "settingsFilesTitle": "Énektárak és fájlok",
-  "settingsFilesSummary": "Üres kép: {blank}",
+  "settingsFilesSummary": "Háttérkép: {blank}",
   "@settingsFilesSummary": {
     "placeholders": {
       "blank": {}
