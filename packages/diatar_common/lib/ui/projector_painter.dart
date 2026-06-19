@@ -1,4 +1,5 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
+import 'dart:collection';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,14 @@ import '../models/projection_globals.dart';
 import 'kotta_assets.dart';
 
 class ProjectorPainter extends CustomPainter {
+  static const int _layoutCacheLimit = 32;
+  static final LinkedHashMap<String, List<_TextRowLayout>> _textRowsCache =
+      LinkedHashMap<String, List<_TextRowLayout>>();
+  static final LinkedHashMap<String, List<_KottaRowLayout>> _kottaRowsCache =
+      LinkedHashMap<String, List<_KottaRowLayout>>();
+  static final LinkedHashMap<String, double> _textHeightCache =
+      LinkedHashMap<String, double>();
+
   ProjectorPainter({
     required this.frame,
     required this.globals,
@@ -819,6 +828,17 @@ class ProjectorPainter extends CustomPainter {
     bool preferPreferredBreaks = true,
   }
   ) {
+    final String cacheKey = _measureTextHeightCacheKey(
+      size,
+      frame,
+      fontSize,
+      preferPreferredBreaks,
+    );
+    final double? cached = _textHeightCache[cacheKey];
+    if (cached != null) {
+      return cached;
+    }
+
     final double maxWidth = math.max(40, size.width);
 
     final bool hasTitleLine =
@@ -943,6 +963,10 @@ class ProjectorPainter extends CustomPainter {
       }
     }
 
+    _textHeightCache[cacheKey] = totalHeight;
+    while (_textHeightCache.length > _layoutCacheLimit) {
+      _textHeightCache.remove(_textHeightCache.keys.first);
+    }
     return totalHeight;
   }
 
@@ -2020,6 +2044,17 @@ class ProjectorPainter extends CustomPainter {
     double maxWidth, {
     _KottaDrawState? inheritedState,
   }) {
+    final String cacheKey = _kottaRowsCacheKey(
+      line,
+      fontSize,
+      maxWidth,
+      inheritedState,
+    );
+    final List<_KottaRowLayout>? cached = _kottaRowsCache[cacheKey];
+    if (cached != null) {
+      return cached;
+    }
+
     final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
     final double lineGap = _kottaLineGap(fontSize);
     final double wrapWidth = math.max(8.0, maxWidth);
@@ -2102,7 +2137,12 @@ class ProjectorPainter extends CustomPainter {
       );
     }
 
-    return _applyKottaRowPrefixes(rows, line, lineGap, fontSize);
+    final List<_KottaRowLayout> resolved = _applyKottaRowPrefixes(rows, line, lineGap, fontSize);
+    _kottaRowsCache[cacheKey] = resolved;
+    while (_kottaRowsCache.length > _layoutCacheLimit) {
+      _kottaRowsCache.remove(_kottaRowsCache.keys.first);
+    }
+    return resolved;
   }
 
   List<_KottaRowLayout> _applyKottaRowPrefixes(
@@ -2294,6 +2334,17 @@ class ProjectorPainter extends CustomPainter {
     bool preferPreferredBreaks = true,
   }
   ) {
+    final String cacheKey = _textRowsCacheKey(
+      line,
+      fontSize,
+      maxWidth,
+      preferPreferredBreaks,
+    );
+    final List<_TextRowLayout>? cached = _textRowsCache[cacheKey];
+    if (cached != null) {
+      return cached;
+    }
+
     if (line.words.isEmpty) {
       return const <_TextRowLayout>[];
     }
@@ -2390,6 +2441,10 @@ class ProjectorPainter extends CustomPainter {
       );
     }
 
+    _textRowsCache[cacheKey] = rows;
+    while (_textRowsCache.length > _layoutCacheLimit) {
+      _textRowsCache.remove(_textRowsCache.keys.first);
+    }
     return rows;
   }
 
@@ -2450,6 +2505,110 @@ class ProjectorPainter extends CustomPainter {
 
   double _effectiveWordFontSize(_WordToken word, double baseFontSize) {
     return baseFontSize * word.fontScale.clamp(0.1, 1.0);
+  }
+
+  String _textRowsCacheKey(
+    _RenderLine line,
+    double fontSize,
+    double maxWidth,
+    bool preferPreferredBreaks,
+  ) {
+    return [
+      'text',
+      fontSize.toStringAsFixed(2),
+      maxWidth.toStringAsFixed(2),
+      preferPreferredBreaks,
+      globals.hCenter,
+      globals.leftIndent,
+      globals.boldText,
+      for (final _WordToken word in line.words)
+        [
+          word.text,
+          word.bold,
+          word.italic,
+          word.spaceAfter,
+          word.breakAfter,
+          word.preferredBreakAfter,
+          word.softHyphenAfter,
+          word.fontScale.toStringAsFixed(3),
+        ].join(':'),
+    ].join('|');
+  }
+
+  String _kottaRowsCacheKey(
+    _RenderLine line,
+    double fontSize,
+    double maxWidth,
+    _KottaDrawState? inheritedState,
+  ) {
+    return [
+      'kotta',
+      fontSize.toStringAsFixed(2),
+      maxWidth.toStringAsFixed(2),
+      globals.hCenter,
+      globals.leftIndent,
+      globals.boldText,
+      inheritedState == null ? '' : _kottaStateKey(inheritedState),
+      for (final _WordToken word in line.words)
+        [
+          word.text,
+          word.bold,
+          word.italic,
+          word.spaceAfter,
+          word.breakAfter,
+          word.preferredBreakAfter,
+          word.softHyphenAfter,
+          word.fontScale.toStringAsFixed(3),
+          word.kotta ?? '',
+        ].join(':'),
+    ].join('|');
+  }
+
+  String _measureTextHeightCacheKey(
+    Size size,
+    TextFrame frame,
+    double fontSize,
+    bool preferPreferredBreaks,
+  ) {
+    return [
+      'height',
+      size.width.toStringAsFixed(2),
+      size.height.toStringAsFixed(2),
+      fontSize.toStringAsFixed(2),
+      preferPreferredBreaks,
+      globals.fontSize,
+      globals.titleSize,
+      globals.leftIndent,
+      globals.spacing100,
+      globals.hCenter,
+      globals.useAkkord,
+      globals.useKotta,
+      globals.hideTitle,
+      settings.receiverUseAkkord,
+      settings.receiverUseKotta,
+      frame.record.title,
+      ...frame.record.lines,
+    ].join('|');
+  }
+
+  String _kottaStateKey(_KottaDrawState state) {
+    return [
+      state.kulcs,
+      state.elojegy,
+      state.modosito,
+      state.ritmus,
+      state.pontozott,
+      state.tomor,
+      state.gerenda,
+      state.szaaratlan,
+      state.slurType,
+      state.slurNext,
+      state.deferFinalDoubleBarAtEnd,
+      state.triLe,
+      state.triTipus,
+      state.triPos.length,
+      state.beamStems.length,
+    ].join('|');
   }
 
   double _kottaRawWidth(String kotta, double lineGap, _KottaDrawState state) {
