@@ -526,11 +526,18 @@ class ProjectorPainter extends CustomPainter {
           : const <_TextRowLayout>[];
       final List<bool> lineHighlights = <bool>[];
 
+      // Reset at each line boundary so the first word of the new line always
+      // gets a new word index, regardless of whether the previous line's last
+      // word had a trailing space.
+      if (!isTitleLine) {
+        prevWordHadSpace = true;
+      }
+
       final List<InlineSpan> spans = <InlineSpan>[];
       for (int i = 0; i < line.words.length; i++) {
         final _WordToken word = line.words[i];
 
-        // Update word index only on real word boundaries (spaceAfter), not syllable breaks or line starts.
+        // Update word index only on real word boundaries (spaceAfter), not syllable breaks.
         if (!isTitleLine && word.countAsWord) {
           final bool startsNewWord = prevWordHadSpace;
           if (startsNewWord) {
