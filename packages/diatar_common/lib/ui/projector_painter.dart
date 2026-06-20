@@ -1857,7 +1857,8 @@ class ProjectorPainter extends CustomPainter {
   }
 
   double _kottaStaffToTextGap(double lineGap) {
-    return math.max(2.0, lineGap * 0.35);
+    // Keep enough clearance for lower ledger lines so they do not collide with lyrics.
+    return math.max(4.0, lineGap * 2.2);
   }
 
   double _kottaRowBlockHeight(double fontSize) {
