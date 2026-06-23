@@ -3269,7 +3269,13 @@ class ProjectorPainter extends CustomPainter {
       }
 
       _trackSlurPoint(state, Offset(nx, cy));
-      _trackTupletPoint(state, Offset(nx, cy), stemDown, lineGap);
+      _trackTupletPoint(
+        state,
+        Offset(nx, cy),
+        stemDown,
+        lineGap,
+        noteW,
+      );
 
       if (state.pontozott) {
         _drawKottaAsset(
@@ -3431,15 +3437,22 @@ class ProjectorPainter extends CustomPainter {
     Offset noteCenter,
     bool stemDown,
     double lineGap,
+    double headWidth,
   ) {
     if (state.triTipus != '3' && state.triTipus != '5') {
       return;
     }
     state.triLe = stemDown;
     final double y = stemDown
-        ? noteCenter.dy + lineGap * 2.8
-        : noteCenter.dy - lineGap * 2.8;
-    state.triPos.add(Offset(noteCenter.dx, y));
+        ? noteCenter.dy + lineGap * 3.2
+        : noteCenter.dy - lineGap * 3.2;
+    state.triPos.add(
+      _TupletPoint(
+        x: noteCenter.dx,
+        y: y,
+        headWidth: headWidth,
+      ),
+    );
   }
 
   void _endTuplet(Canvas canvas, _KottaDrawState state, double lineGap) {
@@ -3453,21 +3466,70 @@ class ProjectorPainter extends CustomPainter {
       state.triPos.clear();
       return;
     }
-    final Offset lp = state.triPos.first;
-    final Offset rp = state.triPos.last;
+    final _TupletPoint lp = state.triPos.first;
+    final _TupletPoint rp = state.triPos.last;
+    final double dx = rp.x - lp.x;
+    double startY = lp.y;
+    double endY = rp.y;
+
+    if (dx.abs() > 0.0001) {
+      for (int i = 1; i < state.triPos.length - 1; i++) {
+        final _TupletPoint point = state.triPos[i];
+        final double yOnLine =
+            startY + ((endY - startY) * (point.x - lp.x)) / dx;
+        final double yDiff = point.y - yOnLine;
+        if (state.triLe ? yDiff > 0 : yDiff < 0) {
+          startY += yDiff;
+          endY += yDiff;
+        }
+      }
+    }
+
+    final double lineOffset = state.triLe ? lineGap * 0.5 : -lineGap * 0.5;
+    startY += lineOffset;
+    endY += lineOffset;
+
+    final double startX = state.triLe ? lp.x - lp.headWidth : lp.x;
+    final double endX = state.triLe ? rp.x : rp.x + rp.headWidth;
+    final double startLineY = dx.abs() > 0.0001
+        ? startY + ((endY - startY) * (startX - lp.x)) / dx
+        : startY;
+    final double endLineY = dx.abs() > 0.0001
+        ? startY + ((endY - startY) * (endX - lp.x)) / dx
+        : endY;
+
     final Paint p = Paint()
       ..color = globals.txtColor
-      ..strokeWidth = 1.0;
-    canvas.drawLine(lp, rp, p);
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(startX, startLineY), Offset(endX, endLineY), p);
+
+    final double capLen = lineGap;
+    final double capDir = state.triLe ? -1.0 : 1.0;
+    canvas.drawLine(
+      Offset(startX, startLineY),
+      Offset(startX, startLineY + capDir * capLen),
+      p,
+    );
+    canvas.drawLine(
+      Offset(endX, endLineY),
+      Offset(endX, endLineY + capDir * capLen),
+      p,
+    );
+
     final String img = tri ? 'triola' : 'pentola';
+    final double numeralHeight = lineGap * 1.15;
     final Offset m = Offset(
-      (lp.dx + rp.dx) / 2,
-      (lp.dy + rp.dy) / 2 + (state.triLe ? lineGap * 0.2 : -lineGap * 0.9),
+      (startX + endX) / 2,
+      ((startLineY + endLineY) / 2) +
+          (state.triLe
+              ? lineGap * 0.5 + numeralHeight / 2
+              : -lineGap * 0.5 - numeralHeight / 2),
     );
     _drawKottaAsset(
       canvas,
       img,
-      Rect.fromCenter(center: m, width: lineGap * 0.9, height: lineGap * 1.2),
+      Rect.fromCenter(center: m, width: lineGap * 0.9, height: numeralHeight),
     );
     state.triTipus = ' ';
     state.triPos.clear();
@@ -4108,7 +4170,7 @@ class _KottaDrawState {
   bool triLe = false;
   String triTipus = ' ';
   bool deferFinalDoubleBarAtEnd = false;
-  final List<Offset> triPos = <Offset>[];
+  final List<_TupletPoint> triPos = <_TupletPoint>[];
   final List<_BeamStem> beamStems = <_BeamStem>[];
 
   _KottaDrawState copy() {
@@ -4139,6 +4201,18 @@ class _KottaDrawState {
     pontozott = false;
     tomor = false;
   }
+}
+
+class _TupletPoint {
+  const _TupletPoint({
+    required this.x,
+    required this.y,
+    required this.headWidth,
+  });
+
+  final double x;
+  final double y;
+  final double headWidth;
 }
 
 class _BeamStem {
