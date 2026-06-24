@@ -161,8 +161,8 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLocalNetworkSubtitle.
   ///
   /// In hu, this message translates to:
-  /// **'TCP port: {port}'**
-  String settingsLocalNetworkSubtitle(Object port);
+  /// **'TCP szerver: {status}, port: {port}'**
+  String settingsLocalNetworkSubtitle(Object status, Object port);
 
   /// No description provided for @settingsLocalNetworkIpLabel.
   ///

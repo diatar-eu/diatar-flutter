@@ -169,6 +169,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
     final l10n = context.l10n;
     final String query = _search.text.trim().toLowerCase();
     final bool internetEnabled = !_ipMode;
+    final String localNetworkStatus =
+      (_ipMode ? l10n.valueOn : l10n.valueOff).toUpperCase();
     final String senderSummary = _mqttUser.text.trim().isEmpty
         ? '-'
         : _mqttUser.text.trim();
@@ -285,6 +287,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         children: <Widget>[
                           Text(
                             l10n.settingsLocalNetworkSubtitle(
+                              localNetworkStatus,
                               _port.text.trim().isEmpty
                                   ? '-'
                                   : _port.text.trim(),

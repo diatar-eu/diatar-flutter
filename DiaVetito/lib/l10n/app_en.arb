@@ -28,9 +28,10 @@
     }
   },
   "settingsLocalNetworkTitle": "Local network (TCP/IP)",
-  "settingsLocalNetworkSubtitle": "TCP port: {port}",
+  "settingsLocalNetworkSubtitle": "TCP server: {status}, port: {port}",
   "@settingsLocalNetworkSubtitle": {
     "placeholders": {
+      "status": {},
       "port": {}
     }
   },

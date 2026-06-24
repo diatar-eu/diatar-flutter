@@ -45,8 +45,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLocalNetworkTitle => 'Local network (TCP/IP)';
 
   @override
-  String settingsLocalNetworkSubtitle(Object port) {
-    return 'TCP port: $port';
+  String settingsLocalNetworkSubtitle(Object status, Object port) {
+    return 'TCP server: $status, port: $port';
   }
 
   @override

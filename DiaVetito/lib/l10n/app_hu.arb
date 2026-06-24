@@ -28,9 +28,10 @@
     }
   },
   "settingsLocalNetworkTitle": "Helyi hálózat (TCP/IP)",
-  "settingsLocalNetworkSubtitle": "TCP port: {port}",
+  "settingsLocalNetworkSubtitle": "TCP szerver: {status}, port: {port}",
   "@settingsLocalNetworkSubtitle": {
     "placeholders": {
+      "status": {},
       "port": {}
     }
   },
