@@ -45,8 +45,8 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsLocalNetworkTitle => 'Helyi hálózat (TCP/IP)';
 
   @override
-  String settingsLocalNetworkSubtitle(Object port) {
-    return 'TCP port: $port';
+  String settingsLocalNetworkSubtitle(Object status, Object port) {
+    return 'TCP szerver: $status, port: $port';
   }
 
   @override
