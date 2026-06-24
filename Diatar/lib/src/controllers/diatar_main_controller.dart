@@ -320,7 +320,17 @@ class DiatarMainController extends ChangeNotifier {
     await _applyTransport();
     await reloadBooks();
     await _tryAutoLoadTodayDia();
-    await _syncCurrentDia();
+    if (customOrderActive &&
+        _customOrderCursor >= 0 &&
+        _customOrderCursor < _customOrder.length &&
+        !_customOrder[_customOrderCursor].isSongEntry) {
+      await _projectCustomOrderEntry(
+        _customOrder[_customOrderCursor],
+        cursor: _customOrderCursor,
+      );
+    } else {
+      await _syncCurrentDia();
+    }
   }
 
   Future<void> _tryAutoLoadTodayDia() async {
