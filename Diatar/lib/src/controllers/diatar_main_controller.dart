@@ -452,6 +452,11 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> applySettings(AppSettings newSettings) async {
+    final AppSettings previousSettings = settings;
+    final bool transportChanged = _transportSettingsChanged(
+      previousSettings,
+      newSettings,
+    );
     settings = newSettings;
     lastBlankPath = settings.blankPicPath;
     await _settingsStore.save(settings);
@@ -484,10 +489,52 @@ class DiatarMainController extends ChangeNotifier {
       blankTrans: settings.projBlankTrans,
       boldText: settings.projBoldText,
     );
-    await _applyTransport();
+    if (transportChanged) {
+      await _applyTransport();
+    } else {
+      _refreshSenderFlags();
+    }
     notifyListeners();
     await _syncCurrentDia();
     await _syncBackgroundImageAfterConnect();
+  }
+
+  bool _transportSettingsChanged(AppSettings previous, AppSettings next) {
+    final bool mqttChanged = _mqttSettingsChanged(previous, next);
+    final bool tcpChanged = _tcpSettingsChanged(previous, next);
+    return mqttChanged || tcpChanged;
+  }
+
+  bool _mqttSettingsChanged(AppSettings previous, AppSettings next) {
+    if (previous.internetRelayEnabled != next.internetRelayEnabled) {
+      return true;
+    }
+    if (!previous.internetRelayEnabled && !next.internetRelayEnabled) {
+      return false;
+    }
+    return previous.mqttUser.trim() != next.mqttUser.trim() ||
+        previous.mqttPassword != next.mqttPassword ||
+        previous.mqttChannel.trim() != next.mqttChannel.trim();
+  }
+
+  bool _tcpSettingsChanged(AppSettings previous, AppSettings next) {
+    if (previous.tcpClientEnabled != next.tcpClientEnabled) {
+      return true;
+    }
+    if (!previous.tcpClientEnabled && !next.tcpClientEnabled) {
+      return false;
+    }
+    return !listEquals(
+      _normalizedTcpTargets(previous),
+      _normalizedTcpTargets(next),
+    );
+  }
+
+  List<String> _normalizedTcpTargets(AppSettings value) {
+    return value.tcpTargets
+        .map((String target) => target.trim())
+        .where((String target) => target.isNotEmpty)
+        .toList();
   }
 
   Future<void> _sendProjectionState() async {
