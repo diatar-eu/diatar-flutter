@@ -1069,11 +1069,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           ),
         ),
         IconButton(
-          onPressed: trimmed.isEmpty ? null : () => _copyRawPath(trimmed),
-          icon: const Icon(Icons.content_copy),
-          tooltip: l10n.copyPathTooltip,
-        ),
-        IconButton(
           onPressed: () async {
             await onPick();
           },
@@ -1082,16 +1077,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ),
       ],
     );
-  }
-
-  Future<void> _copyRawPath(String rawPath) async {
-    await Clipboard.setData(ClipboardData(text: rawPath));
-    if (!mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(context.l10n.pathCopied)));
   }
 
   Future<void> _openDesktopHotkeySettings() {
