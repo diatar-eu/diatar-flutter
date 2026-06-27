@@ -649,7 +649,7 @@ class DiatarHomePage extends StatelessWidget {
                       ),
                     ),
                     tooltip:
-                      '${l10n.showKotta} / ${l10n.showChords} / ${l10n.showBackgroundImage}',
+                        '${l10n.showKotta} / ${l10n.showChords} / ${l10n.showBackgroundImage}',
                     onPressed: () =>
                         unawaited(_showProjectionDisplayMenu(menuContext)),
                     backgroundColor: displayButtonColor.withValues(alpha: 0.15),
@@ -1669,7 +1669,11 @@ class _BookDropdown extends StatelessWidget {
         ? context.l10n.zsolozsmaTooltip
         : context.l10n.customOrderUnnamedFileName;
     final String diaName =
-        controller.lastImportedCustomOrderBaseName ?? fallbackDiaName;
+        controller.suggestedCustomOrderBaseName ?? fallbackDiaName;
+    final bool showZsolozsmaLabel = controller.customOrderIsUnsavedZsolozsma;
+    final String virtualBookLabel = showZsolozsmaLabel
+        ? context.l10n.zsolozsmaBookLabel(diaName)
+        : context.l10n.diaBookLabel(diaName);
     final List<_BookDropdownEntry> entries = _buildBookDropdownEntries(
       controller.books,
       context.l10n.ungroupedBookGroupLabel,
@@ -1699,7 +1703,7 @@ class _BookDropdown extends StatelessWidget {
                   child: SizedBox(
                     width: double.infinity,
                     child: Text(
-                      context.l10n.diaBookLabel(diaName),
+                      virtualBookLabel,
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                     ),
@@ -1744,7 +1748,7 @@ class _BookDropdown extends StatelessWidget {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      context.l10n.diaBookLabel(diaName),
+                      virtualBookLabel,
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                     ),

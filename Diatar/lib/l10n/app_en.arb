@@ -383,6 +383,12 @@
       "name": {}
     }
   },
+  "zsolozsmaBookLabel": "Liturgy: {name}",
+  "@zsolozsmaBookLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "songLabel": "Song",
   "verseLabel": "Verse",
   "versePanelTitle": "{title}: {verse}",

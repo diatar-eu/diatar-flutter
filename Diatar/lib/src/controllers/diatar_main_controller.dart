@@ -194,12 +194,28 @@ class DiatarMainController extends ChangeNotifier {
   bool _diaVirtualBookSelected = false;
   bool _startupDownloadDialogHandled = false;
   String _zsolozsmaLastDiagnostics = '';
+  static const String _customOrderSourceZsolozsmaUnsaved = 'zsolozsma-unsaved';
+  String? _customOrderSourceType;
+  String? _zsolozsmaVirtualBookLabel;
 
   Map<String, String> get statusParams =>
       Map<String, String>.unmodifiable(_statusParams);
 
   String? get lastImportedCustomOrderBaseName =>
       _lastImportedCustomOrderBaseName;
+  bool get customOrderIsUnsavedZsolozsma =>
+      _customOrder.isNotEmpty &&
+      _customOrderSourceType == _customOrderSourceZsolozsmaUnsaved;
+  String? get zsolozsmaVirtualBookLabel =>
+      customOrderIsUnsavedZsolozsma ? _zsolozsmaVirtualBookLabel : null;
+  String? get suggestedCustomOrderBaseName {
+    final String? zsolozsmaLabel = zsolozsmaVirtualBookLabel?.trim();
+    if (zsolozsmaLabel != null && zsolozsmaLabel.isNotEmpty) {
+      return zsolozsmaLabel;
+    }
+    return lastImportedCustomOrderBaseName;
+  }
+
   bool get customOrderLooksLikeZsolozsma =>
       _customOrder.isNotEmpty &&
       _customOrder.every(
@@ -262,6 +278,8 @@ class DiatarMainController extends ChangeNotifier {
       List<StoredCustomOrderEntry> entries,
       bool active,
       String? baseName,
+      String? sourceType,
+      String? zsolozsmaLabel,
     })
     stored = await _orderStore.loadCurrentCustomOrder();
     _customOrder = stored.entries
@@ -284,6 +302,10 @@ class DiatarMainController extends ChangeNotifier {
     _lastImportedCustomOrderBaseName = _customOrder.isEmpty
         ? null
         : stored.baseName;
+    _customOrderSourceType = _customOrder.isEmpty ? null : stored.sourceType;
+    _zsolozsmaVirtualBookLabel = _customOrder.isEmpty
+        ? null
+        : stored.zsolozsmaLabel;
     _customOrderCursor = customOrderActive ? 0 : -1;
     _diaVirtualBookSelected = _customOrder.isNotEmpty;
     globals = globals.copyWith(
@@ -770,6 +792,12 @@ class DiatarMainController extends ChangeNotifier {
 
     await applyCustomOrder(entries, activate: true);
     _logZsolozsmaDebug('applyCustomOrder complete entries=${entries.length}');
+    final String zsolozsmaLabel = '${_formatDateIso(day)} ${part.title.trim()}'
+        .trim();
+    _customOrderSourceType = _customOrderSourceZsolozsmaUnsaved;
+    _zsolozsmaVirtualBookLabel = zsolozsmaLabel;
+    _lastImportedCustomOrderBaseName = zsolozsmaLabel;
+    await _persistCurrentCustomOrder();
     _diaVirtualBookSelected = entries.isNotEmpty;
     if (entries.isNotEmpty) {
       _selectByCustomOrderCursor(0, sync: true);
@@ -1117,6 +1145,8 @@ class DiatarMainController extends ChangeNotifier {
           .toList(),
       active: customOrderActive,
       baseName: _customOrder.isEmpty ? null : _lastImportedCustomOrderBaseName,
+      sourceType: _customOrder.isEmpty ? null : _customOrderSourceType,
+      zsolozsmaLabel: _customOrder.isEmpty ? null : _zsolozsmaVirtualBookLabel,
     );
   }
 
@@ -1441,6 +1471,8 @@ class DiatarMainController extends ChangeNotifier {
     if (_customOrder.isEmpty) {
       _diaVirtualBookSelected = false;
       _lastImportedCustomOrderBaseName = null;
+      _customOrderSourceType = null;
+      _zsolozsmaVirtualBookLabel = null;
     }
     customOrderActive = activate && _customOrder.isNotEmpty;
     if (customOrderActive) {
@@ -1758,10 +1790,14 @@ class DiatarMainController extends ChangeNotifier {
     } catch (_) {
       decodedPath = path;
     }
-    final String savedName = _stripFileExtension(_fileNameFromPath(decodedPath));
+    final String savedName = _stripFileExtension(
+      _fileNameFromPath(decodedPath),
+    );
     _lastImportedCustomOrderBaseName = savedName.trim().isEmpty
         ? null
         : savedName;
+    _customOrderSourceType = null;
+    _zsolozsmaVirtualBookLabel = null;
     await _persistCurrentCustomOrder();
     _setStatus('statusOrderSaved', <String, String>{'path': path});
     notifyListeners();
@@ -1915,6 +1951,8 @@ class DiatarMainController extends ChangeNotifier {
     _lastImportedCustomOrderBaseName = importedName.trim().isEmpty
         ? null
         : importedName;
+    _customOrderSourceType = null;
+    _zsolozsmaVirtualBookLabel = null;
     await _persistCurrentCustomOrder();
     _diaVirtualBookSelected = _customOrder.isNotEmpty;
     _setStatus('statusOrderLoaded', <String, String>{

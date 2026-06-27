@@ -1030,15 +1030,15 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           ? l10n.zsolozsmaTooltip
           : l10n.customOrderSuggestedFileName;
       final String defaultBaseName = _normalizeDiaBaseName(
-        controller.lastImportedCustomOrderBaseName ?? fallbackBaseName,
+        controller.suggestedCustomOrderBaseName ?? fallbackBaseName,
         fallback: 'sorrend',
       );
       final String defaultFileName = '$defaultBaseName.dia';
       final String configuredDir = controller.settings.diaExportPath.trim();
-        final String? initialDir = configuredDir.isNotEmpty
+      final String? initialDir = configuredDir.isNotEmpty
           ? _existingDirectoryPathOrNull(configuredDir)
           : null;
-        final bool hadUsableConfiguredDir = initialDir != null;
+      final bool hadUsableConfiguredDir = initialDir != null;
 
       try {
         final FileSaveLocation? target = await getSaveLocation(
@@ -1152,10 +1152,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       final Uint8List data = await File(exportedTempPath).readAsBytes();
       return _androidDiaSaveChannel.invokeMethod<String>(
         'saveDiaFile',
-        <String, Object?>{
-          'fileName': defaultFileName,
-          'bytes': data,
-        },
+        <String, Object?>{'fileName': defaultFileName, 'bytes': data},
       );
     } finally {
       try {

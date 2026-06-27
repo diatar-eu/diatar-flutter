@@ -428,6 +428,11 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
+  String zsolozsmaBookLabel(Object name) {
+    return 'Zsolozsma: $name';
+  }
+
+  @override
   String get songLabel => 'Ének';
 
   @override

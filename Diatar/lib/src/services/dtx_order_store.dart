@@ -118,6 +118,10 @@ class DtxOrderStore {
   static const String _kCurrentCustomOrderActive = 'CurrentCustomOrderActive';
   static const String _kCurrentCustomOrderBaseName =
       'CurrentCustomOrderBaseName';
+  static const String _kCurrentCustomOrderSourceType =
+      'CurrentCustomOrderSourceType';
+  static const String _kCurrentCustomOrderZsolozsmaLabel =
+      'CurrentCustomOrderZsolozsmaLabel';
   static const String _kCustomOrderPresets = 'CustomOrderPresets';
 
   Future<Set<String>> loadDisabled() async {
@@ -138,6 +142,8 @@ class DtxOrderStore {
     List<StoredCustomOrderEntry> entries, {
     required bool active,
     String? baseName,
+    String? sourceType,
+    String? zsolozsmaLabel,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String json = jsonEncode(
@@ -147,10 +153,24 @@ class DtxOrderStore {
     await prefs.setBool(_kCurrentCustomOrderActive, active);
     final String normalized = (baseName ?? '').trim();
     await prefs.setString(_kCurrentCustomOrderBaseName, normalized);
+    await prefs.setString(
+      _kCurrentCustomOrderSourceType,
+      (sourceType ?? '').trim(),
+    );
+    await prefs.setString(
+      _kCurrentCustomOrderZsolozsmaLabel,
+      (zsolozsmaLabel ?? '').trim(),
+    );
   }
 
   Future<
-    ({List<StoredCustomOrderEntry> entries, bool active, String? baseName})
+    ({
+      List<StoredCustomOrderEntry> entries,
+      bool active,
+      String? baseName,
+      String? sourceType,
+      String? zsolozsmaLabel,
+    })
   >
   loadCurrentCustomOrder() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -161,6 +181,16 @@ class DtxOrderStore {
     final String? baseName = baseNameRaw.trim().isEmpty
         ? null
         : baseNameRaw.trim();
+    final String sourceTypeRaw =
+        prefs.getString(_kCurrentCustomOrderSourceType) ?? '';
+    final String? sourceType = sourceTypeRaw.trim().isEmpty
+        ? null
+        : sourceTypeRaw.trim();
+    final String zsolozsmaLabelRaw =
+        prefs.getString(_kCurrentCustomOrderZsolozsmaLabel) ?? '';
+    final String? zsolozsmaLabel = zsolozsmaLabelRaw.trim().isEmpty
+        ? null
+        : zsolozsmaLabelRaw.trim();
 
     final List<StoredCustomOrderEntry> entries = <StoredCustomOrderEntry>[];
     try {
@@ -176,7 +206,13 @@ class DtxOrderStore {
       }
     } catch (_) {}
 
-    return (entries: entries, active: active, baseName: baseName);
+    return (
+      entries: entries,
+      active: active,
+      baseName: baseName,
+      sourceType: sourceType,
+      zsolozsmaLabel: zsolozsmaLabel,
+    );
   }
 
   Future<Map<String, List<StoredCustomOrderEntry>>>

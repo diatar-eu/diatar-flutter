@@ -383,6 +383,12 @@
       "name": {}
     }
   },
+  "zsolozsmaBookLabel": "Zsolozsma: {name}",
+  "@zsolozsmaBookLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "songLabel": "Ének",
   "verseLabel": "Versszak",
   "versePanelTitle": "{title}: {verse}",
