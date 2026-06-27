@@ -1731,23 +1731,6 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  tooltip: l10n.copyPathTooltip,
-                  onPressed: _directoryPath.trim().isEmpty
-                      ? null
-                      : () async {
-                          await Clipboard.setData(
-                            ClipboardData(text: _directoryPath.trim()),
-                          );
-                          if (!mounted) {
-                            return;
-                          }
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(l10n.pathCopied)),
-                          );
-                        },
-                  icon: const Icon(Icons.content_copy),
-                ),
-                IconButton(
                   tooltip: l10n.fileChoose,
                   onPressed: () async {
                     final String? folderPath = await getDirectoryPath();
