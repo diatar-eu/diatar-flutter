@@ -426,6 +426,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String zsolozsmaBookLabel(Object name) {
+    return 'Liturgy: $name';
+  }
+
+  @override
   String get songLabel => 'Song';
 
   @override
