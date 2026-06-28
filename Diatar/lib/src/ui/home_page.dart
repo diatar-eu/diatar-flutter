@@ -2076,6 +2076,7 @@ class _VersePreview extends StatelessWidget {
         final double width = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : 800;
+        final bool needsScrollableMeasure = !constraints.maxHeight.isFinite;
         final double viewportHeightForMeasure = constraints.maxHeight.isFinite
             ? constraints.maxHeight
             : (MediaQuery.of(context).size.height -
@@ -2099,9 +2100,9 @@ class _VersePreview extends StatelessWidget {
           120,
           viewportHeightForMeasure - titleHeight,
         );
-        final double requiredCanvasHeight = painter.measureRequiredHeight(
-          Size(width, fallbackCanvasHeight),
-        );
+        final double requiredCanvasHeight = needsScrollableMeasure
+            ? painter.measureRequiredHeight(Size(width, fallbackCanvasHeight))
+            : fallbackCanvasHeight;
         final double scrollCanvasHeight = math.max(
           fallbackCanvasHeight,
           requiredCanvasHeight,
@@ -2226,6 +2227,7 @@ class _CustomTextPreview extends StatelessWidget {
         final double width = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : 800;
+        final bool needsScrollableMeasure = !constraints.maxHeight.isFinite;
         final String fullTitle = context.l10n.diaBookLabel(title);
         final TextStyle titleStyle = TextStyle(
           color: controller.globals.txtColor.withValues(alpha: 0.75),
@@ -2247,9 +2249,9 @@ class _CustomTextPreview extends StatelessWidget {
           120,
           viewportHeightForMeasure - titleHeight,
         );
-        final double requiredCanvasHeight = painter.measureRequiredHeight(
-          Size(width, fallbackCanvasHeight),
-        );
+        final double requiredCanvasHeight = needsScrollableMeasure
+            ? painter.measureRequiredHeight(Size(width, fallbackCanvasHeight))
+            : fallbackCanvasHeight;
         final double scrollCanvasHeight = math.max(
           fallbackCanvasHeight,
           requiredCanvasHeight,

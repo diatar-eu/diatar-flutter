@@ -2,6 +2,7 @@
 import 'dart:collection';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/app_settings.dart';
@@ -4092,9 +4093,85 @@ class ProjectorPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(ProjectorPainter oldDelegate) {
-    return oldDelegate.frame != frame ||
-        oldDelegate.globals != globals ||
-        oldDelegate.settings != settings;
+    return !_sameFrame(oldDelegate.frame, frame) ||
+        !_sameGlobals(oldDelegate.globals, globals) ||
+        !_sameSettings(oldDelegate.settings, settings) ||
+        oldDelegate.logoTitle != logoTitle ||
+        oldDelegate.logoSubtitle != logoSubtitle;
+  }
+
+  bool _sameFrame(ProjectionFrame? a, ProjectionFrame? b) {
+    if (identical(a, b)) {
+      return true;
+    }
+    if (a == null || b == null || a.runtimeType != b.runtimeType) {
+      return false;
+    }
+    if (a is LogoFrame && b is LogoFrame) {
+      return a.phase == b.phase;
+    }
+    if (a is ImageFrame && b is ImageFrame) {
+      return identical(a.image, b.image) && a.bgMode == b.bgMode;
+    }
+    if (a is TextFrame && b is TextFrame) {
+      return _sameTextRecord(a.record, b.record);
+    }
+    return false;
+  }
+
+  bool _sameTextRecord(dynamic a, dynamic b) {
+    return a.scholaLine == b.scholaLine &&
+        a.title == b.title &&
+        listEquals(a.lines, b.lines);
+  }
+
+  bool _sameSettings(AppSettings a, AppSettings b) {
+    return a.clipL == b.clipL &&
+        a.clipT == b.clipT &&
+        a.clipR == b.clipR &&
+        a.clipB == b.clipB &&
+        a.mirror == b.mirror &&
+        a.rotateQuarterTurns == b.rotateQuarterTurns &&
+        a.receiverUseAkkord == b.receiverUseAkkord &&
+        a.receiverUseKotta == b.receiverUseKotta;
+  }
+
+  bool _sameGlobals(ProjectionGlobals a, ProjectionGlobals b) {
+    return a.bkColor == b.bkColor &&
+        a.txtColor == b.txtColor &&
+        a.blankColor == b.blankColor &&
+        a.hiColor == b.hiColor &&
+        a.fontSize == b.fontSize &&
+        a.titleSize == b.titleSize &&
+        a.leftIndent == b.leftIndent &&
+        a.spacing100 == b.spacing100 &&
+        a.hKey == b.hKey &&
+        a.wordToHighlight == b.wordToHighlight &&
+        a.borderL == b.borderL &&
+        a.borderT == b.borderT &&
+        a.borderR == b.borderR &&
+        a.borderB == b.borderB &&
+        a.fontName == b.fontName &&
+        a.isBlankPic == b.isBlankPic &&
+        a.autoResize == b.autoResize &&
+        a.projecting == b.projecting &&
+        a.showBlankPic == b.showBlankPic &&
+        a.hCenter == b.hCenter &&
+        a.vCenter == b.vCenter &&
+        a.scholaMode == b.scholaMode &&
+        a.useAkkord == b.useAkkord &&
+        a.useKotta == b.useKotta &&
+        a.useTransitions == b.useTransitions &&
+        a.endProgram == b.endProgram &&
+        a.hideTitle == b.hideTitle &&
+        a.inverzKotta == b.inverzKotta &&
+        a.bgMode == b.bgMode &&
+        a.kottaArany == b.kottaArany &&
+        a.akkordArany == b.akkordArany &&
+        a.backTrans == b.backTrans &&
+        a.blankTrans == b.blankTrans &&
+        a.borderToClip == b.borderToClip &&
+        a.boldText == b.boldText;
   }
 
   Color _colorWithTransparency(Color color, int transparencyPercent) {
