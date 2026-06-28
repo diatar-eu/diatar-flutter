@@ -952,6 +952,22 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
+  String get systemActionsTitle => 'Rendszer műveletek';
+
+  @override
+  String get systemActionsSummary =>
+      'Kilépés, távoli program leállítása, távoli gép leállítása';
+
+  @override
+  String get localExit => 'Kilépés';
+
+  @override
+  String get remoteProgramStop => 'Távoli program leállítása';
+
+  @override
+  String get remoteMachineStop => 'Távoli gép leállítása';
+
+  @override
   String get settingsHotkeysTitle => 'Gyorsbillentyűk';
 
   @override
@@ -1188,5 +1204,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsHotkeyCapture => 'Rögzítés';
 
   @override
-  String get settingsProgramExit => 'Program vége';
+  String get settingsSearchKeywordsSystem =>
+      'rendszer kilepes leallas stop shutdown epstop epshutdown';
 }

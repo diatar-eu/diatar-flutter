@@ -890,6 +890,10 @@ class DiatarHomePage extends StatelessWidget {
           },
           onApply: (AppSettings settings) => controller.applySettings(settings),
           onExitRequested: controller.requestExit,
+          onRemoteStopRequested: () => unawaited(controller.sendStop()),
+          onRemoteShutdownRequested: () => unawaited(
+            controller.sendStop(wantShutdown: true),
+          ),
         );
       },
     );

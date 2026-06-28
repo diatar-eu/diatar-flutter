@@ -23,6 +23,8 @@ class DiatarSettingsSheet extends StatefulWidget {
     required this.initialSettings,
     required this.onApply,
     required this.onExitRequested,
+    required this.onRemoteStopRequested,
+    required this.onRemoteShutdownRequested,
     this.availableSongs = const <SongHotkeyOption>[],
     this.availableSongsLoader,
   });
@@ -30,6 +32,8 @@ class DiatarSettingsSheet extends StatefulWidget {
   final AppSettings initialSettings;
   final ValueChanged<AppSettings> onApply;
   final VoidCallback onExitRequested;
+  final VoidCallback onRemoteStopRequested;
+  final VoidCallback onRemoteShutdownRequested;
   final List<SongHotkeyOption> availableSongs;
   final List<SongHotkeyOption> Function()? availableSongsLoader;
 
@@ -229,6 +233,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       'enektar fajlok dtx hatterkep hatter kep blank',
     );
     final bool showGeneral = _matches(query, 'altalanos tema nyelv language');
+    final bool showSystem = _matches(
+      query,
+      'rendszer kilepes leallas stop shutdown epstop epshutdown',
+    );
     final bool showHotkeys =
         desktopHotkeysAvailable &&
         _matches(
@@ -242,6 +250,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         showProjection ||
         showFiles ||
         showGeneral ||
+        showSystem ||
         showHotkeys;
     return Padding(
       padding: EdgeInsets.only(
@@ -373,7 +382,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       ),
                       onTap: _openGeneralSettings,
                     ),
-                  if (showGeneral && showHotkeys) const Divider(height: 1),
+                  if (showGeneral && (showSystem || showHotkeys))
+                    const Divider(height: 1),
+                  if (showSystem)
+                    _settingsTile(
+                      leading: const Icon(Icons.power_settings_new),
+                      title: Text(l10n.systemActionsTitle),
+                      subtitle: Text(l10n.systemActionsSummary),
+                      onTap: _openSystemActions,
+                    ),
+                  if (showSystem && showHotkeys) const Divider(height: 1),
                   if (showHotkeys)
                     _settingsTile(
                       leading: const Icon(Icons.keyboard_alt_outlined),
@@ -387,15 +405,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       child: Text(l10n.settingsNoResults),
                     ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.tonalIcon(
-                onPressed: widget.onExitRequested,
-                icon: const Icon(Icons.power_settings_new),
-                label: Text(l10n.settingsProgramExit),
               ),
             ),
             const SizedBox(height: 8),
@@ -1009,6 +1018,35 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               }),
             ],
             onChanged: (String? v) => setBoth(() => _appLanguage = v ?? ''),
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _openSystemActions() {
+    return _openSectionSheet(
+      title: context.l10n.systemActionsTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              FilledButton(
+                onPressed: widget.onExitRequested,
+                child: Text(l10n.localExit),
+              ),
+              OutlinedButton(
+                onPressed: widget.onRemoteStopRequested,
+                child: Text(l10n.remoteProgramStop),
+              ),
+              OutlinedButton(
+                onPressed: widget.onRemoteShutdownRequested,
+                child: Text(l10n.remoteMachineStop),
+              ),
+            ],
           ),
         ];
       },

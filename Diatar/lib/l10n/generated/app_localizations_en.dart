@@ -950,6 +950,22 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get systemActionsTitle => 'System actions';
+
+  @override
+  String get systemActionsSummary =>
+      'Exit, remote program stop, remote machine stop';
+
+  @override
+  String get localExit => 'Exit';
+
+  @override
+  String get remoteProgramStop => 'Remote program stop';
+
+  @override
+  String get remoteMachineStop => 'Remote machine stop';
+
+  @override
   String get settingsHotkeysTitle => 'Hotkeys';
 
   @override
@@ -1186,5 +1202,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHotkeyCapture => 'Capture';
 
   @override
-  String get settingsProgramExit => 'End program';
+  String get settingsSearchKeywordsSystem =>
+      'system exit stop shutdown epstop epshutdown';
 }
