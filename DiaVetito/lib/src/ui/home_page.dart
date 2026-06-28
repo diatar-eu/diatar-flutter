@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -190,8 +192,34 @@ class _HomePageState extends State<HomePage> {
           onRefreshUsers: controller.refreshMqttUsers,
           onSenderFilterChanged: controller.updateSenderFilter,
           onExitRequested: controller.requestExit,
-          onShutdownRequested: controller.requestShutdown,
-          onRebootRequested: controller.requestReboot,
+          onShutdownRequested: _handleShutdownRequested,
+        );
+      },
+    );
+  }
+
+  void _handleShutdownRequested() {
+    unawaited(_handleShutdownRequestedAsync());
+  }
+
+  Future<void> _handleShutdownRequestedAsync() async {
+    final bool started = await controller.requestShutdown();
+    if (started || !mounted) {
+      return;
+    }
+    final l10n = context.l10n;
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(l10n.shutdown),
+          content: Text(l10n.shutdownPermissionDeniedDialogMessage),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.ok),
+            ),
+          ],
         );
       },
     );

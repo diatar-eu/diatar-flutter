@@ -74,7 +74,14 @@
     }
   },
   "systemActionsTitle": "Rendszer műveletek",
-  "systemActionsSummary": "Kilépés, leállítás, újraindítás",
+  "systemActionsSummary": "Távoli leállítás: {state}",
+  "@systemActionsSummary": {
+    "placeholders": {
+      "state": {}
+    }
+  },
+  "remoteShutdownTitle": "Távoli leállítás",
+  "remoteShutdownSubtitle": "Ha be van kapcsolva, a távoli epStop és epShutdown parancsok leállíthatják a programot.",
   "internetBroadcastTitle": "Internetes közvetítés",
   "valueOn": "Be",
   "valueOff": "Ki",
@@ -84,7 +91,7 @@
   "settingsSearchKeywordsProjectionFilter": "vetitesi szures akkord kotta highlight scroll",
   "settingsSearchKeywordsColors": "szinek hatter szoveg blank",
   "settingsSearchKeywordsGeneral": "altalanos nyelv autostart boot",
-  "settingsSearchKeywordsSystem": "rendszer kilepes leallas ujrainditas",
+  "settingsSearchKeywordsSystem": "rendszer kilepes leallas",
   "modeIp": "IP",
   "modeInternet": "Internet",
   "tcpPortRange": "TCP port (0..65535)",
@@ -119,7 +126,6 @@
   "highlightColorLabel": "Kiemelés szín",
   "change": "Vált",
   "colorPickerTitle": "Színválasztó",
-  "settingsProgramExit": "Program vége",
   "exit": "Kilépés",
   "shutdown": "Leállítás",
   "reboot": "Újraindítás",
@@ -129,7 +135,9 @@
   "invalidPortRange": "A port 0..65535 között legyen.",
   "statusStarting": "Indítás...",
   "statusExitRequested": "Kilépés...",
+  "statusShutdownRequested": "Leállítás indítva...",
   "statusShutdownUnsupported": "Rendszerleállítás Flutteren nem támogatott.",
+  "shutdownPermissionDeniedDialogMessage": "Nincs jogosultság az eszköz leállításához.",
   "statusRebootUnsupported": "Rendszer újraindítás Flutteren nem támogatott.",
   "statusStopRequested": "Leállítás kérve (epStop).",
   "statusShutdownRequestedUnsupported": "Rendszerleállítás kérve (epShutdown), Flutterben nem támogatott.",

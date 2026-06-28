@@ -6,6 +6,7 @@ import 'package:diatar_common/diatar_common.dart';
 class SettingsStore {
   static const String _kPort = 'Port';
   static const String _kBoot = 'Boot';
+  static const String _kRemoteShutdownEnabled = 'RemoteShutdownEnabled';
   static const String _kB2C = 'B2C';
   static const String _kClipL = 'ClipL';
   static const String _kClipR = 'ClipR';
@@ -31,6 +32,7 @@ class SettingsStore {
     return AppSettings(
       port: prefs.getInt(_kPort) ?? 1024,
       boot: prefs.getBool(_kBoot) ?? false,
+      remoteShutdownEnabled: prefs.getBool(_kRemoteShutdownEnabled) ?? false,
       borderToClip: prefs.getBool(_kB2C) ?? false,
       clipL: prefs.getDouble(_kClipL) ?? 0,
       clipR: prefs.getDouble(_kClipR) ?? 0,
@@ -57,6 +59,7 @@ class SettingsStore {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_kPort, settings.port);
     await prefs.setBool(_kBoot, settings.boot);
+    await prefs.setBool(_kRemoteShutdownEnabled, settings.remoteShutdownEnabled);
     await prefs.setBool(_kB2C, settings.borderToClip);
     await prefs.setDouble(_kClipL, settings.clipL);
     await prefs.setDouble(_kClipR, settings.clipR);

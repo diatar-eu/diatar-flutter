@@ -11,6 +11,8 @@ import '../services/settings_store.dart';
 import '../services/tcp_server_service.dart';
 
 class ProjectionController extends ChangeNotifier {
+  static const MethodChannel _systemChannel = MethodChannel('com.polyjoe.diavetito/system');
+
   ProjectionController()
       : _server = TcpServerService(
           onState: _onStateStatic,
@@ -132,11 +134,11 @@ class ProjectionController extends ChangeNotifier {
     await SystemNavigator.pop();
   }
 
-  void requestShutdown() {
+  Future<bool> requestShutdown() async {
     if (_disposed) {
-      return;
+      return false;
     }
-    _setStatus('statusShutdownUnsupported');
+    return _requestShutdown();
   }
 
   void requestReboot() {
@@ -159,13 +161,19 @@ class ProjectionController extends ChangeNotifier {
     }
     globals = _applyReceiverDisplayFilters(globals.fromState(record));
     final int ep = record.endProgram;
-    if (ep == RecStateEndProgram.stop || ep == RecStateEndProgram.stop + RecStateEndProgram.skipSerialOff) {
-      _setStatus('statusStopRequested', notify: false);
-      await SystemNavigator.pop();
-      return;
-    }
-    if (ep == RecStateEndProgram.shutdown || ep == RecStateEndProgram.shutdown + RecStateEndProgram.skipSerialOff) {
-      _setStatus('statusShutdownRequestedUnsupported', notify: false);
+    if (settings.remoteShutdownEnabled) {
+      if (ep == RecStateEndProgram.stop || ep == RecStateEndProgram.stop + RecStateEndProgram.skipSerialOff) {
+        _setStatus('statusStopRequested', notify: false);
+        await SystemNavigator.pop();
+        return;
+      }
+      if (ep == RecStateEndProgram.shutdown || ep == RecStateEndProgram.shutdown + RecStateEndProgram.skipSerialOff) {
+        final bool started = await _requestShutdown();
+        if (!started) {
+          await requestExit();
+        }
+        return;
+      }
     }
     if (settings.borderToClip) {
       settings = settings.copyWith(
@@ -179,6 +187,29 @@ class ProjectionController extends ChangeNotifier {
     if (!_disposed) {
       notifyListeners();
     }
+  }
+
+  Future<bool> _requestShutdown() async {
+    if (_disposed) {
+      return false;
+    }
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      _setStatus('statusShutdownUnsupported');
+      return false;
+    }
+
+    try {
+      final bool? started = await _systemChannel.invokeMethod<bool>('requestShutdown');
+      if (started == true) {
+        _setStatus('statusShutdownRequested');
+        return true;
+      }
+    } on PlatformException {
+      // fall through to unsupported message
+    }
+
+    _setStatus('statusShutdownUnsupported');
+    return false;
   }
 
   void _onText(RecTextRecord record) {

@@ -90,7 +90,16 @@ class AppLocalizationsHu extends AppLocalizations {
   String get systemActionsTitle => 'Rendszer műveletek';
 
   @override
-  String get systemActionsSummary => 'Kilépés, leállítás, újraindítás';
+  String systemActionsSummary(Object state) {
+    return 'Távoli leállítás: $state';
+  }
+
+  @override
+  String get remoteShutdownTitle => 'Távoli leállítás';
+
+  @override
+  String get remoteShutdownSubtitle =>
+      'Ha be van kapcsolva, a távoli epStop és epShutdown parancsok leállíthatják a programot.';
 
   @override
   String get internetBroadcastTitle => 'Internetes közvetítés';
@@ -123,8 +132,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsSearchKeywordsGeneral => 'altalanos nyelv autostart boot';
 
   @override
-  String get settingsSearchKeywordsSystem =>
-      'rendszer kilepes leallas ujrainditas';
+  String get settingsSearchKeywordsSystem => 'rendszer kilepes leallas';
 
   @override
   String get modeIp => 'IP';
@@ -231,9 +239,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get colorPickerTitle => 'Színválasztó';
 
   @override
-  String get settingsProgramExit => 'Program vége';
-
-  @override
   String get exit => 'Kilépés';
 
   @override
@@ -261,8 +266,15 @@ class AppLocalizationsHu extends AppLocalizations {
   String get statusExitRequested => 'Kilépés...';
 
   @override
+  String get statusShutdownRequested => 'Leállítás indítva...';
+
+  @override
   String get statusShutdownUnsupported =>
       'Rendszerleállítás Flutteren nem támogatott.';
+
+  @override
+  String get shutdownPermissionDeniedDialogMessage =>
+      'Nincs jogosultság az eszköz leállításához.';
 
   @override
   String get statusRebootUnsupported =>

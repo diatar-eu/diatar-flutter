@@ -74,7 +74,14 @@
     }
   },
   "systemActionsTitle": "System actions",
-  "systemActionsSummary": "Exit, shutdown, reboot",
+  "systemActionsSummary": "Remote shutdown: {state}",
+  "@systemActionsSummary": {
+    "placeholders": {
+      "state": {}
+    }
+  },
+  "remoteShutdownTitle": "Remote shutdown",
+  "remoteShutdownSubtitle": "When enabled, remote epStop and epShutdown commands can stop the program.",
   "internetBroadcastTitle": "Internet relay",
   "valueOn": "On",
   "valueOff": "Off",
@@ -84,7 +91,7 @@
   "settingsSearchKeywordsProjectionFilter": "projection filters chords notation highlight scroll",
   "settingsSearchKeywordsColors": "colors background text blank",
   "settingsSearchKeywordsGeneral": "general language autostart boot",
-  "settingsSearchKeywordsSystem": "system exit shutdown reboot",
+  "settingsSearchKeywordsSystem": "system exit shutdown",
   "modeIp": "IP",
   "modeInternet": "Internet",
   "tcpPortRange": "TCP port (0..65535)",
@@ -119,7 +126,6 @@
   "highlightColorLabel": "Highlight color",
   "change": "Change",
   "colorPickerTitle": "Color picker",
-  "settingsProgramExit": "End program",
   "exit": "Exit",
   "shutdown": "Shutdown",
   "reboot": "Reboot",
@@ -129,7 +135,9 @@
   "invalidPortRange": "Port must be between 0 and 65535.",
   "statusStarting": "Starting...",
   "statusExitRequested": "Exiting...",
+  "statusShutdownRequested": "Shutdown requested...",
   "statusShutdownUnsupported": "System shutdown is not supported in Flutter.",
+  "shutdownPermissionDeniedDialogMessage": "No permission to shut down the device.",
   "statusRebootUnsupported": "System reboot is not supported in Flutter.",
   "statusStopRequested": "Stop requested (epStop).",
   "statusShutdownRequestedUnsupported": "Shutdown requested (epShutdown), unsupported in Flutter.",

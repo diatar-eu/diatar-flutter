@@ -90,7 +90,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get systemActionsTitle => 'System actions';
 
   @override
-  String get systemActionsSummary => 'Exit, shutdown, reboot';
+  String systemActionsSummary(Object state) {
+    return 'Remote shutdown: $state';
+  }
+
+  @override
+  String get remoteShutdownTitle => 'Remote shutdown';
+
+  @override
+  String get remoteShutdownSubtitle =>
+      'When enabled, remote epStop and epShutdown commands can stop the program.';
 
   @override
   String get internetBroadcastTitle => 'Internet relay';
@@ -123,7 +132,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSearchKeywordsGeneral => 'general language autostart boot';
 
   @override
-  String get settingsSearchKeywordsSystem => 'system exit shutdown reboot';
+  String get settingsSearchKeywordsSystem => 'system exit shutdown';
 
   @override
   String get modeIp => 'IP';
@@ -230,9 +239,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get colorPickerTitle => 'Color picker';
 
   @override
-  String get settingsProgramExit => 'End program';
-
-  @override
   String get exit => 'Exit';
 
   @override
@@ -260,8 +266,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusExitRequested => 'Exiting...';
 
   @override
+  String get statusShutdownRequested => 'Shutdown requested...';
+
+  @override
   String get statusShutdownUnsupported =>
       'System shutdown is not supported in Flutter.';
+
+  @override
+  String get shutdownPermissionDeniedDialogMessage =>
+      'No permission to shut down the device.';
 
   @override
   String get statusRebootUnsupported =>
