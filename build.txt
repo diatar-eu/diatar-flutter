@@ -1,0 +1,47 @@
+Diatar + DiaVetito release build rovid leiras (Windows / PowerShell)
+
+1) Build code (Android versionCode) novelese
+- Mindket appnal a pubspec.yaml fajlban kell novelni a build szamot:
+  - Diatar/pubspec.yaml -> version: X.Y.Z+N
+  - DiaVetito/pubspec.yaml -> version: X.Y.Z+N
+- Csak a + utani N erteket noveljuk (pl. +107).
+
+2) Release APK keszitese (mindket app)
+- Diatar APK:
+  - Set-Location f:\Diatar\flutter\Diatar
+  - flutter build apk --release
+  - Kimenet: f:\Diatar\flutter\Diatar\build\app\outputs\flutter-apk\app-release.apk
+
+- DiaVetito APK:
+  - Set-Location f:\Diatar\flutter\DiaVetito
+  - flutter build apk --release
+  - Kimenet: f:\Diatar\flutter\DiaVetito\build\app\outputs\flutter-apk\app-release.apk
+
+3) Release AAB keszitese (mindket app)
+- Diatar AAB:
+  - Set-Location f:\Diatar\flutter\Diatar
+  - flutter build appbundle --release
+  - Kimenet: f:\Diatar\flutter\Diatar\build\app\outputs\bundle\release\app-release.aab
+
+- DiaVetito AAB:
+  - Set-Location f:\Diatar\flutter\DiaVetito
+  - flutter build appbundle --release
+  - Kimenet: f:\Diatar\flutter\DiaVetito\build\app\outputs\bundle\release\app-release.aab
+
+4) Opcionlis atnevezes/masolas kozos mappaba
+- APK kozos mappa: f:\Diatar\flutter\APK\
+- AAB kozos mappa: f:\Diatar\android\AAB\release\
+- Javasolt nevformatum: AppNev-vX.Y-bN-release.apk /.aab
+
+5) Gyors ellenorzes
+- Verzioszam ellenorzes:
+  - Select-String -Path f:\Diatar\flutter\Diatar\pubspec.yaml -Pattern "^version:"
+  - Select-String -Path f:\Diatar\flutter\DiaVetito\pubspec.yaml -Pattern "^version:"
+- Fajlok listazasa:
+  - Get-ChildItem f:\Diatar\flutter\Diatar\build\app\outputs\flutter-apk
+  - Get-ChildItem f:\Diatar\flutter\DiaVetito\build\app\outputs\flutter-apk
+  - Get-ChildItem f:\Diatar\flutter\Diatar\build\app\outputs\bundle\release
+  - Get-ChildItem f:\Diatar\flutter\DiaVetito\build\app\outputs\bundle\release
+
+Megjegyzes:
+- Egy terminelben egyszerre csak egy flutter build fusson. Ha kozben uj parancsot adsz ki, a build megszakadhat.
