@@ -47,6 +47,7 @@ class MqttService {
   String _topicState = '';
   String _topicBlank = '';
   String _topicDia = '';
+  Uint8List? _lastStateBytes;
 
   List<MqttUser> _users = <MqttUser>[];
 
@@ -102,6 +103,7 @@ class MqttService {
       _receiverClient?.disconnect();
     } catch (_) {}
     _receiverClient = null;
+    _lastStateBytes = null;
   }
 
   Future<void> fillUserList() async {
@@ -204,13 +206,18 @@ class MqttService {
       if (topic == _topicState) {
         final List<int> bytes = msg.payload.message;
         if (bytes.isNotEmpty) {
-          onState(RecStateRecord.fromBytes(Uint8List.fromList(bytes)));
+          final Uint8List current = Uint8List.fromList(bytes);
+          _lastStateBytes = current;
+          onState(RecStateRecord.fromBytes(current));
+        } else {
+          onState(_projectionOffStateFromLastState());
         }
       } else if (topic == _topicBlank) {
         onBlank(RecImageRecord.fromBytes(Uint8List.fromList(msg.payload.message)));
       } else if (topic == _topicDia) {
         final List<int> b = msg.payload.message;
         if (b.isEmpty) {
+          onText(RecTextRecord.fromBytes(Uint8List(0)));
           continue;
         }
         if (b.first == 'P'.codeUnitAt(0)) {
@@ -221,6 +228,28 @@ class MqttService {
         }
       }
     }
+  }
+
+  RecStateRecord _projectionOffStateFromLastState() {
+    // RecStateRecord reads up to offset 348, so keep at least that many bytes.
+    final Uint8List source = _lastStateBytes ?? Uint8List(349);
+    final Uint8List bytes = Uint8List.fromList(source);
+    if (bytes.length < 349) {
+      final Uint8List padded = Uint8List(349);
+      padded.setRange(0, bytes.length, bytes);
+      padded[310] = 0;
+      padded[318] = 0;
+      padded[319] = 0;
+      padded[320] = 0;
+      padded[321] = 0;
+      return RecStateRecord.fromBytes(padded);
+    }
+    bytes[310] = 0;
+    bytes[318] = 0;
+    bytes[319] = 0;
+    bytes[320] = 0;
+    bytes[321] = 0;
+    return RecStateRecord.fromBytes(bytes);
   }
 
   String _unaccent(String txt) {

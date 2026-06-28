@@ -59,6 +59,7 @@ class ProjectionController extends ChangeNotifier {
   bool initialized = false;
   bool connected = false;
   bool mqttActive = false;
+  bool _ignoreNextMqttEndProgram = false;
   String statusCode = 'statusStarting';
   Map<String, Object> statusParams = const <String, Object>{};
   Size viewportSize = const Size(1920, 1080);
@@ -159,9 +160,13 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
+    final bool ignoreEndProgram = mqttActive && _ignoreNextMqttEndProgram;
+    if (ignoreEndProgram) {
+      _ignoreNextMqttEndProgram = false;
+    }
     globals = _applyReceiverDisplayFilters(globals.fromState(record));
     final int ep = record.endProgram;
-    if (settings.remoteShutdownEnabled) {
+    if (!ignoreEndProgram && settings.remoteShutdownEnabled) {
       if (ep == RecStateEndProgram.stop || ep == RecStateEndProgram.stop + RecStateEndProgram.skipSerialOff) {
         _setStatus('statusStopRequested', notify: false);
         await SystemNavigator.pop();
@@ -367,11 +372,13 @@ class ProjectionController extends ChangeNotifier {
     final String user = settings.mqttUser.trim();
     if (user.isEmpty) {
       mqttActive = false;
+      _ignoreNextMqttEndProgram = false;
       await _mqtt.closeReceiver();
       await _server.restart(settings.port);
       _setStatus('statusTcpListening', notify: false, params: <String, Object>{'port': settings.port});
     } else {
       mqttActive = true;
+      _ignoreNextMqttEndProgram = true;
       await _server.stop();
       await _mqtt.openReceiver(username: user, channel: '1');
       _setStatus(
