@@ -654,6 +654,11 @@
       "language": {}
     }
   },
+  "systemActionsTitle": "System actions",
+  "systemActionsSummary": "Exit, remote program stop, remote machine stop",
+  "localExit": "Exit",
+  "remoteProgramStop": "Remote program stop",
+  "remoteMachineStop": "Remote machine stop",
   "settingsHotkeysTitle": "Hotkeys",
   "settingsHotkeysSummary": "Controller actions and song assignment to keys",
   "settingsDesktopHotkeysTitle": "Hotkeys (desktop)",
@@ -741,5 +746,5 @@
   "settingsHotkeyClearCapture": "Clear",
   "settingsHotkeyClear": "Clear",
   "settingsHotkeyCapture": "Capture",
-  "settingsProgramExit": "End program"
+  "settingsSearchKeywordsSystem": "system exit stop shutdown epstop epshutdown"
 }

@@ -1703,6 +1703,36 @@ abstract class AppLocalizations {
   /// **'Téma: {theme}, Nyelv: {language}'**
   String settingsGeneralSummary(Object theme, Object language);
 
+  /// No description provided for @systemActionsTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Rendszer műveletek'**
+  String get systemActionsTitle;
+
+  /// No description provided for @systemActionsSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kilépés, távoli program leállítása, távoli gép leállítása'**
+  String get systemActionsSummary;
+
+  /// No description provided for @localExit.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kilépés'**
+  String get localExit;
+
+  /// No description provided for @remoteProgramStop.
+  ///
+  /// In hu, this message translates to:
+  /// **'Távoli program leállítása'**
+  String get remoteProgramStop;
+
+  /// No description provided for @remoteMachineStop.
+  ///
+  /// In hu, this message translates to:
+  /// **'Távoli gép leállítása'**
+  String get remoteMachineStop;
+
   /// No description provided for @settingsHotkeysTitle.
   ///
   /// In hu, this message translates to:
@@ -2135,11 +2165,11 @@ abstract class AppLocalizations {
   /// **'Rögzítés'**
   String get settingsHotkeyCapture;
 
-  /// No description provided for @settingsProgramExit.
+  /// No description provided for @settingsSearchKeywordsSystem.
   ///
   /// In hu, this message translates to:
-  /// **'Program vége'**
-  String get settingsProgramExit;
+  /// **'rendszer kilepes leallas stop shutdown epstop epshutdown'**
+  String get settingsSearchKeywordsSystem;
 }
 
 class _AppLocalizationsDelegate

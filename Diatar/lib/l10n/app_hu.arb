@@ -654,6 +654,11 @@
       "language": {}
     }
   },
+  "systemActionsTitle": "Rendszer műveletek",
+  "systemActionsSummary": "Kilépés, távoli program leállítása, távoli gép leállítása",
+  "localExit": "Kilépés",
+  "remoteProgramStop": "Távoli program leállítása",
+  "remoteMachineStop": "Távoli gép leállítása",
   "settingsHotkeysTitle": "Gyorsbillentyűk",
   "settingsHotkeysSummary": "Vezérlő műveletek és ének-hozzárendelés billentyűhöz",
   "settingsDesktopHotkeysTitle": "Gyorsbillentyűk (asztali)",
@@ -741,5 +746,5 @@
   "settingsHotkeyClearCapture": "Törlés",
   "settingsHotkeyClear": "Törlés",
   "settingsHotkeyCapture": "Rögzítés",
-  "settingsProgramExit": "Program vége"
+  "settingsSearchKeywordsSystem": "rendszer kilepes leallas stop shutdown epstop epshutdown"
 }
