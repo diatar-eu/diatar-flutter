@@ -17,7 +17,6 @@ class SettingsSheet extends StatefulWidget {
     required this.onSenderFilterChanged,
     required this.onExitRequested,
     required this.onShutdownRequested,
-    required this.onRebootRequested,
   });
 
   final AppSettings initialSettings;
@@ -27,7 +26,6 @@ class SettingsSheet extends StatefulWidget {
   final ValueChanged<String> onSenderFilterChanged;
   final VoidCallback onExitRequested;
   final VoidCallback onShutdownRequested;
-  final VoidCallback onRebootRequested;
 
   @override
   State<SettingsSheet> createState() => _SettingsSheetState();
@@ -73,6 +71,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   late bool _borderToClip;
   late bool _mirror;
   late bool _boot;
+  late bool _remoteShutdownEnabled;
   late int _rotate;
   late bool _receiverUseServerColors;
   late bool _receiverShowHighlight;
@@ -105,6 +104,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
     _borderToClip = s.borderToClip;
     _mirror = s.mirror;
     _boot = s.boot;
+    _remoteShutdownEnabled = s.remoteShutdownEnabled;
     _rotate = s.rotateQuarterTurns;
     _receiverUseServerColors = s.receiverUseServerColors;
     _receiverShowHighlight = s.receiverShowHighlight;
@@ -183,6 +183,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
     final String filterSummary = _receiverUseServerColors
         ? l10n.projectionColorSourceServer
         : l10n.projectionColorSourceLocal;
+    final String remoteShutdownState = _remoteShutdownEnabled
+      ? l10n.valueOn
+      : l10n.valueOff;
     final bool showInternet = _matches(
       query,
       l10n.settingsSearchKeywordsInternet,
@@ -372,7 +375,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     _settingsTile(
                       leading: const Icon(Icons.power_settings_new),
                       title: Text(l10n.systemActionsTitle),
-                      subtitle: Text(l10n.systemActionsSummary),
+                      subtitle: Text(
+                        l10n.systemActionsSummary(remoteShutdownState),
+                      ),
                       onTap: _openSystemActions,
                     ),
                   if (!anyVisible)
@@ -381,15 +386,6 @@ class _SettingsSheetState extends State<SettingsSheet> {
                       child: Text(l10n.settingsNoResults),
                     ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.tonalIcon(
-                onPressed: widget.onExitRequested,
-                icon: const Icon(Icons.power_settings_new),
-                label: Text(l10n.settingsProgramExit),
               ),
             ),
             const SizedBox(height: 8),
@@ -670,6 +666,14 @@ class _SettingsSheetState extends State<SettingsSheet> {
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _remoteShutdownEnabled,
+            onChanged: (bool v) => setBoth(() => _remoteShutdownEnabled = v),
+            title: Text(l10n.remoteShutdownTitle),
+            subtitle: Text(l10n.remoteShutdownSubtitle),
+          ),
+          const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -681,10 +685,6 @@ class _SettingsSheetState extends State<SettingsSheet> {
               OutlinedButton(
                 onPressed: widget.onShutdownRequested,
                 child: Text(l10n.shutdown),
-              ),
-              OutlinedButton(
-                onPressed: widget.onRebootRequested,
-                child: Text(l10n.reboot),
               ),
             ],
           ),
@@ -825,6 +825,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
       receiverShowHighlight: _receiverShowHighlight,
       receiverUseAkkord: _receiverUseAkkord,
       receiverUseKotta: _receiverUseKotta,
+      remoteShutdownEnabled: _remoteShutdownEnabled,
       projAutoSize: !_projectionScrollable,
       bkColor: _bkColor,
       txtColor: _txtColor,

@@ -6,6 +6,7 @@ class AppSettings {
     this.tcpClientEnabled = true,
     this.tcpTargets = const <String>[],
     this.boot = false,
+    this.remoteShutdownEnabled = false,
     this.borderToClip = false,
     this.clipL = 0,
     this.clipT = 0,
@@ -65,6 +66,7 @@ class AppSettings {
   final bool tcpClientEnabled;
   final List<String> tcpTargets;
   final bool boot;
+  final bool remoteShutdownEnabled;
   final bool borderToClip;
   final double clipL;
   final double clipT;
@@ -131,6 +133,7 @@ class AppSettings {
     bool? tcpClientEnabled,
     List<String>? tcpTargets,
     bool? boot,
+    bool? remoteShutdownEnabled,
     bool? borderToClip,
     double? clipL,
     double? clipT,
@@ -187,6 +190,8 @@ class AppSettings {
       tcpClientEnabled: tcpClientEnabled ?? this.tcpClientEnabled,
       tcpTargets: tcpTargets ?? this.tcpTargets,
       boot: boot ?? this.boot,
+        remoteShutdownEnabled:
+          remoteShutdownEnabled ?? this.remoteShutdownEnabled,
       borderToClip: borderToClip ?? this.borderToClip,
       clipL: clipL ?? this.clipL,
       clipT: clipT ?? this.clipT,

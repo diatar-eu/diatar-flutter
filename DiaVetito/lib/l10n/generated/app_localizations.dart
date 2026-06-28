@@ -227,8 +227,20 @@ abstract class AppLocalizations {
   /// No description provided for @systemActionsSummary.
   ///
   /// In hu, this message translates to:
-  /// **'Kilépés, leállítás, újraindítás'**
-  String get systemActionsSummary;
+  /// **'Távoli leállítás: {state}'**
+  String systemActionsSummary(Object state);
+
+  /// No description provided for @remoteShutdownTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Távoli leállítás'**
+  String get remoteShutdownTitle;
+
+  /// No description provided for @remoteShutdownSubtitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ha be van kapcsolva, a távoli epStop és epShutdown parancsok leállíthatják a programot.'**
+  String get remoteShutdownSubtitle;
 
   /// No description provided for @internetBroadcastTitle.
   ///
@@ -287,7 +299,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSearchKeywordsSystem.
   ///
   /// In hu, this message translates to:
-  /// **'rendszer kilepes leallas ujrainditas'**
+  /// **'rendszer kilepes leallas'**
   String get settingsSearchKeywordsSystem;
 
   /// No description provided for @modeIp.
@@ -494,12 +506,6 @@ abstract class AppLocalizations {
   /// **'Színválasztó'**
   String get colorPickerTitle;
 
-  /// No description provided for @settingsProgramExit.
-  ///
-  /// In hu, this message translates to:
-  /// **'Program vége'**
-  String get settingsProgramExit;
-
   /// No description provided for @exit.
   ///
   /// In hu, this message translates to:
@@ -554,11 +560,23 @@ abstract class AppLocalizations {
   /// **'Kilépés...'**
   String get statusExitRequested;
 
+  /// No description provided for @statusShutdownRequested.
+  ///
+  /// In hu, this message translates to:
+  /// **'Leállítás indítva...'**
+  String get statusShutdownRequested;
+
   /// No description provided for @statusShutdownUnsupported.
   ///
   /// In hu, this message translates to:
   /// **'Rendszerleállítás Flutteren nem támogatott.'**
   String get statusShutdownUnsupported;
+
+  /// No description provided for @shutdownPermissionDeniedDialogMessage.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nincs jogosultság az eszköz leállításához.'**
+  String get shutdownPermissionDeniedDialogMessage;
 
   /// No description provided for @statusRebootUnsupported.
   ///
