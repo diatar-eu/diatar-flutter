@@ -2068,6 +2068,18 @@ class ProjectorPainter extends CustomPainter {
         : _textContinuationIndent(fontSize, measure);
     final _KottaDrawState state = inheritedState?.copy() ?? _KottaDrawState();
     state.deferFinalDoubleBarAtEnd = _lineEndsWithDoubleBar(line);
+    double firstRowInlinePrefixWidth = 0;
+    if (line.words.isNotEmpty) {
+      final String firstKotta = (line.words.first.kotta ?? '').trim();
+      final String leadingKotta = _leadingInlineKottaPrefix(firstKotta);
+      if (leadingKotta.isNotEmpty) {
+        firstRowInlinePrefixWidth = _kottaRawWidth(
+          leadingKotta,
+          lineGap,
+          _KottaDrawState(),
+        );
+      }
+    }
 
     final List<_KottaRowLayout> rows = <_KottaRowLayout>[];
     final List<_KottaWordLayout> currentWords = <_KottaWordLayout>[];
@@ -2098,8 +2110,8 @@ class ProjectorPainter extends CustomPainter {
         continue;
       }
 
-      final double currentRowLimit = rows.isEmpty
-          ? wrapWidth
+        final double currentRowLimit = rows.isEmpty
+          ? math.max(8.0, wrapWidth - firstRowInlinePrefixWidth)
           : math.max(8.0, wrapWidth - continuationIndent);
       if (currentWords.isNotEmpty &&
           (currentWidth + pendingWordWidth) > currentRowLimit) {
