@@ -2559,6 +2559,11 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
+    if (verseIndex > 0) {
+      _selectSongAndVerse(songIndex, 0, includeVerseInStatus: true);
+      return;
+    }
+
     if (diaVirtualBookSelected) {
       final int exactIdx = _currentCustomOrderIndex();
       if (exactIdx >= 0) {
@@ -2567,13 +2572,6 @@ class DiatarMainController extends ChangeNotifier {
           return;
         }
         _selectByCustomOrderCursor(prevIdx, sync: true);
-        return;
-      }
-
-      // Ha sorrenden kivuli dian allunk, eloszor azon lepdelunk vissza,
-      // es csak az eleje utan ugrunk vissza a sorrend elozo elemere.
-      if (verseIndex > 0) {
-        setVerseIndex(verseIndex - 1);
         return;
       }
 
@@ -2595,11 +2593,6 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
-    if (verseIndex > 0) {
-      setVerseIndex(verseIndex - 1);
-      return;
-    }
-
     final int? prevSongIdx = _findSelectableSongIndex(
       songIndex - 1,
       forward: false,
@@ -2607,11 +2600,7 @@ class DiatarMainController extends ChangeNotifier {
     if (prevSongIdx == null) {
       return;
     }
-    final DtxSong targetSong = currentBook!.songs[prevSongIdx];
-    final int targetVerse = targetSong.verses.isEmpty
-        ? 0
-        : targetSong.verses.length - 1;
-    _selectSongAndVerse(prevSongIdx, targetVerse, includeVerseInStatus: true);
+    _selectSongAndVerse(prevSongIdx, 0, includeVerseInStatus: true);
   }
 
   void nextSong() {
@@ -2635,6 +2624,15 @@ class DiatarMainController extends ChangeNotifier {
 
   void prevSong() {
     if (diaVirtualBookSelected) {
+      final int currentGroupStart = _currentDiaGroupStartIndex();
+      final int currentIndex = _currentCustomOrderIndex();
+      final bool onGroupStart = currentIndex == currentGroupStart;
+
+      if (!onGroupStart) {
+        _selectByCustomOrderCursor(currentGroupStart, sync: true);
+        return;
+      }
+
       final int? prevIdx = _findPrevDiaSongGroupStart();
       if (prevIdx == null) {
         return;
@@ -2642,6 +2640,13 @@ class DiatarMainController extends ChangeNotifier {
       _selectByCustomOrderCursor(prevIdx, sync: true);
       return;
     }
+
+    final DtxSong? s = currentSong;
+    if (s != null && s.verses.isNotEmpty && verseIndex > 0) {
+      _selectSongAndVerse(songIndex, 0, includeVerseInStatus: false);
+      return;
+    }
+
     final int? prevSongIdx = _findSelectableSongIndex(
       songIndex - 1,
       forward: false,
