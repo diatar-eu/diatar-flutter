@@ -13,12 +13,23 @@ import 'kotta_assets.dart';
 
 class ProjectorPainter extends CustomPainter {
   static const int _layoutCacheLimit = 32;
+  static const int _preparedLayoutCacheLimit = 16;
+  static const int _wordMeasureCacheLimit = 2048;
+  static const double _autoResizeBigStep = 0.05;
+  static const double _autoResizeSmallStep = 0.005;
+  static const double _minAutoFontSize = 8.0;
   static final LinkedHashMap<String, List<_TextRowLayout>> _textRowsCache =
       LinkedHashMap<String, List<_TextRowLayout>>();
   static final LinkedHashMap<String, List<_KottaRowLayout>> _kottaRowsCache =
       LinkedHashMap<String, List<_KottaRowLayout>>();
   static final LinkedHashMap<String, double> _textHeightCache =
       LinkedHashMap<String, double>();
+    static final LinkedHashMap<String, _PreparedTextLayout> _preparedLayoutCache =
+      LinkedHashMap<String, _PreparedTextLayout>();
+  static final LinkedHashMap<String, List<_RenderLine>> _parsedLinesCache =
+    LinkedHashMap<String, List<_RenderLine>>();
+  static final LinkedHashMap<String, double> _wordWidthCache =
+    LinkedHashMap<String, double>();
 
   ProjectorPainter({
     required this.frame,
@@ -430,110 +441,30 @@ class ProjectorPainter extends CustomPainter {
     const double horizontalPad = 0;
     final double maxWidth = math.max(40, size.width);
 
-    final bool hasTitleLine =
-        !globals.hideTitle && frame.record.title.isNotEmpty;
-    final List<String> sourceLines = <String>[
-      if (hasTitleLine) frame.record.title,
-      ...frame.record.lines,
-    ];
+    final _AutoSizeResult autoSize = _resolveAutoSize(size, frame);
+    final double fontSize = autoSize.fontSize;
+    final bool preferPreferredBreaks = autoSize.preferPreferredBreaks;
 
-    final List<_RenderLine> allLines = _parseRenderLines(sourceLines);
-
-    double fontSize = globals.fontSize.toDouble();
-    bool preferPreferredBreaks = true;
-    if (globals.autoResize) {
-      while (fontSize > 8) {
-        final double preferredRequired = _measureTextRequiredHeightForFontSize(
-          size,
-          frame,
-          fontSize,
-          preferPreferredBreaks: true,
-        );
-        if (preferredRequired <= size.height * 0.95) {
-          preferPreferredBreaks = true;
-          break;
-        }
-
-        final double fallbackRequired = _measureTextRequiredHeightForFontSize(
-          size,
-          frame,
-          fontSize,
-          preferPreferredBreaks: false,
-        );
-        if (fallbackRequired <= size.height * 0.95) {
-          preferPreferredBreaks = false;
-          break;
-        }
-
-        fontSize -= 1;
-      }
-    }
-
-    final double requestedTitleFontSize = (globals.titleSize.toDouble() * 2.5)
-      .clamp(8.0, 72.0);
-    final double titleFontSize = math
-      .min(requestedTitleFontSize, fontSize)
-      .clamp(8.0, 72.0);
+    final _PreparedTextLayout prepared = _prepareTextLayout(
+      size,
+      frame,
+      fontSize,
+      preferPreferredBreaks: preferPreferredBreaks,
+    );
+    final bool hasTitleLine = prepared.hasTitleLine;
+    final List<_RenderLine> allLines = prepared.lines;
+    final double titleFontSize = prepared.titleFontSize;
     final double lineSpacing = globals.spacing100 / 100.0;
 
     final List<TextPainter> painters = <TextPainter>[];
     final List<List<bool>> highlightByLine = <List<bool>>[];
-    final List<List<_TextRowLayout>> textRowsByLine = <List<_TextRowLayout>>[];
-    final List<bool> hasKottaByLine = <bool>[];
-    final List<double> chordBandByLine = <double>[];
-    final List<List<_KottaRowLayout>> kottaRowsByLine =
-        <List<_KottaRowLayout>>[];
-    final _KottaDrawState carryKottaState = _KottaDrawState();
     int globalWordIndex = 0; // Track word index for highlighting (skips title)
     bool prevWordHadSpace = true;
 
     for (int lineIndex = 0; lineIndex < allLines.length; lineIndex++) {
-      final _RenderLine baseLine = allLines[lineIndex];
+      final _RenderLine line = allLines[lineIndex];
       final bool isTitleLine = hasTitleLine && lineIndex == 0;
       final double lineFontSize = isTitleLine ? titleFontSize : fontSize;
-      final bool hasKotta =
-          !isTitleLine &&
-          globals.useKotta &&
-          settings.receiverUseKotta &&
-          baseLine.words.any((w) => (w.kotta ?? '').isNotEmpty);
-      final _RenderLine line;
-      if (!isTitleLine && !hasKotta) {
-        final _RenderLine paddedLine = _applyChordPadding(baseLine, lineFontSize);
-        final double continuationIndent = globals.hCenter
-            ? 0
-            : _textContinuationIndent(
-                lineFontSize,
-                TextPainter(textDirection: TextDirection.ltr),
-              );
-        line = _splitOverlongWords(
-          paddedLine,
-          lineFontSize,
-          maxWidth,
-          continuationIndent: continuationIndent,
-        );
-      } else {
-        line = baseLine;
-      }
-      allLines[lineIndex] = line;
-      final double chordBand = (!isTitleLine && !hasKotta)
-          ? _lineChordBandHeight(line, lineFontSize)
-          : 0;
-      final List<_KottaRowLayout> lineKottaRows = hasKotta
-          ? _buildKottaRows(
-              line,
-              lineFontSize,
-              maxWidth,
-              inheritedState: carryKottaState,
-            )
-          : const <_KottaRowLayout>[];
-      final List<_TextRowLayout> lineTextRows = (!isTitleLine && !hasKotta)
-          ? _buildTextRows(
-              line,
-              lineFontSize,
-              maxWidth,
-              preferPreferredBreaks: preferPreferredBreaks,
-            )
-          : const <_TextRowLayout>[];
       final List<bool> lineHighlights = <bool>[];
 
       // Reset at each line boundary so the first word of the new line always
@@ -590,24 +521,13 @@ class ProjectorPainter extends CustomPainter {
       )..layout(maxWidth: maxWidth);
       painters.add(tp);
       highlightByLine.add(lineHighlights);
-      textRowsByLine.add(lineTextRows);
-      hasKottaByLine.add(hasKotta);
-      chordBandByLine.add(chordBand);
-      kottaRowsByLine.add(lineKottaRows);
-      if (hasKotta) {
-        _advanceKottaStateForLine(
-          line,
-          _kottaLineGap(lineFontSize),
-          carryKottaState,
-        );
-      }
     }
 
     double totalHeight = 0;
     for (int i = 0; i < painters.length; i++) {
       final TextPainter tp = painters[i];
       final bool titleToKottaTransition =
-          hasTitleLine && i == 1 && hasKottaByLine[i];
+          hasTitleLine && i == 1 && prepared.hasKottaByLine[i];
       if (titleToKottaTransition) {
         totalHeight += _titleToKottaTransitionGap(
           nextLineFontSize: fontSize,
@@ -615,8 +535,8 @@ class ProjectorPainter extends CustomPainter {
           lineSpacing: lineSpacing,
         );
       }
-      if (hasKottaByLine[i]) {
-        final int rows = math.max(1, kottaRowsByLine[i].length);
+      if (prepared.hasKottaByLine[i]) {
+        final int rows = math.max(1, prepared.kottaRowsByLine[i].length);
         final bool isTitleLine = hasTitleLine && i == 0;
         final double lineFontSize = isTitleLine ? titleFontSize : fontSize;
         final double rowBlockHeight = _kottaRowBlockHeight(lineFontSize);
@@ -624,11 +544,11 @@ class ProjectorPainter extends CustomPainter {
       } else {
         final bool isTitleLine = hasTitleLine && i == 0;
         if (isTitleLine) {
-          totalHeight += chordBandByLine[i] + tp.height * lineSpacing;
+          totalHeight += prepared.chordBandByLine[i] + tp.height * lineSpacing;
         } else {
           final double lineFontSize = fontSize;
-          final double textRowHeight = _textRowHeight(lineFontSize);
-          final List<_TextRowLayout> rows = textRowsByLine[i];
+          final double textRowHeight = prepared.lineHeightsByLine[i];
+          final List<_TextRowLayout> rows = prepared.textRowsByLine[i];
           for (final _TextRowLayout row in rows) {
             totalHeight +=
                 _rowChordBandHeight(allLines[i], row, lineFontSize) +
@@ -643,12 +563,12 @@ class ProjectorPainter extends CustomPainter {
       final TextPainter tp = painters[painterIndex];
       final _RenderLine rline = allLines[painterIndex];
       final bool isTitleLine = hasTitleLine && painterIndex == 0;
-      final bool hasKotta = hasKottaByLine[painterIndex];
+      final bool hasKotta = prepared.hasKottaByLine[painterIndex];
       final double lineFontSize = isTitleLine ? titleFontSize : fontSize;
-      final List<_KottaRowLayout> lineKottaRows = kottaRowsByLine[painterIndex];
-      final double chordBand = chordBandByLine[painterIndex];
+      final List<_KottaRowLayout> lineKottaRows = prepared.kottaRowsByLine[painterIndex];
+      final double chordBand = prepared.chordBandByLine[painterIndex];
       final double lineStep = tp.height * lineSpacing;
-      final List<_TextRowLayout> lineTextRows = textRowsByLine[painterIndex];
+      final List<_TextRowLayout> lineTextRows = prepared.textRowsByLine[painterIndex];
 
       final bool titleToKottaTransition =
           hasTitleLine && painterIndex == 1 && hasKotta;
@@ -750,7 +670,7 @@ class ProjectorPainter extends CustomPainter {
         continue;
       }
 
-      final double rowHeight = _textRowHeight(lineFontSize);
+      final double rowHeight = prepared.lineHeightsByLine[painterIndex];
       for (final _TextRowLayout row in lineTextRows) {
         final List<_WordToken> rowWords = <_WordToken>[
           for (final int wi in row.wordIndices) rline.words[wi],
@@ -786,69 +706,113 @@ class ProjectorPainter extends CustomPainter {
   }
 
   double _measureTextRequiredHeight(Size size, TextFrame frame) {
-    double fontSize = globals.fontSize.toDouble();
-    bool preferPreferredBreaks = true;
-    if (globals.autoResize) {
-      while (fontSize > 8) {
-        final double preferredRequired = _measureTextRequiredHeightForFontSize(
-          size,
-          frame,
-          fontSize,
-          preferPreferredBreaks: true,
-        );
-        if (preferredRequired <= size.height * 0.95) {
-          preferPreferredBreaks = true;
-          break;
-        }
-        final double fallbackRequired = _measureTextRequiredHeightForFontSize(
-          size,
-          frame,
-          fontSize,
-          preferPreferredBreaks: false,
-        );
-        if (fallbackRequired <= size.height * 0.95) {
-          preferPreferredBreaks = false;
-          break;
-        }
-        fontSize -= 1;
-      }
-    }
+    final _AutoSizeResult autoSize = _resolveAutoSize(size, frame);
 
     return _measureTextRequiredHeightForFontSize(
       size,
       frame,
-      fontSize,
-      preferPreferredBreaks: preferPreferredBreaks,
+      autoSize.fontSize,
+      preferPreferredBreaks: autoSize.preferPreferredBreaks,
     );
   }
 
-  double _measureTextRequiredHeightForFontSize(
+  _AutoSizeResult _resolveAutoSize(Size size, TextFrame frame) {
+    final double baseFontSize = globals.fontSize.toDouble();
+    if (!globals.autoResize || baseFontSize <= _minAutoFontSize) {
+      return _AutoSizeResult(
+        fontSize: baseFontSize,
+        preferPreferredBreaks: true,
+      );
+    }
+
+    final double fitHeight = size.height * 0.95;
+    final double minScale = (_minAutoFontSize / baseFontSize).clamp(0.01, 1.0);
+    double sizeMul = 1.0;
+    double step = _autoResizeBigStep;
+    bool preferPreferredBreaks = true;
+
+    int guard = 0;
+    while (sizeMul >= minScale && guard++ < 300) {
+      final double fontSize = (baseFontSize * sizeMul).clamp(
+        _minAutoFontSize,
+        baseFontSize,
+      );
+
+      final bool preferredFits =
+          _measureTextRequiredHeightForFontSize(
+            size,
+            frame,
+            fontSize,
+            preferPreferredBreaks: true,
+          ) <=
+          fitHeight;
+      final bool fallbackFits =
+          preferredFits ||
+          _measureTextRequiredHeightForFontSize(
+            size,
+            frame,
+            fontSize,
+            preferPreferredBreaks: false,
+          ) <=
+              fitHeight;
+
+      if (preferredFits || fallbackFits) {
+        preferPreferredBreaks = preferredFits;
+        if (step == _autoResizeSmallStep) {
+          return _AutoSizeResult(
+            fontSize: fontSize,
+            preferPreferredBreaks: preferPreferredBreaks,
+          );
+        }
+        sizeMul += step;
+        step = _autoResizeSmallStep;
+      }
+
+      sizeMul -= step;
+    }
+
+    final double fallbackFontSize = _minAutoFontSize.clamp(
+      _minAutoFontSize,
+      baseFontSize,
+    );
+    final bool preferredFitsAtMin =
+        _measureTextRequiredHeightForFontSize(
+          size,
+          frame,
+          fallbackFontSize,
+          preferPreferredBreaks: true,
+        ) <=
+        fitHeight;
+    return _AutoSizeResult(
+      fontSize: fallbackFontSize,
+      preferPreferredBreaks: preferredFitsAtMin,
+    );
+  }
+
+  _PreparedTextLayout _prepareTextLayout(
     Size size,
     TextFrame frame,
     double fontSize, {
-    bool preferPreferredBreaks = true,
-  }
-  ) {
-    final String cacheKey = _measureTextHeightCacheKey(
+    required bool preferPreferredBreaks,
+  }) {
+    final String cacheKey = _preparedTextLayoutCacheKey(
       size,
       frame,
       fontSize,
       preferPreferredBreaks,
     );
-    final double? cached = _textHeightCache[cacheKey];
+    final _PreparedTextLayout? cached = _preparedLayoutCache[cacheKey];
     if (cached != null) {
       return cached;
     }
 
     final double maxWidth = math.max(40, size.width);
-
     final bool hasTitleLine =
         !globals.hideTitle && frame.record.title.isNotEmpty;
     final List<String> sourceLines = <String>[
       if (hasTitleLine) frame.record.title,
       ...frame.record.lines,
     ];
-
     final List<_RenderLine> allLines = _parseRenderLines(sourceLines);
 
     final double requestedTitleFontSize = (globals.titleSize.toDouble() * 2.5)
@@ -856,7 +820,6 @@ class ProjectorPainter extends CustomPainter {
     final double titleFontSize = math
       .min(requestedTitleFontSize, fontSize)
       .clamp(8.0, 72.0);
-    final double lineSpacing = globals.spacing100 / 100.0;
 
     final List<List<_TextRowLayout>> textRowsByLine = <List<_TextRowLayout>>[];
     final List<bool> hasKottaByLine = <bool>[];
@@ -929,20 +892,72 @@ class ProjectorPainter extends CustomPainter {
       lineHeightsByLine.add(_measureTextRowHeight(line, lineFontSize));
     }
 
+    final _PreparedTextLayout prepared = _PreparedTextLayout(
+      hasTitleLine: hasTitleLine,
+      titleFontSize: titleFontSize,
+      lines: List<_RenderLine>.unmodifiable(allLines),
+      textRowsByLine: List<List<_TextRowLayout>>.unmodifiable(
+        textRowsByLine.map((rows) => List<_TextRowLayout>.unmodifiable(rows)),
+      ),
+      hasKottaByLine: List<bool>.unmodifiable(hasKottaByLine),
+      chordBandByLine: List<double>.unmodifiable(chordBandByLine),
+      kottaRowsByLine: List<List<_KottaRowLayout>>.unmodifiable(
+        kottaRowsByLine.map((rows) => List<_KottaRowLayout>.unmodifiable(rows)),
+      ),
+      lineHeightsByLine: List<double>.unmodifiable(lineHeightsByLine),
+    );
+
+    _preparedLayoutCache[cacheKey] = prepared;
+    while (_preparedLayoutCache.length > _preparedLayoutCacheLimit) {
+      _preparedLayoutCache.remove(_preparedLayoutCache.keys.first);
+    }
+    return prepared;
+  }
+
+  double _measureTextRequiredHeightForFontSize(
+    Size size,
+    TextFrame frame,
+    double fontSize, {
+    bool preferPreferredBreaks = true,
+  }
+  ) {
+    final String cacheKey = _measureTextHeightCacheKey(
+      size,
+      frame,
+      fontSize,
+      preferPreferredBreaks,
+    );
+    final double? cached = _textHeightCache[cacheKey];
+    if (cached != null) {
+      return cached;
+    }
+
+    final _PreparedTextLayout prepared = _prepareTextLayout(
+      size,
+      frame,
+      fontSize,
+      preferPreferredBreaks: preferPreferredBreaks,
+    );
+
+    final bool hasTitleLine = prepared.hasTitleLine;
+    final List<_RenderLine> allLines = prepared.lines;
+    final double titleFontSize = prepared.titleFontSize;
+    final double lineSpacing = globals.spacing100 / 100.0;
+
     double totalHeight = 0;
     for (int i = 0; i < allLines.length; i++) {
       final bool titleToKottaTransition =
-          hasTitleLine && i == 1 && hasKottaByLine[i];
+          hasTitleLine && i == 1 && prepared.hasKottaByLine[i];
       if (titleToKottaTransition) {
         totalHeight += _titleToKottaTransitionGap(
           nextLineFontSize: fontSize,
-          titleHeight: lineHeightsByLine[i - 1],
+          titleHeight: prepared.lineHeightsByLine[i - 1],
           lineSpacing: lineSpacing,
         );
       }
 
-      if (hasKottaByLine[i]) {
-        final int rows = math.max(1, kottaRowsByLine[i].length);
+      if (prepared.hasKottaByLine[i]) {
+        final int rows = math.max(1, prepared.kottaRowsByLine[i].length);
         final bool isTitleLine = hasTitleLine && i == 0;
         final double lineFontSize = isTitleLine ? titleFontSize : fontSize;
         final double rowBlockHeight = _kottaRowBlockHeight(lineFontSize);
@@ -951,14 +966,16 @@ class ProjectorPainter extends CustomPainter {
         final bool isTitleLine = hasTitleLine && i == 0;
         if (isTitleLine) {
           totalHeight +=
-              chordBandByLine[i] + lineHeightsByLine[i] * lineSpacing;
+              prepared.chordBandByLine[i] +
+              prepared.lineHeightsByLine[i] * lineSpacing;
         } else {
           final double lineFontSize = fontSize;
-          final List<_TextRowLayout> rows = textRowsByLine[i];
+          final List<_TextRowLayout> rows = prepared.textRowsByLine[i];
+          final double lineTextHeight = prepared.lineHeightsByLine[i];
           for (final _TextRowLayout row in rows) {
             totalHeight +=
                 _rowChordBandHeight(allLines[i], row, lineFontSize) +
-                _measureTextRowHeight(allLines[i], lineFontSize) * lineSpacing;
+                lineTextHeight * lineSpacing;
           }
         }
       }
@@ -1010,20 +1027,6 @@ class ProjectorPainter extends CustomPainter {
       }
     }
     return 0;
-  }
-
-  double _textRowHeight(double fontSize) {
-    final TextPainter measure = TextPainter(
-      text: TextSpan(
-        text: 'Ag',
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: globals.boldText ? FontWeight.bold : FontWeight.normal,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    return measure.height;
   }
 
   double _measureTextRowHeight(_RenderLine line, double fontSize) {
@@ -2359,12 +2362,17 @@ class ProjectorPainter extends CustomPainter {
     final List<_TextRowLayout> rows = <_TextRowLayout>[];
     final List<int> currentWordIndices = <int>[];
     final List<int> pendingWordIndices = <int>[];
+    final List<double> slotWidths = List<double>.generate(
+      line.words.length,
+      (int index) => _measureWordDisplayWidth(line.words[index], fontSize, measure),
+      growable: false,
+    );
     double currentWidth = 0;
     double pendingWordWidth = 0;
 
     for (int i = 0; i < line.words.length; i++) {
       final _WordToken w = line.words[i];
-      final double slotWidth = _measureWordDisplayWidth(w, fontSize, measure);
+      final double slotWidth = slotWidths[i];
       pendingWordIndices.add(i);
       pendingWordWidth += slotWidth;
 
@@ -2395,14 +2403,14 @@ class ProjectorPainter extends CustomPainter {
             List<int>.from(currentWordIndices.take(breakPos + 1));
         final List<int> carryWordIndices =
             List<int>.from(currentWordIndices.skip(breakPos + 1));
-        final double rowBaseWidth = rowWordIndices.fold<double>(
-          0,
-          (sum, idx) => sum + _measureWordDisplayWidth(line.words[idx], fontSize, measure),
-        );
-        final double carryWordsWidth = carryWordIndices.fold<double>(
-          0,
-          (sum, idx) => sum + _measureWordDisplayWidth(line.words[idx], fontSize, measure),
-        );
+        double rowBaseWidth = 0;
+        for (final int idx in rowWordIndices) {
+          rowBaseWidth += slotWidths[idx];
+        }
+        double carryWordsWidth = 0;
+        for (final int idx in carryWordIndices) {
+          carryWordsWidth += slotWidths[idx];
+        }
 
         final int lastWordIndex = breakWordIndex;
         final bool endHyphen = line.words[lastWordIndex].softHyphenAfter;
@@ -2472,6 +2480,17 @@ class ProjectorPainter extends CustomPainter {
     TextPainter measure,
   ) {
     final String display = word.text + (word.spaceAfter ? ' ' : '');
+    final String cacheKey = [
+      'w',
+      display,
+      _effectiveWordFontSize(word, fontSize).toStringAsFixed(3),
+      globals.boldText || word.bold,
+      word.italic,
+    ].join('|');
+    final double? cached = _wordWidthCache[cacheKey];
+    if (cached != null) {
+      return cached;
+    }
     measure.text = TextSpan(
       text: display,
       style: TextStyle(
@@ -2483,7 +2502,12 @@ class ProjectorPainter extends CustomPainter {
       ),
     );
     measure.layout();
-    return measure.width;
+    final double width = measure.width;
+    _wordWidthCache[cacheKey] = width;
+    while (_wordWidthCache.length > _wordMeasureCacheLimit) {
+      _wordWidthCache.remove(_wordWidthCache.keys.first);
+    }
+    return width;
   }
 
   double _measureHyphenDisplayWidth(
@@ -2491,6 +2515,16 @@ class ProjectorPainter extends CustomPainter {
     double fontSize,
     TextPainter measure,
   ) {
+    final String cacheKey = [
+      'h',
+      _effectiveWordFontSize(word, fontSize).toStringAsFixed(3),
+      globals.boldText || word.bold,
+      word.italic,
+    ].join('|');
+    final double? cached = _wordWidthCache[cacheKey];
+    if (cached != null) {
+      return cached;
+    }
     measure.text = TextSpan(
       text: '-',
       style: TextStyle(
@@ -2502,7 +2536,12 @@ class ProjectorPainter extends CustomPainter {
       ),
     );
     measure.layout();
-    return measure.width;
+    final double width = measure.width;
+    _wordWidthCache[cacheKey] = width;
+    while (_wordWidthCache.length > _wordMeasureCacheLimit) {
+      _wordWidthCache.remove(_wordWidthCache.keys.first);
+    }
+    return width;
   }
 
   double _effectiveWordFontSize(_WordToken word, double baseFontSize) {
@@ -2586,6 +2625,33 @@ class ProjectorPainter extends CustomPainter {
       globals.useAkkord,
       globals.useKotta,
       globals.hideTitle,
+      settings.receiverUseAkkord,
+      settings.receiverUseKotta,
+      frame.record.title,
+      ...frame.record.lines,
+    ].join('|');
+  }
+
+  String _preparedTextLayoutCacheKey(
+    Size size,
+    TextFrame frame,
+    double fontSize,
+    bool preferPreferredBreaks,
+  ) {
+    return [
+      'prepared',
+      size.width.toStringAsFixed(2),
+      fontSize.toStringAsFixed(2),
+      preferPreferredBreaks,
+      globals.titleSize,
+      globals.leftIndent,
+      globals.hCenter,
+      globals.boldText,
+      globals.useAkkord,
+      globals.useKotta,
+      globals.hideTitle,
+      globals.kottaArany,
+      globals.akkordArany,
       settings.receiverUseAkkord,
       settings.receiverUseKotta,
       frame.record.title,
@@ -3712,11 +3778,20 @@ class ProjectorPainter extends CustomPainter {
   }
 
   List<_RenderLine> _parseRenderLines(List<String> lines) {
+    final String cacheKey = lines.join('\u0001');
+    final List<_RenderLine>? cached = _parsedLinesCache[cacheKey];
+    if (cached != null) {
+      return List<_RenderLine>.from(cached);
+    }
     final List<_RenderLine> out = <_RenderLine>[];
     for (final String line in lines) {
       out.addAll(_parseOneLine(line));
     }
-    return out;
+    _parsedLinesCache[cacheKey] = List<_RenderLine>.unmodifiable(out);
+    while (_parsedLinesCache.length > _layoutCacheLimit) {
+      _parsedLinesCache.remove(_parsedLinesCache.keys.first);
+    }
+    return List<_RenderLine>.from(out);
   }
 
   List<_RenderLine> _parseOneLine(String src) {
@@ -4401,6 +4476,38 @@ class _KottaTextSlotLayout {
   final double right;
   final bool tieUnderline;
   final Color color;
+}
+
+class _PreparedTextLayout {
+  const _PreparedTextLayout({
+    required this.hasTitleLine,
+    required this.titleFontSize,
+    required this.lines,
+    required this.textRowsByLine,
+    required this.hasKottaByLine,
+    required this.chordBandByLine,
+    required this.kottaRowsByLine,
+    required this.lineHeightsByLine,
+  });
+
+  final bool hasTitleLine;
+  final double titleFontSize;
+  final List<_RenderLine> lines;
+  final List<List<_TextRowLayout>> textRowsByLine;
+  final List<bool> hasKottaByLine;
+  final List<double> chordBandByLine;
+  final List<List<_KottaRowLayout>> kottaRowsByLine;
+  final List<double> lineHeightsByLine;
+}
+
+class _AutoSizeResult {
+  const _AutoSizeResult({
+    required this.fontSize,
+    required this.preferPreferredBreaks,
+  });
+
+  final double fontSize;
+  final bool preferPreferredBreaks;
 }
 
 const double _kcGkulcsW = 102.0;
