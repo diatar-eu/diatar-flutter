@@ -11,6 +11,16 @@ import '../models/projection_globals.dart';
 
 import 'kotta_assets.dart';
 
+class HighlightRenderState {
+  const HighlightRenderState({
+    required this.maxWordIndex,
+    required this.isFullyHighlighted,
+  });
+
+  final int maxWordIndex;
+  final bool isFullyHighlighted;
+}
+
 class ProjectorPainter extends CustomPainter {
   static const int _layoutCacheLimit = 32;
   static const int _preparedLayoutCacheLimit = 16;
@@ -37,6 +47,7 @@ class ProjectorPainter extends CustomPainter {
     required this.settings,
     this.logoTitle = '',
     this.logoSubtitle = 'Flutter port',
+    this.onHighlightRenderState,
   });
 
   final ProjectionFrame? frame;
@@ -44,6 +55,19 @@ class ProjectorPainter extends CustomPainter {
   final AppSettings settings;
   final String logoTitle;
   final String logoSubtitle;
+  final ValueChanged<HighlightRenderState>? onHighlightRenderState;
+
+  void _emitHighlightRenderState({
+    required int maxWordIndex,
+    required bool isFullyHighlighted,
+  }) {
+    onHighlightRenderState?.call(
+      HighlightRenderState(
+        maxWordIndex: maxWordIndex,
+        isFullyHighlighted: isFullyHighlighted,
+      ),
+    );
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -330,6 +354,7 @@ class ProjectorPainter extends CustomPainter {
   void _drawContent(Canvas canvas, Size size) {
     final ProjectionFrame? localFrame = frame;
     if (localFrame is LogoFrame) {
+      _emitHighlightRenderState(maxWordIndex: 0, isFullyHighlighted: false);
       _drawLogo(canvas, size, localFrame.phase);
       return;
     }
@@ -340,9 +365,12 @@ class ProjectorPainter extends CustomPainter {
     }
 
     if (localFrame is ImageFrame) {
+      _emitHighlightRenderState(maxWordIndex: 0, isFullyHighlighted: false);
       _drawImage(canvas, size, localFrame, localFrame.bgMode);
       return;
     }
+
+    _emitHighlightRenderState(maxWordIndex: 0, isFullyHighlighted: false);
 
     final Color blank = _colorWithTransparency(
       globals.blankColor,
@@ -522,6 +550,12 @@ class ProjectorPainter extends CustomPainter {
       painters.add(tp);
       highlightByLine.add(lineHighlights);
     }
+
+    _emitHighlightRenderState(
+      maxWordIndex: globalWordIndex,
+      isFullyHighlighted:
+          globalWordIndex > 0 && globals.wordToHighlight >= globalWordIndex,
+    );
 
     double totalHeight = 0;
     for (int i = 0; i < painters.length; i++) {

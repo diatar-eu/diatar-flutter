@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
@@ -159,6 +160,8 @@ class DiatarMainController extends ChangeNotifier {
   int songIndex = 0;
   int verseIndex = 0;
   int highPos = 0;
+  int _renderedHighlightWordCount = -1;
+  bool _highlightFullyRendered = false;
   bool showing = false;
   bool loading = false;
   AppSettings settings = const AppSettings();
@@ -200,6 +203,25 @@ class DiatarMainController extends ChangeNotifier {
 
   Map<String, String> get statusParams =>
       Map<String, String>.unmodifiable(_statusParams);
+
+  void _resetHighlightRenderState() {
+    _renderedHighlightWordCount = -1;
+    _highlightFullyRendered = false;
+  }
+
+  void updateHighlightRenderState({
+    required int maxWordIndex,
+    required bool isFullyHighlighted,
+  }) {
+    final int normalizedMax = math.max(0, maxWordIndex);
+    _renderedHighlightWordCount = normalizedMax;
+    _highlightFullyRendered = isFullyHighlighted && normalizedMax > 0;
+    if (highPos > normalizedMax) {
+      highPos = normalizedMax;
+      notifyListeners();
+      unawaited(_syncHighlightOnly());
+    }
+  }
 
   String? get lastImportedCustomOrderBaseName =>
       _lastImportedCustomOrderBaseName;
@@ -940,6 +962,7 @@ class DiatarMainController extends ChangeNotifier {
       songIndex = 0;
       verseIndex = 0;
       highPos = 0;
+      _resetHighlightRenderState();
       _customOrder = _customOrder.where((CustomOrderEntry e) {
         if (!e.isSongEntry) {
           return true;
@@ -1556,6 +1579,7 @@ class DiatarMainController extends ChangeNotifier {
         ? 0
         : _safeVerseIndex(entry).clamp(0, s.verses.length - 1);
     highPos = 0;
+    _resetHighlightRenderState();
 
     if (preferredCursor != null) {
       _customOrderCursor = preferredCursor.clamp(
@@ -1647,6 +1671,7 @@ class DiatarMainController extends ChangeNotifier {
     if (!entry.isSongEntry) {
       _customOrderCursor = safe;
       highPos = 0;
+      _resetHighlightRenderState();
       _setStatus('statusCustomOrderSelected', <String, String>{
         'label': entry.label,
       });
@@ -1672,6 +1697,7 @@ class DiatarMainController extends ChangeNotifier {
         ? 0
         : _safeVerseIndex(entry).clamp(0, s.verses.length - 1);
     highPos = 0;
+    _resetHighlightRenderState();
     _customOrderCursor = safe;
     _projectedCustomCursor = -1;
     _setStatus('statusCustomOrderSelected', <String, String>{
@@ -2358,6 +2384,7 @@ class DiatarMainController extends ChangeNotifier {
     songIndex = 0;
     verseIndex = 0;
     highPos = 0;
+    _resetHighlightRenderState();
     _projectedCustomCursor = -1;
     final DtxBook? selected = currentBook;
     _setStatus('statusBookSelected', <String, String>{
@@ -2377,6 +2404,7 @@ class DiatarMainController extends ChangeNotifier {
     songIndex = value.clamp(0, max);
     verseIndex = 0;
     highPos = 0;
+    _resetHighlightRenderState();
     _projectedCustomCursor = -1;
     _setStatus('statusSongPicked', <String, String>{
       'name': currentSong?.title ?? '-',
@@ -2421,6 +2449,7 @@ class DiatarMainController extends ChangeNotifier {
     }
     verseIndex = value.clamp(0, s.verses.length - 1);
     highPos = 0;
+    _resetHighlightRenderState();
     _projectedCustomCursor = -1;
     _setStatus('statusVersePicked', <String, String>{
       'name': currentVerse?.name ?? '-',
@@ -2764,6 +2793,7 @@ class DiatarMainController extends ChangeNotifier {
     songIndex = song;
     verseIndex = verse;
     highPos = 0;
+    _resetHighlightRenderState();
     _projectedCustomCursor = -1;
     final String code = includeVerseInStatus
         ? 'statusSongVerseSelected'
@@ -2814,14 +2844,21 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void highlightNext() {
-    final int max = wordCount;
+    final int maxByRenderer = _renderedHighlightWordCount;
+    final int max = maxByRenderer >= 0 ? maxByRenderer : wordCount;
+    if (_highlightFullyRendered && maxByRenderer >= 0 && highPos >= max) {
+      return;
+    }
     highPos = (highPos + 1).clamp(0, max);
     notifyListeners();
     _syncHighlightOnly();
   }
 
   void highlightPrev() {
-    highPos = (highPos - 1).clamp(0, wordCount);
+    final int maxByRenderer = _renderedHighlightWordCount;
+    final int max = maxByRenderer >= 0 ? maxByRenderer : wordCount;
+    highPos = (highPos - 1).clamp(0, max);
+    _highlightFullyRendered = false;
     notifyListeners();
     _syncHighlightOnly();
   }
@@ -2913,6 +2950,7 @@ class DiatarMainController extends ChangeNotifier {
 
     if (entry.isCustomText) {
       highPos = 0;
+      _resetHighlightRenderState();
       final String title = (entry.customTextTitle ?? '').trim().isEmpty
           ? 'Dia'
           : (entry.customTextTitle ?? '').trim();

@@ -2068,6 +2068,12 @@ class _VersePreview extends StatelessWidget {
       globals: globals,
       settings: controller.settings,
       logoTitle: context.l10n.appTitle,
+      onHighlightRenderState: (HighlightRenderState state) {
+        controller.updateHighlightRenderState(
+          maxWordIndex: state.maxWordIndex,
+          isFullyHighlighted: state.isFullyHighlighted,
+        );
+      },
     );
     final String verseTitle = _buildVerseTitle(controller, song, verse);
 
@@ -2213,13 +2219,19 @@ class _CustomTextPreview extends StatelessWidget {
     final ProjectionFrame frame = TextFrame(record: previewRecord);
     final ProjectionGlobals globals = controller.globals.copyWith(
       projecting: true,
-      wordToHighlight: 0,
+      wordToHighlight: controller.highPos,
     );
     final ProjectorPainter painter = ProjectorPainter(
       frame: frame,
       globals: globals,
       settings: controller.settings,
       logoTitle: context.l10n.appTitle,
+      onHighlightRenderState: (HighlightRenderState state) {
+        controller.updateHighlightRenderState(
+          maxWordIndex: state.maxWordIndex,
+          isFullyHighlighted: state.isFullyHighlighted,
+        );
+      },
     );
 
     return LayoutBuilder(
