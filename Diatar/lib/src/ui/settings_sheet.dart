@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
@@ -17,6 +19,8 @@ class SongHotkeyOption {
   final String label;
 }
 
+enum DiatarSettingsInitialSection { internet, localNetwork }
+
 class DiatarSettingsSheet extends StatefulWidget {
   const DiatarSettingsSheet({
     super.key,
@@ -27,6 +31,8 @@ class DiatarSettingsSheet extends StatefulWidget {
     required this.onRemoteShutdownRequested,
     this.availableSongs = const <SongHotkeyOption>[],
     this.availableSongsLoader,
+    this.initialSection,
+    this.closeAfterInitialSectionClose = false,
   });
 
   final AppSettings initialSettings;
@@ -36,6 +42,8 @@ class DiatarSettingsSheet extends StatefulWidget {
   final VoidCallback onRemoteShutdownRequested;
   final List<SongHotkeyOption> availableSongs;
   final List<SongHotkeyOption> Function()? availableSongsLoader;
+  final DiatarSettingsInitialSection? initialSection;
+  final bool closeAfterInitialSectionClose;
 
   @override
   State<DiatarSettingsSheet> createState() => _DiatarSettingsSheetState();
@@ -148,6 +156,30 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _txtColor = s.txtColor;
     _blankColor = s.blankColor;
     _hiColor = s.hiColor;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_openInitialSectionIfNeeded());
+    });
+  }
+
+  Future<void> _openInitialSectionIfNeeded() async {
+    if (!mounted) {
+      return;
+    }
+    switch (widget.initialSection) {
+      case DiatarSettingsInitialSection.internet:
+        await _openInternetSettings();
+        break;
+      case DiatarSettingsInitialSection.localNetwork:
+        await _openLocalNetworkSettings();
+        break;
+      case null:
+        return;
+    }
+    if (!mounted || !widget.closeAfterInitialSectionClose) {
+      return;
+    }
+    await Navigator.of(context).maybePop();
   }
 
   String? _currentAcceptLanguage() {
@@ -448,8 +480,26 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 
   Future<void> _openInternetSettings() {
+    final bool originalInternetRelayEnabled = _internetRelayEnabled;
+    final String originalMqttUser = _mqttUser.text;
+    final String originalMqttPassword = _mqttPassword.text;
+    final bool originalShowInternetPassword = _showInternetPassword;
+
     return _openSectionSheet(
       title: context.l10n.settingsInternetTitle,
+      showCancelButton: true,
+      onConfirmClose: _applyNetworkSettings,
+      onCancel: () {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _internetRelayEnabled = originalInternetRelayEnabled;
+          _mqttUser.text = originalMqttUser;
+          _mqttPassword.text = originalMqttPassword;
+          _showInternetPassword = originalShowInternetPassword;
+        });
+      },
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         _setInternetSectionState = setBoth;
         final l10n = context.l10n;
@@ -933,23 +983,23 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 
   Future<void> _openLocalNetworkSettings() {
+    final bool originalLocalNetworkEnabled = _localNetworkEnabled;
+    final String originalTcpTargets = _tcpTargets.text;
+
     return _openSectionSheet(
       title: context.l10n.settingsLocalNetworkTitle,
       isDismissible: false,
       enableDrag: false,
-      onConfirmClose: () {
-        final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
-        final String? tcpError = _localNetworkEnabled
-            ? _validateTcpTargets(tcpTargets)
-            : null;
-        if (tcpError != null) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(tcpError)));
-          return false;
+      showCancelButton: true,
+      onConfirmClose: _applyNetworkSettings,
+      onCancel: () {
+        if (!mounted) {
+          return;
         }
-        _tcpTargets.text = tcpTargets.join('\n');
-        return true;
+        setState(() {
+          _localNetworkEnabled = originalLocalNetworkEnabled;
+          _tcpTargets.text = originalTcpTargets;
+        });
       },
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
@@ -984,6 +1034,39 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ];
       },
     );
+  }
+
+  bool _applyNetworkSettings() {
+    final String mqttUser = _mqttUser.text.trim();
+    final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
+    final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
+    final String? tcpError = _localNetworkEnabled
+        ? _validateTcpTargets(tcpTargets)
+        : null;
+    if (tcpError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tcpError)));
+      return false;
+    }
+    _tcpTargets.text = tcpTargets.join('\n');
+
+    final int firstPort = _localNetworkEnabled
+        ? (_firstPortFromTargets(tcpTargets) ?? widget.initialSettings.port)
+        : widget.initialSettings.port;
+
+    final AppSettings updated = widget.initialSettings.copyWith(
+      port: firstPort,
+      tcpClientEnabled: _localNetworkEnabled,
+      tcpTargets: tcpTargets,
+      internetRelayEnabled: _internetRelayEnabled,
+      mqttUser: mqttUser,
+      mqttPassword: mqttPassword,
+      mqttChannel: '1',
+    );
+
+    widget.onApply(updated);
+    return true;
   }
 
   Future<void> _openGeneralSettings() {
@@ -1814,7 +1897,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: _homeShowHighlightControls,
-            onChanged: (bool v) => setBoth(() => _homeShowHighlightControls = v),
+            onChanged: (bool v) =>
+                setBoth(() => _homeShowHighlightControls = v),
             title: Text(l10n.wordHighlight),
           ),
           SwitchListTile(
@@ -1905,14 +1989,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     required String title,
     bool isDismissible = true,
     bool enableDrag = true,
+    bool showCancelButton = false,
     bool Function()? onConfirmClose,
+    VoidCallback? onCancel,
     required List<Widget> Function(
       BuildContext context,
       void Function(void Function()) setBoth,
     )
     builder,
   }) {
-    return showModalBottomSheet<void>(
+    return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       isDismissible: isDismissible,
@@ -1954,18 +2040,26 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                           const SizedBox(height: 8),
                           ...builder(context, setBoth),
                           const SizedBox(height: 12),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: FilledButton(
-                              onPressed: () {
-                                final bool canClose =
-                                    onConfirmClose?.call() ?? true;
-                                if (canClose) {
-                                  Navigator.of(context).pop();
-                                }
-                              },
-                              child: Text(context.l10n.ok),
-                            ),
+                          Row(
+                            children: <Widget>[
+                              if (showCancelButton)
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(false),
+                                  child: Text(context.l10n.cancel),
+                                ),
+                              const Spacer(),
+                              FilledButton(
+                                onPressed: () {
+                                  final bool canClose =
+                                      onConfirmClose?.call() ?? true;
+                                  if (canClose) {
+                                    Navigator.of(context).pop(true);
+                                  }
+                                },
+                                child: Text(context.l10n.ok),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -1975,7 +2069,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               },
         );
       },
-    );
+    ).then((bool? accepted) {
+      if (accepted == true) {
+        return;
+      }
+      onCancel?.call();
+    });
   }
 
   void _save() {

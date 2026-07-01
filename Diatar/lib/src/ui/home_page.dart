@@ -562,9 +562,23 @@ class DiatarHomePage extends StatelessWidget {
     return Column(
       children: <Widget>[
         _TransportErrorSnackListener(controller: controller),
-        _BookDropdown(controller: controller),
+        _BookDropdown(
+          controller: controller,
+          onInternetSettingsTap: () => _openSettings(
+            context,
+            initialSection: DiatarSettingsInitialSection.internet,
+            sectionOnly: true,
+          ),
+        ),
         const SizedBox(height: 4),
-        _SongDropdown(controller: controller),
+        _SongDropdown(
+          controller: controller,
+          onLocalNetworkSettingsTap: () => _openSettings(
+            context,
+            initialSection: DiatarSettingsInitialSection.localNetwork,
+            sectionOnly: true,
+          ),
+        ),
         const SizedBox(height: 4),
         Row(
           children: <Widget>[
@@ -863,13 +877,19 @@ class DiatarHomePage extends StatelessWidget {
     );
   }
 
-  Future<void> _openSettings(BuildContext context) {
+  Future<void> _openSettings(
+    BuildContext context, {
+    DiatarSettingsInitialSection? initialSection,
+    bool sectionOnly = false,
+  }) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (BuildContext context) {
         return DiatarSettingsSheet(
           initialSettings: controller.settings,
+          initialSection: initialSection,
+          closeAfterInitialSectionClose: sectionOnly && initialSection != null,
           availableSongsLoader: () {
             final List<SongHotkeyOption> songOptions = <SongHotkeyOption>[];
             for (final DtxBook book in controller.books) {
@@ -891,9 +911,8 @@ class DiatarHomePage extends StatelessWidget {
           onApply: (AppSettings settings) => controller.applySettings(settings),
           onExitRequested: controller.requestExit,
           onRemoteStopRequested: () => unawaited(controller.sendStop()),
-          onRemoteShutdownRequested: () => unawaited(
-            controller.sendStop(wantShutdown: true),
-          ),
+          onRemoteShutdownRequested: () =>
+              unawaited(controller.sendStop(wantShutdown: true)),
         );
       },
     );
@@ -1658,9 +1677,13 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
 }
 
 class _BookDropdown extends StatelessWidget {
-  const _BookDropdown({required this.controller});
+  const _BookDropdown({
+    required this.controller,
+    required this.onInternetSettingsTap,
+  });
 
   final DiatarMainController controller;
+  final VoidCallback onInternetSettingsTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1787,10 +1810,14 @@ class _BookDropdown extends StatelessWidget {
             title: context.l10n.settingsInternetTitle,
             state: _mqttIndicatorState(controller),
           ),
-          child: _statusIcon(
-            icon: Icons.public,
-            state: _mqttIndicatorState(controller),
-            theme: theme,
+          child: InkResponse(
+            radius: 20,
+            onTap: onInternetSettingsTap,
+            child: _statusIcon(
+              icon: Icons.public,
+              state: _mqttIndicatorState(controller),
+              theme: theme,
+            ),
           ),
         ),
       ],
@@ -1799,9 +1826,13 @@ class _BookDropdown extends StatelessWidget {
 }
 
 class _SongDropdown extends StatelessWidget {
-  const _SongDropdown({required this.controller});
+  const _SongDropdown({
+    required this.controller,
+    required this.onLocalNetworkSettingsTap,
+  });
 
   final DiatarMainController controller;
+  final VoidCallback onLocalNetworkSettingsTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1867,10 +1898,14 @@ class _SongDropdown extends StatelessWidget {
               title: context.l10n.settingsLocalNetworkTitle,
               state: _localNetworkIndicatorState(controller),
             ),
-            child: _statusIcon(
-              icon: Icons.lan,
-              state: _localNetworkIndicatorState(controller),
-              theme: theme,
+            child: InkResponse(
+              radius: 20,
+              onTap: onLocalNetworkSettingsTap,
+              child: _statusIcon(
+                icon: Icons.lan,
+                state: _localNetworkIndicatorState(controller),
+                theme: theme,
+              ),
             ),
           ),
         ],
@@ -1928,10 +1963,14 @@ class _SongDropdown extends StatelessWidget {
             title: context.l10n.settingsLocalNetworkTitle,
             state: _localNetworkIndicatorState(controller),
           ),
-          child: _statusIcon(
-            icon: Icons.lan,
-            state: _localNetworkIndicatorState(controller),
-            theme: theme,
+          child: InkResponse(
+            radius: 20,
+            onTap: onLocalNetworkSettingsTap,
+            child: _statusIcon(
+              icon: Icons.lan,
+              state: _localNetworkIndicatorState(controller),
+              theme: theme,
+            ),
           ),
         ),
       ],
@@ -2379,18 +2418,17 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
   @override
   void initState() {
     super.initState();
-    _pageTurnController = AnimationController(
-      vsync: this,
-      duration: _settleDuration,
-    )..addListener(() {
-      final Animation<double>? animation = _pageTurnAnimation;
-      if (animation == null) {
-        return;
-      }
-      setState(() {
-        _dragDx = animation.value;
-      });
-    });
+    _pageTurnController =
+        AnimationController(vsync: this, duration: _settleDuration)
+          ..addListener(() {
+            final Animation<double>? animation = _pageTurnAnimation;
+            if (animation == null) {
+              return;
+            }
+            setState(() {
+              _dragDx = animation.value;
+            });
+          });
   }
 
   @override
@@ -2436,14 +2474,8 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
   }
 
   Future<void> _animateOffset(double begin, double end) async {
-    _pageTurnAnimation = Tween<double>(
-      begin: begin,
-      end: end,
-    ).animate(
-      CurvedAnimation(
-        parent: _pageTurnController,
-        curve: Curves.easeOutCubic,
-      ),
+    _pageTurnAnimation = Tween<double>(begin: begin, end: end).animate(
+      CurvedAnimation(parent: _pageTurnController, curve: Curves.easeOutCubic),
     );
     _pageTurnController
       ..value = 0
@@ -2451,7 +2483,10 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
     await _pageTurnController.forward().orCancel;
   }
 
-  Future<void> _animatePageTurn(double targetDx, VoidCallback pageAction) async {
+  Future<void> _animatePageTurn(
+    double targetDx,
+    VoidCallback pageAction,
+  ) async {
     if (_isAnimatingPageTurn) {
       return;
     }
@@ -2512,7 +2547,9 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
             onHorizontalDragStart: (_) => _startDrag(),
             onHorizontalDragUpdate: (DragUpdateDetails details) {
               _updateDrag(
-                (_dragDx + details.delta.dx).clamp(-maxDrag, maxDrag).toDouble(),
+                (_dragDx + details.delta.dx)
+                    .clamp(-maxDrag, maxDrag)
+                    .toDouble(),
               );
             },
             onHorizontalDragCancel: _resetDrag,
