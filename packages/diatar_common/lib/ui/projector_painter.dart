@@ -34,12 +34,12 @@ class ProjectorPainter extends CustomPainter {
       LinkedHashMap<String, List<_KottaRowLayout>>();
   static final LinkedHashMap<String, double> _textHeightCache =
       LinkedHashMap<String, double>();
-    static final LinkedHashMap<String, _PreparedTextLayout> _preparedLayoutCache =
+  static final LinkedHashMap<String, _PreparedTextLayout> _preparedLayoutCache =
       LinkedHashMap<String, _PreparedTextLayout>();
   static final LinkedHashMap<String, List<_RenderLine>> _parsedLinesCache =
-    LinkedHashMap<String, List<_RenderLine>>();
+      LinkedHashMap<String, List<_RenderLine>>();
   static final LinkedHashMap<String, double> _wordWidthCache =
-    LinkedHashMap<String, double>();
+      LinkedHashMap<String, double>();
 
   ProjectorPainter({
     required this.frame,
@@ -198,11 +198,7 @@ class ProjectorPainter extends CustomPainter {
     }
 
     final _RenderLine line = lines.first;
-    final List<_TextRowLayout> rows = _buildTextRows(
-      line,
-      fontSize,
-      maxWidth,
-    );
+    final List<_TextRowLayout> rows = _buildTextRows(line, fontSize, maxWidth);
     return rows.map((row) {
       if (row.wordIndices.isEmpty) {
         return const <bool>[false, false];
@@ -219,7 +215,7 @@ class ProjectorPainter extends CustomPainter {
           line.words[lastWord + 1].tieUnderline;
       return <bool>[fromPrevious, toNext];
     }).toList();
-    }
+  }
 
   List<String> debugTextWrappedRowsForLine(
     String source, {
@@ -238,13 +234,14 @@ class ProjectorPainter extends CustomPainter {
     );
     return rows
         .map(
-          (row) => row.wordIndices
-              .map((int wi) {
-                final _WordToken w = lines.first.words[wi];
-                return w.text + (w.spaceAfter ? ' ' : '');
-              })
-              .join()
-              .trimRight() +
+          (row) =>
+              row.wordIndices
+                  .map((int wi) {
+                    final _WordToken w = lines.first.words[wi];
+                    return w.text + (w.spaceAfter ? ' ' : '');
+                  })
+                  .join()
+                  .trimRight() +
               (row.endHyphen ? '-' : ''),
         )
         .toList();
@@ -599,10 +596,12 @@ class ProjectorPainter extends CustomPainter {
       final bool isTitleLine = hasTitleLine && painterIndex == 0;
       final bool hasKotta = prepared.hasKottaByLine[painterIndex];
       final double lineFontSize = isTitleLine ? titleFontSize : fontSize;
-      final List<_KottaRowLayout> lineKottaRows = prepared.kottaRowsByLine[painterIndex];
+      final List<_KottaRowLayout> lineKottaRows =
+          prepared.kottaRowsByLine[painterIndex];
       final double chordBand = prepared.chordBandByLine[painterIndex];
       final double lineStep = tp.height * lineSpacing;
-      final List<_TextRowLayout> lineTextRows = prepared.textRowsByLine[painterIndex];
+      final List<_TextRowLayout> lineTextRows =
+          prepared.textRowsByLine[painterIndex];
 
       final bool titleToKottaTransition =
           hasTitleLine && painterIndex == 1 && hasKotta;
@@ -783,11 +782,11 @@ class ProjectorPainter extends CustomPainter {
       final bool fallbackFits =
           preferredFits ||
           _measureTextRequiredHeightForFontSize(
-            size,
-            frame,
-            fontSize,
-            preferPreferredBreaks: false,
-          ) <=
+                size,
+                frame,
+                fontSize,
+                preferPreferredBreaks: false,
+              ) <=
               fitHeight;
 
       if (preferredFits || fallbackFits) {
@@ -850,10 +849,10 @@ class ProjectorPainter extends CustomPainter {
     final List<_RenderLine> allLines = _parseRenderLines(sourceLines);
 
     final double requestedTitleFontSize = (globals.titleSize.toDouble() * 2.5)
-      .clamp(8.0, 72.0);
+        .clamp(8.0, 72.0);
     final double titleFontSize = math
-      .min(requestedTitleFontSize, fontSize)
-      .clamp(8.0, 72.0);
+        .min(requestedTitleFontSize, fontSize)
+        .clamp(8.0, 72.0);
 
     final List<List<_TextRowLayout>> textRowsByLine = <List<_TextRowLayout>>[];
     final List<bool> hasKottaByLine = <bool>[];
@@ -874,7 +873,10 @@ class ProjectorPainter extends CustomPainter {
           baseLine.words.any((w) => (w.kotta ?? '').isNotEmpty);
       final _RenderLine line;
       if (!isTitleLine && !hasKotta) {
-        final _RenderLine paddedLine = _applyChordPadding(baseLine, lineFontSize);
+        final _RenderLine paddedLine = _applyChordPadding(
+          baseLine,
+          lineFontSize,
+        );
         final double continuationIndent = globals.hCenter
             ? 0
             : _textContinuationIndent(
@@ -953,8 +955,7 @@ class ProjectorPainter extends CustomPainter {
     TextFrame frame,
     double fontSize, {
     bool preferPreferredBreaks = true,
-  }
-  ) {
+  }) {
     final String cacheKey = _measureTextHeightCacheKey(
       size,
       frame,
@@ -1209,7 +1210,8 @@ class ProjectorPainter extends CustomPainter {
     }
 
     final ui.LineMetrics metric = metrics.first;
-    final double underlineY = y + metric.baseline + math.max(1.0, fontSize * 0.08);
+    final double underlineY =
+        y + metric.baseline + math.max(1.0, fontSize * 0.08);
     final double thickness = math.max(1.0, fontSize * 0.045);
     final double capLength = math.max(thickness * 2.5, fontSize * 0.22);
     final double capLift = math.max(thickness * 1.8, fontSize * 0.11);
@@ -1230,7 +1232,10 @@ class ProjectorPainter extends CustomPainter {
 
       final _TextWordLayout endLayout = layout.wordLayouts[runEnd];
       final List<ui.TextBox> startBoxes = layout.painter.getBoxesForSelection(
-        TextSelection(baseOffset: startLayout.start, extentOffset: startLayout.end),
+        TextSelection(
+          baseOffset: startLayout.start,
+          extentOffset: startLayout.end,
+        ),
       );
       final List<ui.TextBox> endBoxes = layout.painter.getBoxesForSelection(
         TextSelection(baseOffset: endLayout.start, extentOffset: endLayout.end),
@@ -1322,7 +1327,8 @@ class ProjectorPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout();
     final ui.LineMetrics metric = measure.computeLineMetrics().first;
-    final double underlineY = y + metric.baseline + math.max(1.0, fontSize * 0.08);
+    final double underlineY =
+        y + metric.baseline + math.max(1.0, fontSize * 0.08);
     final double thickness = math.max(1.0, fontSize * 0.045);
     final double capLength = math.max(thickness * 2.5, fontSize * 0.22);
     final double capLift = math.max(thickness * 1.8, fontSize * 0.11);
@@ -1411,7 +1417,8 @@ class ProjectorPainter extends CustomPainter {
   }) {
     final double direction = left ? -1.0 : 1.0;
     final double controlX1 = bodyEdgeX + direction * thickness * 0.8;
-    final double controlX2 = bodyEdgeX + direction * math.max(thickness * 1.6, capLift * 0.45);
+    final double controlX2 =
+        bodyEdgeX + direction * math.max(thickness * 1.6, capLift * 0.45);
     final Path path = Path()
       ..moveTo(bodyEdgeX, baselineY)
       ..cubicTo(
@@ -1549,6 +1556,7 @@ class ProjectorPainter extends CustomPainter {
     final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
     final double splitLimit = math.max(8.0, maxWidth - continuationIndent);
     const double minWordScale = 0.82;
+    const double minWordScaleFallback = 0.62;
     bool changed = false;
     final List<_WordToken> words = <_WordToken>[];
 
@@ -1570,6 +1578,21 @@ class ProjectorPainter extends CustomPainter {
       if (shrunk != null) {
         changed = true;
         words.add(shrunk);
+        continue;
+      }
+
+      // Prefer per-word downsizing over forced word-splitting.
+      final _WordToken? fallbackShrunk = _shrinkWordToFitWidth(
+        word,
+        fontSize,
+        splitLimit,
+        minWordScaleFallback,
+        measure,
+        currentWidth: width,
+      );
+      if (fallbackShrunk != null) {
+        changed = true;
+        words.add(fallbackShrunk);
         continue;
       }
 
@@ -1607,8 +1630,8 @@ class ProjectorPainter extends CustomPainter {
       return null;
     }
 
-    final double targetScale =
-        (word.fontScale * (maxWidth / currentWidth)).clamp(minWordScale, 1.0);
+    final double targetScale = (word.fontScale * (maxWidth / currentWidth))
+        .clamp(minWordScale, 1.0);
     if ((word.fontScale - targetScale).abs() < 0.001) {
       return null;
     }
@@ -1630,7 +1653,11 @@ class ProjectorPainter extends CustomPainter {
       fontScale: targetScale,
     );
 
-    final double scaledWidth = _measureWordDisplayWidth(scaled, fontSize, measure);
+    final double scaledWidth = _measureWordDisplayWidth(
+      scaled,
+      fontSize,
+      measure,
+    );
     return scaledWidth <= maxWidth + 0.5 ? scaled : null;
   }
 
@@ -1694,7 +1721,8 @@ class ProjectorPainter extends CustomPainter {
           chord: start == 0 ? word.chord : null,
           kotta: start == 0 ? word.kotta : null,
           spaceAfter: isLast ? word.spaceAfter : false,
-          breakAfter: isLast ? word.breakAfter : false,
+          // Non-final chunks must be breakable; otherwise splitting has no effect.
+          breakAfter: isLast ? word.breakAfter : true,
           preferredBreakAfter: isLast ? word.preferredBreakAfter : false,
           softHyphenAfter: isLast ? word.softHyphenAfter : false,
           fontScale: word.fontScale,
@@ -2057,8 +2085,9 @@ class ProjectorPainter extends CustomPainter {
           ? highlights[row.words.last.wordIndex]
           : false;
       final Color baseColor = lastWord.color ?? globals.txtColor;
-      final double hyphenX =
-          slotLayouts.isEmpty ? rowX : slotLayouts.last.right;
+      final double hyphenX = slotLayouts.isEmpty
+          ? rowX
+          : slotLayouts.last.right;
       final TextPainter hyphen = TextPainter(
         text: TextSpan(
           text: '-',
@@ -2144,7 +2173,7 @@ class ProjectorPainter extends CustomPainter {
         continue;
       }
 
-        final double currentRowLimit = rows.isEmpty
+      final double currentRowLimit = rows.isEmpty
           ? math.max(8.0, wrapWidth - firstRowInlinePrefixWidth)
           : math.max(8.0, wrapWidth - continuationIndent);
       if (currentWords.isNotEmpty &&
@@ -2188,7 +2217,12 @@ class ProjectorPainter extends CustomPainter {
       );
     }
 
-    final List<_KottaRowLayout> resolved = _applyKottaRowPrefixes(rows, line, lineGap, fontSize);
+    final List<_KottaRowLayout> resolved = _applyKottaRowPrefixes(
+      rows,
+      line,
+      lineGap,
+      fontSize,
+    );
     _kottaRowsCache[cacheKey] = resolved;
     while (_kottaRowsCache.length > _layoutCacheLimit) {
       _kottaRowsCache.remove(_kottaRowsCache.keys.first);
@@ -2383,8 +2417,7 @@ class ProjectorPainter extends CustomPainter {
     double fontSize,
     double maxWidth, {
     bool preferPreferredBreaks = true,
-  }
-  ) {
+  }) {
     final String cacheKey = _textRowsCacheKey(
       line,
       fontSize,
@@ -2410,7 +2443,8 @@ class ProjectorPainter extends CustomPainter {
     final List<int> pendingWordIndices = <int>[];
     final List<double> slotWidths = List<double>.generate(
       line.words.length,
-      (int index) => _measureWordDisplayWidth(line.words[index], fontSize, measure),
+      (int index) =>
+          _measureWordDisplayWidth(line.words[index], fontSize, measure),
       growable: false,
     );
     double currentWidth = 0;
@@ -2428,7 +2462,7 @@ class ProjectorPainter extends CustomPainter {
         continue;
       }
 
-      final double currentRowLimit = rows.isEmpty
+    final double currentRowLimit = rows.isEmpty
           ? wrapWidth
           : math.max(8.0, wrapWidth - continuationIndent);
       if (currentWordIndices.isNotEmpty &&
@@ -2445,10 +2479,12 @@ class ProjectorPainter extends CustomPainter {
         }
 
         final int breakPos = currentWordIndices.indexOf(breakWordIndex);
-        final List<int> rowWordIndices =
-            List<int>.from(currentWordIndices.take(breakPos + 1));
-        final List<int> carryWordIndices =
-            List<int>.from(currentWordIndices.skip(breakPos + 1));
+        final List<int> rowWordIndices = List<int>.from(
+          currentWordIndices.take(breakPos + 1),
+        );
+        final List<int> carryWordIndices = List<int>.from(
+          currentWordIndices.skip(breakPos + 1),
+        );
         double rowBaseWidth = 0;
         for (final int idx in rowWordIndices) {
           rowBaseWidth += slotWidths[idx];
@@ -3382,13 +3418,7 @@ class ProjectorPainter extends CustomPainter {
       }
 
       _trackSlurPoint(state, Offset(nx, cy));
-      _trackTupletPoint(
-        state,
-        Offset(nx, cy),
-        stemDown,
-        lineGap,
-        noteW,
-      );
+      _trackTupletPoint(state, Offset(nx, cy), stemDown, lineGap, noteW);
 
       if (state.pontozott) {
         _drawKottaAsset(
@@ -3560,11 +3590,7 @@ class ProjectorPainter extends CustomPainter {
         ? noteCenter.dy + lineGap * 3.2
         : noteCenter.dy - lineGap * 3.2;
     state.triPos.add(
-      _TupletPoint(
-        x: noteCenter.dx,
-        y: y,
-        headWidth: headWidth,
-      ),
+      _TupletPoint(x: noteCenter.dx, y: y, headWidth: headWidth),
     );
   }
 
@@ -4485,10 +4511,7 @@ class _TextRowLayout {
 }
 
 class _TextRowPaintLayout {
-  const _TextRowPaintLayout({
-    required this.painter,
-    required this.wordLayouts,
-  });
+  const _TextRowPaintLayout({required this.painter, required this.wordLayouts});
 
   final TextPainter painter;
   final List<_TextWordLayout> wordLayouts;

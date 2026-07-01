@@ -2366,8 +2366,38 @@ class _SwipePagingPreview extends StatefulWidget {
   State<_SwipePagingPreview> createState() => _SwipePagingPreviewState();
 }
 
-class _SwipePagingPreviewState extends State<_SwipePagingPreview> {
+class _SwipePagingPreviewState extends State<_SwipePagingPreview>
+    with SingleTickerProviderStateMixin {
+  static const Duration _settleDuration = Duration(milliseconds: 180);
+
   double _dragDx = 0;
+  bool _isDragging = false;
+  bool _isAnimatingPageTurn = false;
+  late final AnimationController _pageTurnController;
+  Animation<double>? _pageTurnAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageTurnController = AnimationController(
+      vsync: this,
+      duration: _settleDuration,
+    )..addListener(() {
+      final Animation<double>? animation = _pageTurnAnimation;
+      if (animation == null) {
+        return;
+      }
+      setState(() {
+        _dragDx = animation.value;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageTurnController.dispose();
+    super.dispose();
+  }
 
   bool _isDesktopPlatform(TargetPlatform platform) {
     return platform == TargetPlatform.windows ||
@@ -2376,10 +2406,88 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview> {
   }
 
   void _resetDrag() {
-    if (_dragDx == 0) {
+    if (_dragDx == 0 && !_isDragging) {
       return;
     }
-    _dragDx = 0;
+    setState(() {
+      _dragDx = 0;
+      _isDragging = false;
+    });
+  }
+
+  void _startDrag() {
+    if (_isAnimatingPageTurn) {
+      return;
+    }
+    _pageTurnController.stop();
+    setState(() {
+      _dragDx = 0;
+      _isDragging = true;
+    });
+  }
+
+  void _updateDrag(double nextDx) {
+    if (_isAnimatingPageTurn) {
+      return;
+    }
+    setState(() {
+      _dragDx = nextDx;
+    });
+  }
+
+  Future<void> _animateOffset(double begin, double end) async {
+    _pageTurnAnimation = Tween<double>(
+      begin: begin,
+      end: end,
+    ).animate(
+      CurvedAnimation(
+        parent: _pageTurnController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+    _pageTurnController
+      ..value = 0
+      ..duration = _settleDuration;
+    await _pageTurnController.forward().orCancel;
+  }
+
+  Future<void> _animatePageTurn(double targetDx, VoidCallback pageAction) async {
+    if (_isAnimatingPageTurn) {
+      return;
+    }
+
+    setState(() {
+      _isDragging = false;
+      _isAnimatingPageTurn = true;
+    });
+
+    try {
+      await _animateOffset(_dragDx, targetDx);
+      if (!mounted) {
+        return;
+      }
+
+      pageAction();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _dragDx = -targetDx;
+      });
+
+      await _animateOffset(-targetDx, 0);
+    } on TickerCanceled {
+      return;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _dragDx = 0;
+          _isAnimatingPageTurn = false;
+        });
+      }
+    }
   }
 
   @override
@@ -2394,36 +2502,45 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview> {
         final double maxDrag = width * (desktopLike ? 0.30 : 0.40);
         final double distanceThreshold = width * (desktopLike ? 0.20 : 0.14);
         final double swipeVelocityThreshold = desktopLike ? 420.0 : 220.0;
+        final double turnTarget = width * 0.92;
 
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.controller.toggleShowing,
-          onHorizontalDragStart: (_) => _dragDx = 0,
-          onHorizontalDragUpdate: (DragUpdateDetails details) {
-            _dragDx = (_dragDx + details.delta.dx)
-                .clamp(-maxDrag, maxDrag)
-                .toDouble();
-          },
-          onHorizontalDragCancel: _resetDrag,
-          onHorizontalDragEnd: (DragEndDetails details) {
-            final double velocityDx = details.velocity.pixelsPerSecond.dx;
+        return IgnorePointer(
+          ignoring: _isAnimatingPageTurn,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.controller.toggleShowing,
+            onHorizontalDragStart: (_) => _startDrag(),
+            onHorizontalDragUpdate: (DragUpdateDetails details) {
+              _updateDrag(
+                (_dragDx + details.delta.dx).clamp(-maxDrag, maxDrag).toDouble(),
+              );
+            },
+            onHorizontalDragCancel: _resetDrag,
+            onHorizontalDragEnd: (DragEndDetails details) {
+              final double velocityDx = details.velocity.pixelsPerSecond.dx;
 
-            final bool goPrev =
-                velocityDx > swipeVelocityThreshold ||
-                _dragDx > distanceThreshold;
-            final bool goNext =
-                velocityDx < -swipeVelocityThreshold ||
-                _dragDx < -distanceThreshold;
+              final bool goPrev =
+                  velocityDx > swipeVelocityThreshold ||
+                  _dragDx > distanceThreshold;
+              final bool goNext =
+                  velocityDx < -swipeVelocityThreshold ||
+                  _dragDx < -distanceThreshold;
 
-            _resetDrag();
-
-            if (goPrev) {
-              widget.controller.prevVerse();
-            } else if (goNext) {
-              widget.controller.nextVerse();
-            }
-          },
-          child: widget.child,
+              if (goPrev) {
+                _animatePageTurn(turnTarget, widget.controller.prevVerse);
+              } else if (goNext) {
+                _animatePageTurn(-turnTarget, widget.controller.nextVerse);
+              } else {
+                _resetDrag();
+              }
+            },
+            child: ClipRect(
+              child: Transform.translate(
+                offset: Offset(_dragDx, 0),
+                child: widget.child,
+              ),
+            ),
+          ),
         );
       },
     );
