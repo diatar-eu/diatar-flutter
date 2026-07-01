@@ -333,6 +333,23 @@ void main() {
     expect(hasBadSplit('h', 'ogy'), false);
   });
 
+  test('single overlong word is shrunk instead of being split', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: false, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: false),
+    );
+
+    final List<String> rows = painter.debugTextWrappedRowsForLine(
+      'torvenyeinek',
+      fontSize: 24,
+      maxWidth: 95,
+    );
+
+    expect(rows.length, 1);
+    expect(rows.first, 'torvenyeinek');
+  });
+
   test('soft hyphen stays hidden when no wrap occurs', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
