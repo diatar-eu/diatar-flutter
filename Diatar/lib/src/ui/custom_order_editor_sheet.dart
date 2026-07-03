@@ -50,6 +50,32 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     return fallback;
   }
 
+  String _normalizeSlashSpacing(String text) {
+    return text.replaceAll(RegExp(r'\s*/\s*'), '/');
+  }
+
+  Widget _buildTitleWithFirstLine({
+    required String title,
+    required String firstLine,
+  }) {
+    final List<InlineSpan> spans = <InlineSpan>[TextSpan(text: title)];
+    if (firstLine.trim().isNotEmpty) {
+      spans.add(const TextSpan(text: ' '));
+      spans.add(
+        TextSpan(
+          text: '($firstLine)',
+          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w400),
+        ),
+      );
+    }
+    return Text.rich(
+      TextSpan(children: spans),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(height: 0.95),
+    );
+  }
+
   DiatarMainController get controller => widget.controller;
 
   String _entrySignature(CustomOrderEntry entry) {
@@ -1308,10 +1334,16 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             ? controller.versesForEntry(entry)
             : const <DtxVerse>[];
         final int verseIx = _safeEntryVerseIndex(entry);
-        final String verseLabel = verses.isEmpty
+        final String rawVerseLabel = verses.isEmpty
             ? '-'
             : verses[verseIx.clamp(0, verses.length - 1)].name;
-        final String titleText = isContinuation ? verseLabel : entry.label;
+        final String verseLabel = isSongEntry
+            ? _normalizeSlashSpacing(rawVerseLabel)
+            : rawVerseLabel;
+        final String titleText = isContinuation
+            ? verseLabel
+            : (isSongEntry ? _normalizeSlashSpacing(entry.label) : entry.label);
+        final String firstLine = controller.firstTextLineForEntry(entry);
         return ListTile(
           key: ValueKey<String>('${entry.fileName}_${entry.songIndex}_$index'),
           dense: true,
@@ -1329,11 +1361,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             left: isContinuation ? 70 : 16,
             right: 8,
           ),
-          title: Text(
-            titleText,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(height: 0.95),
+          title: _buildTitleWithFirstLine(
+            title: titleText,
+            firstLine: firstLine,
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,

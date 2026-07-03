@@ -375,6 +375,10 @@
     }
   },
   "noLoadedSlide": "No slide loaded.",
+  "homeControlModeTooltip": "Screen mode",
+  "homeControlModeBooks": "Books",
+  "homeControlModeDialist": "Slide list",
+  "dialistLabel": "Slide list",
   "bookLabel": "Book",
   "ungroupedBookGroupLabel": "(unclassified)",
   "diaBookLabel": "DIA: {name}",

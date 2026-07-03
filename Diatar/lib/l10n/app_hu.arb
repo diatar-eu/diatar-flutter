@@ -375,6 +375,10 @@
     }
   },
   "noLoadedSlide": "Nincs betöltött dia.",
+  "homeControlModeTooltip": "Képernyőmód",
+  "homeControlModeBooks": "Kötetek",
+  "homeControlModeDialist": "Dialista",
+  "dialistLabel": "Dialista",
   "bookLabel": "Kötet",
   "ungroupedBookGroupLabel": "(nem besorolt)",
   "diaBookLabel": "DIA: {name}",

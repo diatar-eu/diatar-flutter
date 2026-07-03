@@ -415,6 +415,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noLoadedSlide => 'No slide loaded.';
 
   @override
+  String get homeControlModeTooltip => 'Screen mode';
+
+  @override
+  String get homeControlModeBooks => 'Books';
+
+  @override
+  String get homeControlModeDialist => 'Slide list';
+
+  @override
+  String get dialistLabel => 'Slide list';
+
+  @override
   String get bookLabel => 'Book';
 
   @override

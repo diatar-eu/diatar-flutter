@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../utils/escape_sequences.dart';
 import '../services/mqtt_sender_service.dart';
 import '../services/dtx_download_service.dart';
 import '../services/dtx_order_store.dart';
@@ -541,6 +542,15 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
     await _syncCurrentDia();
     await _syncBackgroundImageAfterConnect();
+  }
+
+  Future<void> setHomeViewMode(int mode) async {
+    if (settings.homeViewMode == mode) {
+      return;
+    }
+    settings = settings.copyWith(homeViewMode: mode);
+    await _settingsStore.save(settings);
+    notifyListeners();
   }
 
   bool _transportSettingsChanged(AppSettings previous, AppSettings next) {
@@ -1138,6 +1148,24 @@ class DiatarMainController extends ChangeNotifier {
     _selectByCustomOrderCursor(target, sync: true);
   }
 
+  void selectBookControlMode() {
+    customOrderActive = _customOrder.isNotEmpty;
+
+    final CustomOrderEntry? projected = projectedCustomOrderEntry;
+    final bool keepProjectedCustom =
+        projected != null && !projected.isSongEntry;
+    if (keepProjectedCustom) {
+      _diaVirtualBookSelected = _customOrder.isNotEmpty;
+      notifyListeners();
+      return;
+    }
+
+    _diaVirtualBookSelected = false;
+    _projectedCustomCursor = -1;
+    notifyListeners();
+    unawaited(_syncCurrentDia());
+  }
+
   bool isEntryCurrentlyProjected(CustomOrderEntry entry) {
     final DtxBook? b = currentBook;
     if (b == null) {
@@ -1297,6 +1325,20 @@ class DiatarMainController extends ChangeNotifier {
   List<DtxVerse> versesForEntry(CustomOrderEntry entry) {
     final DtxSong? s = songForEntry(entry);
     return s?.verses ?? const <DtxVerse>[];
+  }
+
+  String firstTextLineForEntry(CustomOrderEntry entry) {
+    if (entry.isSeparator || entry.isCustomImage) {
+      return '';
+    }
+    if (entry.isCustomText) {
+      return firstMeaningfulLineFromText(entry.customTextBody ?? '');
+    }
+    final List<DtxVerse> verses = versesForEntry(entry);
+    if (verses.isEmpty) {
+      return '';
+    }
+    return firstMeaningfulLine(verses[_safeVerseIndex(entry)].lines);
   }
 
   String buildEntryLabel(String fileName, int songIndex, int verseIndex) {

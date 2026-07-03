@@ -78,6 +78,8 @@ const int _diaVirtualBookValue = -1000000;
 
 enum _ProjectionDisplayToggle { kotta, chords, backgroundImage }
 
+enum _HomeControlMode { books, dialist }
+
 String _basename(String path) {
   final String normalized = path.replaceAll('\\', '/');
   final List<String> parts = normalized
@@ -98,6 +100,36 @@ String _cleanSeparatorLabel(CustomOrderEntry entry) {
       .replaceAll(RegExp(r'\s*-+$'), '')
       .trim();
   return compact.isEmpty ? '--' : '-- $compact --';
+}
+
+String _normalizeSlashSpacing(String text) {
+  return text.replaceAll(RegExp(r'\s*/\s*'), '/');
+}
+
+Widget _buildTitleWithFirstLine({
+  required String title,
+  required String firstLine,
+  required TextStyle? titleStyle,
+}) {
+  final List<InlineSpan> spans = <InlineSpan>[
+    TextSpan(text: title, style: titleStyle),
+  ];
+  if (firstLine.trim().isNotEmpty) {
+    spans.add(
+      TextSpan(
+        text: ' ($firstLine)',
+        style: titleStyle?.copyWith(
+          fontSize: ((titleStyle?.fontSize ?? 13) * 0.85),
+          fontWeight: FontWeight.w400,
+        ),
+      ),
+    );
+  }
+  return Text.rich(
+    TextSpan(children: spans),
+    overflow: TextOverflow.ellipsis,
+    maxLines: 1,
+  );
 }
 
 String _songVerseToken(DtxVerse verse) {
@@ -420,18 +452,97 @@ List<_BookDropdownEntry> _buildBookDropdownEntries(
   return entries;
 }
 
-class DiatarHomePage extends StatelessWidget {
+class DiatarHomePage extends StatefulWidget {
   const DiatarHomePage({super.key, required this.controller});
 
   final DiatarMainController controller;
 
   @override
+  State<DiatarHomePage> createState() => _DiatarHomePageState();
+}
+
+class _DiatarHomePageState extends State<DiatarHomePage> {
+  static const double _portraitDialistHeight = 148;
+
+  _HomeControlMode _homeControlMode = _HomeControlMode.books;
+
+  DiatarMainController get controller => widget.controller;
+
+  int _homeViewModeValue(_HomeControlMode mode) {
+    return mode == _HomeControlMode.dialist ? 1 : 0;
+  }
+
+  _HomeControlMode _homeControlModeFromValue(int value) {
+    return value == 1 ? _HomeControlMode.dialist : _HomeControlMode.books;
+  }
+
+  void _syncHomeModeFromSettings() {
+    final _HomeControlMode stored = _homeControlModeFromValue(
+      controller.settings.homeViewMode,
+    );
+    if (stored == _homeControlMode) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _homeControlMode = stored;
+      });
+      if (stored == _HomeControlMode.dialist) {
+        controller.selectDiaVirtualBook();
+      }
+    });
+  }
+
+  void _setHomeControlMode(_HomeControlMode mode) {
+    if (_homeControlMode == mode) {
+      return;
+    }
+    setState(() {
+      _homeControlMode = mode;
+    });
+    if (mode == _HomeControlMode.dialist) {
+      controller.selectDiaVirtualBook();
+    } else {
+      controller.selectBookControlMode();
+    }
+    final int modeValue = _homeViewModeValue(mode);
+    unawaited(controller.setHomeViewMode(modeValue));
+  }
+
+  @override
   Widget build(BuildContext context) {
+    _syncHomeModeFromSettings();
     final l10n = context.l10n;
+    final IconData modeIcon = _homeControlMode == _HomeControlMode.books
+        ? Icons.library_books_outlined
+        : Icons.view_list_outlined;
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.appTitle),
         actions: <Widget>[
+          PopupMenuButton<_HomeControlMode>(
+            tooltip: l10n.homeControlModeTooltip,
+            initialValue: _homeControlMode,
+            onSelected: _setHomeControlMode,
+            itemBuilder: (BuildContext context) =>
+                <PopupMenuEntry<_HomeControlMode>>[
+                  CheckedPopupMenuItem<_HomeControlMode>(
+                    value: _HomeControlMode.books,
+                    checked: _homeControlMode == _HomeControlMode.books,
+                    child: Text(l10n.homeControlModeBooks),
+                  ),
+                  CheckedPopupMenuItem<_HomeControlMode>(
+                    value: _HomeControlMode.dialist,
+                    checked: _homeControlMode == _HomeControlMode.dialist,
+                    child: Text(l10n.homeControlModeDialist),
+                  ),
+                ],
+            icon: Icon(modeIcon),
+          ),
           IconButton(
             tooltip: l10n.settingsTooltip,
             onPressed: () => _openSettings(context),
@@ -522,18 +633,7 @@ class DiatarHomePage extends StatelessWidget {
             children: <Widget>[
               SizedBox(
                 width: controlsWidth,
-                child: Column(
-                  children: <Widget>[
-                    if (controller.loading)
-                      const LinearProgressIndicator(minHeight: 2),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(12),
-                        child: _buildSimpleControls(context),
-                      ),
-                    ),
-                  ],
-                ),
+                child: _buildSimpleControls(context, isLandscape: true),
               ),
               const VerticalDivider(width: 1),
               Expanded(child: _buildSimplePreviewPane(context)),
@@ -545,23 +645,101 @@ class DiatarHomePage extends StatelessWidget {
 
     return Column(
       children: <Widget>[
-        if (controller.loading) const LinearProgressIndicator(minHeight: 2),
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: _buildSimpleControls(context),
-        ),
+        _buildSimpleControls(context, isLandscape: false),
         const Divider(height: 1),
         Expanded(child: _buildSimplePreviewPane(context)),
       ],
     );
   }
 
-  Widget _buildSimpleControls(BuildContext context) {
-    final l10n = context.l10n;
+  Widget _buildSimpleControls(
+    BuildContext context, {
+    required bool isLandscape,
+  }) {
+    if (isLandscape) {
+      return Column(
+        children: <Widget>[
+          if (controller.loading) const LinearProgressIndicator(minHeight: 2),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: <Widget>[
+                  _TransportErrorSnackListener(controller: controller),
+                  if (_homeControlMode == _HomeControlMode.dialist) ...<Widget>[
+                    const SizedBox(height: 4),
+                    Expanded(
+                      child: _DialistPanel(
+                        controller: controller,
+                        onInternetSettingsTap: () => _openSettings(
+                          context,
+                          initialSection: DiatarSettingsInitialSection.internet,
+                          sectionOnly: true,
+                        ),
+                        onLocalNetworkSettingsTap: () => _openSettings(
+                          context,
+                          initialSection:
+                              DiatarSettingsInitialSection.localNetwork,
+                          sectionOnly: true,
+                        ),
+                      ),
+                    ),
+                  ] else ...<Widget>[
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: _buildKotetekSelectors(context),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  _buildActionButtons(context),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
 
     return Column(
       children: <Widget>[
-        _TransportErrorSnackListener(controller: controller),
+        if (controller.loading) const LinearProgressIndicator(minHeight: 2),
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: <Widget>[
+              _TransportErrorSnackListener(controller: controller),
+              if (_homeControlMode == _HomeControlMode.dialist) ...<Widget>[
+                const SizedBox(height: 4),
+                SizedBox(
+                  height: _portraitDialistHeight,
+                  child: _DialistPanel(
+                    controller: controller,
+                    onInternetSettingsTap: () => _openSettings(
+                      context,
+                      initialSection: DiatarSettingsInitialSection.internet,
+                      sectionOnly: true,
+                    ),
+                    onLocalNetworkSettingsTap: () => _openSettings(
+                      context,
+                      initialSection: DiatarSettingsInitialSection.localNetwork,
+                      sectionOnly: true,
+                    ),
+                  ),
+                ),
+              ] else ...<Widget>[_buildKotetekSelectors(context)],
+              const SizedBox(height: 10),
+              _buildActionButtons(context),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildKotetekSelectors(BuildContext context) {
+    return Column(
+      children: <Widget>[
         _BookDropdown(
           controller: controller,
           onInternetSettingsTap: () => _openSettings(
@@ -586,7 +764,14 @@ class DiatarHomePage extends StatelessWidget {
             const SizedBox(width: 30),
           ],
         ),
-        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      children: <Widget>[
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -2072,6 +2257,307 @@ class _VerseDropdown extends StatelessWidget {
           controller.setVerseIndex(value);
         }
       },
+    );
+  }
+}
+
+String _dialistEntryLabel(
+  DiatarMainController controller,
+  CustomOrderEntry entry,
+) {
+  if (entry.isSeparator) {
+    return _cleanSeparatorLabel(entry);
+  }
+  final String explicit = entry.label.trim();
+  if (explicit.isNotEmpty) {
+    return entry.isSongEntry ? _normalizeSlashSpacing(explicit) : explicit;
+  }
+  final String fallback = _entryShortLabel(controller, entry);
+  return entry.isSongEntry ? _normalizeSlashSpacing(fallback) : fallback;
+}
+
+class _DialistPanel extends StatefulWidget {
+  const _DialistPanel({
+    required this.controller,
+    required this.onInternetSettingsTap,
+    required this.onLocalNetworkSettingsTap,
+  });
+
+  final DiatarMainController controller;
+  final VoidCallback onInternetSettingsTap;
+  final VoidCallback onLocalNetworkSettingsTap;
+
+  @override
+  State<_DialistPanel> createState() => _DialistPanelState();
+}
+
+class _DialistPanelState extends State<_DialistPanel> {
+  static const double _itemExtent = 38;
+
+  final ScrollController _scrollController = ScrollController();
+  int _lastScrollTargetIndex = -1;
+  int _lastScrollTargetCount = -1;
+
+  DiatarMainController get controller => widget.controller;
+
+  TextStyle? _dialistTitleStyle(
+    ThemeData theme, {
+    required bool selected,
+    required bool isSeparator,
+  }) {
+    return theme.textTheme.bodySmall?.copyWith(
+      fontSize: 13,
+      fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+      fontStyle: isSeparator ? FontStyle.italic : FontStyle.normal,
+      color: isSeparator ? theme.colorScheme.onSurfaceVariant : null,
+    );
+  }
+
+  Widget _buildDialistTitle(
+    BuildContext context, {
+    required ThemeData theme,
+    required List<CustomOrderEntry> entries,
+    required int index,
+    required int selectedCursor,
+  }) {
+    final CustomOrderEntry entry = entries[index];
+    final bool selected = index == selectedCursor;
+    final bool isSeparator = entry.isSeparator;
+    final TextStyle? style = _dialistTitleStyle(
+      theme,
+      selected: selected,
+      isSeparator: isSeparator,
+    );
+    final String label = _dialistEntryLabel(controller, entry);
+    final String firstLine = controller.firstTextLineForEntry(entry);
+
+    if (isSeparator || index <= 0) {
+      return _buildTitleWithFirstLine(
+        title: label,
+        firstLine: firstLine,
+        titleStyle: style,
+      );
+    }
+
+    final ({String prefix, String suffix})? split = _splitSlashLabel(label);
+    if (split == null) {
+      return _buildTitleWithFirstLine(
+        title: label,
+        firstLine: firstLine,
+        titleStyle: style,
+      );
+    }
+
+    final CustomOrderEntry previousEntry = entries[index - 1];
+    if (previousEntry.isSeparator) {
+      return _buildTitleWithFirstLine(
+        title: label,
+        firstLine: firstLine,
+        titleStyle: style,
+      );
+    }
+
+    final String previousLabel = _dialistEntryLabel(controller, previousEntry);
+    final ({String prefix, String suffix})? previousSplit = _splitSlashLabel(
+      previousLabel,
+    );
+    if (previousSplit == null || previousSplit.prefix != split.prefix) {
+      return _buildTitleWithFirstLine(
+        title: label,
+        firstLine: firstLine,
+        titleStyle: style,
+      );
+    }
+
+    final bool previousSelected = (index - 1) == selectedCursor;
+    final TextStyle? previousStyle = _dialistTitleStyle(
+      theme,
+      selected: previousSelected,
+      isSeparator: previousEntry.isSeparator,
+    );
+
+    final List<InlineSpan> spans = <InlineSpan>[
+      TextSpan(
+        text: split.prefix,
+        style: previousStyle?.copyWith(color: Colors.transparent),
+      ),
+      TextSpan(text: '/${split.suffix}', style: style),
+    ];
+    if (firstLine.trim().isNotEmpty) {
+      spans.add(
+        TextSpan(
+          text: ' ($firstLine)',
+          style: style?.copyWith(
+            fontSize: ((style?.fontSize ?? 13) * 0.85),
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      );
+    }
+
+    return Text.rich(
+      TextSpan(children: spans),
+      overflow: TextOverflow.ellipsis,
+      maxLines: 1,
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _ensureSelectedVisible(int index, int itemCount) {
+    if (index < 0 || index >= itemCount) {
+      return;
+    }
+    if (_lastScrollTargetIndex == index &&
+        _lastScrollTargetCount == itemCount) {
+      return;
+    }
+    _lastScrollTargetIndex = index;
+    _lastScrollTargetCount = itemCount;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) {
+        return;
+      }
+      final ScrollPosition pos = _scrollController.position;
+      if (!pos.hasViewportDimension) {
+        return;
+      }
+
+      final double itemTop = index * _itemExtent;
+      final double itemBottom = itemTop + _itemExtent;
+      final double viewportTop = pos.pixels;
+      final double viewportBottom = viewportTop + pos.viewportDimension;
+      double? targetOffset;
+
+      if (itemTop < viewportTop) {
+        targetOffset = itemTop;
+      } else if (itemBottom > viewportBottom) {
+        targetOffset = itemBottom - pos.viewportDimension;
+      }
+
+      if (targetOffset == null) {
+        return;
+      }
+
+      final double clamped = targetOffset.clamp(0.0, pos.maxScrollExtent);
+      _scrollController.animateTo(
+        clamped,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final List<CustomOrderEntry> entries = controller.customOrder;
+    final int selectedCursor = controller.selectedCustomOrderCursor;
+
+    _ensureSelectedVisible(selectedCursor, entries.length);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Expanded(
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: context.l10n.dialistLabel,
+              border: const OutlineInputBorder(),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 6,
+              ),
+            ),
+            child: entries.isEmpty
+                ? const SizedBox.shrink()
+                : ListView.builder(
+                    controller: _scrollController,
+                    primary: false,
+                    itemCount: entries.length,
+                    itemExtent: _itemExtent,
+                    itemBuilder: (BuildContext context, int index) {
+                      final CustomOrderEntry entry = entries[index];
+                      final bool isSeparator = entry.isSeparator;
+                      final bool selected = index == selectedCursor;
+                      return ListTile(
+                        dense: true,
+                        visualDensity: const VisualDensity(
+                          horizontal: 0,
+                          vertical: -2,
+                        ),
+                        minTileHeight: 38,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                        ),
+                        title: _buildDialistTitle(
+                          context,
+                          theme: theme,
+                          entries: entries,
+                          index: index,
+                          selectedCursor: selectedCursor,
+                        ),
+                        selected: selected,
+                        selectedColor: theme.colorScheme.onPrimaryContainer,
+                        selectedTileColor: theme.colorScheme.primaryContainer
+                            .withValues(alpha: 0.55),
+                        onTap: isSeparator
+                            ? null
+                            : () {
+                                controller.selectCustomOrderEntryAt(index);
+                                _ensureSelectedVisible(index, entries.length);
+                              },
+                      );
+                    },
+                  ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: <Widget>[
+            Tooltip(
+              message: _statusTooltip(
+                context,
+                title: context.l10n.settingsInternetTitle,
+                state: _mqttIndicatorState(controller),
+              ),
+              child: InkResponse(
+                radius: 20,
+                onTap: widget.onInternetSettingsTap,
+                child: _statusIcon(
+                  icon: Icons.public,
+                  state: _mqttIndicatorState(controller),
+                  theme: theme,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Tooltip(
+              message: _statusTooltip(
+                context,
+                title: context.l10n.settingsLocalNetworkTitle,
+                state: _localNetworkIndicatorState(controller),
+              ),
+              child: InkResponse(
+                radius: 20,
+                onTap: widget.onLocalNetworkSettingsTap,
+                child: _statusIcon(
+                  icon: Icons.lan,
+                  state: _localNetworkIndicatorState(controller),
+                  theme: theme,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

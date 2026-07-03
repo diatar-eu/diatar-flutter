@@ -719,6 +719,30 @@ abstract class AppLocalizations {
   /// **'Nincs betöltött dia.'**
   String get noLoadedSlide;
 
+  /// No description provided for @homeControlModeTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Képernyőmód'**
+  String get homeControlModeTooltip;
+
+  /// No description provided for @homeControlModeBooks.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kötetek'**
+  String get homeControlModeBooks;
+
+  /// No description provided for @homeControlModeDialist.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dialista'**
+  String get homeControlModeDialist;
+
+  /// No description provided for @dialistLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dialista'**
+  String get dialistLabel;
+
   /// No description provided for @bookLabel.
   ///
   /// In hu, this message translates to:

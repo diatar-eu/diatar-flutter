@@ -417,6 +417,18 @@ class AppLocalizationsHu extends AppLocalizations {
   String get noLoadedSlide => 'Nincs betöltött dia.';
 
   @override
+  String get homeControlModeTooltip => 'Képernyőmód';
+
+  @override
+  String get homeControlModeBooks => 'Kötetek';
+
+  @override
+  String get homeControlModeDialist => 'Dialista';
+
+  @override
+  String get dialistLabel => 'Dialista';
+
+  @override
   String get bookLabel => 'Kötet';
 
   @override
