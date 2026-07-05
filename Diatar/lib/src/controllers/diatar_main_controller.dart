@@ -9,7 +9,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../utils/escape_sequences.dart';
+import '../core/books/book_sort_policy.dart';
+import '../core/custom_order/custom_order_normalizer.dart';
+import '../core/custom_order/custom_order_navigation_policy.dart';
+import '../core/custom_order/entry_label_service.dart';
+import '../core/custom_order/entry_match_policy.dart';
+import '../core/custom_order/entry_resolver.dart';
+import '../core/dia/dia_ini_parser.dart';
+import '../core/dia/dia_matching_policy.dart';
+import '../core/dia/dia_path_policy.dart';
+import '../core/navigation/song_navigation_policy.dart';
+import '../core/navigation/song_selection_policy.dart';
+import '../models/custom_order_entry.dart';
 import '../services/mqtt_sender_service.dart';
 import '../services/dtx_download_service.dart';
 import '../services/dtx_order_store.dart';
@@ -17,6 +28,8 @@ import '../services/settings_store.dart';
 import '../services/tcp_sender_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
 import '../services/zsolozsma_service.dart';
+
+export '../models/custom_order_entry.dart';
 
 class SongbookOrderItem {
   const SongbookOrderItem({
@@ -46,68 +59,6 @@ class CustomOrderCandidate {
   final String songTitle;
 
   String get label => '$bookTitle: $songTitle';
-}
-
-class CustomOrderEntry {
-  static const String separatorFileName = '__separator__';
-  static const int separatorSongIndex = -3;
-
-  const CustomOrderEntry({
-    required this.fileName,
-    required this.songIndex,
-    required this.verseIndex,
-    required this.label,
-    this.customTextTitle,
-    this.customTextBody,
-    this.customImagePath,
-    this.customType,
-    this.customData = const <String, dynamic>{},
-    this.storageExtras = const <String, dynamic>{},
-  });
-
-  final String fileName;
-  final int songIndex;
-  final int verseIndex;
-  final String label;
-  final String? customTextTitle;
-  final String? customTextBody;
-  final String? customImagePath;
-  final String? customType;
-  final Map<String, dynamic> customData;
-  final Map<String, dynamic> storageExtras;
-
-  bool get isSeparator =>
-      fileName == separatorFileName && songIndex == separatorSongIndex;
-  bool get isCustomText =>
-      customType == 'text' || customTextBody != null || customTextTitle != null;
-  bool get isCustomImage => customType == 'image' || customImagePath != null;
-  bool get isSongEntry => !isSeparator && songIndex >= 0;
-
-  CustomOrderEntry copyWith({
-    String? fileName,
-    int? songIndex,
-    int? verseIndex,
-    String? label,
-    String? customTextTitle,
-    String? customTextBody,
-    String? customImagePath,
-    String? customType,
-    Map<String, dynamic>? customData,
-    Map<String, dynamic>? storageExtras,
-  }) {
-    return CustomOrderEntry(
-      fileName: fileName ?? this.fileName,
-      songIndex: songIndex ?? this.songIndex,
-      verseIndex: verseIndex ?? this.verseIndex,
-      label: label ?? this.label,
-      customTextTitle: customTextTitle ?? this.customTextTitle,
-      customTextBody: customTextBody ?? this.customTextBody,
-      customImagePath: customImagePath ?? this.customImagePath,
-      customType: customType ?? this.customType,
-      customData: customData ?? this.customData,
-      storageExtras: storageExtras ?? this.storageExtras,
-    );
-  }
 }
 
 class DtxImportResult {
@@ -142,6 +93,28 @@ class DtxManageItem {
 
 class DiatarMainController extends ChangeNotifier {
   final DtxParser _parser = const DtxParser();
+  final DiaIniParser _diaIniParser = const DiaIniParser();
+  final DiaMatchingPolicy _diaMatchingPolicy = const DiaMatchingPolicy();
+  final DiaPathPolicy _diaPathPolicy = const DiaPathPolicy();
+  final BookSortPolicy _bookSortPolicy = const BookSortPolicy();
+    final SongNavigationPolicy _songNavigationPolicy =
+      const SongNavigationPolicy();
+    final SongSelectionPolicy _songSelectionPolicy =
+      const SongSelectionPolicy();
+  final CustomOrderNavigationPolicy _customOrderNavigationPolicy =
+      const CustomOrderNavigationPolicy();
+  final EntryResolver _entryResolver = const EntryResolver();
+  late final EntryMatchPolicy _entryMatchPolicy = EntryMatchPolicy(
+    resolver: _entryResolver,
+  );
+  late final EntryLabelService _entryLabelService = EntryLabelService(
+    resolver: _entryResolver,
+  );
+  late final CustomOrderNormalizer _customOrderNormalizer =
+      CustomOrderNormalizer(
+        resolver: _entryResolver,
+        labelService: _entryLabelService,
+      );
   final SettingsStore _settingsStore = SettingsStore();
   final DtxDownloadService _downloadService = DtxDownloadService();
   final DtxOrderStore _orderStore = DtxOrderStore();
@@ -278,16 +251,7 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   int _safeVerseIndex(CustomOrderEntry entry, {int fallback = 0}) {
-    try {
-      final dynamic value = (entry as dynamic).verseIndex;
-      if (value is int) {
-        return value;
-      }
-      if (value is num) {
-        return value.toInt();
-      }
-    } catch (_) {}
-    return fallback;
+    return _customOrderNormalizer.safeVerseIndex(entry, fallback: fallback);
   }
 
   bool get _hasConfiguredBackgroundImage =>
@@ -1304,221 +1268,59 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   DtxBook? bookForEntry(CustomOrderEntry entry) {
-    final int idx = books.indexWhere(
-      (DtxBook b) => b.fileName == entry.fileName,
-    );
-    if (idx < 0) {
-      return null;
-    }
-    return books[idx];
+    return _entryLabelService.bookForEntry(books, entry);
   }
 
   DtxSong? songForEntry(CustomOrderEntry entry) {
-    final DtxBook? b = bookForEntry(entry);
-    if (b == null || b.songs.isEmpty) {
-      return null;
-    }
-    final int safeSong = entry.songIndex.clamp(0, b.songs.length - 1);
-    return b.songs[safeSong];
+    return _entryLabelService.songForEntry(books, entry);
   }
 
   List<DtxVerse> versesForEntry(CustomOrderEntry entry) {
-    final DtxSong? s = songForEntry(entry);
-    return s?.verses ?? const <DtxVerse>[];
+    return _entryLabelService.versesForEntry(books, entry);
   }
 
   String firstTextLineForEntry(CustomOrderEntry entry) {
-    if (entry.isSeparator || entry.isCustomImage) {
-      return '';
-    }
-    if (entry.isCustomText) {
-      return firstMeaningfulLineFromText(entry.customTextBody ?? '');
-    }
-    final List<DtxVerse> verses = versesForEntry(entry);
-    if (verses.isEmpty) {
-      return '';
-    }
-    return firstMeaningfulLine(verses[_safeVerseIndex(entry)].lines);
+    return _entryLabelService.firstTextLineForEntry(books, entry);
   }
 
   String buildEntryLabel(String fileName, int songIndex, int verseIndex) {
-    final int bIx = books.indexWhere((DtxBook b) => b.fileName == fileName);
-    if (bIx < 0) {
-      return fileName;
-    }
-    final DtxBook b = books[bIx];
-    if (b.songs.isEmpty) {
-      return b.displayName;
-    }
-    final int safeSong = songIndex.clamp(0, b.songs.length - 1);
-    final DtxSong song = b.songs[safeSong];
-    if (song.verses.isEmpty) {
-      return '${b.displayName}: ${song.title}';
-    }
-    final String verseName = song
-        .verses[verseIndex.clamp(0, song.verses.length - 1)]
-        .name
-        .trim();
-    final bool hideVersePart =
-        verseName.isEmpty || ((song.verses.length == 1) && verseName == '---');
-    return hideVersePart
-        ? '${b.displayName}: ${song.title}'
-        : '${b.displayName}: ${song.title} / $verseName';
+    return _entryLabelService.buildEntryLabel(
+      books,
+      fileName,
+      songIndex,
+      verseIndex,
+    );
   }
 
   String _normalizeDiaText(String text) {
-    const Map<String, String> repl = <String, String>{
-      'á': 'a',
-      'é': 'e',
-      'í': 'i',
-      'ó': 'o',
-      'ö': 'o',
-      'ő': 'o',
-      'ú': 'u',
-      'ü': 'u',
-      'ű': 'u',
-      'Á': 'a',
-      'É': 'e',
-      'Í': 'i',
-      'Ó': 'o',
-      'Ö': 'o',
-      'Ő': 'o',
-      'Ú': 'u',
-      'Ü': 'u',
-      'Ű': 'u',
-    };
-    final StringBuffer sb = StringBuffer();
-    bool lastWasSpace = false;
-    for (final int rune in text.runes) {
-      final String ch = String.fromCharCode(rune);
-      final String mapped = repl[ch] ?? ch;
-      final bool isSep =
-          mapped.trim().isEmpty ||
-          mapped == '_' ||
-          mapped == '-' ||
-          mapped == '/';
-      if (isSep) {
-        if (!lastWasSpace) {
-          sb.write(' ');
-          lastWasSpace = true;
-        }
-        continue;
-      }
-      sb.write(mapped.toLowerCase());
-      lastWasSpace = false;
-    }
-    return sb.toString().trim().replaceAll(RegExp(r'\s+'), ' ');
+    return _diaMatchingPolicy.normalize(text);
   }
 
   int _findBookIndexForDia(String kotet) {
-    final String needle = _normalizeDiaText(kotet);
-    if (needle.isEmpty) {
-      return -1;
-    }
-    return books.indexWhere((DtxBook b) {
-      return _normalizeDiaText(b.title) == needle ||
-          _normalizeDiaText(b.displayName) == needle ||
-          _normalizeDiaText(b.fileName) == needle;
-    });
+    return _diaMatchingPolicy.findBookIndex(books, kotet);
   }
 
   int _findSongIndexForDia(DtxBook book, String enek) {
-    final String needle = _normalizeDiaText(enek);
-    if (needle.isEmpty) {
-      return -1;
-    }
-    return book.songs.indexWhere(
-      (DtxSong s) => !s.separator && _normalizeDiaText(s.title) == needle,
-    );
+    return _diaMatchingPolicy.findSongIndex(book, enek);
   }
 
   int _findVerseIndexForDia(DtxSong song, String versszak) {
-    final String needle = _normalizeDiaText(versszak);
-    if (needle.isEmpty) {
-      return 0;
-    }
-    final int parsed = song.verses.indexWhere(
-      (DtxVerse v) => _normalizeDiaText(v.name) == needle,
-    );
-    return parsed >= 0 ? parsed : 0;
+    return _diaMatchingPolicy.findVerseIndex(song, versszak);
   }
 
   int _findCustomOrderIndexByEntry(
     CustomOrderEntry entry, {
     int preferredCursor = -1,
   }) {
-    bool matches(int idx) {
-      if (idx < 0 || idx >= _customOrder.length) {
-        return false;
-      }
-      final CustomOrderEntry candidate = _customOrder[idx];
-      if (!entry.isSongEntry || !candidate.isSongEntry) {
-        return candidate.fileName == entry.fileName &&
-            candidate.songIndex == entry.songIndex &&
-            candidate.label == entry.label &&
-            candidate.customTextTitle == entry.customTextTitle &&
-            candidate.customTextBody == entry.customTextBody &&
-            candidate.customImagePath == entry.customImagePath &&
-            candidate.customType == entry.customType &&
-            mapEquals(candidate.customData, entry.customData);
-      }
-      return candidate.fileName == entry.fileName &&
-          candidate.songIndex == entry.songIndex &&
-          _safeVerseIndex(candidate) == _safeVerseIndex(entry);
-    }
-
-    if (preferredCursor >= 0 &&
-        preferredCursor < _customOrder.length &&
-        matches(preferredCursor)) {
-      return preferredCursor;
-    }
-
-    if (preferredCursor >= 0) {
-      for (int i = preferredCursor + 1; i < _customOrder.length; i++) {
-        if (matches(i)) {
-          return i;
-        }
-      }
-      for (int i = 0; i < preferredCursor && i < _customOrder.length; i++) {
-        if (matches(i)) {
-          return i;
-        }
-      }
-      return -1;
-    }
-
-    for (int i = 0; i < _customOrder.length; i++) {
-      if (matches(i)) {
-        return i;
-      }
-    }
-    return -1;
+    return _entryMatchPolicy.findEntryIndex(
+      _customOrder,
+      entry,
+      preferredCursor: preferredCursor,
+    );
   }
 
   CustomOrderEntry normalizeEntry(CustomOrderEntry entry) {
-    if (!entry.isSongEntry) {
-      return entry;
-    }
-    final int bIx = books.indexWhere(
-      (DtxBook b) => b.fileName == entry.fileName,
-    );
-    if (bIx < 0) {
-      return entry;
-    }
-    final DtxBook b = books[bIx];
-    if (b.songs.isEmpty) {
-      return entry.copyWith(label: b.displayName);
-    }
-    final int safeSong = entry.songIndex.clamp(0, b.songs.length - 1);
-    final DtxSong song = b.songs[safeSong];
-    final int safeVerse = song.verses.isEmpty
-        ? 0
-        : _safeVerseIndex(entry).clamp(0, song.verses.length - 1);
-    return entry.copyWith(
-      songIndex: safeSong,
-      verseIndex: safeVerse,
-      label: buildEntryLabel(entry.fileName, safeSong, safeVerse),
-    );
+    return _customOrderNormalizer.normalizeEntry(entry, books);
   }
 
   Future<void> applyCustomOrder(
@@ -2032,161 +1834,27 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   String _relativeDiaImagePath(String rawPath, Directory diaDir) {
-    final String normalized = rawPath.trim().replaceAll('\\', '/');
-    if (normalized.isEmpty) {
-      return '';
-    }
-
-    // If already relative, keep it as-is for portability
-    final bool looksWindowsAbs = RegExp(r'^[a-zA-Z]:/').hasMatch(normalized);
-    final bool looksUnixAbs = normalized.startsWith('/');
-    if (!looksWindowsAbs && !looksUnixAbs) {
-      return normalized;
-    }
-
-    // Try to make absolute path relative to dia directory
-    final String diaDirNorm = diaDir.path.replaceAll('\\', '/');
-    final String diaPrefix = '$diaDirNorm/';
-    if (normalized.startsWith(diaPrefix)) {
-      // Same directory: return relative path
-      return normalized.substring(diaPrefix.length);
-    }
-
-    // Check if image is in a subdirectory of dia directory
-    // by comparing absolute paths (for cross-device portability)
-    try {
-      final File imageFile = File(
-        normalized.replaceAll('/', Platform.pathSeparator),
-      );
-      final File diaFile = File(diaDir.path);
-      final String imagePath = imageFile.absolute.path.replaceAll('\\', '/');
-      final String basePath = diaFile.absolute.path.replaceAll('\\', '/');
-
-      if (imagePath.startsWith('$basePath/')) {
-        // Image is within dia directory subtree: return relative path for portability
-        return imagePath.substring(basePath.length + 1);
-      }
-    } catch (_) {
-      // Path resolution failed; continue to fallback
-    }
-
-    // Fallback: return absolute path as-is for cache paths
-    // This preserves cache image paths which are stable within same device
-    return normalized;
+    return _diaPathPolicy.relativeDiaImagePath(rawPath, diaDir);
   }
 
   String _resolveDiaImagePath(String diaPath, String relOrAbs) {
-    final String normalized = relOrAbs.trim().replaceAll('\\', '/');
-    if (normalized.isEmpty) {
-      return '';
-    }
-
-    // Check if it's an absolute path (Windows or Unix style)
-    final bool looksWindowsAbs = RegExp(r'^[a-zA-Z]:/').hasMatch(normalized);
-    final bool looksUnixAbs = normalized.startsWith('/');
-
-    if (looksWindowsAbs || looksUnixAbs) {
-      // Absolute path: try to use as-is for same device
-      final File absFile = File(
-        normalized.replaceAll('/', Platform.pathSeparator),
-      );
-      if (absFile.existsSync()) {
-        return absFile.path;
-      }
-
-      // Fallback: if absolute path doesn't exist (e.g., cache on different device),
-      // try to find the file by name in the dia directory
-      final String fileName = _fileNameFromPath(normalized);
-      final Directory diaDir = File(diaPath).parent;
-      final File fallbackFile = File(
-        '${diaDir.path}${Platform.pathSeparator}$fileName',
-      );
-      if (fallbackFile.existsSync()) {
-        return fallbackFile.path;
-      }
-
-      // Return the absolute path as-is (will fail gracefully with error message)
-      return normalized;
-    }
-
-    // Relative path: resolve relative to .dia file directory
-    final Directory parent = File(diaPath).parent;
-    final String resolvedPath =
-        '${parent.path}${Platform.pathSeparator}${normalized.replaceAll('/', Platform.pathSeparator)}';
-    final File relFile = File(resolvedPath);
-    if (relFile.existsSync()) {
-      return relFile.path;
-    }
-    // Return the resolved path even if not found (user will get feedback)
-    return resolvedPath;
+    return _diaPathPolicy.resolveDiaImagePath(diaPath, relOrAbs);
   }
 
   String _fileNameFromPath(String rawPath) {
-    final String normalized = rawPath.replaceAll('\\', '/');
-    final List<String> parts = normalized
-        .split('/')
-        .where((String part) => part.isNotEmpty)
-        .toList();
-    if (parts.isEmpty) {
-      return normalized;
-    }
-    return parts.last;
+    return _diaPathPolicy.fileNameFromPath(rawPath);
   }
 
   String _stripFileExtension(String fileName) {
-    final String trimmed = fileName.trim();
-    final int dotIndex = trimmed.lastIndexOf('.');
-    if (dotIndex <= 0) {
-      return trimmed;
-    }
-    return trimmed.substring(0, dotIndex);
+    return _diaPathPolicy.stripFileExtension(fileName);
   }
 
   List<String> _collectDiaLines(Map<String, String> sec, int declaredLines) {
-    if (declaredLines > 0) {
-      final List<String> lines = <String>[];
-      for (int i = 0; i < declaredLines; i++) {
-        lines.add((sec['line$i'] ?? '').trimRight());
-      }
-      return lines;
-    }
-
-    final List<int> indexes =
-        sec.keys
-            .where((String key) => key.startsWith('line'))
-            .map((String key) => int.tryParse(key.substring(4)) ?? -1)
-            .where((int value) => value >= 0)
-            .toList()
-          ..sort();
-    return indexes.map((int i) => (sec['line$i'] ?? '').trimRight()).toList();
+    return _diaIniParser.collectLines(sec, declaredLines);
   }
 
   Map<String, Map<String, String>> _parseDiaIni(String content) {
-    final Map<String, Map<String, String>> sections =
-        <String, Map<String, String>>{};
-    String current = 'main';
-    sections[current] = <String, String>{};
-
-    for (final String rawLine in content.split(RegExp(r'\r?\n'))) {
-      final String line = rawLine.trim();
-      if (line.isEmpty || line.startsWith(';') || line.startsWith('#')) {
-        continue;
-      }
-      if (line.startsWith('[') && line.endsWith(']')) {
-        current = line.substring(1, line.length - 1).trim().toLowerCase();
-        sections.putIfAbsent(current, () => <String, String>{});
-        continue;
-      }
-      final int eq = line.indexOf('=');
-      if (eq <= 0) {
-        continue;
-      }
-      final String key = line.substring(0, eq).trim().toLowerCase();
-      final String value = line.substring(eq + 1).trim();
-      sections[current]![key] = value;
-    }
-
-    return sections;
+    return _diaIniParser.parse(content);
   }
 
   Future<void> applyDtxManagerSelection({
@@ -2335,48 +2003,11 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   int _compareBooksLikeAndroid(DtxBook left, DtxBook right) {
-    final String lGroup = left.group.trim();
-    final String rGroup = right.group.trim();
-    final bool lEmpty = lGroup.isEmpty;
-    final bool rEmpty = rGroup.isEmpty;
-    if (lEmpty != rEmpty) {
-      return lEmpty ? 1 : -1;
-    }
-    final int lGroupPriority = _preferredBookGroupPriority(lGroup);
-    final int rGroupPriority = _preferredBookGroupPriority(rGroup);
-    if (lGroupPriority != rGroupPriority) {
-      return lGroupPriority.compareTo(rGroupPriority);
-    }
-    final int groupCmp = lGroup.toLowerCase().compareTo(rGroup.toLowerCase());
-    if (groupCmp != 0) {
-      return groupCmp;
-    }
-
-    final int lOrder = left.order;
-    final int rOrder = right.order;
-    if (lOrder != 0) {
-      if (rOrder != 0) {
-        return lOrder.compareTo(rOrder);
-      }
-      return -1;
-    }
-    if (rOrder != 0) {
-      return 1;
-    }
-
-    return left.title.toLowerCase().compareTo(right.title.toLowerCase());
+    return _bookSortPolicy.compare(left, right);
   }
 
   int _preferredBookGroupPriority(String group) {
-    // Keep these two groups first in every grouped book list.
-    switch (group.trim().toLowerCase()) {
-      case 'népénekes könyvek':
-        return 0;
-      case 'mise és liturgia':
-        return 1;
-      default:
-        return 2;
-    }
+    return _bookSortPolicy.preferredGroupPriority(group);
   }
 
   DtxBook? get currentBook =>
@@ -2558,41 +2189,14 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   int _currentCustomOrderIndex() {
-    if (_projectedCustomCursor >= 0 &&
-        _projectedCustomCursor < _customOrder.length) {
-      return _projectedCustomCursor;
-    }
-
-    final DtxBook? b = currentBook;
-    if (b == null || _customOrder.isEmpty) {
-      return -1;
-    }
-
-    bool matches(int idx) {
-      if (idx < 0 || idx >= _customOrder.length) {
-        return false;
-      }
-      final CustomOrderEntry e = _customOrder[idx];
-      return e.fileName == b.fileName &&
-          e.songIndex == songIndex &&
-          _safeVerseIndex(e) == verseIndex;
-    }
-
-    // Prefer current cursor when duplicates exist.
-    if (matches(_customOrderCursor)) {
-      return _customOrderCursor;
-    }
-    for (int i = _customOrderCursor + 1; i < _customOrder.length; i++) {
-      if (matches(i)) {
-        return i;
-      }
-    }
-    for (int i = 0; i <= _customOrderCursor && i < _customOrder.length; i++) {
-      if (matches(i)) {
-        return i;
-      }
-    }
-    return -1;
+    return _entryMatchPolicy.findCurrentIndex(
+      source: _customOrder,
+      projectedCursor: _projectedCustomCursor,
+      currentCursor: _customOrderCursor,
+      currentBookFileName: currentBook?.fileName,
+      currentSongIndex: songIndex,
+      currentVerseIndex: verseIndex,
+    );
   }
 
   void prevVerse() {
@@ -2716,86 +2320,25 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   int? _findSelectableSongIndex(int start, {required bool forward}) {
-    final List<DtxSong> songs = currentBook?.songs ?? const <DtxSong>[];
-    if (songs.isEmpty) {
-      return null;
-    }
-    int idx = start;
-    while (idx >= 0 && idx < songs.length) {
-      if (!songs[idx].separator) {
-        return idx;
-      }
-      idx += forward ? 1 : -1;
-    }
-    return null;
+    return _songNavigationPolicy.findSelectableSongIndex(
+      currentBook?.songs ?? const <DtxSong>[],
+      start,
+      forward: forward,
+    );
   }
 
   int? _findNextProjectableCustomOrderIndex(int start) {
-    int idx = start;
-    while (idx >= 0 && idx < _customOrder.length) {
-      if (!_customOrder[idx].isSeparator) {
-        return idx;
-      }
-      idx++;
-    }
-    return null;
+    return _customOrderNavigationPolicy.findNextProjectableIndex(
+      _customOrder,
+      start,
+    );
   }
 
   int? _findPrevProjectableCustomOrderIndex(int start) {
-    int idx = start;
-    while (idx >= 0 && idx < _customOrder.length) {
-      if (!_customOrder[idx].isSeparator) {
-        return idx;
-      }
-      idx--;
-    }
-    return null;
-  }
-
-  String? _nonSongSlashGroupPrefix(CustomOrderEntry entry) {
-    if (entry.isSongEntry || entry.isSeparator) {
-      return null;
-    }
-    final String source = (entry.customTextTitle ?? entry.label).trim();
-    if (source.isEmpty) {
-      return null;
-    }
-    final int slashIndex = source.indexOf('/');
-    if (slashIndex <= 0 || slashIndex >= source.length - 1) {
-      return null;
-    }
-    final String prefix = source.substring(0, slashIndex).trim();
-    final String suffix = source.substring(slashIndex + 1).trim();
-    if (prefix.isEmpty || suffix.isEmpty) {
-      return null;
-    }
-    return prefix.toLowerCase();
-  }
-
-  bool _isDiaSongGroupContinuation(int previousIndex, int currentIndex) {
-    if (previousIndex < 0 ||
-        currentIndex < 0 ||
-        previousIndex >= _customOrder.length ||
-        currentIndex >= _customOrder.length) {
-      return false;
-    }
-    final CustomOrderEntry previous = _customOrder[previousIndex];
-    final CustomOrderEntry current = _customOrder[currentIndex];
-    if (previous.isSongEntry && current.isSongEntry) {
-      return previous.fileName == current.fileName &&
-          previous.songIndex == current.songIndex &&
-          _safeVerseIndex(current) == _safeVerseIndex(previous) + 1;
-    }
-
-    final String? previousPrefix = _nonSongSlashGroupPrefix(previous);
-    if (previousPrefix == null) {
-      return false;
-    }
-    final String? currentPrefix = _nonSongSlashGroupPrefix(current);
-    if (currentPrefix == null) {
-      return false;
-    }
-    return previousPrefix == currentPrefix;
+    return _customOrderNavigationPolicy.findPrevProjectableIndex(
+      _customOrder,
+      start,
+    );
   }
 
   int _currentDiaGroupStartIndex() {
@@ -2803,39 +2346,27 @@ class DiatarMainController extends ChangeNotifier {
     if (current < 0 || current >= _customOrder.length) {
       current = _customOrderCursor.clamp(0, _customOrder.length - 1);
     }
-    while (current > 0 && _isDiaSongGroupContinuation(current - 1, current)) {
-      current--;
-    }
-    return current;
+    return _customOrderNavigationPolicy.currentDiaGroupStartIndex(
+      _customOrder,
+      current,
+      safeVerseIndex: _safeVerseIndex,
+    );
   }
 
   int? _findNextDiaSongGroupStart() {
-    if (_customOrder.isEmpty) {
-      return null;
-    }
-    int next = _currentDiaGroupStartIndex() + 1;
-    while (next < _customOrder.length &&
-        _isDiaSongGroupContinuation(next - 1, next)) {
-      next++;
-    }
-    if (next >= _customOrder.length) {
-      return null;
-    }
-    return next;
+    return _customOrderNavigationPolicy.findNextDiaSongGroupStart(
+      _customOrder,
+      _currentDiaGroupStartIndex(),
+      safeVerseIndex: _safeVerseIndex,
+    );
   }
 
   int? _findPrevDiaSongGroupStart() {
-    if (_customOrder.isEmpty) {
-      return null;
-    }
-    int start = _currentDiaGroupStartIndex() - 1;
-    if (start < 0) {
-      return null;
-    }
-    while (start > 0 && _isDiaSongGroupContinuation(start - 1, start)) {
-      start--;
-    }
-    return start;
+    return _customOrderNavigationPolicy.findPrevDiaSongGroupStart(
+      _customOrder,
+      _currentDiaGroupStartIndex(),
+      safeVerseIndex: _safeVerseIndex,
+    );
   }
 
   void _selectSongAndVerse(
@@ -2847,21 +2378,24 @@ class DiatarMainController extends ChangeNotifier {
     if (b == null || b.songs.isEmpty) {
       return;
     }
-    final int song = targetSong.clamp(0, b.songs.length - 1);
-    final DtxSong songModel = b.songs[song];
-    final int verse = songModel.verses.isEmpty
-        ? 0
-        : targetVerse.clamp(0, songModel.verses.length - 1);
+    final SongSelectionResult? selection = _songSelectionPolicy
+        .selectSongAndVerse(
+          songs: b.songs,
+          targetSong: targetSong,
+          targetVerse: targetVerse,
+          includeVerseInStatus: includeVerseInStatus,
+        );
+    if (selection == null) {
+      return;
+    }
 
-    songIndex = song;
-    verseIndex = verse;
+    songIndex = selection.songIndex;
+    verseIndex = selection.verseIndex;
     highPos = 0;
     _resetHighlightRenderState();
     _projectedCustomCursor = -1;
-    final String code = includeVerseInStatus
-        ? 'statusSongVerseSelected'
-        : 'statusSongSelected';
-    _setStatus(code, <String, String>{'title': songModel.title});
+    final DtxSong selectedSong = b.songs[selection.songIndex];
+    _setStatus(selection.statusCode, <String, String>{'title': selectedSong.title});
     _syncCustomCursorFromCurrentSong();
     notifyListeners();
     _syncCurrentDia();
