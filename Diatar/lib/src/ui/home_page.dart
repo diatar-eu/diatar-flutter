@@ -119,7 +119,7 @@ Widget _buildTitleWithFirstLine({
       TextSpan(
         text: ' ($firstLine)',
         style: titleStyle?.copyWith(
-          fontSize: ((titleStyle?.fontSize ?? 13) * 0.85),
+          fontSize: ((titleStyle.fontSize ?? 13) * 0.85),
           fontWeight: FontWeight.w400,
         ),
       ),
@@ -2388,7 +2388,7 @@ class _DialistPanelState extends State<_DialistPanel> {
         TextSpan(
           text: ' ($firstLine)',
           style: style?.copyWith(
-            fontSize: ((style?.fontSize ?? 13) * 0.85),
+            fontSize: ((style.fontSize ?? 13) * 0.85),
             fontWeight: FontWeight.w400,
           ),
         ),
@@ -2895,11 +2895,11 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
     with SingleTickerProviderStateMixin {
   static const Duration _settleDuration = Duration(milliseconds: 180);
 
-  double _dragDx = 0;
+  Offset _dragOffset = Offset.zero;
   bool _isDragging = false;
   bool _isAnimatingPageTurn = false;
   late final AnimationController _pageTurnController;
-  Animation<double>? _pageTurnAnimation;
+  Animation<Offset>? _pageTurnAnimation;
 
   @override
   void initState() {
@@ -2907,12 +2907,12 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
     _pageTurnController =
         AnimationController(vsync: this, duration: _settleDuration)
           ..addListener(() {
-            final Animation<double>? animation = _pageTurnAnimation;
+            final Animation<Offset>? animation = _pageTurnAnimation;
             if (animation == null) {
               return;
             }
             setState(() {
-              _dragDx = animation.value;
+              _dragOffset = animation.value;
             });
           });
   }
@@ -2930,11 +2930,11 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
   }
 
   void _resetDrag() {
-    if (_dragDx == 0 && !_isDragging) {
+    if (_dragOffset == Offset.zero && !_isDragging) {
       return;
     }
     setState(() {
-      _dragDx = 0;
+      _dragOffset = Offset.zero;
       _isDragging = false;
     });
   }
@@ -2945,22 +2945,22 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
     }
     _pageTurnController.stop();
     setState(() {
-      _dragDx = 0;
+      _dragOffset = Offset.zero;
       _isDragging = true;
     });
   }
 
-  void _updateDrag(double nextDx) {
+  void _updateDrag(Offset nextOffset) {
     if (_isAnimatingPageTurn) {
       return;
     }
     setState(() {
-      _dragDx = nextDx;
+      _dragOffset = nextOffset;
     });
   }
 
-  Future<void> _animateOffset(double begin, double end) async {
-    _pageTurnAnimation = Tween<double>(begin: begin, end: end).animate(
+  Future<void> _animateOffset(Offset begin, Offset end) async {
+    _pageTurnAnimation = Tween<Offset>(begin: begin, end: end).animate(
       CurvedAnimation(parent: _pageTurnController, curve: Curves.easeOutCubic),
     );
     _pageTurnController
@@ -2970,7 +2970,7 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
   }
 
   Future<void> _animatePageTurn(
-    double targetDx,
+    Offset targetOffset,
     VoidCallback pageAction,
   ) async {
     if (_isAnimatingPageTurn) {
@@ -2983,7 +2983,7 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
     });
 
     try {
-      await _animateOffset(_dragDx, targetDx);
+      await _animateOffset(_dragOffset, targetOffset);
       if (!mounted) {
         return;
       }
@@ -2995,16 +2995,16 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
       }
 
       setState(() {
-        _dragDx = -targetDx;
+        _dragOffset = Offset(-targetOffset.dx, -targetOffset.dy);
       });
 
-      await _animateOffset(-targetDx, 0);
+      await _animateOffset(_dragOffset, Offset.zero);
     } on TickerCanceled {
       return;
     } finally {
       if (mounted) {
         setState(() {
-          _dragDx = 0;
+          _dragOffset = Offset.zero;
           _isAnimatingPageTurn = false;
         });
       }
@@ -3023,7 +3023,17 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
         final double maxDrag = width * (desktopLike ? 0.30 : 0.40);
         final double distanceThreshold = width * (desktopLike ? 0.20 : 0.14);
         final double swipeVelocityThreshold = desktopLike ? 420.0 : 220.0;
-        final double turnTarget = width * 0.92;
+        final double turnTargetX = width * 0.92;
+
+        final double height = constraints.maxHeight.isFinite
+          ? constraints.maxHeight
+          : MediaQuery.of(context).size.height;
+        final double maxVerticalDrag = height * (desktopLike ? 0.30 : 0.38);
+        final double verticalDistanceThreshold =
+          height * (desktopLike ? 0.17 : 0.13);
+        final double verticalSwipeVelocityThreshold =
+          desktopLike ? 420.0 : 220.0;
+        final double turnTargetY = height * 0.90;
 
         return IgnorePointer(
           ignoring: _isAnimatingPageTurn,
@@ -3033,9 +3043,12 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
             onHorizontalDragStart: (_) => _startDrag(),
             onHorizontalDragUpdate: (DragUpdateDetails details) {
               _updateDrag(
-                (_dragDx + details.delta.dx)
-                    .clamp(-maxDrag, maxDrag)
-                    .toDouble(),
+                Offset(
+                  (_dragOffset.dx + details.delta.dx)
+                      .clamp(-maxDrag, maxDrag)
+                      .toDouble(),
+                  0,
+                ),
               );
             },
             onHorizontalDragCancel: _resetDrag,
@@ -3044,22 +3057,64 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
 
               final bool goPrev =
                   velocityDx > swipeVelocityThreshold ||
-                  _dragDx > distanceThreshold;
+                  _dragOffset.dx > distanceThreshold;
               final bool goNext =
                   velocityDx < -swipeVelocityThreshold ||
-                  _dragDx < -distanceThreshold;
+                  _dragOffset.dx < -distanceThreshold;
 
               if (goPrev) {
-                _animatePageTurn(turnTarget, widget.controller.prevVerse);
+                _animatePageTurn(
+                  Offset(turnTargetX, 0),
+                  widget.controller.prevVerse,
+                );
               } else if (goNext) {
-                _animatePageTurn(-turnTarget, widget.controller.nextVerse);
+                _animatePageTurn(
+                  Offset(-turnTargetX, 0),
+                  widget.controller.nextVerse,
+                );
+              } else {
+                _resetDrag();
+              }
+            },
+            onVerticalDragStart: (_) => _startDrag(),
+            onVerticalDragUpdate: (DragUpdateDetails details) {
+              _updateDrag(
+                Offset(
+                  0,
+                  (_dragOffset.dy + details.delta.dy)
+                      .clamp(-maxVerticalDrag, maxVerticalDrag)
+                      .toDouble(),
+                ),
+              );
+            },
+            onVerticalDragCancel: _resetDrag,
+            onVerticalDragEnd: (DragEndDetails details) {
+              final double velocityDy = details.velocity.pixelsPerSecond.dy;
+
+              final bool goPrevSong =
+                  velocityDy > verticalSwipeVelocityThreshold ||
+                  _dragOffset.dy > verticalDistanceThreshold;
+              final bool goNextSong =
+                  velocityDy < -verticalSwipeVelocityThreshold ||
+                  _dragOffset.dy < -verticalDistanceThreshold;
+
+              if (goPrevSong) {
+                _animatePageTurn(
+                  Offset(0, turnTargetY),
+                  widget.controller.prevSong,
+                );
+              } else if (goNextSong) {
+                _animatePageTurn(
+                  Offset(0, -turnTargetY),
+                  widget.controller.nextSong,
+                );
               } else {
                 _resetDrag();
               }
             },
             child: ClipRect(
               child: Transform.translate(
-                offset: Offset(_dragDx, 0),
+                offset: _dragOffset,
                 child: widget.child,
               ),
             ),

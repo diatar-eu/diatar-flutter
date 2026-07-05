@@ -2601,11 +2601,6 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
-    if (verseIndex > 0) {
-      _selectSongAndVerse(songIndex, 0, includeVerseInStatus: true);
-      return;
-    }
-
     if (diaVirtualBookSelected) {
       final int exactIdx = _currentCustomOrderIndex();
       if (exactIdx >= 0) {
@@ -2635,6 +2630,15 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
+    if (verseIndex > 0) {
+      _selectSongAndVerse(
+        songIndex,
+        verseIndex - 1,
+        includeVerseInStatus: true,
+      );
+      return;
+    }
+
     final int? prevSongIdx = _findSelectableSongIndex(
       songIndex - 1,
       forward: false,
@@ -2642,7 +2646,19 @@ class DiatarMainController extends ChangeNotifier {
     if (prevSongIdx == null) {
       return;
     }
-    _selectSongAndVerse(prevSongIdx, 0, includeVerseInStatus: true);
+    final DtxBook? b = currentBook;
+    if (b == null) {
+      return;
+    }
+    final DtxSong prevSong = b.songs[prevSongIdx];
+    final int prevSongLastVerse = prevSong.verses.isEmpty
+        ? 0
+        : prevSong.verses.length - 1;
+    _selectSongAndVerse(
+      prevSongIdx,
+      prevSongLastVerse,
+      includeVerseInStatus: true,
+    );
   }
 
   void nextSong() {
