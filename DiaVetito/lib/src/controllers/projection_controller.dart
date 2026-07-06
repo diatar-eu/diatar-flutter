@@ -11,54 +11,69 @@ import '../services/settings_store.dart';
 import '../services/tcp_server_service.dart';
 
 class ProjectionController extends ChangeNotifier {
-  static const MethodChannel _systemChannel = MethodChannel('com.polyjoe.diavetito/system');
+  static const MethodChannel _systemChannel = MethodChannel(
+    'com.polyjoe.diavetito/system',
+  );
 
   ProjectionController()
-      : _server = TcpServerService(
-          onState: _onStateStatic,
-          onText: _onTextStatic,
-          onPic: _onPicStatic,
-          onBlank: _onBlankStatic,
-          onAskSize: _onAskSizeStatic,
-          onError: _onErrorStatic,
-          onConnection: _onConnectionStatic,
-        ),
-        _mqtt = MqttService(
-          onError: _onErrorStatic,
-          onState: _onStateStatic,
-          onText: _onTextStatic,
-          onPic: _onPicStatic,
-          onBlank: _onBlankStatic,
-          onUsers: _onUsersStatic,
-        ) {
+    : _server = TcpServerService(
+        onState: _onStateStatic,
+        onText: _onTextStatic,
+        onPic: _onPicStatic,
+        onBlank: _onBlankStatic,
+        onAskSize: _onAskSizeStatic,
+        onError: _onErrorStatic,
+        onConnection: _onConnectionStatic,
+      ),
+      _mqtt = MqttService(
+        onError: _onErrorStatic,
+        onState: _onStateStatic,
+        onText: _onTextStatic,
+        onPic: _onPicStatic,
+        onBlank: _onBlankStatic,
+        onUsers: _onUsersStatic,
+        onConnection: _onMqttConnectionStatic,
+      ) {
     _instance = this;
   }
 
   static ProjectionController? _instance;
 
-  static void _onStateStatic(RecStateRecord record) => _instance?._onState(record);
+  static void _onStateStatic(RecStateRecord record) =>
+      _instance?._onState(record);
   static void _onTextStatic(RecTextRecord record) => _instance?._onText(record);
   static void _onPicStatic(RecImageRecord record) => _instance?._onPic(record);
-  static void _onBlankStatic(RecImageRecord record) => _instance?._onBlank(record);
+  static void _onBlankStatic(RecImageRecord record) =>
+      _instance?._onBlank(record);
   static void _onAskSizeStatic() => _instance?._onAskSize();
   static void _onErrorStatic(String message) => _instance?._onError(message);
-  static void _onConnectionStatic(bool connected) => _instance?._onConnection(connected);
-  static void _onUsersStatic(List<MqttUser> users) => _instance?._onUsers(users);
+  static void _onConnectionStatic(bool connected) =>
+      _instance?._onConnection(connected);
+  static void _onUsersStatic(List<MqttUser> users) =>
+      _instance?._onUsers(users);
+  static void _onMqttConnectionStatic(bool connected) =>
+      _instance?._onMqttConnection(connected);
 
   final SettingsStore _settingsStore = SettingsStore();
   final TcpServerService _server;
   final MqttService _mqtt;
 
   AppSettings settings = const AppSettings();
-  ProjectionGlobals globals = const ProjectionGlobals().copyWith(projecting: true);
-  ProjectionFrame? diaFrame = const LogoFrame(0);
+  ProjectionGlobals globals = const ProjectionGlobals().copyWith(
+    projecting: true,
+  );
+  ProjectionFrame? diaFrame;
   ProjectionFrame? blankFrame;
+  LogoFrame? _logoFrame = const LogoFrame(0);
   List<MqttUser> mqttUsers = <MqttUser>[];
   List<String> senderSuggestions = <String>[];
 
   bool initialized = false;
   bool connected = false;
   bool mqttActive = false;
+  bool mqttConnected = false;
+  bool _hasDataForCurrentConnection = false;
+  bool _startupAnimationFinished = false;
   bool _ignoreNextMqttEndProgram = false;
   String statusCode = 'statusStarting';
   Map<String, Object> statusParams = const <String, Object>{};
@@ -90,6 +105,7 @@ class ProjectionController extends ChangeNotifier {
     await _settingsStore.save(settings);
     globals = _applyReceiverDisplayFilters(globals);
     await _applyTransport();
+    _syncNoConnectionLogo();
     if (!_disposed) {
       notifyListeners();
     }
@@ -103,8 +119,57 @@ class ProjectionController extends ChangeNotifier {
   }
 
   void updateSenderFilter(String mask) {
-    senderSuggestions = _mqtt.usersLike(mask).map((MqttUser u) => u.username).toList();
+    senderSuggestions = _mqtt
+        .usersLike(mask)
+        .map((MqttUser u) => u.username)
+        .toList();
     notifyListeners();
+  }
+
+  Future<void> setKeepStartupLogo(bool keep) async {
+    if (_disposed || settings.receiverKeepStartupLogo == keep) {
+      return;
+    }
+    settings = settings.copyWith(receiverKeepStartupLogo: keep);
+    _syncNoConnectionLogo();
+    await _settingsStore.save(settings);
+    if (!_disposed) {
+      notifyListeners();
+    }
+  }
+
+  bool get _transportConnected => mqttActive ? mqttConnected : connected;
+
+  bool get _transportConfigured =>
+      mqttActive ? settings.mqttUser.trim().isNotEmpty : settings.port > 0;
+
+  bool get _shouldShowNoConnectionLogo =>
+      settings.receiverKeepStartupLogo &&
+      _transportConfigured &&
+      !_transportConnected;
+
+  void _syncNoConnectionLogo() {
+    if (!_startupAnimationFinished) {
+      return;
+    }
+    if (_shouldShowNoConnectionLogo) {
+      _logoFrame = const LogoFrame(80);
+      return;
+    }
+    _logoFrame = null;
+  }
+
+  ProjectionFrame? _connectedProjectedFrame() {
+    if (!_transportConnected || !_hasDataForCurrentConnection) {
+      return null;
+    }
+    if (globals.projecting && diaFrame != null) {
+      return diaFrame;
+    }
+    if (!globals.projecting && blankFrame != null) {
+      return blankFrame;
+    }
+    return null;
   }
 
   ProjectionGlobals _applyReceiverDisplayFilters(ProjectionGlobals source) {
@@ -118,7 +183,9 @@ class ProjectionController extends ChangeNotifier {
           );
 
     return colored.copyWith(
-      wordToHighlight: settings.receiverShowHighlight ? colored.wordToHighlight : 0,
+      wordToHighlight: settings.receiverShowHighlight
+          ? colored.wordToHighlight
+          : 0,
       useAkkord: settings.receiverUseAkkord && source.useAkkord,
       useKotta: settings.receiverUseKotta && source.useKotta,
       autoResize: settings.projAutoSize,
@@ -160,6 +227,7 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
+    _hasDataForCurrentConnection = true;
     final bool ignoreEndProgram = mqttActive && _ignoreNextMqttEndProgram;
     if (ignoreEndProgram) {
       _ignoreNextMqttEndProgram = false;
@@ -167,12 +235,15 @@ class ProjectionController extends ChangeNotifier {
     globals = _applyReceiverDisplayFilters(globals.fromState(record));
     final int ep = record.endProgram;
     if (!ignoreEndProgram && settings.remoteShutdownEnabled) {
-      if (ep == RecStateEndProgram.stop || ep == RecStateEndProgram.stop + RecStateEndProgram.skipSerialOff) {
+      if (ep == RecStateEndProgram.stop ||
+          ep == RecStateEndProgram.stop + RecStateEndProgram.skipSerialOff) {
         _setStatus('statusStopRequested', notify: false);
         await SystemNavigator.pop();
         return;
       }
-      if (ep == RecStateEndProgram.shutdown || ep == RecStateEndProgram.shutdown + RecStateEndProgram.skipSerialOff) {
+      if (ep == RecStateEndProgram.shutdown ||
+          ep ==
+              RecStateEndProgram.shutdown + RecStateEndProgram.skipSerialOff) {
         final bool started = await _requestShutdown();
         if (!started) {
           await requestExit();
@@ -204,7 +275,9 @@ class ProjectionController extends ChangeNotifier {
     }
 
     try {
-      final bool? started = await _systemChannel.invokeMethod<bool>('requestShutdown');
+      final bool? started = await _systemChannel.invokeMethod<bool>(
+        'requestShutdown',
+      );
       if (started == true) {
         _setStatus('statusShutdownRequested');
         return true;
@@ -221,6 +294,7 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
+    _hasDataForCurrentConnection = true;
     diaFrame = TextFrame(record: record);
     notifyListeners();
   }
@@ -229,6 +303,7 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
+    _hasDataForCurrentConnection = true;
     final ui.Image? image = await _decodeImage(record.imageBytes);
     if (image == null) {
       return;
@@ -243,6 +318,7 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
+    _hasDataForCurrentConnection = true;
     final ui.Image? image = await _decodeImage(record.imageBytes);
     if (image == null) {
       return;
@@ -286,50 +362,96 @@ class ProjectionController extends ChangeNotifier {
     }
 
     if (message.startsWith('tcpServerError:')) {
-      _setStatus('statusTcpServerError', params: <String, Object>{'error': message.substring('tcpServerError:'.length)});
+      _setStatus(
+        'statusTcpServerError',
+        params: <String, Object>{
+          'error': message.substring('tcpServerError:'.length),
+        },
+      );
       return;
     }
     if (message.startsWith('tcpServerClientError:')) {
-      _setStatus('statusTcpServerClientError', params: <String, Object>{'error': message.substring('tcpServerClientError:'.length)});
+      _setStatus(
+        'statusTcpServerClientError',
+        params: <String, Object>{
+          'error': message.substring('tcpServerClientError:'.length),
+        },
+      );
       return;
     }
     if (message.startsWith('tcpServerPacketParseError:')) {
-      _setStatus('statusTcpServerPacketParseError', params: <String, Object>{'error': message.substring('tcpServerPacketParseError:'.length)});
+      _setStatus(
+        'statusTcpServerPacketParseError',
+        params: <String, Object>{
+          'error': message.substring('tcpServerPacketParseError:'.length),
+        },
+      );
       return;
     }
     if (message.startsWith('tcpServerSendError:')) {
-      _setStatus('statusTcpServerSendError', params: <String, Object>{'error': message.substring('tcpServerSendError:'.length)});
+      _setStatus(
+        'statusTcpServerSendError',
+        params: <String, Object>{
+          'error': message.substring('tcpServerSendError:'.length),
+        },
+      );
       return;
     }
 
-    _setStatus('statusReceiverError', params: <String, Object>{'message': message});
+    _setStatus(
+      'statusReceiverError',
+      params: <String, Object>{'message': message},
+    );
   }
 
   void _onConnection(bool isConnected) {
     if (_disposed) {
       return;
     }
+    if (connected != isConnected) {
+      _hasDataForCurrentConnection = false;
+    }
     connected = isConnected;
+    _syncNoConnectionLogo();
     if (mqttActive) {
       _setStatus(
-        settings.mqttUser.trim().isEmpty ? 'statusMqttOff' : 'statusMqttReceiving',
+        settings.mqttUser.trim().isEmpty
+            ? 'statusMqttOff'
+            : 'statusMqttReceiving',
         notify: false,
         params: settings.mqttUser.trim().isEmpty
             ? const <String, Object>{}
-            : <String, Object>{
-                'user': settings.mqttUser,
-                'channel': '1',
-              },
+            : <String, Object>{'user': settings.mqttUser, 'channel': '1'},
       );
     } else {
       if (isConnected) {
-        _setStatus('statusConnected', notify: false, params: <String, Object>{'port': settings.port});
+        _setStatus(
+          'statusConnected',
+          notify: false,
+          params: <String, Object>{'port': settings.port},
+        );
       } else if (settings.tcpEnabled) {
-        _setStatus('statusWaitingForClient', notify: false, params: <String, Object>{'port': settings.port});
+        _setStatus(
+          'statusWaitingForClient',
+          notify: false,
+          params: <String, Object>{'port': settings.port},
+        );
       } else {
         _setStatus('statusTcpOff', notify: false);
       }
     }
+    notifyListeners();
+  }
+
+  void _onMqttConnection(bool isConnected) {
+    if (_disposed) {
+      return;
+    }
+    if (mqttConnected != isConnected) {
+      _hasDataForCurrentConnection = false;
+    }
+    mqttConnected = isConnected;
+    _syncNoConnectionLogo();
     notifyListeners();
   }
 
@@ -338,11 +460,24 @@ class ProjectionController extends ChangeNotifier {
       return;
     }
     mqttUsers = users;
-    senderSuggestions = _mqtt.usersLike(settings.mqttUser).map((MqttUser u) => u.username).toList();
+    senderSuggestions = _mqtt
+        .usersLike(settings.mqttUser)
+        .map((MqttUser u) => u.username)
+        .toList();
     notifyListeners();
   }
 
   ProjectionFrame? get activeFrame {
+    final ProjectionFrame? connectedFrame = _connectedProjectedFrame();
+    if (connectedFrame != null) {
+      return connectedFrame;
+    }
+    if (!_startupAnimationFinished) {
+      return _logoFrame;
+    }
+    if (_shouldShowNoConnectionLogo) {
+      return _logoFrame ?? const LogoFrame(80);
+    }
     if (globals.projecting) {
       return diaFrame;
     }
@@ -372,27 +507,39 @@ class ProjectionController extends ChangeNotifier {
     final String user = settings.mqttUser.trim();
     if (user.isEmpty) {
       mqttActive = false;
+      mqttConnected = false;
+      connected = false;
+      _hasDataForCurrentConnection = false;
       _ignoreNextMqttEndProgram = false;
       await _mqtt.closeReceiver();
       await _server.restart(settings.port);
-      _setStatus('statusTcpListening', notify: false, params: <String, Object>{'port': settings.port});
+      _setStatus(
+        'statusTcpListening',
+        notify: false,
+        params: <String, Object>{'port': settings.port},
+      );
     } else {
       mqttActive = true;
+      connected = false;
+      mqttConnected = false;
+      _hasDataForCurrentConnection = false;
       _ignoreNextMqttEndProgram = true;
       await _server.stop();
       await _mqtt.openReceiver(username: user, channel: '1');
       _setStatus(
         'statusMqttReceiving',
         notify: false,
-        params: <String, Object>{
-          'user': user,
-          'channel': '1',
-        },
+        params: <String, Object>{'user': user, 'channel': '1'},
       );
     }
+    _syncNoConnectionLogo();
   }
 
-  void _setStatus(String code, {Map<String, Object> params = const <String, Object>{}, bool notify = true}) {
+  void _setStatus(
+    String code, {
+    Map<String, Object> params = const <String, Object>{},
+    bool notify = true,
+  }) {
     statusCode = code;
     statusParams = params;
     if (notify && !_disposed) {
@@ -402,18 +549,16 @@ class ProjectionController extends ChangeNotifier {
 
   void _startLogo() {
     _logoTimer?.cancel();
+    _startupAnimationFinished = false;
+    _logoFrame = const LogoFrame(0);
     int phase = 0;
     _logoTimer = Timer.periodic(const Duration(milliseconds: 100), (Timer t) {
-      if (diaFrame is! LogoFrame) {
-        t.cancel();
-        return;
-      }
       if (phase > 80) {
-        diaFrame = null;
-        globals = globals.copyWith(projecting: false);
+        _startupAnimationFinished = true;
+        _syncNoConnectionLogo();
         t.cancel();
       } else {
-        diaFrame = LogoFrame(phase);
+        _logoFrame = LogoFrame(phase);
       }
       phase++;
       if (!_disposed) {

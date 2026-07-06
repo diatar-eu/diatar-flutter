@@ -464,6 +464,18 @@ abstract class AppLocalizations {
   /// **'Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.'**
   String get scrollableProjectionHint;
 
+  /// No description provided for @keepStartupLogo.
+  ///
+  /// In hu, this message translates to:
+  /// **'Induló logo, ha nincs kapcsolat'**
+  String get keepStartupLogo;
+
+  /// No description provided for @keepStartupLogoHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ha megszakad az internet vagy a helyi hálózati kapcsolat, jelenjen meg újra a logo, amíg nincs kapcsolat.'**
+  String get keepStartupLogoHint;
+
   /// No description provided for @localColorsTitle.
   ///
   /// In hu, this message translates to:

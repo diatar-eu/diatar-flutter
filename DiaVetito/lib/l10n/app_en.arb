@@ -119,6 +119,8 @@
   "showKotta": "Show notation",
   "scrollableProjection": "Scrollable projection",
   "scrollableProjectionHint": "If turned off, text is auto-sized to fit the projection area.",
+  "keepStartupLogo": "Startup logo when disconnected",
+  "keepStartupLogoHint": "If internet or local network connection is lost, show the logo screen again until connection is restored.",
   "localColorsTitle": "Local colors",
   "backgroundColorLabel": "Background color",
   "textColorLabel": "Text color",

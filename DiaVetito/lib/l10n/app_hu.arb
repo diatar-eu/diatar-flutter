@@ -119,6 +119,8 @@
   "showKotta": "Kotta mutatása",
   "scrollableProjection": "Görgethető vetítés",
   "scrollableProjectionHint": "Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.",
+  "keepStartupLogo": "Induló logo, ha nincs kapcsolat",
+  "keepStartupLogoHint": "Ha megszakad az internet vagy a helyi hálózati kapcsolat, jelenjen meg újra a logo, amíg nincs kapcsolat.",
   "localColorsTitle": "Helyi színek",
   "backgroundColorLabel": "Háttérszín",
   "textColorLabel": "Szövegszín",

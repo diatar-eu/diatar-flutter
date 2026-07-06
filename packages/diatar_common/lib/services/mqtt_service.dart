@@ -15,6 +15,7 @@ typedef MqttStateCallback = void Function(RecStateRecord record);
 typedef MqttTextCallback = void Function(RecTextRecord record);
 typedef MqttImageCallback = void Function(RecImageRecord record);
 typedef MqttUsersCallback = void Function(List<MqttUser> users);
+typedef MqttConnectionCallback = void Function(bool connected);
 
 class MqttService {
   MqttService({
@@ -24,6 +25,7 @@ class MqttService {
     required this.onPic,
     required this.onBlank,
     required this.onUsers,
+    this.onConnection,
   });
 
   final MqttErrorCallback onError;
@@ -32,6 +34,7 @@ class MqttService {
   final MqttImageCallback onPic;
   final MqttImageCallback onBlank;
   final MqttUsersCallback onUsers;
+  final MqttConnectionCallback? onConnection;
 
   static const String _host = 'mqtt.diatar.eu';
   static const int _port = 1883;
@@ -51,7 +54,10 @@ class MqttService {
 
   List<MqttUser> _users = <MqttUser>[];
 
-  Future<void> openReceiver({required String username, required String channel}) async {
+  Future<void> openReceiver({
+    required String username,
+    required String channel,
+  }) async {
     await closeReceiver();
     _username = username.trim();
     _channel = channel.trim().isEmpty ? '1' : channel.trim();
@@ -65,14 +71,20 @@ class MqttService {
     _topicBlank = '${_topicGroup}blank';
     _topicDia = '${_topicGroup}dia';
 
-    final String clientId = 'receiver-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(10000)}';
+    final String clientId =
+        'receiver-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(10000)}';
     final MqttServerClient client = MqttServerClient(_host, clientId)
       ..port = _port
       ..logging(on: false)
       ..keepAlivePeriod = 15
       ..autoReconnect = true
       ..resubscribeOnAutoReconnect = true
-      ..onDisconnected = () {}
+      ..onConnected = () {
+        onConnection?.call(true);
+      }
+      ..onDisconnected = () {
+        onConnection?.call(false);
+      }
       ..connectionMessage = MqttConnectMessage()
           .authenticateAs('receiver', 'receiverpsw')
           .withClientIdentifier(clientId)
@@ -82,6 +94,7 @@ class MqttService {
       final MqttClientConnectionStatus? status = await client.connect();
       if (status?.state != MqttConnectionState.connected) {
         onError('MQTT receiver kapcsolodas sikertelen.');
+        onConnection?.call(false);
         client.disconnect();
         return;
       }
@@ -90,6 +103,7 @@ class MqttService {
       _receiverClient = client;
     } catch (e) {
       onError('MQTT receiver hiba: $e');
+      onConnection?.call(false);
       try {
         client.disconnect();
       } catch (_) {}
@@ -104,6 +118,7 @@ class MqttService {
     } catch (_) {}
     _receiverClient = null;
     _lastStateBytes = null;
+    onConnection?.call(false);
   }
 
   Future<void> fillUserList() async {
@@ -149,11 +164,13 @@ class MqttService {
           .getUrl(uri)
           .timeout(const Duration(seconds: 12));
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      final HttpClientResponse response = await request
-          .close()
-          .timeout(const Duration(seconds: 12));
+      final HttpClientResponse response = await request.close().timeout(
+        const Duration(seconds: 12),
+      );
       if (response.statusCode != HttpStatus.ok) {
-        onError('Felhasznalolista lekerdezesi hiba: HTTP ${response.statusCode}.');
+        onError(
+          'Felhasznalolista lekerdezesi hiba: HTTP ${response.statusCode}.',
+        );
         return;
       }
 
@@ -179,7 +196,10 @@ class MqttService {
       rawList.addAll(payload);
     } else if (payload is Map<String, dynamic>) {
       final dynamic users =
-          payload['users'] ?? payload['data'] ?? payload['items'] ?? payload['result'];
+          payload['users'] ??
+          payload['data'] ??
+          payload['items'] ??
+          payload['result'];
       if (users is List<dynamic>) {
         rawList.addAll(users);
       }
@@ -190,7 +210,8 @@ class MqttService {
       if (item is String) {
         result.add(item);
       } else if (item is Map<String, dynamic>) {
-        final dynamic uname = item['username'] ?? item['userName'] ?? item['name'];
+        final dynamic uname =
+            item['username'] ?? item['userName'] ?? item['name'];
         if (uname is String) {
           result.add(uname);
         }
@@ -213,7 +234,9 @@ class MqttService {
           onState(_projectionOffStateFromLastState());
         }
       } else if (topic == _topicBlank) {
-        onBlank(RecImageRecord.fromBytes(Uint8List.fromList(msg.payload.message)));
+        onBlank(
+          RecImageRecord.fromBytes(Uint8List.fromList(msg.payload.message)),
+        );
       } else if (topic == _topicDia) {
         final List<int> b = msg.payload.message;
         if (b.isEmpty) {
@@ -221,7 +244,6 @@ class MqttService {
           continue;
         }
         if (b.first == 'P'.codeUnitAt(0)) {
-
           onPic(RecImageRecord.fromBytes(Uint8List.fromList(b.sublist(1))));
         } else if (b.first == 'T'.codeUnitAt(0)) {
           onText(RecTextRecord.fromBytes(Uint8List.fromList(b.sublist(1))));
@@ -254,8 +276,24 @@ class MqttService {
 
   String _unaccent(String txt) {
     const Map<String, String> repl = <String, String>{
-      'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ö': 'o', 'ő': 'o', 'ú': 'u', 'ü': 'u', 'ű': 'u',
-      'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ö': 'O', 'Ő': 'O', 'Ú': 'U', 'Ü': 'U', 'Ű': 'U',
+      'á': 'a',
+      'é': 'e',
+      'í': 'i',
+      'ó': 'o',
+      'ö': 'o',
+      'ő': 'o',
+      'ú': 'u',
+      'ü': 'u',
+      'ű': 'u',
+      'Á': 'A',
+      'É': 'E',
+      'Í': 'I',
+      'Ó': 'O',
+      'Ö': 'O',
+      'Ő': 'O',
+      'Ú': 'U',
+      'Ü': 'U',
+      'Ű': 'U',
     };
     final StringBuffer sb = StringBuffer();
     for (final int r in txt.runes) {

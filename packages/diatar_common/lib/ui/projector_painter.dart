@@ -2462,7 +2462,7 @@ class ProjectorPainter extends CustomPainter {
         continue;
       }
 
-    final double currentRowLimit = rows.isEmpty
+      final double currentRowLimit = rows.isEmpty
           ? wrapWidth
           : math.max(8.0, wrapWidth - continuationIndent);
       if (currentWordIndices.isNotEmpty &&

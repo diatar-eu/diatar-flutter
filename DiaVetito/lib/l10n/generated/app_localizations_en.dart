@@ -218,6 +218,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'If turned off, text is auto-sized to fit the projection area.';
 
   @override
+  String get keepStartupLogo => 'Startup logo when disconnected';
+
+  @override
+  String get keepStartupLogoHint =>
+      'If internet or local network connection is lost, show the logo screen again until connection is restored.';
+
+  @override
   String get localColorsTitle => 'Local colors';
 
   @override

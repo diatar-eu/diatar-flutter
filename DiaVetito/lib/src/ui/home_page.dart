@@ -126,6 +126,44 @@ class _HomePageState extends State<HomePage> {
                             ),
                     ),
                   ),
+                  if (controller.settings.receiverKeepStartupLogo &&
+                      controller.activeFrame is LogoFrame)
+                    Positioned(
+                      right: 12,
+                      bottom: 12,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text(
+                                context.l10n.keepStartupLogo,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              const SizedBox(width: 8),
+                              Switch.adaptive(
+                                value:
+                                    controller.settings.receiverKeepStartupLogo,
+                                onChanged: (bool value) {
+                                  unawaited(
+                                    controller.setKeepStartupLogo(value),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               );
             },

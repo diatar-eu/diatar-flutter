@@ -53,6 +53,7 @@ class AppSettings {
     this.receiverShowHighlight = true,
     this.receiverUseAkkord = true,
     this.receiverUseKotta = true,
+    this.receiverKeepStartupLogo = true,
     Color? bkColor,
     Color? txtColor,
     Color? blankColor,
@@ -113,6 +114,7 @@ class AppSettings {
   final bool receiverShowHighlight;
   final bool receiverUseAkkord;
   final bool receiverUseKotta;
+  final bool receiverKeepStartupLogo;
   final Color? _bkColor;
   final Color? _txtColor;
   final Color? _blankColor;
@@ -180,6 +182,7 @@ class AppSettings {
     bool? receiverShowHighlight,
     bool? receiverUseAkkord,
     bool? receiverUseKotta,
+    bool? receiverKeepStartupLogo,
     Color? bkColor,
     Color? txtColor,
     Color? blankColor,
@@ -190,7 +193,7 @@ class AppSettings {
       tcpClientEnabled: tcpClientEnabled ?? this.tcpClientEnabled,
       tcpTargets: tcpTargets ?? this.tcpTargets,
       boot: boot ?? this.boot,
-        remoteShutdownEnabled:
+      remoteShutdownEnabled:
           remoteShutdownEnabled ?? this.remoteShutdownEnabled,
       borderToClip: borderToClip ?? this.borderToClip,
       clipL: clipL ?? this.clipL,
@@ -226,10 +229,10 @@ class AppSettings {
       projBgMode: projBgMode ?? this.projBgMode,
       projBackTrans: projBackTrans ?? this.projBackTrans,
       projBlankTrans: projBlankTrans ?? this.projBlankTrans,
-        projShowBackgroundImage:
+      projShowBackgroundImage:
           projShowBackgroundImage ?? this.projShowBackgroundImage,
       homeViewMode: homeViewMode ?? this.homeViewMode,
-        homeShowHighlightControls:
+      homeShowHighlightControls:
           homeShowHighlightControls ?? this.homeShowHighlightControls,
       appThemeMode: appThemeMode ?? this.appThemeMode,
       appLanguage: appLanguage ?? this.appLanguage,
@@ -242,6 +245,8 @@ class AppSettings {
           receiverShowHighlight ?? this.receiverShowHighlight,
       receiverUseAkkord: receiverUseAkkord ?? this.receiverUseAkkord,
       receiverUseKotta: receiverUseKotta ?? this.receiverUseKotta,
+      receiverKeepStartupLogo:
+          receiverKeepStartupLogo ?? this.receiverKeepStartupLogo,
       bkColor: bkColor ?? this.bkColor,
       txtColor: txtColor ?? this.txtColor,
       blankColor: blankColor ?? this.blankColor,

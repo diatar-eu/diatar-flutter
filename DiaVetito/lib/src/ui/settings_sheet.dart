@@ -77,6 +77,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   late bool _receiverShowHighlight;
   late bool _receiverUseAkkord;
   late bool _receiverUseKotta;
+  late bool _receiverKeepStartupLogo;
   late bool _projectionScrollable;
   late String _appLanguage;
   late Color _bkColor;
@@ -110,6 +111,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
     _receiverShowHighlight = s.receiverShowHighlight;
     _receiverUseAkkord = s.receiverUseAkkord;
     _receiverUseKotta = s.receiverUseKotta;
+    _receiverKeepStartupLogo = s.receiverKeepStartupLogo;
     _projectionScrollable = !s.projAutoSize;
     _appLanguage = _isSupportedLanguage(s.appLanguage) ? s.appLanguage : '';
     _bkColor = s.bkColor;
@@ -169,8 +171,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
     final l10n = context.l10n;
     final String query = _search.text.trim().toLowerCase();
     final bool internetEnabled = !_ipMode;
-    final String localNetworkStatus =
-      (_ipMode ? l10n.valueOn : l10n.valueOff).toUpperCase();
+    final String localNetworkStatus = (_ipMode ? l10n.valueOn : l10n.valueOff)
+        .toUpperCase();
     final String senderSummary = _mqttUser.text.trim().isEmpty
         ? '-'
         : _mqttUser.text.trim();
@@ -184,8 +186,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
         ? l10n.projectionColorSourceServer
         : l10n.projectionColorSourceLocal;
     final String remoteShutdownState = _remoteShutdownEnabled
-      ? l10n.valueOn
-      : l10n.valueOff;
+        ? l10n.valueOn
+        : l10n.valueOff;
     final bool showInternet = _matches(
       query,
       l10n.settingsSearchKeywordsInternet,
@@ -585,6 +587,13 @@ class _SettingsSheetState extends State<SettingsSheet> {
             title: Text(l10n.scrollableProjection),
             subtitle: Text(l10n.scrollableProjectionHint),
           ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _receiverKeepStartupLogo,
+            onChanged: (bool v) => setBoth(() => _receiverKeepStartupLogo = v),
+            title: Text(l10n.keepStartupLogo),
+            subtitle: Text(l10n.keepStartupLogoHint),
+          ),
         ];
       },
     );
@@ -825,6 +834,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
       receiverShowHighlight: _receiverShowHighlight,
       receiverUseAkkord: _receiverUseAkkord,
       receiverUseKotta: _receiverUseKotta,
+      receiverKeepStartupLogo: _receiverKeepStartupLogo,
       remoteShutdownEnabled: _remoteShutdownEnabled,
       projAutoSize: !_projectionScrollable,
       bkColor: _bkColor,

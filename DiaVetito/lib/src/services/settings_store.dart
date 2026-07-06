@@ -20,6 +20,7 @@ class SettingsStore {
   static const String _kReceiverShowHighlight = 'ReceiverShowHighlight';
   static const String _kReceiverUseAkkord = 'ReceiverUseAkkord';
   static const String _kReceiverUseKotta = 'ReceiverUseKotta';
+  static const String _kReceiverKeepStartupLogo = 'ReceiverKeepStartupLogo';
   static const String _kBkColor = 'BkColor';
   static const String _kTxtColor = 'TxtColor';
   static const String _kBlankColor = 'BlankColor';
@@ -46,11 +47,12 @@ class SettingsStore {
       receiverShowHighlight: prefs.getBool(_kReceiverShowHighlight) ?? true,
       receiverUseAkkord: prefs.getBool(_kReceiverUseAkkord) ?? true,
       receiverUseKotta: prefs.getBool(_kReceiverUseKotta) ?? true,
+      receiverKeepStartupLogo: prefs.getBool(_kReceiverKeepStartupLogo) ?? true,
       bkColor: Color(prefs.getInt(_kBkColor) ?? 0xFF000000),
       txtColor: Color(prefs.getInt(_kTxtColor) ?? 0xFFFFFFFF),
       blankColor: Color(prefs.getInt(_kBlankColor) ?? 0xFF000000),
       hiColor: Color(prefs.getInt(_kHiColor) ?? 0xFF00FFFF),
-        projAutoSize: prefs.getBool(_kProjAutoSize) ?? true,
+      projAutoSize: prefs.getBool(_kProjAutoSize) ?? true,
       appLanguage: prefs.getString(_kAppLanguage) ?? '',
     );
   }
@@ -59,7 +61,10 @@ class SettingsStore {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_kPort, settings.port);
     await prefs.setBool(_kBoot, settings.boot);
-    await prefs.setBool(_kRemoteShutdownEnabled, settings.remoteShutdownEnabled);
+    await prefs.setBool(
+      _kRemoteShutdownEnabled,
+      settings.remoteShutdownEnabled,
+    );
     await prefs.setBool(_kB2C, settings.borderToClip);
     await prefs.setDouble(_kClipL, settings.clipL);
     await prefs.setDouble(_kClipR, settings.clipR);
@@ -69,10 +74,20 @@ class SettingsStore {
     await prefs.setInt(_kRotate, settings.rotateQuarterTurns);
     await prefs.setString(_kUser, settings.mqttUser);
     await prefs.setString(_kChannel, '1');
-    await prefs.setBool(_kReceiverUseServerColors, settings.receiverUseServerColors);
-    await prefs.setBool(_kReceiverShowHighlight, settings.receiverShowHighlight);
+    await prefs.setBool(
+      _kReceiverUseServerColors,
+      settings.receiverUseServerColors,
+    );
+    await prefs.setBool(
+      _kReceiverShowHighlight,
+      settings.receiverShowHighlight,
+    );
     await prefs.setBool(_kReceiverUseAkkord, settings.receiverUseAkkord);
     await prefs.setBool(_kReceiverUseKotta, settings.receiverUseKotta);
+    await prefs.setBool(
+      _kReceiverKeepStartupLogo,
+      settings.receiverKeepStartupLogo,
+    );
     await prefs.setInt(_kBkColor, settings.bkColor.toARGB32());
     await prefs.setInt(_kTxtColor, settings.txtColor.toARGB32());
     await prefs.setInt(_kBlankColor, settings.blankColor.toARGB32());

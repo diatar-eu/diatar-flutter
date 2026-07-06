@@ -218,6 +218,13 @@ class AppLocalizationsHu extends AppLocalizations {
       'Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.';
 
   @override
+  String get keepStartupLogo => 'Induló logo, ha nincs kapcsolat';
+
+  @override
+  String get keepStartupLogoHint =>
+      'Ha megszakad az internet vagy a helyi hálózati kapcsolat, jelenjen meg újra a logo, amíg nincs kapcsolat.';
+
+  @override
   String get localColorsTitle => 'Helyi színek';
 
   @override
