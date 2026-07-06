@@ -12,14 +12,20 @@ import 'package:path_provider/path_provider.dart';
 import '../core/books/book_sort_policy.dart';
 import '../core/custom_order/custom_order_normalizer.dart';
 import '../core/custom_order/custom_order_navigation_policy.dart';
+import '../core/custom_order/custom_order_bootstrap_policy.dart';
+import '../core/custom_order/custom_order_entry_mapper.dart';
 import '../core/custom_order/entry_label_service.dart';
 import '../core/custom_order/entry_match_policy.dart';
 import '../core/custom_order/entry_resolver.dart';
+import '../core/dtx/dtx_import_policy.dart';
 import '../core/dia/dia_ini_parser.dart';
 import '../core/dia/dia_matching_policy.dart';
 import '../core/dia/dia_path_policy.dart';
 import '../core/navigation/song_navigation_policy.dart';
 import '../core/navigation/song_selection_policy.dart';
+import '../core/settings/sender_status_policy.dart';
+import '../core/settings/projection_globals_policy.dart';
+import '../core/settings/transport_settings_policy.dart';
 import '../models/custom_order_entry.dart';
 import '../services/mqtt_sender_service.dart';
 import '../services/dtx_download_service.dart';
@@ -97,12 +103,21 @@ class DiatarMainController extends ChangeNotifier {
   final DiaMatchingPolicy _diaMatchingPolicy = const DiaMatchingPolicy();
   final DiaPathPolicy _diaPathPolicy = const DiaPathPolicy();
   final BookSortPolicy _bookSortPolicy = const BookSortPolicy();
-    final SongNavigationPolicy _songNavigationPolicy =
+  final SongNavigationPolicy _songNavigationPolicy =
       const SongNavigationPolicy();
-    final SongSelectionPolicy _songSelectionPolicy =
-      const SongSelectionPolicy();
+  final SongSelectionPolicy _songSelectionPolicy = const SongSelectionPolicy();
   final CustomOrderNavigationPolicy _customOrderNavigationPolicy =
       const CustomOrderNavigationPolicy();
+  final CustomOrderBootstrapPolicy _customOrderBootstrapPolicy =
+      const CustomOrderBootstrapPolicy();
+  final CustomOrderEntryMapper _customOrderEntryMapper =
+      const CustomOrderEntryMapper();
+  final DtxImportPolicy _dtxImportPolicy = const DtxImportPolicy();
+  final SenderStatusPolicy _senderStatusPolicy = const SenderStatusPolicy();
+  final ProjectionGlobalsPolicy _projectionGlobalsPolicy =
+      const ProjectionGlobalsPolicy();
+  final TransportSettingsPolicy _transportSettingsPolicy =
+      const TransportSettingsPolicy();
   final EntryResolver _entryResolver = const EntryResolver();
   late final EntryMatchPolicy _entryMatchPolicy = EntryMatchPolicy(
     resolver: _entryResolver,
@@ -261,69 +276,21 @@ class DiatarMainController extends ChangeNotifier {
     settings = await _settingsStore.load();
     lastBlankPath = settings.blankPicPath;
     _disabledSongbooks = await _orderStore.loadDisabled();
-    final ({
-      List<StoredCustomOrderEntry> entries,
-      bool active,
-      String? baseName,
-      String? sourceType,
-      String? zsolozsmaLabel,
-    })
-    stored = await _orderStore.loadCurrentCustomOrder();
-    _customOrder = stored.entries
-        .map(
-          (StoredCustomOrderEntry e) => CustomOrderEntry(
-            fileName: e.fileName,
-            songIndex: e.songIndex,
-            verseIndex: e.verseIndex,
-            label: e.label,
-            customTextTitle: e.customTextTitle,
-            customTextBody: e.customTextBody,
-            customImagePath: e.customImagePath,
-            customType: e.customType,
-            customData: e.customData,
-            storageExtras: e.additionalFields,
-          ),
-        )
-        .toList();
-    customOrderActive = stored.active && _customOrder.isNotEmpty;
-    _lastImportedCustomOrderBaseName = _customOrder.isEmpty
-        ? null
-        : stored.baseName;
-    _customOrderSourceType = _customOrder.isEmpty ? null : stored.sourceType;
-    _zsolozsmaVirtualBookLabel = _customOrder.isEmpty
-        ? null
-        : stored.zsolozsmaLabel;
-    _customOrderCursor = customOrderActive ? 0 : -1;
-    _diaVirtualBookSelected = _customOrder.isNotEmpty;
-    globals = globals.copyWith(
-      bkColor: settings.bkColor,
-      txtColor: settings.txtColor,
-      blankColor: settings.blankColor,
-      hiColor: settings.hiColor,
-      isBlankPic: _hasConfiguredBackgroundImage,
-      showBlankPic:
-          _hasConfiguredBackgroundImage && settings.projShowBackgroundImage,
+    final CustomOrderBootstrapState customOrderState =
+        _customOrderBootstrapPolicy.fromStored(
+          await _orderStore.loadCurrentCustomOrder(),
+        );
+    _customOrder = customOrderState.entries;
+    customOrderActive = customOrderState.active;
+    _lastImportedCustomOrderBaseName = customOrderState.baseName;
+    _customOrderSourceType = customOrderState.sourceType;
+    _zsolozsmaVirtualBookLabel = customOrderState.zsolozsmaLabel;
+    _customOrderCursor = customOrderState.cursor;
+    _diaVirtualBookSelected = customOrderState.diaVirtualBookSelected;
+    globals = _projectionGlobalsPolicy.fromSettings(
+      settings,
       projecting: showing,
-      fontSize: settings.projFontSize,
-      titleSize: settings.projTitleSize,
-      leftIndent: settings.projLeftIndent,
-      borderL: settings.projBorderL,
-      borderT: settings.projBorderT,
-      borderR: settings.projBorderR,
-      borderB: settings.projBorderB,
-      spacing100: 100 + settings.projSpacingStep * 10,
-      autoResize: settings.projAutoSize,
-      hCenter: settings.projHCenter,
-      vCenter: settings.projVCenter,
-      useAkkord: settings.projUseAkkord,
-      useKotta: settings.projUseKotta,
-      hideTitle: !settings.projUseTitle,
-      kottaArany: settings.projKottaArany,
-      akkordArany: settings.projAkkordArany,
-      bgMode: settings.projBgMode,
-      backTrans: settings.projBackTrans,
-      blankTrans: settings.projBlankTrans,
-      boldText: settings.projBoldText,
+      hasBackgroundImage: _hasConfiguredBackgroundImage,
     );
     _configureSender();
     await _applyTransport();
@@ -404,22 +371,11 @@ class DiatarMainController extends ChangeNotifier {
           return;
         }
         tcpHasError = true;
-        switch (code) {
-          case 'senderTcpError':
-            _setStatus('statusSenderTcpError', <String, String>{
-              'error': params['error'] ?? '',
-            });
-            break;
-          case 'senderOpenPortFailed':
-            _setStatus('statusSenderOpenPortFailed', <String, String>{
-              'port': params['port'] ?? '0',
-              'error': params['error'] ?? '',
-            });
-            break;
-          default:
-            _setStatus('statusSenderError', <String, String>{'message': code});
-            break;
-        }
+        final SenderStatusUpdate status = _senderStatusPolicy.tcpError(
+          code,
+          params,
+        );
+        _setStatus(status.code, status.params);
         _refreshSenderFlags();
         notifyListeners();
       });
@@ -441,19 +397,11 @@ class DiatarMainController extends ChangeNotifier {
           return;
         }
         mqttHasError = true;
-        switch (code) {
-          case 'senderMqttConnectFailed':
-            _setStatus('statusSenderMqttConnectFailed');
-            break;
-          case 'senderMqttError':
-            _setStatus('statusSenderMqttError', <String, String>{
-              'error': params['error'] ?? '',
-            });
-            break;
-          default:
-            _setStatus('statusSenderError', <String, String>{'message': code});
-            break;
-        }
+        final SenderStatusUpdate status = _senderStatusPolicy.mqttError(
+          code,
+          params,
+        );
+        _setStatus(status.code, status.params);
         _refreshSenderFlags();
         notifyListeners();
       });
@@ -462,41 +410,15 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<void> applySettings(AppSettings newSettings) async {
     final AppSettings previousSettings = settings;
-    final bool transportChanged = _transportSettingsChanged(
-      previousSettings,
-      newSettings,
-    );
+    final bool transportChanged = _transportSettingsPolicy
+        .transportSettingsChanged(previousSettings, newSettings);
     settings = newSettings;
     lastBlankPath = settings.blankPicPath;
     await _settingsStore.save(settings);
-    globals = globals.copyWith(
-      bkColor: settings.bkColor,
-      txtColor: settings.txtColor,
-      blankColor: settings.blankColor,
-      hiColor: settings.hiColor,
-      isBlankPic: _hasConfiguredBackgroundImage,
-      showBlankPic:
-          _hasConfiguredBackgroundImage && settings.projShowBackgroundImage,
-      fontSize: settings.projFontSize,
-      titleSize: settings.projTitleSize,
-      leftIndent: settings.projLeftIndent,
-      borderL: settings.projBorderL,
-      borderT: settings.projBorderT,
-      borderR: settings.projBorderR,
-      borderB: settings.projBorderB,
-      spacing100: 100 + settings.projSpacingStep * 10,
-      autoResize: settings.projAutoSize,
-      hCenter: settings.projHCenter,
-      vCenter: settings.projVCenter,
-      useAkkord: settings.projUseAkkord,
-      useKotta: settings.projUseKotta,
-      hideTitle: !settings.projUseTitle,
-      kottaArany: settings.projKottaArany,
-      akkordArany: settings.projAkkordArany,
-      bgMode: settings.projBgMode,
-      backTrans: settings.projBackTrans,
-      blankTrans: settings.projBlankTrans,
-      boldText: settings.projBoldText,
+    globals = _projectionGlobalsPolicy.fromSettings(
+      settings,
+      projecting: showing,
+      hasBackgroundImage: _hasConfiguredBackgroundImage,
     );
     if (transportChanged) {
       await _applyTransport();
@@ -515,44 +437,6 @@ class DiatarMainController extends ChangeNotifier {
     settings = settings.copyWith(homeViewMode: mode);
     await _settingsStore.save(settings);
     notifyListeners();
-  }
-
-  bool _transportSettingsChanged(AppSettings previous, AppSettings next) {
-    final bool mqttChanged = _mqttSettingsChanged(previous, next);
-    final bool tcpChanged = _tcpSettingsChanged(previous, next);
-    return mqttChanged || tcpChanged;
-  }
-
-  bool _mqttSettingsChanged(AppSettings previous, AppSettings next) {
-    if (previous.internetRelayEnabled != next.internetRelayEnabled) {
-      return true;
-    }
-    if (!previous.internetRelayEnabled && !next.internetRelayEnabled) {
-      return false;
-    }
-    return previous.mqttUser.trim() != next.mqttUser.trim() ||
-        previous.mqttPassword != next.mqttPassword ||
-        previous.mqttChannel.trim() != next.mqttChannel.trim();
-  }
-
-  bool _tcpSettingsChanged(AppSettings previous, AppSettings next) {
-    if (previous.tcpClientEnabled != next.tcpClientEnabled) {
-      return true;
-    }
-    if (!previous.tcpClientEnabled && !next.tcpClientEnabled) {
-      return false;
-    }
-    return !listEquals(
-      _normalizedTcpTargets(previous),
-      _normalizedTcpTargets(next),
-    );
-  }
-
-  List<String> _normalizedTcpTargets(AppSettings value) {
-    return value.tcpTargets
-        .map((String target) => target.trim())
-        .where((String target) => target.isNotEmpty)
-        .toList();
   }
 
   Future<void> _sendProjectionState() async {
@@ -612,41 +496,15 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   String _displayNameForImportedFile(XFile xf, int index) {
-    final String directName = xf.name.trim();
-    if (directName.isNotEmpty) {
-      return directName;
-    }
-
-    final Uri? parsed = Uri.tryParse(xf.path);
-    if (parsed != null && parsed.pathSegments.isNotEmpty) {
-      final String last = Uri.decodeComponent(parsed.pathSegments.last).trim();
-      if (last.isNotEmpty) {
-        return last;
-      }
-    }
-
-    final String normalized = xf.path.replaceAll('\\', '/').trim();
-    if (normalized.isNotEmpty) {
-      final List<String> segments = normalized.split('/');
-      final String last = segments.isNotEmpty ? segments.last.trim() : '';
-      if (last.isNotEmpty) {
-        return last;
-      }
-    }
-
-    return 'imported_${index + 1}.dtx';
+    return _dtxImportPolicy.displayNameForImportedPath(
+      directName: xf.name,
+      path: xf.path,
+      index: index,
+    );
   }
 
   String _safeImportFileName(String value, int index) {
-    String name = value.trim();
-    if (name.isEmpty) {
-      name = 'imported_${index + 1}.dtx';
-    }
-    name = name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-    if (!name.toLowerCase().endsWith('.dtx')) {
-      name = '$name.dtx';
-    }
-    return name;
+    return _dtxImportPolicy.safeImportFileName(value, index);
   }
 
   /// Copies the given [files] (picked via file picker) into the internal DTX
@@ -859,7 +717,7 @@ class DiatarMainController extends ChangeNotifier {
       await _sender.sendScreenSize(width: _screenWidth, height: _screenHeight);
       if (tcpConnected) {
         _setStatus('statusTcpSending', <String, String>{
-          'port': _tcpTargetsStatusLabel(settings),
+          'port': _transportSettingsPolicy.tcpTargetsStatusLabel(settings),
         });
       }
     } else {
@@ -872,23 +730,6 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   bool get _projectionOutputLocked => settings.projectionLocked;
-
-  String _tcpTargetsStatusLabel(AppSettings value) {
-    if (!value.tcpClientEnabled || value.tcpTargets.isEmpty) {
-      return '-';
-    }
-    final List<String> targets = value.tcpTargets
-        .map((String e) => e.trim())
-        .where((String e) => e.isNotEmpty)
-        .toList();
-    if (targets.isEmpty) {
-      return '-';
-    }
-    if (targets.length == 1) {
-      return targets.first;
-    }
-    return '${targets.first} (+${targets.length - 1})';
-  }
 
   Future<void> updateScreenSize({
     required int width,
@@ -1144,17 +985,9 @@ class DiatarMainController extends ChangeNotifier {
     await _orderStore.saveCurrentCustomOrder(
       _customOrder
           .map(
-            (CustomOrderEntry e) => StoredCustomOrderEntry(
-              fileName: e.fileName,
-              songIndex: e.songIndex,
+            (CustomOrderEntry e) => _customOrderEntryMapper.toStored(
+              e,
               verseIndex: _safeVerseIndex(e),
-              label: e.label,
-              customTextTitle: e.customTextTitle,
-              customTextBody: e.customTextBody,
-              customImagePath: e.customImagePath,
-              customType: e.customType,
-              customData: e.customData,
-              additionalFields: e.storageExtras,
             ),
           )
           .toList(),
@@ -1184,22 +1017,7 @@ class DiatarMainController extends ChangeNotifier {
         .loadCustomOrderPresets();
     final List<StoredCustomOrderEntry> entries =
         presets[key] ?? const <StoredCustomOrderEntry>[];
-    return entries
-        .map(
-          (StoredCustomOrderEntry e) => CustomOrderEntry(
-            fileName: e.fileName,
-            songIndex: e.songIndex,
-            verseIndex: e.verseIndex,
-            label: e.label,
-            customTextTitle: e.customTextTitle,
-            customTextBody: e.customTextBody,
-            customImagePath: e.customImagePath,
-            customType: e.customType,
-            customData: e.customData,
-            storageExtras: e.additionalFields,
-          ),
-        )
-        .toList();
+    return entries.map(_customOrderEntryMapper.fromStored).toList();
   }
 
   Future<void> saveCustomOrderPreset(
@@ -1214,17 +1032,9 @@ class DiatarMainController extends ChangeNotifier {
         .loadCustomOrderPresets();
     presets[key] = entries
         .map(
-          (CustomOrderEntry e) => StoredCustomOrderEntry(
-            fileName: e.fileName,
-            songIndex: e.songIndex,
+          (CustomOrderEntry e) => _customOrderEntryMapper.toStored(
+            e,
             verseIndex: _safeVerseIndex(e),
-            label: e.label,
-            customTextTitle: e.customTextTitle,
-            customTextBody: e.customTextBody,
-            customImagePath: e.customImagePath,
-            customType: e.customType,
-            customData: e.customData,
-            additionalFields: e.storageExtras,
           ),
         )
         .toList();
@@ -2395,7 +2205,9 @@ class DiatarMainController extends ChangeNotifier {
     _resetHighlightRenderState();
     _projectedCustomCursor = -1;
     final DtxSong selectedSong = b.songs[selection.songIndex];
-    _setStatus(selection.statusCode, <String, String>{'title': selectedSong.title});
+    _setStatus(selection.statusCode, <String, String>{
+      'title': selectedSong.title,
+    });
     _syncCustomCursorFromCurrentSong();
     notifyListeners();
     _syncCurrentDia();
