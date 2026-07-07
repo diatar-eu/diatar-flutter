@@ -1,6 +1,24 @@
 import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
 
+class TransportRuntimeState {
+  const TransportRuntimeState({
+    required this.mqttUser,
+    required this.tcpTargets,
+    required this.mqttActive,
+    required this.tcpConfigured,
+    required this.mqttConnectAttemptAt,
+    required this.tcpConnectAttemptAt,
+  });
+
+  final String mqttUser;
+  final List<String> tcpTargets;
+  final bool mqttActive;
+  final bool tcpConfigured;
+  final DateTime? mqttConnectAttemptAt;
+  final DateTime? tcpConnectAttemptAt;
+}
+
 class TransportSettingsPolicy {
   const TransportSettingsPolicy();
 
@@ -9,8 +27,43 @@ class TransportSettingsPolicy {
         _tcpSettingsChanged(previous, next);
   }
 
+  String normalizedMqttUser(AppSettings value) {
+    return value.mqttUser.trim();
+  }
+
+  List<String> normalizedTcpTargets(AppSettings value) {
+    return _normalizedTcpTargets(value);
+  }
+
+  bool isMqttActive(AppSettings value) {
+    return value.internetRelayEnabled && normalizedMqttUser(value).isNotEmpty;
+  }
+
+  bool isTcpConfigured(AppSettings value) {
+    return value.tcpClientEnabled && _normalizedTcpTargets(value).isNotEmpty;
+  }
+
+  TransportRuntimeState runtimeState(
+    AppSettings value, {
+    DateTime? now,
+  }) {
+    final DateTime timestamp = now ?? DateTime.now();
+    final String mqttUser = normalizedMqttUser(value);
+    final List<String> tcpTargets = _normalizedTcpTargets(value);
+    final bool mqttActive = value.internetRelayEnabled && mqttUser.isNotEmpty;
+    final bool tcpConfigured = value.tcpClientEnabled && tcpTargets.isNotEmpty;
+    return TransportRuntimeState(
+      mqttUser: mqttUser,
+      tcpTargets: tcpTargets,
+      mqttActive: mqttActive,
+      tcpConfigured: tcpConfigured,
+      mqttConnectAttemptAt: mqttActive ? timestamp : null,
+      tcpConnectAttemptAt: tcpConfigured ? timestamp : null,
+    );
+  }
+
   String tcpTargetsStatusLabel(AppSettings value) {
-    if (!value.tcpClientEnabled || value.tcpTargets.isEmpty) {
+    if (!isTcpConfigured(value)) {
       return '-';
     }
     final List<String> targets = _normalizedTcpTargets(value);
@@ -30,7 +83,7 @@ class TransportSettingsPolicy {
     if (!previous.internetRelayEnabled && !next.internetRelayEnabled) {
       return false;
     }
-    return previous.mqttUser.trim() != next.mqttUser.trim() ||
+    return normalizedMqttUser(previous) != normalizedMqttUser(next) ||
         previous.mqttPassword != next.mqttPassword ||
         previous.mqttChannel.trim() != next.mqttChannel.trim();
   }

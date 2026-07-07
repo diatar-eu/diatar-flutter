@@ -17,19 +17,21 @@ import '../core/custom_order/custom_order_entry_mapper.dart';
 import '../core/custom_order/entry_label_service.dart';
 import '../core/custom_order/entry_match_policy.dart';
 import '../core/custom_order/entry_resolver.dart';
-import '../core/dtx/dtx_import_policy.dart';
 import '../core/dia/dia_ini_parser.dart';
 import '../core/dia/dia_matching_policy.dart';
 import '../core/dia/dia_path_policy.dart';
 import '../core/navigation/song_navigation_policy.dart';
 import '../core/navigation/song_selection_policy.dart';
-import '../core/settings/sender_status_policy.dart';
 import '../core/settings/projection_globals_policy.dart';
 import '../core/settings/transport_settings_policy.dart';
 import '../models/custom_order_entry.dart';
 import '../services/mqtt_sender_service.dart';
 import '../services/dtx_download_service.dart';
+import '../services/dtx_library_service.dart';
 import '../services/dtx_order_store.dart';
+import '../services/sender_callback_coordinator.dart';
+import '../services/sender_error_debouncer.dart';
+import '../services/sender_transport_coordinator.dart';
 import '../services/settings_store.dart';
 import '../services/tcp_sender_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
@@ -112,12 +114,14 @@ class DiatarMainController extends ChangeNotifier {
       const CustomOrderBootstrapPolicy();
   final CustomOrderEntryMapper _customOrderEntryMapper =
       const CustomOrderEntryMapper();
-  final DtxImportPolicy _dtxImportPolicy = const DtxImportPolicy();
-  final SenderStatusPolicy _senderStatusPolicy = const SenderStatusPolicy();
   final ProjectionGlobalsPolicy _projectionGlobalsPolicy =
       const ProjectionGlobalsPolicy();
   final TransportSettingsPolicy _transportSettingsPolicy =
       const TransportSettingsPolicy();
+    final SenderCallbackCoordinator _senderCallbackCoordinator =
+      SenderCallbackCoordinator();
+    final SenderTransportCoordinator _senderTransportCoordinator =
+      const SenderTransportCoordinator();
   final EntryResolver _entryResolver = const EntryResolver();
   late final EntryMatchPolicy _entryMatchPolicy = EntryMatchPolicy(
     resolver: _entryResolver,
@@ -132,6 +136,8 @@ class DiatarMainController extends ChangeNotifier {
       );
   final SettingsStore _settingsStore = SettingsStore();
   final DtxDownloadService _downloadService = DtxDownloadService();
+  late final DtxLibraryService _dtxLibraryService =
+      DtxLibraryService(parser: _parser);
   final DtxOrderStore _orderStore = DtxOrderStore();
   final ZsolozsmaService _zsolozsmaService = ZsolozsmaService();
   final ZsolozsmaBreviarDecoder _zsolozsmaDecoder = ZsolozsmaBreviarDecoder();
@@ -164,8 +170,6 @@ class DiatarMainController extends ChangeNotifier {
   bool tcpHasError = false;
   DateTime? mqttConnectAttemptAt;
   DateTime? tcpConnectAttemptAt;
-  int _mqttErrorSeq = 0;
-  int _tcpErrorSeq = 0;
   String statusCode = 'statusStarting';
   Map<String, String> _statusParams = <String, String>{};
   String lastPicPath = '';
@@ -242,11 +246,7 @@ class DiatarMainController extends ChangeNotifier {
       !loading &&
       statusCode == 'statusNoDtxFiles';
   bool get tcpActive => settings.tcpClientEnabled;
-  bool get tcpConfigured =>
-      tcpActive &&
-      settings.tcpTargets
-          .map((String target) => target.trim())
-          .any((String target) => target.isNotEmpty);
+    bool get tcpConfigured => _transportSettingsPolicy.isTcpConfigured(settings);
 
   void _refreshSenderFlags() {
     senderRunning = _sender.running || _mqttSender.running;
@@ -354,58 +354,36 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void _configureSender() {
-    _sender.onStatusChanged = (bool connected) {
-      tcpConnected = connected;
-      if (connected) {
-        tcpHasError = false;
-        unawaited(_syncBackgroundImageAfterConnect());
-      }
-      _refreshSenderFlags();
-      notifyListeners();
-    };
-    _sender.onError = (String code, Map<String, String> params) {
-      _tcpErrorSeq++;
-      final int token = _tcpErrorSeq;
-      Future<void>.delayed(const Duration(seconds: 2), () {
-        if (token != _tcpErrorSeq || !tcpActive || tcpConnected) {
-          return;
-        }
-        tcpHasError = true;
-        final SenderStatusUpdate status = _senderStatusPolicy.tcpError(
-          code,
-          params,
-        );
-        _setStatus(status.code, status.params);
-        _refreshSenderFlags();
-        notifyListeners();
-      });
-    };
-    _mqttSender.onStatusChanged = (bool connected) {
-      mqttConnected = connected;
-      if (connected) {
-        mqttHasError = false;
-        unawaited(_syncBackgroundImageAfterConnect());
-      }
-      _refreshSenderFlags();
-      notifyListeners();
-    };
-    _mqttSender.onError = (String code, Map<String, String> params) {
-      _mqttErrorSeq++;
-      final int token = _mqttErrorSeq;
-      Future<void>.delayed(const Duration(seconds: 2), () {
-        if (token != _mqttErrorSeq || !mqttActive || mqttConnected) {
-          return;
-        }
-        mqttHasError = true;
-        final SenderStatusUpdate status = _senderStatusPolicy.mqttError(
-          code,
-          params,
-        );
-        _setStatus(status.code, status.params);
-        _refreshSenderFlags();
-        notifyListeners();
-      });
-    };
+    _sender.onStatusChanged = _senderCallbackCoordinator.buildStatusChangedHandler(
+      setConnected: (bool connected) => tcpConnected = connected,
+      clearError: () => tcpHasError = false,
+      syncAfterConnect: _syncBackgroundImageAfterConnect,
+      refreshFlags: _refreshSenderFlags,
+      notify: notifyListeners,
+    );
+    _sender.onError = _senderCallbackCoordinator.buildTcpErrorHandler(
+      isActive: () => tcpActive,
+      isConnected: () => tcpConnected,
+      markHasError: () => tcpHasError = true,
+      setStatus: _setStatus,
+      refreshFlags: _refreshSenderFlags,
+      notify: notifyListeners,
+    );
+    _mqttSender.onStatusChanged = _senderCallbackCoordinator.buildStatusChangedHandler(
+      setConnected: (bool connected) => mqttConnected = connected,
+      clearError: () => mqttHasError = false,
+      syncAfterConnect: _syncBackgroundImageAfterConnect,
+      refreshFlags: _refreshSenderFlags,
+      notify: notifyListeners,
+    );
+    _mqttSender.onError = _senderCallbackCoordinator.buildMqttErrorHandler(
+      isActive: () => mqttActive,
+      isConnected: () => mqttConnected,
+      markHasError: () => mqttHasError = true,
+      setStatus: _setStatus,
+      refreshFlags: _refreshSenderFlags,
+      notify: notifyListeners,
+    );
   }
 
   Future<void> applySettings(AppSettings newSettings) async {
@@ -486,8 +464,7 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<Directory> _resolveDtxDirectory() async {
-    final Directory docs = await getApplicationDocumentsDirectory();
-    return Directory('${docs.path}/diatar/DTXs');
+    return _dtxLibraryService.resolveDirectory();
   }
 
   Future<Directory> _resolveZsolozsmaDirectory() async {
@@ -495,47 +472,21 @@ class DiatarMainController extends ChangeNotifier {
     return Directory('${docs.path}/zsolozsma');
   }
 
-  String _displayNameForImportedFile(XFile xf, int index) {
-    return _dtxImportPolicy.displayNameForImportedPath(
-      directName: xf.name,
-      path: xf.path,
-      index: index,
-    );
-  }
-
-  String _safeImportFileName(String value, int index) {
-    return _dtxImportPolicy.safeImportFileName(value, index);
-  }
-
   /// Copies the given [files] (picked via file picker) into the internal DTX
   /// directory, then reloads books.
   Future<DtxImportResult> importDtxFiles(List<XFile> files) async {
-    final Directory dtxDir = await _resolveDtxDirectory();
-    await dtxDir.create(recursive: true);
-    final List<String> failures = <String>[];
-    final Set<String> importedFileNames = <String>{};
-    int count = 0;
-    for (int i = 0; i < files.length; i++) {
-      final XFile xf = files[i];
-      final String originalName = _displayNameForImportedFile(xf, i);
-      final String targetName = _safeImportFileName(originalName, i);
-      try {
-        final List<int> bytes = await xf.readAsBytes();
-        final String content = utf8.decode(bytes, allowMalformed: true);
-        _parser.parse(fileName: targetName, content: content);
-        await File('${dtxDir.path}/$targetName').writeAsBytes(bytes);
-        importedFileNames.add(targetName);
-        count++;
-      } catch (e) {
-        failures.add('$originalName: $e');
-      }
-    }
-    if (count > 0) {
-      _disabledSongbooks.removeAll(importedFileNames);
+    final DtxLibraryImportResult result = await _dtxLibraryService.importFiles(
+      files,
+    );
+    if (result.importedCount > 0) {
+      _disabledSongbooks.removeAll(result.importedFileNames);
       await _orderStore.saveDisabled(_disabledSongbooks);
       await reloadBooks();
     }
-    return DtxImportResult(importedCount: count, failures: failures);
+    return DtxImportResult(
+      importedCount: result.importedCount,
+      failures: result.failures,
+    );
   }
 
   Future<ZsolozsmaSyncResult> syncZsolozsmaArchives({int? centerYear}) async {
@@ -682,49 +633,43 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> _applyTransport() async {
-    final String user = settings.mqttUser.trim();
-    _mqttErrorSeq++;
-    _tcpErrorSeq++;
-    mqttActive = settings.internetRelayEnabled && user.isNotEmpty;
-    if (mqttActive) {
-      mqttConnected = false;
-      mqttHasError = false;
-      mqttConnectAttemptAt = DateTime.now();
-      await _mqttSender.open(
-        username: user,
-        password: settings.mqttPassword,
-        channel: settings.mqttChannel,
-      );
+    final TransportRuntimeState runtime = _transportSettingsPolicy.runtimeState(
+      settings,
+    );
+    _senderCallbackCoordinator.invalidatePendingErrors();
+    mqttActive = runtime.mqttActive;
+    mqttConnectAttemptAt = runtime.mqttConnectAttemptAt;
+    mqttConnected = false;
+    mqttHasError = false;
+    tcpConnectAttemptAt = runtime.tcpConnectAttemptAt;
+    tcpConnected = false;
+    tcpHasError = false;
+
+    await _senderTransportCoordinator.apply(
+      mqttSender: _mqttSender,
+      tcpSender: _sender,
+      runtime: runtime,
+      mqttPassword: settings.mqttPassword,
+      mqttChannel: settings.mqttChannel,
+      screenWidth: _screenWidth,
+      screenHeight: _screenHeight,
+    );
+
+    if (runtime.mqttActive) {
       if (mqttConnected) {
         _setStatus('statusMqttSending', <String, String>{
-          'user': user,
+          'user': runtime.mqttUser,
           'channel': settings.mqttChannel,
         });
       }
-    } else {
-      mqttConnectAttemptAt = null;
-      mqttConnected = false;
-      mqttHasError = false;
-      await _mqttSender.clearRetainedMessages();
-      await _mqttSender.close();
     }
 
-    if (tcpConfigured) {
-      tcpConnected = false;
-      tcpHasError = false;
-      tcpConnectAttemptAt = DateTime.now();
-      await _sender.restart(settings.tcpTargets);
-      await _sender.sendScreenSize(width: _screenWidth, height: _screenHeight);
+    if (runtime.tcpConfigured) {
       if (tcpConnected) {
         _setStatus('statusTcpSending', <String, String>{
           'port': _transportSettingsPolicy.tcpTargetsStatusLabel(settings),
         });
       }
-    } else {
-      tcpConnectAttemptAt = null;
-      tcpConnected = false;
-      tcpHasError = false;
-      await _sender.stop();
     }
     _refreshSenderFlags();
   }
@@ -744,7 +689,11 @@ class DiatarMainController extends ChangeNotifier {
     _screenHeight = normalizedH;
 
     if (tcpConfigured && !_projectionOutputLocked) {
-      await _sender.sendScreenSize(width: _screenWidth, height: _screenHeight);
+      await _senderTransportCoordinator.sendScreenSize(
+        tcpSender: _sender,
+        screenWidth: _screenWidth,
+        screenHeight: _screenHeight,
+      );
     }
   }
 
@@ -821,36 +770,7 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<List<DtxBook>> _loadBooksFromDisk() async {
-    final Directory dtxDir = await _resolveDtxDirectory();
-    final List<DtxBook> loaded = <DtxBook>[];
-
-    if (!await dtxDir.exists()) {
-      return loaded;
-    }
-
-    final List<FileSystemEntity> children = dtxDir.listSync();
-    children.sort(
-      (FileSystemEntity a, FileSystemEntity b) => a.path.compareTo(b.path),
-    );
-    for (final FileSystemEntity child in children) {
-      if (child is! File || !child.path.toLowerCase().endsWith('.dtx')) {
-        continue;
-      }
-      try {
-        final String content = await child.readAsString();
-        loaded.add(
-          _parser.parse(
-            fileName: child.uri.pathSegments.isNotEmpty
-                ? child.uri.pathSegments.last
-                : child.path,
-            content: content,
-          ),
-        );
-      } catch (_) {
-        // Invalid dtx files are skipped to keep the app usable.
-      }
-    }
-    return loaded;
+    return _dtxLibraryService.loadBooks();
   }
 
   Future<List<SongbookOrderItem>> loadSongbookOrderItems() async {
