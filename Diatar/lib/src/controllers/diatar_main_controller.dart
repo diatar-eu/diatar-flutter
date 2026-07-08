@@ -26,11 +26,11 @@ import '../core/settings/projection_globals_policy.dart';
 import '../core/settings/transport_settings_policy.dart';
 import '../models/custom_order_entry.dart';
 import '../services/mqtt_sender_service.dart';
+import '../services/desktop_projector_bridge.dart';
 import '../services/dtx_download_service.dart';
 import '../services/dtx_library_service.dart';
 import '../services/dtx_order_store.dart';
 import '../services/sender_callback_coordinator.dart';
-import '../services/sender_error_debouncer.dart';
 import '../services/sender_transport_coordinator.dart';
 import '../services/settings_store.dart';
 import '../services/tcp_sender_service.dart';
@@ -149,6 +149,8 @@ class DiatarMainController extends ChangeNotifier {
     onStatusChanged: (bool connected) {},
     onError: (String code, Map<String, String> params) {},
   );
+  final DesktopProjectorBridge _desktopProjectorBridge =
+      DesktopProjectorBridge.instance;
 
   List<DtxBook> books = <DtxBook>[];
   int bookIndex = 0;
@@ -292,6 +294,7 @@ class DiatarMainController extends ChangeNotifier {
       projecting: showing,
       hasBackgroundImage: _hasConfiguredBackgroundImage,
     );
+    await _desktopProjectorBridge.start(settings);
     _configureSender();
     await _applyTransport();
     await reloadBooks();
@@ -393,6 +396,7 @@ class DiatarMainController extends ChangeNotifier {
     settings = newSettings;
     lastBlankPath = settings.blankPicPath;
     await _settingsStore.save(settings);
+    await _desktopProjectorBridge.updateSettings(settings);
     globals = _projectionGlobalsPolicy.fromSettings(
       settings,
       projecting: showing,
@@ -2155,6 +2159,11 @@ class DiatarMainController extends ChangeNotifier {
     if (_projectionOutputLocked) {
       return;
     }
+    await _desktopProjectorBridge.sendState(
+      globals,
+      showing: showing,
+      wordToHighlight: highPos,
+    );
     if (mqttActive) {
       await _mqttSender.sendState(
         globals,
@@ -2197,6 +2206,11 @@ class DiatarMainController extends ChangeNotifier {
     if (_projectionOutputLocked) {
       return;
     }
+    await _desktopProjectorBridge.sendState(
+      globals,
+      showing: showing,
+      wordToHighlight: highPos,
+    );
     if (mqttActive) {
       await _mqttSender.sendState(
         globals,
@@ -2221,6 +2235,11 @@ class DiatarMainController extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    await _desktopProjectorBridge.sendState(
+      globals,
+      showing: showing,
+      wordToHighlight: highPos,
+    );
     final DtxSong? song = currentSong;
     final DtxBook? book = currentBook;
     final DtxVerse? verse = currentVerse;
@@ -2246,6 +2265,7 @@ class DiatarMainController extends ChangeNotifier {
       );
       await _mqttSender.sendText(title: title, lines: lines);
     }
+    await _desktopProjectorBridge.sendText(title: title, lines: lines);
     if (tcpConfigured) {
       await _sender.sendState(
         globals,
@@ -2259,6 +2279,7 @@ class DiatarMainController extends ChangeNotifier {
       );
       await _sender.sendIdle();
     }
+    await _desktopProjectorBridge.sendIdle();
     _refreshSenderFlags();
     notifyListeners();
   }
@@ -2297,6 +2318,12 @@ class DiatarMainController extends ChangeNotifier {
         notifyListeners();
         return;
       }
+      await _desktopProjectorBridge.sendState(
+        globals,
+        showing: showing,
+        wordToHighlight: 0,
+      );
+      await _desktopProjectorBridge.sendText(title: title, lines: payloadLines);
       if (mqttActive) {
         await _mqttSender.sendState(
           globals,
@@ -2314,6 +2341,7 @@ class DiatarMainController extends ChangeNotifier {
         );
         await _sender.sendIdle();
       }
+      await _desktopProjectorBridge.sendIdle();
       _refreshSenderFlags();
       _setStatus('statusCustomTextSent', <String, String>{'title': title});
       notifyListeners();
@@ -2430,6 +2458,15 @@ class DiatarMainController extends ChangeNotifier {
         notifyListeners();
         return;
       }
+      await _desktopProjectorBridge.sendState(
+        globals,
+        showing: showing,
+        wordToHighlight: highPos,
+      );
+      await _desktopProjectorBridge.sendText(
+        title: effectiveTitle,
+        lines: nonEmptyLines,
+      );
       if (mqttActive) {
         await _mqttSender.sendState(
           globals,
@@ -2451,6 +2488,7 @@ class DiatarMainController extends ChangeNotifier {
         );
         await _sender.sendIdle();
       }
+      await _desktopProjectorBridge.sendIdle();
       _refreshSenderFlags();
       _setStatus('statusCustomTextSent', <String, String>{
         'title': effectiveTitle,
@@ -2493,6 +2531,7 @@ class DiatarMainController extends ChangeNotifier {
       if (mqttActive) {
         await _mqttSender.sendPic(bytes, ext: ext);
       }
+      await _desktopProjectorBridge.sendPic(bytes, ext: ext);
       if (tcpConfigured) {
         await _sender.sendPic(bytes, ext: ext);
       }
@@ -2564,6 +2603,7 @@ class DiatarMainController extends ChangeNotifier {
       if (mqttActive) {
         await _mqttSender.sendBlank(bytes, ext: ext);
       }
+      await _desktopProjectorBridge.sendBlank(bytes, ext: ext);
       if (tcpConfigured) {
         await _sender.sendBlank(bytes, ext: ext);
       }
@@ -2640,6 +2680,12 @@ class DiatarMainController extends ChangeNotifier {
           wordToHighlight: highPos,
         );
       }
+      await _desktopProjectorBridge.sendBlank(Uint8List(0), ext: '');
+      await _desktopProjectorBridge.sendState(
+        globals,
+        showing: showing,
+        wordToHighlight: highPos,
+      );
       if (tcpConfigured) {
         await _sender.sendBlank(Uint8List(0), ext: '');
         await _sender.sendState(
@@ -2698,6 +2744,7 @@ class DiatarMainController extends ChangeNotifier {
     await _mqttSender.clearRetainedMessages();
     await _sender.stop();
     await _mqttSender.close();
+    await _desktopProjectorBridge.dispose();
     await SystemNavigator.pop();
   }
 

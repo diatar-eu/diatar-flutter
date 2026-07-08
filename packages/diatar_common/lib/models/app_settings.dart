@@ -47,6 +47,7 @@ class AppSettings {
     this.appThemeMode = 0,
     this.appLanguage = '',
     this.projectionLocked = false,
+    this.desktopProjectorSide = 1,
     this.desktopActionHotkeys = const <String, String>{},
     this.desktopSongHotkeys = const <String, String>{},
     this.receiverUseServerColors = true,
@@ -108,6 +109,7 @@ class AppSettings {
   final int appThemeMode;
   final String appLanguage;
   final bool projectionLocked;
+  final int desktopProjectorSide;
   final Map<String, String> desktopActionHotkeys;
   final Map<String, String> desktopSongHotkeys;
   final bool receiverUseServerColors;
@@ -176,6 +178,7 @@ class AppSettings {
     int? appThemeMode,
     String? appLanguage,
     bool? projectionLocked,
+    int? desktopProjectorSide,
     Map<String, String>? desktopActionHotkeys,
     Map<String, String>? desktopSongHotkeys,
     bool? receiverUseServerColors,
@@ -237,6 +240,7 @@ class AppSettings {
       appThemeMode: appThemeMode ?? this.appThemeMode,
       appLanguage: appLanguage ?? this.appLanguage,
       projectionLocked: projectionLocked ?? this.projectionLocked,
+        desktopProjectorSide: desktopProjectorSide ?? this.desktopProjectorSide,
       desktopActionHotkeys: desktopActionHotkeys ?? this.desktopActionHotkeys,
       desktopSongHotkeys: desktopSongHotkeys ?? this.desktopSongHotkeys,
       receiverUseServerColors:
@@ -251,6 +255,120 @@ class AppSettings {
       txtColor: txtColor ?? this.txtColor,
       blankColor: blankColor ?? this.blankColor,
       hiColor: hiColor ?? this.hiColor,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'clipL': clipL,
+      'clipT': clipT,
+      'clipR': clipR,
+      'clipB': clipB,
+      'mirror': mirror,
+      'rotateQuarterTurns': rotateQuarterTurns,
+      'projFontSize': projFontSize,
+      'projTitleSize': projTitleSize,
+      'projLeftIndent': projLeftIndent,
+      'projBorderL': projBorderL,
+      'projBorderT': projBorderT,
+      'projBorderR': projBorderR,
+      'projBorderB': projBorderB,
+      'projSpacingStep': projSpacingStep,
+      'projAutoSize': projAutoSize,
+      'projHCenter': projHCenter,
+      'projVCenter': projVCenter,
+      'projUseAkkord': projUseAkkord,
+      'projUseKotta': projUseKotta,
+      'projUseTitle': projUseTitle,
+      'projKottaArany': projKottaArany,
+      'projAkkordArany': projAkkordArany,
+      'projBoldText': projBoldText,
+      'projBgMode': projBgMode,
+      'projBackTrans': projBackTrans,
+      'projBlankTrans': projBlankTrans,
+      'projShowBackgroundImage': projShowBackgroundImage,
+      'desktopProjectorSide': desktopProjectorSide,
+      'bkColor': bkColor.toARGB32(),
+      'txtColor': txtColor.toARGB32(),
+      'blankColor': blankColor.toARGB32(),
+      'hiColor': hiColor.toARGB32(),
+      'receiverUseServerColors': receiverUseServerColors,
+      'receiverShowHighlight': receiverShowHighlight,
+      'receiverUseAkkord': receiverUseAkkord,
+      'receiverUseKotta': receiverUseKotta,
+      'receiverKeepStartupLogo': receiverKeepStartupLogo,
+    };
+  }
+
+  factory AppSettings.fromMap(Map<String, dynamic> map) {
+    int intValue(String key, int fallback) {
+      final Object? raw = map[key];
+      if (raw is int) {
+        return raw;
+      }
+      if (raw is num) {
+        return raw.toInt();
+      }
+      return fallback;
+    }
+
+    bool boolValue(String key, bool fallback) {
+      final Object? raw = map[key];
+      if (raw is bool) {
+        return raw;
+      }
+      return fallback;
+    }
+
+    Color colorValue(String key, Color fallback) {
+      final Object? raw = map[key];
+      if (raw is int) {
+        return Color(raw);
+      }
+      if (raw is num) {
+        return Color(raw.toInt());
+      }
+      return fallback;
+    }
+
+    return AppSettings(
+      clipL: (map['clipL'] as num?)?.toDouble() ?? 0,
+      clipT: (map['clipT'] as num?)?.toDouble() ?? 0,
+      clipR: (map['clipR'] as num?)?.toDouble() ?? 0,
+      clipB: (map['clipB'] as num?)?.toDouble() ?? 0,
+      mirror: boolValue('mirror', false),
+      rotateQuarterTurns: intValue('rotateQuarterTurns', 0),
+      projFontSize: intValue('projFontSize', 70),
+      projTitleSize: intValue('projTitleSize', 12),
+      projLeftIndent: intValue('projLeftIndent', 2),
+      projBorderL: intValue('projBorderL', 0),
+      projBorderT: intValue('projBorderT', 0),
+      projBorderR: intValue('projBorderR', 0),
+      projBorderB: intValue('projBorderB', 0),
+      projSpacingStep: intValue('projSpacingStep', 0),
+      projAutoSize: boolValue('projAutoSize', true),
+      projHCenter: boolValue('projHCenter', false),
+      projVCenter: boolValue('projVCenter', true),
+      projUseAkkord: boolValue('projUseAkkord', false),
+      projUseKotta: boolValue('projUseKotta', true),
+      projUseTitle: boolValue('projUseTitle', true),
+      projKottaArany: intValue('projKottaArany', 100),
+      projAkkordArany: intValue('projAkkordArany', 100),
+      projBoldText: boolValue('projBoldText', false),
+      projBgMode: intValue('projBgMode', 0),
+      projBackTrans: intValue('projBackTrans', 0),
+      projBlankTrans: intValue('projBlankTrans', 0),
+      projShowBackgroundImage: boolValue('projShowBackgroundImage', true),
+      desktopProjectorSide: intValue('desktopProjectorSide', 1).clamp(0, 1),
+      bkColor: colorValue('bkColor', const Color(0xFF000000)),
+      txtColor: colorValue('txtColor', const Color(0xFFFFFFFF)),
+      blankColor: colorValue('blankColor', const Color(0xFF000000)),
+      hiColor: colorValue('hiColor', const Color(0xFF00FFFF)),
+      receiverUseServerColors: boolValue('receiverUseServerColors', true),
+      receiverShowHighlight: boolValue('receiverShowHighlight', true),
+      receiverUseAkkord: boolValue('receiverUseAkkord', true),
+      receiverUseKotta: boolValue('receiverUseKotta', true),
+      receiverKeepStartupLogo: boolValue('receiverKeepStartupLogo', true),
     );
   }
 }

@@ -700,6 +700,9 @@
   "projectionMarginRight": "Right margin",
   "projectionMarginTop": "Top margin",
   "projectionMarginBottom": "Bottom margin",
+  "projectorSide": "Projector side",
+  "projectorSideLeft": "Left",
+  "projectorSideRight": "Right",
   "tcpInvalidTargetFormat": "Invalid target format: {target}",
   "@tcpInvalidTargetFormat": {
     "placeholders": {

@@ -42,6 +42,7 @@ class SettingsStore {
   static const String _kAppThemeMode = 'AppThemeMode';
   static const String _kAppLanguage = 'AppLanguage';
   static const String _kProjectionLocked = 'ProjectionLocked';
+  static const String _kDesktopProjectorSide = 'DesktopProjectorSide';
   static const String _kDesktopActionHotkeys = 'DesktopActionHotkeys';
   static const String _kDesktopSongHotkeys = 'DesktopSongHotkeys';
 
@@ -110,6 +111,8 @@ class SettingsStore {
       appThemeMode: prefs.getInt(_kAppThemeMode) ?? 0,
       appLanguage: prefs.getString(_kAppLanguage) ?? '',
       projectionLocked: prefs.getBool(_kProjectionLocked) ?? false,
+      desktopProjectorSide:
+          (prefs.getInt(_kDesktopProjectorSide) ?? 1).clamp(0, 1),
       desktopActionHotkeys: _decodeStringMap(
         prefs.getStringList(_kDesktopActionHotkeys),
       ),
@@ -175,6 +178,7 @@ class SettingsStore {
     await prefs.setInt(_kAppThemeMode, settings.appThemeMode);
     await prefs.setString(_kAppLanguage, settings.appLanguage);
     await prefs.setBool(_kProjectionLocked, settings.projectionLocked);
+    await prefs.setInt(_kDesktopProjectorSide, settings.desktopProjectorSide);
     await prefs.setStringList(
       _kDesktopActionHotkeys,
       _encodeStringMap(settings.desktopActionHotkeys),

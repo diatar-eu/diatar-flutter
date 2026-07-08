@@ -1079,6 +1079,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get projectionMarginBottom => 'Bottom margin';
 
   @override
+  String get projectorSide => 'Projector side';
+
+  @override
+  String get projectorSideLeft => 'Left';
+
+  @override
+  String get projectorSideRight => 'Right';
+
+  @override
   String tcpInvalidTargetFormat(Object target) {
     return 'Invalid target format: $target';
   }

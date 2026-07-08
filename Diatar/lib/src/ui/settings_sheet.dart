@@ -84,6 +84,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _projShowBackgroundImage;
   late bool _projUseTitle;
   late bool _projBoldText;
+  late int _desktopProjectorSide;
   late bool _internetRelayEnabled;
   late bool _localNetworkEnabled;
   late Map<String, String> _desktopActionHotkeys;
@@ -143,6 +144,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projShowBackgroundImage = s.projShowBackgroundImage;
     _projUseTitle = s.projUseTitle;
     _projBoldText = s.projBoldText;
+    _desktopProjectorSide = s.desktopProjectorSide.clamp(0, 1);
     _internetRelayEnabled = s.internetRelayEnabled;
     _localNetworkEnabled = s.tcpClientEnabled;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
@@ -1851,6 +1853,21 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             }),
             onChanged: (int? v) => setBoth(() => _projBlankTrans = v ?? 0),
           ),
+          DropdownButtonFormField<int>(
+            initialValue: _desktopProjectorSide,
+            decoration: InputDecoration(labelText: l10n.projectorSide),
+            items: <DropdownMenuItem<int>>[
+              DropdownMenuItem<int>(
+                value: 0,
+                child: Text(l10n.projectorSideLeft),
+              ),
+              DropdownMenuItem<int>(
+                value: 1,
+                child: Text(l10n.projectorSideRight),
+              ),
+            ],
+            onChanged: (int? v) => setBoth(() => _desktopProjectorSide = v ?? 1),
+          ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: !_projAutoSize,
@@ -2183,6 +2200,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       homeShowHighlightControls: _homeShowHighlightControls,
       appThemeMode: _appThemeMode.clamp(0, 1),
       appLanguage: _appLanguage,
+      desktopProjectorSide: _desktopProjectorSide.clamp(0, 1),
       desktopActionHotkeys: Map<String, String>.from(_desktopActionHotkeys),
       desktopSongHotkeys: Map<String, String>.from(_desktopSongHotkeys),
       projBoldText: _projBoldText,

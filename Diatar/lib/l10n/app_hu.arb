@@ -700,6 +700,9 @@
   "projectionMarginRight": "Jobb margó",
   "projectionMarginTop": "Felső margó",
   "projectionMarginBottom": "Alsó margó",
+  "projectorSide": "Vetítő oldala",
+  "projectorSideLeft": "Bal",
+  "projectorSideRight": "Jobb",
   "tcpInvalidTargetFormat": "Hibás célpont formátum: {target}",
   "@tcpInvalidTargetFormat": {
     "placeholders": {

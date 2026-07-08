@@ -1081,6 +1081,15 @@ class AppLocalizationsHu extends AppLocalizations {
   String get projectionMarginBottom => 'Alsó margó';
 
   @override
+  String get projectorSide => 'Vetítő oldala';
+
+  @override
+  String get projectorSideLeft => 'Bal';
+
+  @override
+  String get projectorSideRight => 'Jobb';
+
+  @override
   String tcpInvalidTargetFormat(Object target) {
     return 'Hibás célpont formátum: $target';
   }

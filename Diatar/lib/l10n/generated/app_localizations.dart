@@ -1949,6 +1949,24 @@ abstract class AppLocalizations {
   /// **'Alsó margó'**
   String get projectionMarginBottom;
 
+  /// No description provided for @projectorSide.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vetítő oldala'**
+  String get projectorSide;
+
+  /// No description provided for @projectorSideLeft.
+  ///
+  /// In hu, this message translates to:
+  /// **'Bal'**
+  String get projectorSideLeft;
+
+  /// No description provided for @projectorSideRight.
+  ///
+  /// In hu, this message translates to:
+  /// **'Jobb'**
+  String get projectorSideRight;
+
   /// No description provided for @tcpInvalidTargetFormat.
   ///
   /// In hu, this message translates to:
