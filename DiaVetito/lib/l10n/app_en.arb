@@ -80,6 +80,7 @@
       "state": {}
     }
   },
+  "systemActionsBack": "Back",
   "remoteShutdownTitle": "Remote shutdown",
   "remoteShutdownSubtitle": "When enabled, remote epStop and epShutdown commands can stop the program.",
   "internetBroadcastTitle": "Internet relay",

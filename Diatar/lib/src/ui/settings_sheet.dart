@@ -1112,6 +1112,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   Future<void> _openSystemActions() {
     return _openSectionSheet(
       title: context.l10n.systemActionsTitle,
+      closeButtonLabel: context.l10n.systemActionsBack,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         return <Widget>[
@@ -2004,6 +2005,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   Future<void> _openSectionSheet({
     required String title,
+    String? closeButtonLabel,
     bool isDismissible = true,
     bool enableDrag = true,
     bool showCancelButton = false,
@@ -2074,7 +2076,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                                     Navigator.of(context).pop(true);
                                   }
                                 },
-                                child: Text(context.l10n.ok),
+                                child: Text(
+                                  closeButtonLabel ?? context.l10n.ok,
+                                ),
                               ),
                             ],
                           ),

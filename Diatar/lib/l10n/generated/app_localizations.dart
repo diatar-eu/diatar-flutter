@@ -734,14 +734,14 @@ abstract class AppLocalizations {
   /// No description provided for @homeControlModeDialist.
   ///
   /// In hu, this message translates to:
-  /// **'Dialista'**
+  /// **'Diasor'**
   String get homeControlModeDialist;
 
-  /// No description provided for @dialistLabel.
+  /// No description provided for @dialistNamedLabel.
   ///
   /// In hu, this message translates to:
-  /// **'Dialista'**
-  String get dialistLabel;
+  /// **'Diasor: {name}'**
+  String dialistNamedLabel(Object name);
 
   /// No description provided for @bookLabel.
   ///
@@ -1738,6 +1738,12 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Kilépés, távoli program leállítása, távoli gép leállítása'**
   String get systemActionsSummary;
+
+  /// No description provided for @systemActionsBack.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vissza'**
+  String get systemActionsBack;
 
   /// No description provided for @localExit.
   ///

@@ -424,7 +424,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeControlModeDialist => 'Slide list';
 
   @override
-  String get dialistLabel => 'Slide list';
+  String dialistNamedLabel(Object name) {
+    return 'Slide list: $name';
+  }
 
   @override
   String get bookLabel => 'Book';
@@ -967,6 +969,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get systemActionsSummary =>
       'Exit, remote program stop, remote machine stop';
+
+  @override
+  String get systemActionsBack => 'Back';
 
   @override
   String get localExit => 'Exit';

@@ -230,6 +230,12 @@ abstract class AppLocalizations {
   /// **'Távoli leállítás: {state}'**
   String systemActionsSummary(Object state);
 
+  /// No description provided for @systemActionsBack.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vissza'**
+  String get systemActionsBack;
+
   /// No description provided for @remoteShutdownTitle.
   ///
   /// In hu, this message translates to:

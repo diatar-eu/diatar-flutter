@@ -378,7 +378,12 @@
   "homeControlModeTooltip": "Screen mode",
   "homeControlModeBooks": "Books",
   "homeControlModeDialist": "Slide list",
-  "dialistLabel": "Slide list",
+  "dialistNamedLabel": "Slide list: {name}",
+  "@dialistNamedLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "bookLabel": "Book",
   "ungroupedBookGroupLabel": "(unclassified)",
   "diaBookLabel": "DIA: {name}",
@@ -660,6 +665,7 @@
   },
   "systemActionsTitle": "System actions",
   "systemActionsSummary": "Exit, remote program stop, remote machine stop",
+  "systemActionsBack": "Back",
   "localExit": "Exit",
   "remoteProgramStop": "Remote program stop",
   "remoteMachineStop": "Remote machine stop",

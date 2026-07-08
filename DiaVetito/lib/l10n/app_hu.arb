@@ -80,6 +80,7 @@
       "state": {}
     }
   },
+  "systemActionsBack": "Vissza",
   "remoteShutdownTitle": "Távoli leállítás",
   "remoteShutdownSubtitle": "Ha be van kapcsolva, a távoli epStop és epShutdown parancsok leállíthatják a programot.",
   "internetBroadcastTitle": "Internetes közvetítés",

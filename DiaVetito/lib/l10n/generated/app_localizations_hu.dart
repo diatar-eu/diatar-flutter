@@ -95,6 +95,9 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
+  String get systemActionsBack => 'Vissza';
+
+  @override
   String get remoteShutdownTitle => 'Távoli leállítás';
 
   @override

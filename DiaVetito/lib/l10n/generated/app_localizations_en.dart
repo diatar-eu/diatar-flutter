@@ -95,6 +95,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get systemActionsBack => 'Back';
+
+  @override
   String get remoteShutdownTitle => 'Remote shutdown';
 
   @override

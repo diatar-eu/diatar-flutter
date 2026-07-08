@@ -423,10 +423,12 @@ class AppLocalizationsHu extends AppLocalizations {
   String get homeControlModeBooks => 'Kötetek';
 
   @override
-  String get homeControlModeDialist => 'Dialista';
+  String get homeControlModeDialist => 'Diasor';
 
   @override
-  String get dialistLabel => 'Dialista';
+  String dialistNamedLabel(Object name) {
+    return 'Diasor: $name';
+  }
 
   @override
   String get bookLabel => 'Kötet';
@@ -969,6 +971,9 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get systemActionsSummary =>
       'Kilépés, távoli program leállítása, távoli gép leállítása';
+
+  @override
+  String get systemActionsBack => 'Vissza';
 
   @override
   String get localExit => 'Kilépés';

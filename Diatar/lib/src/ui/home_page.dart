@@ -2456,6 +2456,11 @@ class _DialistPanelState extends State<_DialistPanel> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final String fallbackDiaName = controller.customOrderLooksLikeZsolozsma
+      ? context.l10n.zsolozsmaTooltip
+      : context.l10n.customOrderUnnamedFileName;
+    final String dialistName =
+      controller.suggestedCustomOrderBaseName ?? fallbackDiaName;
     final List<CustomOrderEntry> entries = controller.customOrder;
     final int selectedCursor = controller.selectedCustomOrderCursor;
 
@@ -2467,7 +2472,7 @@ class _DialistPanelState extends State<_DialistPanel> {
         Expanded(
           child: InputDecorator(
             decoration: InputDecoration(
-              labelText: context.l10n.dialistLabel,
+              labelText: context.l10n.dialistNamedLabel(dialistName),
               border: const OutlineInputBorder(),
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(

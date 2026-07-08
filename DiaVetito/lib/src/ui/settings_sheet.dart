@@ -672,6 +672,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   Future<void> _openSystemActions() {
     return _openSectionSheet(
       title: context.l10n.systemActionsTitle,
+      closeButtonLabel: context.l10n.systemActionsBack,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         return <Widget>[
@@ -704,6 +705,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
   Future<void> _openSectionSheet({
     required String title,
+    String? closeButtonLabel,
     required List<Widget> Function(
       BuildContext context,
       void Function(void Function()) setBoth,
@@ -754,7 +756,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
                             alignment: Alignment.centerRight,
                             child: FilledButton(
                               onPressed: () => Navigator.of(context).pop(),
-                              child: Text(context.l10n.ok),
+                              child: Text(
+                                closeButtonLabel ?? context.l10n.ok,
+                              ),
                             ),
                           ),
                         ],

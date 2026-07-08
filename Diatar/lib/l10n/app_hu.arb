@@ -377,8 +377,13 @@
   "noLoadedSlide": "Nincs betöltött dia.",
   "homeControlModeTooltip": "Képernyőmód",
   "homeControlModeBooks": "Kötetek",
-  "homeControlModeDialist": "Dialista",
-  "dialistLabel": "Dialista",
+  "homeControlModeDialist": "Diasor",
+  "dialistNamedLabel": "Diasor: {name}",
+  "@dialistNamedLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "bookLabel": "Kötet",
   "ungroupedBookGroupLabel": "(nem besorolt)",
   "diaBookLabel": "DIA: {name}",
@@ -660,6 +665,7 @@
   },
   "systemActionsTitle": "Rendszer műveletek",
   "systemActionsSummary": "Kilépés, távoli program leállítása, távoli gép leállítása",
+  "systemActionsBack": "Vissza",
   "localExit": "Kilépés",
   "remoteProgramStop": "Távoli program leállítása",
   "remoteMachineStop": "Távoli gép leállítása",
