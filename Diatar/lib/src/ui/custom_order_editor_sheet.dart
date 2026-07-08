@@ -11,6 +11,8 @@ import 'package:flutter/services.dart';
 import '../controllers/diatar_main_controller.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
+import '../utils/custom_entry_labels.dart';
+import '../utils/escape_sequences.dart';
 import '../utils/friendly_path.dart';
 
 class CustomOrderEditorPanel extends StatefulWidget {
@@ -718,6 +720,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<void> _pickAndSendImageSlide() async {
+    final AppLocalizations l10n = context.l10n;
     final XTypeGroup images = XTypeGroup(
       label: context.l10n.imagesFileTypeLabel,
       extensions: <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
@@ -734,7 +737,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       fileName: '__custom_image__',
       songIndex: -2,
       verseIndex: 0,
-      label: '[Kep] $fileName',
+      label: formatCustomImageEntryLabel(l10n, fileName),
       customImagePath: file.path,
     );
 
@@ -776,7 +779,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       fileName: '__custom_text__',
       songIndex: -1,
       verseIndex: 0,
-      label: '[Szoveg] $effectiveTitle',
+      label: formatCustomTextEntryLabel(context.l10n, effectiveTitle),
       customTextTitle: effectiveTitle,
       customTextBody: lines.join('\n'),
     );
@@ -977,7 +980,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                             final bool selected = selectedSet.contains(i);
                             return CheckboxListTile(
                               value: selected,
-                              title: Text(verses[i].name),
+                              title: _buildTitleWithFirstLine(
+                                title: verses[i].name,
+                                firstLine: firstMeaningfulLine(
+                                  verses[i].lines,
+                                ),
+                              ),
                               onChanged: (bool? value) {
                                 setModalState(() {
                                   if (value == true) {
@@ -1342,7 +1350,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             : rawVerseLabel;
         final String titleText = isContinuation
             ? verseLabel
-            : (isSongEntry ? _normalizeSlashSpacing(entry.label) : entry.label);
+            : (isSongEntry
+                  ? _normalizeSlashSpacing(entry.label)
+                  : localizedCustomEntryLabel(context.l10n, entry));
         final String firstLine = controller.firstTextLineForEntry(entry);
         return ListTile(
           key: ValueKey<String>('${entry.fileName}_${entry.songIndex}_$index'),

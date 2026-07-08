@@ -833,6 +833,18 @@ abstract class AppLocalizations {
   /// **'Dia előnézet'**
   String get previewTitle;
 
+  /// No description provided for @customTextEntryLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dia: {name}'**
+  String customTextEntryLabel(Object name);
+
+  /// No description provided for @customImageEntryLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kép: {name}'**
+  String customImageEntryLabel(Object name);
+
   /// No description provided for @projectedImage.
   ///
   /// In hu, this message translates to:

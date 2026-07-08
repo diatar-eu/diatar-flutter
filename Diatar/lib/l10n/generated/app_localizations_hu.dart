@@ -484,6 +484,16 @@ class AppLocalizationsHu extends AppLocalizations {
   String get previewTitle => 'Dia előnézet';
 
   @override
+  String customTextEntryLabel(Object name) {
+    return 'Dia: $name';
+  }
+
+  @override
+  String customImageEntryLabel(Object name) {
+    return 'Kép: $name';
+  }
+
+  @override
   String get projectedImage => 'Vetített kép:';
 
   @override

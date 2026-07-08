@@ -482,6 +482,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get previewTitle => 'Slide preview';
 
   @override
+  String customTextEntryLabel(Object name) {
+    return 'Slide: $name';
+  }
+
+  @override
+  String customImageEntryLabel(Object name) {
+    return 'Image: $name';
+  }
+
+  @override
   String get projectedImage => 'Projected image:';
 
   @override

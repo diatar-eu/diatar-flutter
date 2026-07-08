@@ -420,6 +420,18 @@
   "stateInactive": "Inactive",
   "nextShort": "Next",
   "previewTitle": "Slide preview",
+  "customTextEntryLabel": "Slide: {name}",
+  "@customTextEntryLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "customImageEntryLabel": "Image: {name}",
+  "@customImageEntryLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "projectedImage": "Projected image:",
   "settingsTitle": "Diatar settings",
   "settingsTitleReceiver": "Settings",

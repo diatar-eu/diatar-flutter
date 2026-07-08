@@ -5,10 +5,12 @@ import 'dart:math' as math;
 import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
 import '../services/dtx_download_service.dart';
 import '../services/zsolozsma_service.dart';
+import '../utils/custom_entry_labels.dart';
 import '../utils/friendly_path.dart';
 import 'settings_sheet.dart';
 import 'custom_order_editor_sheet.dart';
@@ -80,15 +82,6 @@ enum _ProjectionDisplayToggle { kotta, chords, backgroundImage }
 
 enum _HomeControlMode { books, dialist }
 
-String _basename(String path) {
-  final String normalized = path.replaceAll('\\', '/');
-  final List<String> parts = normalized
-      .split('/')
-      .where((String part) => part.isNotEmpty)
-      .toList();
-  return parts.isEmpty ? normalized : parts.last;
-}
-
 String _cleanSeparatorLabel(CustomOrderEntry entry) {
   final String explicit = (entry.customTextTitle ?? '').trim();
   if (explicit.isNotEmpty) {
@@ -145,6 +138,7 @@ String _songVerseToken(DtxVerse verse) {
 }
 
 String _entryShortLabel(
+  AppLocalizations l10n,
   DiatarMainController controller,
   CustomOrderEntry entry,
 ) {
@@ -152,11 +146,10 @@ String _entryShortLabel(
     return _cleanSeparatorLabel(entry);
   }
   if (entry.isCustomImage) {
-    return _basename(entry.customImagePath ?? entry.label);
+    return localizedCustomEntryLabel(l10n, entry);
   }
   if (entry.isCustomText) {
-    final String title = (entry.customTextTitle ?? '').trim();
-    return title.isEmpty ? entry.label : title;
+    return localizedCustomEntryLabel(l10n, entry);
   }
   final DtxSong? song = controller.songForEntry(entry);
   final List<DtxVerse> verses = controller.versesForEntry(entry);
@@ -172,7 +165,10 @@ String _entryShortLabel(
   return fallback.isEmpty ? '${safeVerse + 1}' : fallback;
 }
 
-List<_DiaSongGroup> _buildDiaSongGroups(DiatarMainController controller) {
+List<_DiaSongGroup> _buildDiaSongGroups(
+  AppLocalizations l10n,
+  DiatarMainController controller,
+) {
   final List<CustomOrderEntry> custom = controller.customOrder;
   final List<_DiaSongGroup> groups = <_DiaSongGroup>[];
   int i = 0;
@@ -180,7 +176,7 @@ List<_DiaSongGroup> _buildDiaSongGroups(DiatarMainController controller) {
   while (i < custom.length) {
     final CustomOrderEntry first = custom[i];
     if (!first.isSongEntry) {
-      final String firstLabel = _entryShortLabel(controller, first);
+      final String firstLabel = _entryShortLabel(l10n, controller, first);
       final ({String prefix, String suffix})? firstSplit = _splitSlashLabel(
         firstLabel,
       );
@@ -204,7 +200,11 @@ List<_DiaSongGroup> _buildDiaSongGroups(DiatarMainController controller) {
         if (candidate.isSongEntry) {
           break;
         }
-        final String candidateLabel = _entryShortLabel(controller, candidate);
+        final String candidateLabel = _entryShortLabel(
+          l10n,
+          controller,
+          candidate,
+        );
         final ({String prefix, String suffix})? candidateSplit =
             _splitSlashLabel(candidateLabel);
         if (candidateSplit == null ||
@@ -248,7 +248,7 @@ List<_DiaSongGroup> _buildDiaSongGroups(DiatarMainController controller) {
       verses.add(
         _DiaVerseEntry(
           customOrderIndex: j,
-          label: _entryShortLabel(controller, candidate),
+          label: _entryShortLabel(l10n, controller, candidate),
         ),
       );
       lastVerse = candidate.verseIndex;
@@ -1021,13 +1021,11 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     BuildContext context, {
     required String panelTitle,
   }) {
+    final AppLocalizations l10n = context.l10n;
     final CustomOrderEntry? projectedCustom =
         controller.projectedCustomOrderEntry;
     if (projectedCustom != null && projectedCustom.isCustomText) {
-      final String title =
-          (projectedCustom.customTextTitle ?? '').trim().isEmpty
-          ? projectedCustom.label
-          : (projectedCustom.customTextTitle ?? '').trim();
+      final String title = localizedCustomEntryLabel(l10n, projectedCustom);
       final List<String> lines = (projectedCustom.customTextBody ?? '')
           .split(RegExp(r'\r?\n'))
           .map((String line) => line.trimRight())
@@ -1042,6 +1040,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     if (projectedCustom != null && projectedCustom.isCustomImage) {
       return _CustomImagePreview(
         controller: controller,
+        title: localizedCustomEntryLabel(l10n, projectedCustom),
         imagePath: projectedCustom.customImagePath ?? '',
       );
     }
@@ -2022,7 +2021,10 @@ class _SongDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (controller.diaVirtualBookSelected) {
-      final List<_DiaSongGroup> groups = _buildDiaSongGroups(controller);
+      final List<_DiaSongGroup> groups = _buildDiaSongGroups(
+        context.l10n,
+        controller,
+      );
       if (groups.isEmpty) {
         return const SizedBox.shrink();
       }
@@ -2171,7 +2173,10 @@ class _VerseDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (controller.diaVirtualBookSelected) {
-      final List<_DiaSongGroup> groups = _buildDiaSongGroups(controller);
+      final List<_DiaSongGroup> groups = _buildDiaSongGroups(
+        context.l10n,
+        controller,
+      );
       if (groups.isEmpty) {
         return const SizedBox.shrink();
       }
@@ -2262,17 +2267,21 @@ class _VerseDropdown extends StatelessWidget {
 }
 
 String _dialistEntryLabel(
+  AppLocalizations l10n,
   DiatarMainController controller,
   CustomOrderEntry entry,
 ) {
   if (entry.isSeparator) {
     return _cleanSeparatorLabel(entry);
   }
+  if (entry.isCustomText || entry.isCustomImage) {
+    return localizedCustomEntryLabel(l10n, entry);
+  }
   final String explicit = entry.label.trim();
   if (explicit.isNotEmpty) {
     return entry.isSongEntry ? _normalizeSlashSpacing(explicit) : explicit;
   }
-  final String fallback = _entryShortLabel(controller, entry);
+  final String fallback = _entryShortLabel(l10n, controller, entry);
   return entry.isSongEntry ? _normalizeSlashSpacing(fallback) : fallback;
 }
 
@@ -2328,7 +2337,7 @@ class _DialistPanelState extends State<_DialistPanel> {
       selected: selected,
       isSeparator: isSeparator,
     );
-    final String label = _dialistEntryLabel(controller, entry);
+    final String label = _dialistEntryLabel(context.l10n, controller, entry);
     final String firstLine = controller.firstTextLineForEntry(entry);
 
     if (isSeparator || index <= 0) {
@@ -2357,7 +2366,11 @@ class _DialistPanelState extends State<_DialistPanel> {
       );
     }
 
-    final String previousLabel = _dialistEntryLabel(controller, previousEntry);
+    final String previousLabel = _dialistEntryLabel(
+      context.l10n,
+      controller,
+      previousEntry,
+    );
     final ({String prefix, String suffix})? previousSplit = _splitSlashLabel(
       previousLabel,
     );
@@ -2457,10 +2470,10 @@ class _DialistPanelState extends State<_DialistPanel> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final String fallbackDiaName = controller.customOrderLooksLikeZsolozsma
-      ? context.l10n.zsolozsmaTooltip
-      : context.l10n.customOrderUnnamedFileName;
+        ? context.l10n.zsolozsmaTooltip
+        : context.l10n.customOrderUnnamedFileName;
     final String dialistName =
-      controller.suggestedCustomOrderBaseName ?? fallbackDiaName;
+        controller.suggestedCustomOrderBaseName ?? fallbackDiaName;
     final List<CustomOrderEntry> entries = controller.customOrder;
     final int selectedCursor = controller.selectedCustomOrderCursor;
 
@@ -2770,7 +2783,7 @@ class _CustomTextPreview extends StatelessWidget {
             ? constraints.maxWidth
             : 800;
         final bool needsScrollableMeasure = !constraints.maxHeight.isFinite;
-        final String fullTitle = context.l10n.diaBookLabel(title);
+        final String fullTitle = title;
         final TextStyle titleStyle = TextStyle(
           color: controller.globals.txtColor.withValues(alpha: 0.75),
         );
@@ -2855,14 +2868,17 @@ class _CustomTextPreview extends StatelessWidget {
 class _CustomImagePreview extends StatelessWidget {
   const _CustomImagePreview({
     required this.controller,
+    required this.title,
     required this.imagePath,
   });
 
   final DiatarMainController controller;
+  final String title;
   final String imagePath;
 
   @override
   Widget build(BuildContext context) {
+    final bool showTitle = controller.settings.projUseTitle;
     final String normalized = imagePath.trim();
     final String friendlyPath = normalized.isEmpty
         ? ''
@@ -2882,7 +2898,28 @@ class _CustomImagePreview extends StatelessWidget {
             ),
           );
 
-    return _SwipePagingPreview(controller: controller, child: content);
+    final TextStyle titleStyle = TextStyle(
+      color: controller.globals.txtColor.withValues(alpha: 0.75),
+    );
+
+    return _SwipePagingPreview(
+      controller: controller,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (showTitle) ...<Widget>[
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: titleStyle,
+            ),
+            const SizedBox(height: 10),
+          ],
+          Expanded(child: content),
+        ],
+      ),
+    );
   }
 }
 
@@ -3031,13 +3068,14 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
         final double turnTargetX = width * 0.92;
 
         final double height = constraints.maxHeight.isFinite
-          ? constraints.maxHeight
-          : MediaQuery.of(context).size.height;
+            ? constraints.maxHeight
+            : MediaQuery.of(context).size.height;
         final double maxVerticalDrag = height * (desktopLike ? 0.30 : 0.38);
         final double verticalDistanceThreshold =
-          height * (desktopLike ? 0.17 : 0.13);
-        final double verticalSwipeVelocityThreshold =
-          desktopLike ? 420.0 : 220.0;
+            height * (desktopLike ? 0.17 : 0.13);
+        final double verticalSwipeVelocityThreshold = desktopLike
+            ? 420.0
+            : 220.0;
         final double turnTargetY = height * 0.90;
 
         return IgnorePointer(

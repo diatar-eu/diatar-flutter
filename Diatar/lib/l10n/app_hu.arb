@@ -420,6 +420,18 @@
   "stateInactive": "Inaktív",
   "nextShort": "Kov.",
   "previewTitle": "Dia előnézet",
+  "customTextEntryLabel": "Dia: {name}",
+  "@customTextEntryLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "customImageEntryLabel": "Kép: {name}",
+  "@customImageEntryLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "projectedImage": "Vetített kép:",
   "settingsTitle": "Diatár beállítások",
   "settingsTitleReceiver": "Beállítások",
