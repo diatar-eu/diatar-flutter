@@ -1857,19 +1857,21 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             }),
             onChanged: (int? v) => setBoth(() => _projBlankTrans = v ?? 0),
           ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _desktopProjectorEnabled,
-            onChanged: (bool v) =>
-                setBoth(() => _desktopProjectorEnabled = v),
-            title: Text(l10n.projectorEnabled),
-            subtitle: Text(l10n.projectorEnabledHint),
-          ),
-          _MonitorSelector(
-            value: _desktopProjectorMonitor,
-            onChanged: (int v) =>
-                setBoth(() => _desktopProjectorMonitor = v),
-          ),
+          if (_isDesktopPlatform()) ...<Widget>[
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _desktopProjectorEnabled,
+              onChanged: (bool v) =>
+                  setBoth(() => _desktopProjectorEnabled = v),
+              title: Text(l10n.projectorEnabled),
+              subtitle: Text(l10n.projectorEnabledHint),
+            ),
+            _MonitorSelector(
+              value: _desktopProjectorMonitor,
+              onChanged: (int v) =>
+                  setBoth(() => _desktopProjectorMonitor = v),
+            ),
+          ],
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: !_projAutoSize,
