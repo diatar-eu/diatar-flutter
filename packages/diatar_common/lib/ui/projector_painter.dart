@@ -46,7 +46,7 @@ class ProjectorPainter extends CustomPainter {
     required this.globals,
     required this.settings,
     this.logoTitle = '',
-    this.logoSubtitle = 'Flutter port',
+    this.logoSubtitle = '',
     this.onHighlightRenderState,
   });
 

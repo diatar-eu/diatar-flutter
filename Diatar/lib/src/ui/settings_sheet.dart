@@ -6,6 +6,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:screen_retriever/screen_retriever.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
@@ -84,7 +85,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _projShowBackgroundImage;
   late bool _projUseTitle;
   late bool _projBoldText;
-  late int _desktopProjectorSide;
+  late int _desktopProjectorMonitor;
+  late bool _desktopProjectorEnabled;
   late bool _internetRelayEnabled;
   late bool _localNetworkEnabled;
   late Map<String, String> _desktopActionHotkeys;
@@ -144,7 +146,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projShowBackgroundImage = s.projShowBackgroundImage;
     _projUseTitle = s.projUseTitle;
     _projBoldText = s.projBoldText;
-    _desktopProjectorSide = s.desktopProjectorSide.clamp(0, 1);
+    _desktopProjectorMonitor = s.desktopProjectorMonitor;
+    _desktopProjectorEnabled = s.desktopProjectorEnabled;
     _internetRelayEnabled = s.internetRelayEnabled;
     _localNetworkEnabled = s.tcpClientEnabled;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
@@ -1854,20 +1857,18 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             }),
             onChanged: (int? v) => setBoth(() => _projBlankTrans = v ?? 0),
           ),
-          DropdownButtonFormField<int>(
-            initialValue: _desktopProjectorSide,
-            decoration: InputDecoration(labelText: l10n.projectorSide),
-            items: <DropdownMenuItem<int>>[
-              DropdownMenuItem<int>(
-                value: 0,
-                child: Text(l10n.projectorSideLeft),
-              ),
-              DropdownMenuItem<int>(
-                value: 1,
-                child: Text(l10n.projectorSideRight),
-              ),
-            ],
-            onChanged: (int? v) => setBoth(() => _desktopProjectorSide = v ?? 1),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _desktopProjectorEnabled,
+            onChanged: (bool v) =>
+                setBoth(() => _desktopProjectorEnabled = v),
+            title: Text(l10n.projectorEnabled),
+            subtitle: Text(l10n.projectorEnabledHint),
+          ),
+          _MonitorSelector(
+            value: _desktopProjectorMonitor,
+            onChanged: (int v) =>
+                setBoth(() => _desktopProjectorMonitor = v),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -2204,7 +2205,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       homeShowHighlightControls: _homeShowHighlightControls,
       appThemeMode: _appThemeMode.clamp(0, 1),
       appLanguage: _appLanguage,
-      desktopProjectorSide: _desktopProjectorSide.clamp(0, 1),
+      desktopProjectorEnabled: _desktopProjectorEnabled,
+      desktopProjectorMonitor: _desktopProjectorMonitor,
       desktopActionHotkeys: Map<String, String>.from(_desktopActionHotkeys),
       desktopSongHotkeys: Map<String, String>.from(_desktopSongHotkeys),
       projBoldText: _projBoldText,
@@ -2659,6 +2661,75 @@ class _RegistrationInputDialogState extends State<_RegistrationInputDialog> {
         ),
         FilledButton(onPressed: _submit, child: Text(l10n.ok)),
       ],
+    );
+  }
+}
+
+/// A vetítőablak megjelenítendő kijelzőjének kiválasztója.
+/// -1: automatikus (utolsó/jobb szélső kijelző), egyébként a kijelző indexe.
+class _MonitorSelector extends StatefulWidget {
+  const _MonitorSelector({required this.value, required this.onChanged});
+
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  @override
+  State<_MonitorSelector> createState() => _MonitorSelectorState();
+}
+
+class _MonitorSelectorState extends State<_MonitorSelector> {
+  List<Display> _displays = <Display>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDisplays();
+  }
+
+  Future<void> _loadDisplays() async {
+    try {
+      final List<Display> displays = await screenRetriever.getAllDisplays();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _displays = displays;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _displays = <Display>[];
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = context.l10n;
+    final List<DropdownMenuItem<int>> items = <DropdownMenuItem<int>>[
+      DropdownMenuItem<int>(
+        value: -1,
+        child: Text(l10n.projectorMonitorAuto),
+      ),
+    ];
+    for (int i = 0; i < _displays.length; i++) {
+      final Display d = _displays[i];
+      final String size = d.size.width.round() > 0
+          ? '${d.size.width.round()}x${d.size.height.round()}'
+          : '';
+      final String label = size.isNotEmpty
+          ? l10n.projectorMonitorIndex(i + 1, size)
+          : l10n.projectorMonitorIndexShort(i + 1);
+      items.add(DropdownMenuItem<int>(value: i, child: Text(label)));
+    }
+
+    return DropdownButtonFormField<int>(
+      initialValue: widget.value,
+      decoration: InputDecoration(labelText: l10n.projectorMonitor),
+      items: items,
+      onChanged: (int? v) => widget.onChanged(v ?? -1),
     );
   }
 }

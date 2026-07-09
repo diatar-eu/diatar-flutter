@@ -302,6 +302,12 @@ abstract class AppLocalizations {
   /// **'Vetítés KI'**
   String get projectionOff;
 
+  /// No description provided for @hideControlWindow.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vezérlő ablak elrejtése'**
+  String get hideControlWindow;
+
   /// No description provided for @previous.
   ///
   /// In hu, this message translates to:
@@ -1967,23 +1973,41 @@ abstract class AppLocalizations {
   /// **'Alsó margó'**
   String get projectionMarginBottom;
 
-  /// No description provided for @projectorSide.
+  /// No description provided for @projectorMonitor.
   ///
   /// In hu, this message translates to:
-  /// **'Vetítő oldala'**
-  String get projectorSide;
+  /// **'Vetítő kijelzője'**
+  String get projectorMonitor;
 
-  /// No description provided for @projectorSideLeft.
+  /// No description provided for @projectorEnabled.
   ///
   /// In hu, this message translates to:
-  /// **'Bal'**
-  String get projectorSideLeft;
+  /// **'Vetítőablak használata'**
+  String get projectorEnabled;
 
-  /// No description provided for @projectorSideRight.
+  /// No description provided for @projectorEnabledHint.
   ///
   /// In hu, this message translates to:
-  /// **'Jobb'**
-  String get projectorSideRight;
+  /// **'Külön ablakban vetít asztali környezeten. Kikapcsolva a program csak vezérlőként működik vetítőablak nélkül.'**
+  String get projectorEnabledHint;
+
+  /// No description provided for @projectorMonitorAuto.
+  ///
+  /// In hu, this message translates to:
+  /// **'Automatikus (utolsó kijelző)'**
+  String get projectorMonitorAuto;
+
+  /// No description provided for @projectorMonitorIndex.
+  ///
+  /// In hu, this message translates to:
+  /// **'{index}. kijelző ({size})'**
+  String projectorMonitorIndex(int index, Object size);
+
+  /// No description provided for @projectorMonitorIndexShort.
+  ///
+  /// In hu, this message translates to:
+  /// **'{index}. kijelző'**
+  String projectorMonitorIndexShort(int index);
 
   /// No description provided for @tcpInvalidTargetFormat.
   ///

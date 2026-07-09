@@ -34,6 +34,7 @@
   "songNext": "Song +",
   "projectionOn": "Projection ON",
   "projectionOff": "Projection OFF",
+  "hideControlWindow": "Hide control window",
   "previous": "Previous",
   "next": "Next",
   "highlightPrev": "Word highlight ←",
@@ -718,9 +719,27 @@
   "projectionMarginRight": "Right margin",
   "projectionMarginTop": "Top margin",
   "projectionMarginBottom": "Bottom margin",
-  "projectorSide": "Projector side",
-  "projectorSideLeft": "Left",
-  "projectorSideRight": "Right",
+  "projectorMonitor": "Projector display",
+  "projectorEnabled": "Use projector window",
+  "projectorEnabledHint": "Projects in a separate window on desktop. When off, the app acts only as a controller without a projector window.",
+  "projectorMonitorAuto": "Automatic (last display)",
+  "projectorMonitorIndex": "Display {index} ({size})",
+  "@projectorMonitorIndex": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "size": {}
+    }
+  },
+  "projectorMonitorIndexShort": "Display {index}",
+  "@projectorMonitorIndexShort": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
   "tcpInvalidTargetFormat": "Invalid target format: {target}",
   "@tcpInvalidTargetFormat": {
     "placeholders": {

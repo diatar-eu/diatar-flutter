@@ -806,6 +806,15 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                     ? const Color(0xFFD32F2F)
                     : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
+              if (controller.desktopProjectorEnabled)
+                const SizedBox(width: 8),
+              if (controller.desktopProjectorEnabled)
+                _actionIconButton(
+                  context,
+                  icon: Icons.visibility_off,
+                  tooltip: l10n.hideControlWindow,
+                  onPressed: () => unawaited(controller.hideControlWindow()),
+                ),
               const SizedBox(width: 8),
               _actionIconButton(
                 context,

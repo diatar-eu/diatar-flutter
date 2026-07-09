@@ -250,6 +250,20 @@ class DiatarMainController extends ChangeNotifier {
   bool get tcpActive => settings.tcpClientEnabled;
     bool get tcpConfigured => _transportSettingsPolicy.isTcpConfigured(settings);
 
+  /// True, ha asztali környezeten a vetítőablak (külön ablak) elérhető.
+  /// Ez a beállítás értékét tükrözi (a felhasználó kapcsolhatja ki).
+  bool get desktopProjectorEnabled =>
+      _isDesktopPlatform() && settings.desktopProjectorEnabled;
+
+  bool _isDesktopPlatform() {
+    if (kIsWeb) {
+      return false;
+    }
+    return defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
+  }
+
   void _refreshSenderFlags() {
     senderRunning = _sender.running || _mqttSender.running;
     senderConnected = tcpConnected || mqttConnected;
@@ -295,6 +309,12 @@ class DiatarMainController extends ChangeNotifier {
       hasBackgroundImage: _hasConfiguredBackgroundImage,
     );
     await _desktopProjectorBridge.start(settings);
+    _desktopProjectorBridge.onControlWindowRestored = () {
+      if (_controlWindowHidden) {
+        _controlWindowHidden = false;
+        notifyListeners();
+      }
+    };
     _configureSender();
     await _applyTransport();
     await reloadBooks();
@@ -2143,6 +2163,25 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
     _syncProjectionOnly();
   }
+
+  /// Elrejti a vezérlő (fő) ablakot, ha a vetítő ablakkal azonos
+  /// monitoron vagyunk, hogy a vetítés látszódjon.
+  Future<void> hideControlWindow() async {
+    await _desktopProjectorBridge.hideControlWindow();
+    _controlWindowHidden = true;
+    notifyListeners();
+  }
+
+  /// Visszaállítja a vezérlő (fő) ablakot a vetítésbe való kattintás után.
+  Future<void> showControlWindow() async {
+    await _desktopProjectorBridge.showControlWindow();
+    _controlWindowHidden = false;
+    notifyListeners();
+  }
+
+  /// Igaz, ha a vezérlő ablak el van rejtve (átlátszósága 0).
+  bool _controlWindowHidden = false;
+  bool get controlWindowHidden => _controlWindowHidden;
 
   Future<void> toggleProjectionLock() async {
     final bool wasLocked = settings.projectionLocked;

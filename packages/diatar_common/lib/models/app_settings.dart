@@ -47,7 +47,8 @@ class AppSettings {
     this.appThemeMode = 0,
     this.appLanguage = '',
     this.projectionLocked = false,
-    this.desktopProjectorSide = 1,
+    this.desktopProjectorEnabled = true,
+    this.desktopProjectorMonitor = -1,
     this.desktopActionHotkeys = const <String, String>{},
     this.desktopSongHotkeys = const <String, String>{},
     this.receiverUseServerColors = true,
@@ -109,7 +110,8 @@ class AppSettings {
   final int appThemeMode;
   final String appLanguage;
   final bool projectionLocked;
-  final int desktopProjectorSide;
+  final bool desktopProjectorEnabled;
+  final int desktopProjectorMonitor;
   final Map<String, String> desktopActionHotkeys;
   final Map<String, String> desktopSongHotkeys;
   final bool receiverUseServerColors;
@@ -178,7 +180,8 @@ class AppSettings {
     int? appThemeMode,
     String? appLanguage,
     bool? projectionLocked,
-    int? desktopProjectorSide,
+    bool? desktopProjectorEnabled,
+    int? desktopProjectorMonitor,
     Map<String, String>? desktopActionHotkeys,
     Map<String, String>? desktopSongHotkeys,
     bool? receiverUseServerColors,
@@ -240,7 +243,10 @@ class AppSettings {
       appThemeMode: appThemeMode ?? this.appThemeMode,
       appLanguage: appLanguage ?? this.appLanguage,
       projectionLocked: projectionLocked ?? this.projectionLocked,
-        desktopProjectorSide: desktopProjectorSide ?? this.desktopProjectorSide,
+      desktopProjectorEnabled:
+          desktopProjectorEnabled ?? this.desktopProjectorEnabled,
+        desktopProjectorMonitor:
+            desktopProjectorMonitor ?? this.desktopProjectorMonitor,
       desktopActionHotkeys: desktopActionHotkeys ?? this.desktopActionHotkeys,
       desktopSongHotkeys: desktopSongHotkeys ?? this.desktopSongHotkeys,
       receiverUseServerColors:
@@ -287,7 +293,8 @@ class AppSettings {
       'projBackTrans': projBackTrans,
       'projBlankTrans': projBlankTrans,
       'projShowBackgroundImage': projShowBackgroundImage,
-      'desktopProjectorSide': desktopProjectorSide,
+      'desktopProjectorEnabled': desktopProjectorEnabled,
+      'desktopProjectorMonitor': desktopProjectorMonitor,
       'bkColor': bkColor.toARGB32(),
       'txtColor': txtColor.toARGB32(),
       'blankColor': blankColor.toARGB32(),
@@ -359,7 +366,8 @@ class AppSettings {
       projBackTrans: intValue('projBackTrans', 0),
       projBlankTrans: intValue('projBlankTrans', 0),
       projShowBackgroundImage: boolValue('projShowBackgroundImage', true),
-      desktopProjectorSide: intValue('desktopProjectorSide', 1).clamp(0, 1),
+      desktopProjectorEnabled: boolValue('desktopProjectorEnabled', true),
+      desktopProjectorMonitor: intValue('desktopProjectorMonitor', -1),
       bkColor: colorValue('bkColor', const Color(0xFF000000)),
       txtColor: colorValue('txtColor', const Color(0xFFFFFFFF)),
       blankColor: colorValue('blankColor', const Color(0xFF000000)),

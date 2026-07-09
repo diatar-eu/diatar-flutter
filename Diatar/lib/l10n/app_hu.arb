@@ -34,6 +34,7 @@
   "songNext": "Ének +",
   "projectionOn": "Vetítés BE",
   "projectionOff": "Vetítés KI",
+  "hideControlWindow": "Vezérlő ablak elrejtése",
   "previous": "Előző",
   "next": "Következő",
   "highlightPrev": "Szókiemelés ←",
@@ -718,9 +719,27 @@
   "projectionMarginRight": "Jobb margó",
   "projectionMarginTop": "Felső margó",
   "projectionMarginBottom": "Alsó margó",
-  "projectorSide": "Vetítő oldala",
-  "projectorSideLeft": "Bal",
-  "projectorSideRight": "Jobb",
+  "projectorMonitor": "Vetítő kijelzője",
+  "projectorEnabled": "Vetítőablak használata",
+  "projectorEnabledHint": "Külön ablakban vetít asztali környezeten. Kikapcsolva a program csak vezérlőként működik vetítőablak nélkül.",
+  "projectorMonitorAuto": "Automatikus (utolsó kijelző)",
+  "projectorMonitorIndex": "{index}. kijelző ({size})",
+  "@projectorMonitorIndex": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "size": {}
+    }
+  },
+  "projectorMonitorIndexShort": "{index}. kijelző",
+  "@projectorMonitorIndexShort": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
   "tcpInvalidTargetFormat": "Hibás célpont formátum: {target}",
   "@tcpInvalidTargetFormat": {
     "placeholders": {

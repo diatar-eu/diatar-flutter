@@ -113,6 +113,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get projectionOff => 'Projection OFF';
 
   @override
+  String get hideControlWindow => 'Hide control window';
+
+  @override
   String get previous => 'Previous';
 
   @override
@@ -1094,13 +1097,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get projectionMarginBottom => 'Bottom margin';
 
   @override
-  String get projectorSide => 'Projector side';
+  String get projectorMonitor => 'Projector display';
 
   @override
-  String get projectorSideLeft => 'Left';
+  String get projectorEnabled => 'Use projector window';
 
   @override
-  String get projectorSideRight => 'Right';
+  String get projectorEnabledHint =>
+      'Projects in a separate window on desktop. When off, the app acts only as a controller without a projector window.';
+
+  @override
+  String get projectorMonitorAuto => 'Automatic (last display)';
+
+  @override
+  String projectorMonitorIndex(int index, Object size) {
+    return 'Display $index ($size)';
+  }
+
+  @override
+  String projectorMonitorIndexShort(int index) {
+    return 'Display $index';
+  }
 
   @override
   String tcpInvalidTargetFormat(Object target) {

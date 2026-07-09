@@ -114,6 +114,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get projectionOff => 'Vetítés KI';
 
   @override
+  String get hideControlWindow => 'Vezérlő ablak elrejtése';
+
+  @override
   String get previous => 'Előző';
 
   @override
@@ -1096,13 +1099,27 @@ class AppLocalizationsHu extends AppLocalizations {
   String get projectionMarginBottom => 'Alsó margó';
 
   @override
-  String get projectorSide => 'Vetítő oldala';
+  String get projectorMonitor => 'Vetítő kijelzője';
 
   @override
-  String get projectorSideLeft => 'Bal';
+  String get projectorEnabled => 'Vetítőablak használata';
 
   @override
-  String get projectorSideRight => 'Jobb';
+  String get projectorEnabledHint =>
+      'Külön ablakban vetít asztali környezeten. Kikapcsolva a program csak vezérlőként működik vetítőablak nélkül.';
+
+  @override
+  String get projectorMonitorAuto => 'Automatikus (utolsó kijelző)';
+
+  @override
+  String projectorMonitorIndex(int index, Object size) {
+    return '$index. kijelző ($size)';
+  }
+
+  @override
+  String projectorMonitorIndexShort(int index) {
+    return '$index. kijelző';
+  }
 
   @override
   String tcpInvalidTargetFormat(Object target) {

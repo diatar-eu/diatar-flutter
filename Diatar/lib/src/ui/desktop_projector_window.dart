@@ -10,9 +10,10 @@ import 'package:screen_retriever/screen_retriever.dart';
 import 'package:window_manager/window_manager.dart';
 
 class DesktopProjectorWindow extends StatefulWidget {
-  const DesktopProjectorWindow({super.key, required this.side});
+  const DesktopProjectorWindow({super.key, required this.monitor});
 
-  final int side;
+  /// A kiválasztott monitor indexe. -1 esetén az utolsó (jobb szélső) kijelző.
+  final int monitor;
 
   @override
   State<DesktopProjectorWindow> createState() => _DesktopProjectorWindowState();
@@ -21,10 +22,15 @@ class DesktopProjectorWindow extends StatefulWidget {
 class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     with WindowListener {
   static const String _channelName = 'diatar/desktop_projector';
+  static const String _controlChannelName = 'diatar/desktop_projector_control';
 
   final WindowMethodChannel _channel = const WindowMethodChannel(
     _channelName,
     mode: ChannelMode.unidirectional,
+  );
+  final WindowMethodChannel _controlChannel = const WindowMethodChannel(
+    _controlChannelName,
+    mode: ChannelMode.bidirectional,
   );
   final DesktopProjectorController _controller = DesktopProjectorController();
 
@@ -38,8 +44,16 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     final WindowController windowController =
         await WindowController.fromCurrentEngine();
     final Map<String, dynamic> args = _decodeArguments(windowController.arguments);
-    _controller.applySide(args['side'] as int? ?? widget.side);
+    final int requestedMonitor = (args['monitor'] as int?) ?? widget.monitor;
+    final int mainMonitor = (args['mainMonitor'] as int?) ?? -1;
+    _controller.applyMonitor(requestedMonitor);
     await _channel.setMethodCallHandler(_controller.handleMethodCall);
+    // A vezérlő ablakkal való kommunikációhoz (vetítésbe kattintás ->
+    // vezérlő visszahozása) egy bidirekcionális csatornán párba állunk a
+    // főablakkal.
+    await _controlChannel.setMethodCallHandler((MethodCall call) async {
+      return null;
+    });
     await windowManager.ensureInitialized();
     windowManager.addListener(this);
     await windowManager.waitUntilReadyToShow(
@@ -53,12 +67,19 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
       () async {
         await windowManager.setAsFrameless();
         await windowManager.setSkipTaskbar(true);
-        await windowManager.setAlwaysOnTop(true);
         await windowManager.setPreventClose(true);
-        await _positionOnSelectedDisplay(_controller.side);
+        final int targetIndex =
+            await _positionOnSelectedDisplay(requestedMonitor);
+        final bool sameMonitor =
+            mainMonitor >= 0 && mainMonitor == targetIndex;
+        // Ha a vetítő ablak a vezérlő ablakkal azonos monitoron van, akkor
+        // ne legyen mindig felül, hogy a vezérlő ablak kerülhessen a tetejére.
+        await windowManager.setAlwaysOnTop(!sameMonitor);
         await windowManager.setFullScreen(true);
         await windowManager.show(inactive: true);
-        await windowManager.focus();
+        if (!sameMonitor) {
+          await windowManager.focus();
+        }
       },
     );
   }
@@ -77,10 +98,13 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     return <String, dynamic>{};
   }
 
-  Future<void> _positionOnSelectedDisplay(int side) async {
+  /// A kért monitorra pozícionálja az ablakot.
+  /// [monitor] >= 0 esetén az adott indexű kijelző, egyébként az utolsó
+  /// (jobb szélső) kijelző. Visszaadja a ténylegesen kiválasztott indexet.
+  Future<int> _positionOnSelectedDisplay(int monitor) async {
     final List<Display> displays = await screenRetriever.getAllDisplays();
     if (displays.isEmpty) {
-      return;
+      return 0;
     }
     final List<Display> sorted = List<Display>.from(displays)
       ..sort((Display a, Display b) {
@@ -88,18 +112,22 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
         final double bx = b.visiblePosition?.dx ?? 0;
         return ax.compareTo(bx);
       });
-    final Display selected = side <= 0 ? sorted.first : sorted.last;
+    final int index =
+        (monitor >= 0 && monitor < sorted.length) ? monitor : sorted.length - 1;
+    final Display selected = sorted[index];
     final ui.Offset position = selected.visiblePosition ?? ui.Offset.zero;
     final ui.Size size = selected.visibleSize ?? selected.size;
     await windowManager.setBounds(
       ui.Rect.fromLTWH(position.dx, position.dy, size.width, size.height),
     );
+    return index;
   }
 
   @override
   void dispose() {
     windowManager.removeListener(this);
     unawaited(_channel.setMethodCallHandler(null));
+    unawaited(_controlChannel.setMethodCallHandler(null));
     _controller.dispose();
     super.dispose();
   }
@@ -108,6 +136,15 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
   void onWindowClose() async {
     await windowManager.setPreventClose(false);
     await windowManager.close();
+  }
+
+  /// A vetítésbe való kattintáskor visszahozzuk a vezérlő (fő) ablakot.
+  Future<void> _onProjectionTap() async {
+    try {
+      await _controlChannel.invokeMethod('showControl');
+    } catch (_) {
+      // nem kritikus
+    }
   }
 
   @override
@@ -119,14 +156,18 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
           debugShowCheckedModeBanner: false,
           home: Scaffold(
             backgroundColor: Colors.black,
-            body: IgnorePointer(
-              child: CustomPaint(
-                painter: ProjectorPainter(
-                  frame: _controller.activeFrame,
-                  globals: _controller.globals,
-                  settings: _controller.settings,
+            body: MouseRegion(
+              cursor: SystemMouseCursors.none,
+              child: GestureDetector(
+                onTap: _onProjectionTap,
+                child: CustomPaint(
+                  painter: ProjectorPainter(
+                    frame: _controller.activeFrame,
+                    globals: _controller.globals,
+                    settings: _controller.settings,
+                  ),
+                  child: const SizedBox.expand(),
                 ),
-                child: const SizedBox.expand(),
               ),
             ),
           ),
@@ -141,7 +182,7 @@ class DesktopProjectorController extends ChangeNotifier {
   AppSettings settings = const AppSettings();
   ProjectionFrame? diaFrame = const LogoFrame(0);
   ProjectionFrame? blankFrame;
-  int side = 1;
+  int monitor = -1;
   Timer? _logoTimer;
   bool _disposed = false;
 
@@ -164,13 +205,17 @@ class DesktopProjectorController extends ChangeNotifier {
         return null;
       case 'idle':
         return null;
+      case 'close':
+        await windowManager.setPreventClose(false);
+        await windowManager.close();
+        return null;
       default:
         throw MissingPluginException('Unknown projector method: ${call.method}');
     }
   }
 
-  void applySide(int value) {
-    side = value <= 0 ? 0 : 1;
+  void applyMonitor(int value) {
+    monitor = value;
   }
 
   void _applySettings(AppSettings newSettings) {
@@ -178,7 +223,7 @@ class DesktopProjectorController extends ChangeNotifier {
       return;
     }
     settings = newSettings;
-    side = newSettings.desktopProjectorSide.clamp(0, 1);
+    monitor = newSettings.desktopProjectorMonitor;
     notifyListeners();
   }
 

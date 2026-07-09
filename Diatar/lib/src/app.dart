@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../l10n/generated/app_localizations.dart';
 import 'controllers/diatar_main_controller.dart';
@@ -17,7 +18,8 @@ class DiatarApp extends StatefulWidget {
   State<DiatarApp> createState() => _DiatarAppState();
 }
 
-class _DiatarAppState extends State<DiatarApp> with WidgetsBindingObserver {
+class _DiatarAppState extends State<DiatarApp>
+    with WidgetsBindingObserver, WindowListener {
   final DiatarMainController _controller = DiatarMainController();
 
   Locale? _resolveAppLocale(String languageCode) {
@@ -36,6 +38,9 @@ class _DiatarAppState extends State<DiatarApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (_isDesktopPlatform()) {
+      windowManager.addListener(this);
+    }
     unawaited(_enableImmersiveMode());
     unawaited(_controller.init());
     unawaited(
@@ -50,8 +55,27 @@ class _DiatarAppState extends State<DiatarApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (_isDesktopPlatform()) {
+      windowManager.removeListener(this);
+    }
     _controller.dispose();
     super.dispose();
+  }
+
+  bool _isDesktopPlatform() {
+    if (kIsWeb) {
+      return false;
+    }
+    return defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
+  }
+
+  /// A vezérlő (fő) ablak bezárásakor (pl. a fejléc bezárás gombja) zárjuk be
+  /// a vetítőablakot is, és lépünk ki a programból teljesen.
+  @override
+  void onWindowClose() async {
+    await _controller.requestExit();
   }
 
   @override
@@ -91,9 +115,18 @@ class _DiatarAppState extends State<DiatarApp> with WidgetsBindingObserver {
           theme: ThemeData.light(useMaterial3: true),
           darkTheme: ThemeData.dark(useMaterial3: true),
           themeMode: themeMode,
+          // A DesktopHotkeysLayer-t (gyorsbillentyűket kezelő Focus réteget)
+          // mindig csatlakoztatjuk, hogy a billentyűk akkor is működjenek,
+          // ha a vezérlő ablak el van rejtve. Ilyenkor csak az ablak
+          // tartalma üres (és a kurzor el van rejtve), maga a réteg megmarad.
           home: DesktopHotkeysLayer(
             controller: _controller,
-            child: DiatarHomePage(controller: _controller),
+            child: _controller.controlWindowHidden
+                ? MouseRegion(
+                    cursor: SystemMouseCursors.none,
+                    child: const SizedBox.expand(),
+                  )
+                : DiatarHomePage(controller: _controller),
           ),
         );
       },
