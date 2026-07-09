@@ -40,6 +40,23 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     unawaited(_bootstrap());
   }
 
+  bool _shuttingDown = false;
+
+  /// Leállítja a vetítőablakot: előbb leiratkozik a natív ablakcsatornákról
+  /// (hogy a következő megnyitáskor ne kapjunk CHANNEL_LIMIT_REACHED hibát,
+  /// mivel a csatorna regisztrációja a natív oldalon az izolátum leállása
+  /// után is megmarad), majd bezárja az ablakot.
+  Future<void> _shutdown() async {
+    if (_shuttingDown) {
+      return;
+    }
+    _shuttingDown = true;
+    await _channel.setMethodCallHandler(null);
+    await _controlChannel.setMethodCallHandler(null);
+    await windowManager.setPreventClose(false);
+    await windowManager.close();
+  }
+
   Future<void> _bootstrap() async {
     final WindowController windowController =
         await WindowController.fromCurrentEngine();
@@ -47,6 +64,7 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     final int requestedMonitor = (args['monitor'] as int?) ?? widget.monitor;
     final int mainMonitor = (args['mainMonitor'] as int?) ?? -1;
     _controller.applyMonitor(requestedMonitor);
+    _controller.onClose = _shutdown;
     await _channel.setMethodCallHandler(_controller.handleMethodCall);
     // A vezérlő ablakkal való kommunikációhoz (vetítésbe kattintás ->
     // vezérlő visszahozása) egy bidirekcionális csatornán párba állunk a
@@ -75,10 +93,31 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
         // Ha a vetítő ablak a vezérlő ablakkal azonos monitoron van, akkor
         // ne legyen mindig felül, hogy a vezérlő ablak kerülhessen a tetejére.
         await windowManager.setAlwaysOnTop(!sameMonitor);
-        await windowManager.setFullScreen(true);
+        // Teljes képernyőre helyezzük a kiválasztott kijelzőn a bounds
+        // beállításával (a natív macOS fullscreen helyett), így futás
+        // közbeni (beállításokból történő) megnyitáskor is megbízhatóan
+        // kitölti a kijelzőt, és nem függ a fullscreen-animáció
+        // időzítésétől.
+        await windowManager.setFullScreen(false);
+        final ui.Rect displayRect = await _displayRect(targetIndex);
+        await windowManager.setBounds(displayRect, animate: false);
         await windowManager.show(inactive: true);
         if (!sameMonitor) {
           await windowManager.focus();
+        }
+        // Biztonsági újraalkalmazás: futás közbeni (beállításokból történő)
+        // megnyitáskor a window_manager néha nem érvényesíti azonnal a
+        // bounds/alwaysOnTop beállításokat, ezért egy képkockányi késleltetés
+        // után újra kitöltjük a kijelzőt és a fókuszt is rendezük.
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+        await windowManager.setBounds(displayRect, animate: false);
+        await windowManager.setAlwaysOnTop(!sameMonitor);
+        if (!sameMonitor) {
+          await windowManager.focus();
+        } else {
+          // Azonos monitoron a vezérlő ablakot tartjuk felül, de a vetítő
+          // ablakot is láthatóvá tesszük (átlátszó, ha a vezérlő el van rejtve).
+          await windowManager.show(inactive: true);
         }
       },
     );
@@ -123,6 +162,28 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     return index;
   }
 
+  /// Visszaadja a megadott indexű kijelző teljes területét leíró téglalant.
+  /// [index] >= 0 esetén az adott kijelző, egyébként az utolsó (jobb
+  /// szélső) kijelző. A vetítőablak teljes képernyőre helyezéséhez használjuk
+  /// a natív fullscreen helyett.
+  Future<ui.Rect> _displayRect(int index) async {
+    final List<Display> displays = await screenRetriever.getAllDisplays();
+    if (displays.isEmpty) {
+      return ui.Rect.zero;
+    }
+    final List<Display> sorted = List<Display>.from(displays)
+      ..sort((Display a, Display b) {
+        final double ax = a.visiblePosition?.dx ?? 0;
+        final double bx = b.visiblePosition?.dx ?? 0;
+        return ax.compareTo(bx);
+      });
+    final int i = (index >= 0 && index < sorted.length) ? index : sorted.length - 1;
+    final Display d = sorted[i];
+    final ui.Offset position = d.visiblePosition ?? ui.Offset.zero;
+    final ui.Size size = d.visibleSize ?? d.size;
+    return ui.Rect.fromLTWH(position.dx, position.dy, size.width, size.height);
+  }
+
   @override
   void dispose() {
     windowManager.removeListener(this);
@@ -133,10 +194,7 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
   }
 
   @override
-  void onWindowClose() async {
-    await windowManager.setPreventClose(false);
-    await windowManager.close();
-  }
+  void onWindowClose() => _shutdown();
 
   /// A vetítésbe való kattintáskor visszahozzuk a vezérlő (fő) ablakot.
   Future<void> _onProjectionTap() async {
@@ -206,12 +264,19 @@ class DesktopProjectorController extends ChangeNotifier {
       case 'idle':
         return null;
       case 'close':
-        await windowManager.setPreventClose(false);
-        await windowManager.close();
+        _onClose();
         return null;
       default:
         throw MissingPluginException('Unknown projector method: ${call.method}');
     }
+  }
+
+  /// A vezérlő ablak bezárását (a 'close' csatornaüzenetre) a vetítőablak
+  /// állapotkezelőjéből indítjuk, hogy a natív csatornák is leiratkozzanak.
+  VoidCallback? onClose;
+
+  void _onClose() {
+    onClose?.call();
   }
 
   void applyMonitor(int value) {
