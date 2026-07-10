@@ -33,6 +33,7 @@ import '../services/dtx_order_store.dart';
 import '../services/dtz_library_service.dart';
 import '../services/sender_callback_coordinator.dart';
 import '../services/sender_transport_coordinator.dart';
+import '../services/song_search_service.dart';
 import '../services/settings_store.dart';
 import '../services/tcp_sender_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
@@ -143,6 +144,7 @@ class DiatarMainController extends ChangeNotifier {
   final DtxOrderStore _orderStore = DtxOrderStore();
   final ZsolozsmaService _zsolozsmaService = ZsolozsmaService();
   final ZsolozsmaBreviarDecoder _zsolozsmaDecoder = ZsolozsmaBreviarDecoder();
+  final SongSearchService _searchService = SongSearchService();
   final TcpSenderService _sender = TcpSenderService(
     onStatusChanged: (bool connected) {},
     onError: (String code, Map<String, String> params) {},
@@ -197,6 +199,11 @@ class DiatarMainController extends ChangeNotifier {
   static const String _customOrderSourceZsolozsmaUnsaved = 'zsolozsma-unsaved';
   String? _customOrderSourceType;
   String? _zsolozsmaVirtualBookLabel;
+
+  /// A kereséshez eloallitott, izolátumban keresheto index.
+  /// `reloadBooks` után épül fel (háttérfolyamatban).
+  List<SongSearchSong> _searchIndex = const <SongSearchSong>[];
+  List<SongSearchSong> get searchIndex => _searchIndex;
 
   /// A .dtz fajlokbol betoltott dia-id -> foto utvonal lekepezes.
   Map<String, String> _diaPhotoPaths = <String, String>{};
@@ -837,9 +844,13 @@ class DiatarMainController extends ChangeNotifier {
       }
       await _loadDtzPhotos();
       await _persistCurrentCustomOrder();
+
+      // Keresési index építése háttérfolyamatban (nem fagyasztja az UI-t).
+      _searchIndex = await compute(buildSearchIndex, books);
     } catch (e) {
       _setStatus('statusLoadError', <String, String>{'error': '$e'});
       books = const <DtxBook>[];
+      _searchIndex = const <SongSearchSong>[];
     } finally {
       loading = false;
       notifyListeners();
@@ -1945,6 +1956,46 @@ class DiatarMainController extends ChangeNotifier {
     });
     notifyListeners();
     _syncCurrentDia();
+  }
+
+  /// Egy adott ének/versszak közvetlen megjelenítése a vezérlőben és a
+  /// vetítésben, egyetlen szinkronizálással (a keresőből való ugráshoz).
+  void goToSong(int targetBookIndex, int targetSongIndex, int targetVerseIndex) {
+    if (books.isEmpty) {
+      return;
+    }
+    final int bIx = targetBookIndex.clamp(0, books.length - 1);
+    final DtxBook b = books[bIx];
+    if (b.songs.isEmpty) {
+      return;
+    }
+    final int sIx = targetSongIndex.clamp(0, b.songs.length - 1);
+    final DtxSong s = b.songs[sIx];
+    final int vIx = s.verses.isEmpty
+        ? 0
+        : targetVerseIndex.clamp(0, s.verses.length - 1);
+
+    _diaVirtualBookSelected = false;
+    bookIndex = bIx;
+    songIndex = sIx;
+    verseIndex = vIx;
+    highPos = 0;
+    _resetHighlightRenderState();
+    _projectedCustomCursor = -1;
+    _setStatus('statusSongSelected', <String, String>{'title': s.title});
+    _syncCustomCursorFromCurrentSong();
+    notifyListeners();
+    _syncCurrentDia();
+  }
+
+  /// Keresés az összes betöltött énektárban: énekszám, cím és dalbeli sor
+  /// alapján is. A keresés külön izolátumban fut, így nem fagyasztja az UI-t.
+  Future<List<SongSearchResult>> searchSongs(String query) async {
+    final String trimmed = query.trim();
+    if (trimmed.isEmpty || _searchIndex.isEmpty) {
+      return const <SongSearchResult>[];
+    }
+    return _searchService.search(index: _searchIndex, query: trimmed);
   }
 
   void nextVerse() {

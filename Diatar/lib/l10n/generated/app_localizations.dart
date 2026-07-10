@@ -800,7 +800,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchHint.
   ///
   /// In hu, this message translates to:
-  /// **'Kötet vagy enekcím'**
+  /// **'Kötet, énekcím vagy dal szövege'**
   String get searchHint;
 
   /// No description provided for @noResults.
@@ -1418,7 +1418,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchSongHint.
   ///
   /// In hu, this message translates to:
-  /// **'Kötet vagy énekcím'**
+  /// **'Kötet, énekcím vagy dal szövege'**
   String get searchSongHint;
 
   /// No description provided for @customOrderInsertBookLabel.

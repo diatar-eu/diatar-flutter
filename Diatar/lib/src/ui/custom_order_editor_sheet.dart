@@ -14,6 +14,8 @@ import '../l10n/l10n.dart';
 import '../utils/custom_entry_labels.dart';
 import '../utils/escape_sequences.dart';
 import '../utils/friendly_path.dart';
+import '../services/song_search_service.dart';
+import 'song_search_sheet.dart';
 
 class CustomOrderEditorPanel extends StatefulWidget {
   const CustomOrderEditorPanel({
@@ -212,7 +214,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                     ),
                     IconButton(
                       tooltip: l10n.addSong,
-                      onPressed: _openSearchDialog,
+                      onPressed: () => _openSearchSheet(context),
                       icon: const Icon(Icons.search),
                     ),
                     IconButton(
@@ -542,150 +544,29 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
   }
 
-  Future<void> _openSearchDialog() async {
-    String query = '';
-
-    final _SearchCandidate? selected = await showDialog<_SearchCandidate>(
+  void _openSearchSheet(BuildContext context) {
+    showModalBottomSheet(
       context: context,
-      builder: (BuildContext dialogContext) {
-        final l10n = dialogContext.l10n;
-        final NavigatorState dialogNavigator = Navigator.of(dialogContext);
-        return StatefulBuilder(
-          builder:
-              (
-                BuildContext innerContext,
-                void Function(void Function()) setDialogState,
-              ) {
-                final String filter = query.trim().toLowerCase();
-                final List<_SearchCandidate> hits =
-                    _collectSearchCandidates()
-                        .where(
-                          (_SearchCandidate candidate) =>
-                              candidate.bookSearchText.toLowerCase().contains(
-                                filter,
-                              ) ||
-                              candidate.songTitle.toLowerCase().contains(
-                                filter,
-                              ),
-                        )
-                        .toList()
-                      ..sort((_SearchCandidate a, _SearchCandidate b) {
-                        final int byBook = a.bookSortTitle
-                            .toLowerCase()
-                            .compareTo(b.bookSortTitle.toLowerCase());
-                        if (byBook != 0) {
-                          return byBook;
-                        }
-                        final int byGroup = a.bookGroup.toLowerCase().compareTo(
-                          b.bookGroup.toLowerCase(),
-                        );
-                        return byGroup != 0
-                            ? byGroup
-                            : a.songTitle.toLowerCase().compareTo(
-                                b.songTitle.toLowerCase(),
-                              );
-                      });
-
-                return AlertDialog(
-                  title: Text(l10n.addSong),
-                  content: SizedBox(
-                    width: 560,
-                    height: 460,
-                    child: Column(
-                      children: <Widget>[
-                        TextField(
-                          autofocus: true,
-                          decoration: InputDecoration(
-                            hintText: l10n.searchSongHint,
-                            prefixIcon: const Icon(Icons.search),
-                            border: const OutlineInputBorder(),
-                          ),
-                          onChanged: (String value) {
-                            setDialogState(() => query = value);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: hits.isEmpty
-                              ? Center(child: Text(l10n.noResults))
-                              : ListView.builder(
-                                  itemCount: hits.length,
-                                  itemBuilder:
-                                      (BuildContext listContext, int index) {
-                                        final _SearchCandidate hit =
-                                            hits[index];
-                                        return ListTile(
-                                          dense: true,
-                                          title: Text(hit.songTitle),
-                                          subtitle: Text(hit.bookDisplayTitle),
-                                          trailing: IconButton(
-                                            icon: const Icon(
-                                              Icons.add_circle_outline,
-                                            ),
-                                            onPressed: () {
-                                              dialogNavigator.pop(hit);
-                                            },
-                                          ),
-                                        );
-                                      },
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  actions: <Widget>[
-                    TextButton(
-                      onPressed: () => dialogNavigator.pop(),
-                      child: Text(l10n.close),
-                    ),
-                  ],
-                );
-              },
-        );
-      },
+      isScrollControlled: true,
+      builder: (BuildContext context) => SongSearchSheet(
+        controller: controller,
+        onSelected: (result) {
+          _insertSearchResult(result);
+        },
+      ),
     );
-    if (!mounted || selected == null) {
-      return;
-    }
-    await _insertSearchCandidate(selected);
   }
 
-  List<_SearchCandidate> _collectSearchCandidates() {
-    final List<_SearchCandidate> candidates = <_SearchCandidate>[];
-    final String ungroupedLabel = context.l10n.ungroupedBookGroupLabel;
-    for (final DtxBook book in controller.books) {
-      final String rawGroup = book.group.trim();
-      final String group = rawGroup.isEmpty ? ungroupedLabel : rawGroup;
-      final String fullTitle = book.title;
-      final String displayTitle = '[$group] $fullTitle';
-      final String searchText = '${book.displayName} $fullTitle';
-      for (int i = 0; i < book.songs.length; i++) {
-        final DtxSong song = book.songs[i];
-        if (song.separator) {
-          continue;
-        }
-        candidates.add(
-          _SearchCandidate(
-            fileName: book.fileName,
-            bookDisplayTitle: displayTitle,
-            bookSortTitle: fullTitle,
-            bookSearchText: searchText,
-            bookGroup: group,
-            songIndex: i,
-            songTitle: song.title,
-          ),
-        );
-      }
-    }
-    return candidates;
-  }
-
-  Future<void> _insertSearchCandidate(_SearchCandidate hit) async {
+  Future<void> _insertSearchResult(SongSearchResult result) async {
     final CustomOrderEntry baseEntry = CustomOrderEntry(
-      fileName: hit.fileName,
-      songIndex: hit.songIndex,
+      fileName: controller.books[result.bookIndex].fileName,
+      songIndex: result.songIndex,
       verseIndex: 0,
-      label: controller.buildEntryLabel(hit.fileName, hit.songIndex, 0),
+      label: controller.buildEntryLabel(
+        controller.books[result.bookIndex].fileName,
+        result.songIndex,
+        0,
+      ),
     );
     final List<DtxVerse> verses = controller.versesForEntry(baseEntry);
     final List<CustomOrderEntry> toInsert = verses.isEmpty
@@ -693,12 +574,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         : List<CustomOrderEntry>.generate(
             verses.length,
             (int verseIx) => CustomOrderEntry(
-              fileName: hit.fileName,
-              songIndex: hit.songIndex,
+              fileName: controller.books[result.bookIndex].fileName,
+              songIndex: result.songIndex,
               verseIndex: verseIx,
               label: controller.buildEntryLabel(
-                hit.fileName,
-                hit.songIndex,
+                controller.books[result.bookIndex].fileName,
+                result.songIndex,
                 verseIx,
               ),
             ),
@@ -718,6 +599,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       );
     }
   }
+
 
   Future<void> _pickAndSendImageSlide() async {
     final AppLocalizations l10n = context.l10n;
@@ -1539,25 +1421,6 @@ class CustomOrderEditorSheet extends StatelessWidget {
   }
 }
 
-class _SearchCandidate {
-  const _SearchCandidate({
-    required this.fileName,
-    required this.bookDisplayTitle,
-    required this.bookSortTitle,
-    required this.bookSearchText,
-    required this.bookGroup,
-    required this.songIndex,
-    required this.songTitle,
-  });
-
-  final String fileName;
-  final String bookDisplayTitle;
-  final String bookSortTitle;
-  final String bookSearchText;
-  final String bookGroup;
-  final int songIndex;
-  final String songTitle;
-}
 
 class _SongOption {
   const _SongOption({required this.songIndex, required this.songTitle});

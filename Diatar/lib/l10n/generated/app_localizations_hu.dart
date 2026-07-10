@@ -464,7 +464,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get searchLabel => 'Diakereső';
 
   @override
-  String get searchHint => 'Kötet vagy enekcím';
+  String get searchHint => 'Kötet, énekcím vagy dal szövege';
 
   @override
   String get noResults => 'Nincs találat.';
@@ -783,7 +783,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get addSong => 'Ének hozzáadása';
 
   @override
-  String get searchSongHint => 'Kötet vagy énekcím';
+  String get searchSongHint => 'Kötet, énekcím vagy dal szövege';
 
   @override
   String get customOrderInsertBookLabel => 'Kötet';

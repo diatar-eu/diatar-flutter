@@ -14,6 +14,7 @@ import '../utils/custom_entry_labels.dart';
 import '../utils/friendly_path.dart';
 import 'settings_sheet.dart';
 import 'custom_order_editor_sheet.dart';
+import 'song_search_sheet.dart';
 
 class _BookDropdownEntry {
   const _BookDropdownEntry.header(this.group) : bookIndex = null, title = null;
@@ -542,6 +543,11 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                   ),
                 ],
             icon: Icon(modeIcon),
+          ),
+          IconButton(
+            tooltip: l10n.searchLabel,
+            onPressed: () => _openSearchSheet(context),
+            icon: const Icon(Icons.search),
           ),
           IconButton(
             tooltip: l10n.settingsTooltip,
@@ -1206,6 +1212,24 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       builder: (BuildContext context) {
         return _ZsolozsmaDialog(controller: controller);
       },
+    );
+  }
+
+  void _openSearchSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) => SongSearchSheet(
+        controller: controller,
+        onSelected: (result) {
+          _setHomeControlMode(_HomeControlMode.books);
+          controller.goToSong(
+            result.bookIndex,
+            result.songIndex,
+            result.verseIndex,
+          );
+        },
+      ),
     );
   }
 }

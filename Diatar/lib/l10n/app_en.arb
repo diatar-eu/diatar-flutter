@@ -409,7 +409,7 @@
     }
   },
   "searchLabel": "Slide search",
-  "searchHint": "Book or song title",
+  "searchHint": "Book, song title or lyric",
   "noResults": "No results.",
   "customOrderStatus": "Custom order: {state}",
   "@customOrderStatus": {
@@ -533,7 +533,7 @@
   "customOrderSuggestedFileName": "order.dia",
   "customOrderEditTitle": "Edit custom order",
   "addSong": "Add song",
-  "searchSongHint": "Book or song title",
+  "searchSongHint": "Book, song title or lyric",
   "customOrderInsertBookLabel": "Book",
   "customOrderInsertSongLabel": "Song",
   "customOrderInsertVersesAction": "Insert verses",

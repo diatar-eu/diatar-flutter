@@ -462,7 +462,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchLabel => 'Slide search';
 
   @override
-  String get searchHint => 'Book or song title';
+  String get searchHint => 'Book, song title or lyric';
 
   @override
   String get noResults => 'No results.';
@@ -781,7 +781,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addSong => 'Add song';
 
   @override
-  String get searchSongHint => 'Book or song title';
+  String get searchSongHint => 'Book, song title or lyric';
 
   @override
   String get customOrderInsertBookLabel => 'Book';

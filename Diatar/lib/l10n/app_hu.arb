@@ -409,7 +409,7 @@
     }
   },
   "searchLabel": "Diakereső",
-  "searchHint": "Kötet vagy enekcím",
+  "searchHint": "Kötet, énekcím vagy dal szövege",
   "noResults": "Nincs találat.",
   "customOrderStatus": "Saját sorrend: {state}",
   "@customOrderStatus": {
@@ -533,7 +533,7 @@
   "customOrderSuggestedFileName": "sorrend.dia",
   "customOrderEditTitle": "Énekrend szerkesztése",
   "addSong": "Ének hozzáadása",
-  "searchSongHint": "Kötet vagy énekcím",
+  "searchSongHint": "Kötet, énekcím vagy dal szövege",
   "customOrderInsertBookLabel": "Kötet",
   "customOrderInsertSongLabel": "Ének",
   "customOrderInsertVersesAction": "Versszakok beszúrása",
