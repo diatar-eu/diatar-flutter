@@ -1019,6 +1019,18 @@ abstract class AppLocalizations {
   /// **'Fájl választása'**
   String get fileChoose;
 
+  /// No description provided for @openDtxFolder.
+  ///
+  /// In hu, this message translates to:
+  /// **'Diatár állományok megnyitása'**
+  String get openDtxFolder;
+
+  /// No description provided for @openDtxFolderTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'A Diatár állományait tartalmazó mappa megnyitása'**
+  String get openDtxFolderTooltip;
+
   /// No description provided for @copyPathTooltip.
   ///
   /// In hu, this message translates to:

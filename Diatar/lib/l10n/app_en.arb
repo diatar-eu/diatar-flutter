@@ -471,6 +471,8 @@
   "blankImagePath": "Background image path",
   "diaExportFolderPath": "DIA export folder",
   "fileChoose": "Choose file",
+  "openDtxFolder": "Open Diatár files",
+  "openDtxFolderTooltip": "Open the folder containing the Diatár files",
   "copyPathTooltip": "Copy original path",
   "pathCopied": "Original path copied",
   "pathLabelInternalStorage": "Internal storage",

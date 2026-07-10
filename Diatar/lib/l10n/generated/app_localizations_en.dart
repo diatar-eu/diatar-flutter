@@ -581,6 +581,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileChoose => 'Choose file';
 
   @override
+  String get openDtxFolder => 'Open Diatár files';
+
+  @override
+  String get openDtxFolderTooltip =>
+      'Open the folder containing the Diatár files';
+
+  @override
   String get copyPathTooltip => 'Copy original path';
 
   @override

@@ -1,15 +1,19 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
+import '../services/dtx_library_service.dart';
 import '../services/mqtt_user_api_service.dart';
 import '../utils/friendly_path.dart';
 
@@ -1166,9 +1170,34 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               setBoth(() {});
             },
           ),
+          const SizedBox(height: 16),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.folder_open),
+            title: Text(l10n.openDtxFolder),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _openDtxFolder,
+          ),
         ];
       },
     );
+  }
+
+  Future<void> _openDtxFolder() async {
+    final Directory docs = await getApplicationDocumentsDirectory();
+    final Directory diatarsDir = Directory('${docs.path}/diatar');
+    if (!await diatarsDir.exists()) {
+      await diatarsDir.create(recursive: true);
+    }
+    final Uri uri = Uri.file(diatarsDir.path);
+    if (!await launchUrl(uri)) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.openDtxFolderTooltip)),
+      );
+    }
   }
 
   Widget _buildPathPickerRow({

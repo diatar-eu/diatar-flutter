@@ -11,20 +11,20 @@ class DtzLibraryService {
 
   Future<Directory> resolveDirectory() async {
     final Directory docs = await getApplicationDocumentsDirectory();
-    return Directory('${docs.path}/diatar/DTXs');
+    return Directory('${docs.path}/diatar/DTZs');
   }
 
   /// Beolvassa az osszes .dtz fajlt a DTXs konyvtarbol, es egyesiti a bennuk
   /// levo dia-id -> foto utvonal lekepezeseket egy tombben.
   Future<Map<String, String>> loadPhotos() async {
-    final Directory dtxDir = await resolveDirectory();
+    final Directory dtzDir = await resolveDirectory();
     final Map<String, String> photos = <String, String>{};
 
-    if (!await dtxDir.exists()) {
+    if (!await dtzDir.exists()) {
       return photos;
     }
 
-    final List<FileSystemEntity> children = dtxDir.listSync();
+    final List<FileSystemEntity> children = dtzDir.listSync();
     children.sort(
       (FileSystemEntity a, FileSystemEntity b) => a.path.compareTo(b.path),
     );
@@ -44,9 +44,11 @@ class DtzLibraryService {
     return photos;
   }
 
-  void _parseFile(String content, Map<String, String> photos) {
+  void _parseFile(String content, Map<String, String> photos) async {
     final List<String> lines = content.replaceAll('\r\n', '\n').split('\n');
-    String baseDir = '';
+    final Directory docs = await getApplicationDocumentsDirectory();
+
+    String baseDir = '${docs.path}/diatar/DTZs';
 
     for (final String raw in lines) {
       if (raw.isEmpty) {

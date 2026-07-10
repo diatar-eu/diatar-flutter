@@ -583,6 +583,13 @@ class AppLocalizationsHu extends AppLocalizations {
   String get fileChoose => 'Fájl választása';
 
   @override
+  String get openDtxFolder => 'Diatár állományok megnyitása';
+
+  @override
+  String get openDtxFolderTooltip =>
+      'A Diatár állományait tartalmazó mappa megnyitása';
+
+  @override
   String get copyPathTooltip => 'Eredeti útvonal másolása';
 
   @override
