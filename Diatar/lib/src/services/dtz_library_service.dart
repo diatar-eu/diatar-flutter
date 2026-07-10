@@ -56,7 +56,7 @@ class DtzLibraryService {
       }
 
       if (raw.startsWith('b')) {
-        baseDir = raw.substring(1).trim();
+        baseDir = raw.substring(1).trim().replaceAll('\\', '/');
         continue;
       }
 
@@ -68,7 +68,8 @@ class DtzLibraryService {
           continue;
         }
         final String diaId = rest.substring(0, spaceIndex).trim();
-        final String relPath = rest.substring(spaceIndex + 1).trim();
+        final String relPath =
+            rest.substring(spaceIndex + 1).trim().replaceAll('\\', '/');
         if (diaId.isEmpty || relPath.isEmpty) {
           continue;
         }
