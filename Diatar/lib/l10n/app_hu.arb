@@ -790,5 +790,8 @@
   "settingsHotkeyClearCapture": "Törlés",
   "settingsHotkeyClear": "Törlés",
   "settingsHotkeyCapture": "Rögzítés",
-  "settingsSearchKeywordsSystem": "rendszer kilepes leallas stop shutdown epstop epshutdown"
+  "settingsSearchKeywordsSystem": "rendszer kilepes leallas stop shutdown epstop epshutdown",
+  "controlPhotoView": "Fénykép / vetítés váltása",
+  "controlPhotoViewPhoto": "Fénykép nézet",
+  "controlPhotoViewPreview": "Vetítés előnézet"
 }

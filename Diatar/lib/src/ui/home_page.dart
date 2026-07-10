@@ -818,6 +818,23 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
               const SizedBox(width: 8),
               _actionIconButton(
                 context,
+                icon: controller.showPhotoInControl
+                    ? Icons.photo
+                    : Icons.slideshow,
+                tooltip: l10n.controlPhotoView,
+                onPressed: () => controller.toggleControlPhotoView(),
+                backgroundColor: controller.showPhotoInControl
+                    ? const Color(0xFF1976D2).withValues(alpha: 0.15)
+                    : Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
+                foregroundColor: controller.showPhotoInControl
+                    ? const Color(0xFF1976D2)
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              _actionIconButton(
+                context,
                 icon: controller.settings.projectionLocked
                     ? Icons.lock
                     : Icons.lock_open,
@@ -1033,6 +1050,50 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     final AppLocalizations l10n = context.l10n;
     final CustomOrderEntry? projectedCustom =
         controller.projectedCustomOrderEntry;
+
+    if (controller.showPhotoInControl) {
+      final String? photoPath = controller.currentPhotoPath;
+      if (photoPath != null && photoPath.isNotEmpty) {
+        final File photoFile = File(photoPath);
+        final bool photoExists = photoFile.existsSync();
+        return _SwipePagingPreview(
+          controller: controller,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                l10n.controlPhotoViewPhoto,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: controller.globals.txtColor.withValues(alpha: 0.75),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: !photoExists
+                    ? Align(
+                        alignment: Alignment.topLeft,
+                        child: Text(
+                          context.l10n.statusImageNotFound(photoPath),
+                        ),
+                      )
+                    : SizedBox.expand(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            photoFile,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
     if (projectedCustom != null && projectedCustom.isCustomText) {
       final String title = localizedCustomEntryLabel(l10n, projectedCustom);
       final List<String> lines = (projectedCustom.customTextBody ?? '')

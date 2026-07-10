@@ -22,6 +22,7 @@ class DtxParser {
     final List<String> currentVerseLines = <String>[];
     bool songHasBody = false;
     bool seenSongStart = false;
+    String? pendingDiaId;
 
     void flushVerseIfNeeded() {
       if (currentSongTitle == null) {
@@ -37,8 +38,10 @@ class DtxParser {
         DtxVerse(
           name: currentVerseName.isEmpty ? '---' : currentVerseName,
           lines: List<String>.from(currentVerseLines),
+          diaId: pendingDiaId,
         ),
       );
+      pendingDiaId = null;
       currentVerseLines.clear();
     }
 
@@ -119,6 +122,16 @@ class DtxParser {
         flushVerseIfNeeded();
         currentVerseName = raw.substring(1).trim();
         songHasBody = true;
+        continue;
+      }
+
+      if (raw.startsWith('#')) {
+        // Dia id (8 hex karakter) a versszakhoz. A kovetkezo flush-elt
+        // versszakra kerul, mivel a # sor a versszak szovege elott all.
+        final String id = raw.substring(1).trim();
+        if (id.isNotEmpty) {
+          pendingDiaId = id;
+        }
         continue;
       }
 

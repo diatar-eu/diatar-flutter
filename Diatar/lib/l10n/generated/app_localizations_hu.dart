@@ -1259,4 +1259,13 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get settingsSearchKeywordsSystem =>
       'rendszer kilepes leallas stop shutdown epstop epshutdown';
+
+  @override
+  String get controlPhotoView => 'Fénykép / vetítés váltása';
+
+  @override
+  String get controlPhotoViewPhoto => 'Fénykép nézet';
+
+  @override
+  String get controlPhotoViewPreview => 'Vetítés előnézet';
 }

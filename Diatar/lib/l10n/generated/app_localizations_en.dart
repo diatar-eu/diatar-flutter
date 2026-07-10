@@ -1257,4 +1257,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsSearchKeywordsSystem =>
       'system exit stop shutdown epstop epshutdown';
+
+  @override
+  String get controlPhotoView => 'Toggle photo / projection';
+
+  @override
+  String get controlPhotoViewPhoto => 'Photo view';
+
+  @override
+  String get controlPhotoViewPreview => 'Projection preview';
 }

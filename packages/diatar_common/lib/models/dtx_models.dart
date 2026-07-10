@@ -31,8 +31,9 @@ class DtxSong {
 }
 
 class DtxVerse {
-  const DtxVerse({required this.name, required this.lines});
+  const DtxVerse({required this.name, required this.lines, this.diaId});
 
   final String name;
   final List<String> lines;
+  final String? diaId;
 }

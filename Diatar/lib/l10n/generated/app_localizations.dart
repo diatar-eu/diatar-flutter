@@ -2254,6 +2254,24 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'rendszer kilepes leallas stop shutdown epstop epshutdown'**
   String get settingsSearchKeywordsSystem;
+
+  /// No description provided for @controlPhotoView.
+  ///
+  /// In hu, this message translates to:
+  /// **'Fénykép / vetítés váltása'**
+  String get controlPhotoView;
+
+  /// No description provided for @controlPhotoViewPhoto.
+  ///
+  /// In hu, this message translates to:
+  /// **'Fénykép nézet'**
+  String get controlPhotoViewPhoto;
+
+  /// No description provided for @controlPhotoViewPreview.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vetítés előnézet'**
+  String get controlPhotoViewPreview;
 }
 
 class _AppLocalizationsDelegate

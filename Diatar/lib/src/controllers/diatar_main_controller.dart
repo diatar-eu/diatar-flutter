@@ -30,6 +30,7 @@ import '../services/desktop_projector_bridge.dart';
 import '../services/dtx_download_service.dart';
 import '../services/dtx_library_service.dart';
 import '../services/dtx_order_store.dart';
+import '../services/dtz_library_service.dart';
 import '../services/sender_callback_coordinator.dart';
 import '../services/sender_transport_coordinator.dart';
 import '../services/settings_store.dart';
@@ -138,6 +139,7 @@ class DiatarMainController extends ChangeNotifier {
   final DtxDownloadService _downloadService = DtxDownloadService();
   late final DtxLibraryService _dtxLibraryService =
       DtxLibraryService(parser: _parser);
+  final DtzLibraryService _dtzLibraryService = const DtzLibraryService();
   final DtxOrderStore _orderStore = DtxOrderStore();
   final ZsolozsmaService _zsolozsmaService = ZsolozsmaService();
   final ZsolozsmaBreviarDecoder _zsolozsmaDecoder = ZsolozsmaBreviarDecoder();
@@ -195,6 +197,56 @@ class DiatarMainController extends ChangeNotifier {
   static const String _customOrderSourceZsolozsmaUnsaved = 'zsolozsma-unsaved';
   String? _customOrderSourceType;
   String? _zsolozsmaVirtualBookLabel;
+
+  /// A .dtz fajlokbol betoltott dia-id -> foto utvonal lekepezes.
+  Map<String, String> _diaPhotoPaths = <String, String>{};
+
+  /// Atmeneti, csak az adott munkamenetre ervenyes kapcsolo: a vezérlő ablak
+  /// előnézetében a vetítési előnézet helyett a dia-id-hez tartozo fotot
+  /// mutassa-e. A vetítőablakot (es a tobbi kimenetet) ez nem erinti.
+  bool _showPhotoInControl = false;
+  bool get showPhotoInControl => _showPhotoInControl;
+
+  void toggleControlPhotoView() {
+    _showPhotoInControl = !_showPhotoInControl;
+    notifyListeners();
+  }
+
+  /// Az aktualis versszak dia-id-jehez tartozo foto utvonala, vagy null ha
+  /// nincs hozzarendelve foto.
+  String? get currentPhotoPath {
+    final String? diaId = currentVerse?.diaId;
+    if (diaId == null || diaId.isEmpty) {
+      return null;
+    }
+    final String? path = _diaPhotoPaths[diaId];
+    if (path == null || path.isEmpty) {
+      return null;
+    }
+    return path;
+  }
+
+  /// A kovetkezo versszak dia-id-jehez tartozo foto utvonala (RAM-előtolteshez),
+  /// vagy null.
+  String? get nextPhotoPath {
+    final DtxSong? s = currentSong;
+    if (s == null || s.verses.isEmpty) {
+      return null;
+    }
+    final int nextIdx = verseIndex + 1;
+    if (nextIdx >= s.verses.length) {
+      return null;
+    }
+    final String? diaId = s.verses[nextIdx].diaId;
+    if (diaId == null || diaId.isEmpty) {
+      return null;
+    }
+    final String? path = _diaPhotoPaths[diaId];
+    if (path == null || path.isEmpty) {
+      return null;
+    }
+    return path;
+  }
 
   Map<String, String> get statusParams =>
       Map<String, String>.unmodifiable(_statusParams);
@@ -783,6 +835,7 @@ class DiatarMainController extends ChangeNotifier {
           _selectByCustomOrderCursor(_customOrderCursor, sync: false);
         }
       }
+      await _loadDtzPhotos();
       await _persistCurrentCustomOrder();
     } catch (e) {
       _setStatus('statusLoadError', <String, String>{'error': '$e'});
@@ -790,6 +843,15 @@ class DiatarMainController extends ChangeNotifier {
     } finally {
       loading = false;
       notifyListeners();
+    }
+  }
+
+  /// Betolti a .dtz fajlokbol a dia-id -> foto utvonal lekepezeseket.
+  Future<void> _loadDtzPhotos() async {
+    try {
+      _diaPhotoPaths = await _dtzLibraryService.loadPhotos();
+    } catch (_) {
+      _diaPhotoPaths = <String, String>{};
     }
   }
 
