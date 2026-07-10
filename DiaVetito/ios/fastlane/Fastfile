@@ -1,0 +1,18 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Build and deploy to the App Store"
+  lane :deploy do
+    get_certificates
+    sigh
+    sh("flutter", "pub", "get")
+    sh("flutter", "build", "ipa", "--release")
+    upload_to_app_store(
+      skip_screenshots: true,
+      skip_metadata: true,
+      submit_for_review: true,
+      automatic_release: true,
+      force: true
+    )
+  end
+end

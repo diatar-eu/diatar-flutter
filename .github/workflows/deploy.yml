@@ -1,0 +1,88 @@
+name: Deploy to Stores
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Deploy Android (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - Diatar
+          - DiaVetito
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ${{ matrix.app }}/android
+
+      - name: Decode Play Store JSON key
+        run: |
+          echo "${{ secrets.PLAY_STORE_JSON_KEY }}" > ${{ matrix.app }}/android/play_store_key.json
+
+      - name: Fastlane Deploy
+        working-directory: ${{ matrix.app }}/android
+        env:
+          PLAY_STORE_JSON_KEY_FILE: play_store_key.json
+        run: bundle exec fastlane deploy
+
+  ios:
+    name: Deploy iOS (${{ matrix.app }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - Diatar
+          - DiaVetito
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: false
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ${{ matrix.app }}/ios
+
+      - name: Fastlane Deploy
+        working-directory: ${{ matrix.app }}/ios
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: bundle exec fastlane deploy
