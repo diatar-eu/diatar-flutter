@@ -796,5 +796,8 @@
   "controlPhotoView": "Fénykép / vetítés váltása",
   "controlPhotoViewPhoto": "Fénykép nézet",
   "controlPhotoViewPreview": "Vetítés előnézet",
-  "useSound": "Hang használata"
+  "useSound": "Hang használata",
+  "transposeDown": "Transzpozíció le",
+  "transposeUp": "Transzpozíció fel",
+  "transposeReset": "Transzpozíció alap"
 }

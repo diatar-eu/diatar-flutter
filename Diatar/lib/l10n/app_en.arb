@@ -796,5 +796,8 @@
   "controlPhotoView": "Toggle photo / projection",
   "controlPhotoViewPhoto": "Photo view",
   "controlPhotoViewPreview": "Projection preview",
-  "useSound": "Use sound"
+  "useSound": "Use sound",
+  "transposeDown": "Transpose down",
+  "transposeUp": "Transpose up",
+  "transposeReset": "Reset transpose"
 }

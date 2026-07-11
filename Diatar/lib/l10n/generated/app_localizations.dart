@@ -2290,6 +2290,24 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Hang használata'**
   String get useSound;
+
+  /// No description provided for @transposeDown.
+  ///
+  /// In hu, this message translates to:
+  /// **'Transzpozíció le'**
+  String get transposeDown;
+
+  /// No description provided for @transposeUp.
+  ///
+  /// In hu, this message translates to:
+  /// **'Transzpozíció fel'**
+  String get transposeUp;
+
+  /// No description provided for @transposeReset.
+  ///
+  /// In hu, this message translates to:
+  /// **'Transzpozíció alap'**
+  String get transposeReset;
 }
 
 class _AppLocalizationsDelegate

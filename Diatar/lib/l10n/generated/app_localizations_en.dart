@@ -1276,4 +1276,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get useSound => 'Use sound';
+
+  @override
+  String get transposeDown => 'Transpose down';
+
+  @override
+  String get transposeUp => 'Transpose up';
+
+  @override
+  String get transposeReset => 'Reset transpose';
 }

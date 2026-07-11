@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:diatar_common/diatar_common.dart';
+import 'package:diatar_common/utils/transposition_utils.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -352,6 +353,7 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<void> init() async {
     settings = await _settingsStore.load();
+    _transpositions = await _settingsStore.loadTranspositions();
     lastBlankPath = settings.blankPicPath;
     _disabledSongbooks = await _orderStore.loadDisabled();
     final CustomOrderBootstrapState customOrderState =
@@ -1859,12 +1861,39 @@ class DiatarMainController extends ChangeNotifier {
     return s.verses[verseIndex.clamp(0, s.verses.length - 1)];
   }
 
+  /// A dalokhoz tartozo transzpozicio eltolasok (felhasznaloi beallitas).
+  /// Kulcs: "konyvFajlneve|enekIndex".
+  Map<String, int> _transpositions = <String, int>{};
+
+  String get _currentSongKey {
+    final DtxBook? b = currentBook;
+    if (b == null) return '';
+    return '${b.fileName}|$songIndex';
+  }
+
+  /// Az aktualis enek transzpozicio eltolasa (felhasznaloi beallitas,
+  /// vagy a dal alapértelmezett transzpozicioja).
+  int get currentTransposition =>
+      _transpositions[_currentSongKey] ?? currentSong?.transposition ?? 0;
+
   List<String> get displayLines {
     final DtxVerse? v = currentVerse;
     if (v == null || v.lines.isEmpty) {
       return const <String>[''];
     }
-    return v.lines;
+    final int offset = currentTransposition;
+    if (offset == 0) return v.lines;
+    return v.lines.map((line) => TranspositionUtils.transposeLine(line, offset)).toList();
+  }
+
+  /// Beallitja az aktualis enek transzpozicio eltolasat es ujrajelzi a vetítést.
+  Future<void> setTransposition(int semitones) async {
+    final String key = _currentSongKey;
+    if (key.isEmpty) return;
+    _transpositions[key] = semitones;
+    await _settingsStore.saveTranspositions(_transpositions);
+    notifyListeners();
+    await _syncCurrentDia(playSound: false);
   }
 
   int get wordCount {

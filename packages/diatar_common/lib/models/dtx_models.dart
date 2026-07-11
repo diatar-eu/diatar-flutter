@@ -26,12 +26,14 @@ class DtxSong {
     required this.verses,
     this.separator = false,
     this.useSound = true,
+    this.transposition = 0,
   });
 
   final String title;
   final bool separator;
   final List<DtxVerse> verses;
   final bool useSound;
+  final int transposition;
 }
 
 class DtxVerse {

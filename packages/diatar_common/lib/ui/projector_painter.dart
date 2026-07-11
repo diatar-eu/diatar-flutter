@@ -4090,19 +4090,19 @@ class ProjectorPainter extends CustomPainter {
           case 'K':
             flushWord();
             attachPendingToPrevWord();
-            final int end = src.indexOf(';', i);
-            if (end > i) {
-              pendingKotta = src.substring(i, end);
-              i = end + 1;
+            final int endK = src.indexOf(';', i);
+            if (endK > i) {
+              pendingKotta = src.substring(i, endK);
+              i = endK + 1;
             }
             continue;
           case 'C':
             flushWord();
             attachPendingToPrevWord();
-            final int end = src.indexOf(';', i);
-            if (end > i) {
-              style.color = _parseColor(src.substring(i, end));
-              i = end + 1;
+            final int endC = src.indexOf(';', i);
+            if (endC > i) {
+              style.color = _parseColor(src.substring(i, endC));
+              i = endC + 1;
             }
             continue;
           case '?':

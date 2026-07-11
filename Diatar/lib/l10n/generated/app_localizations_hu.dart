@@ -1278,4 +1278,13 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get useSound => 'Hang használata';
+
+  @override
+  String get transposeDown => 'Transzpozíció le';
+
+  @override
+  String get transposeUp => 'Transzpozíció fel';
+
+  @override
+  String get transposeReset => 'Transzpozíció alap';
 }

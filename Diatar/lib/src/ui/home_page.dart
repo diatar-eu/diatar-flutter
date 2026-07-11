@@ -902,6 +902,45 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                 tooltip: l10n.songNext,
                 onPressed: controller.nextSong,
               ),
+              /*const SizedBox(width: 8),
+              _actionIconButton(
+                context,
+                icon: Icons.remove,
+                tooltip: l10n.transposeDown,
+                onPressed: () =>
+                    unawaited(controller.setTransposition(controller.currentTransposition - 1)),
+              ),
+              const SizedBox(width: 4),
+              SizedBox(
+                width: 44,
+                child: Center(
+                  child: Text(
+                    controller.currentTransposition == 0
+                        ? '0'
+                        : (controller.currentTransposition > 0
+                            ? '+${controller.currentTransposition}'
+                            : '${controller.currentTransposition}'),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              _actionIconButton(
+                context,
+                icon: Icons.add,
+                tooltip: l10n.transposeUp,
+                onPressed: () =>
+                    unawaited(controller.setTransposition(controller.currentTransposition + 1)),
+              ),
+              const SizedBox(width: 8),
+              _actionIconButton(
+                context,
+                icon: Icons.restart_alt,
+                tooltip: l10n.transposeReset,
+                onPressed: () => unawaited(controller.setTransposition(0)),
+              ),*/
               if (controller.settings.homeShowHighlightControls) ...<Widget>[
                 const SizedBox(width: 8),
                 _actionIconButton(
@@ -2693,7 +2732,7 @@ class _VersePreview extends StatelessWidget {
     final RecTextRecord previewRecord = RecTextRecord(
       scholaLine: '',
       title: '',
-      lines: verse.lines,
+      lines: controller.displayLines,
     );
     final ProjectionFrame frame = TextFrame(record: previewRecord);
     final ProjectionGlobals globals = controller.globals.copyWith(

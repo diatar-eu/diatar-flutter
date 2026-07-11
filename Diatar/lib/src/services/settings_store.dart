@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diatar_common/diatar_common.dart';
@@ -47,6 +48,24 @@ class SettingsStore {
   static const String _kDesktopActionHotkeys = 'DesktopActionHotkeys';
   static const String _kDesktopSongHotkeys = 'DesktopSongHotkeys';
   static const String _kUseSound = 'UseSound';
+  static const String _kTranspositions = 'Transpositions';
+
+  Future<Map<String, int>> loadTranspositions() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? json = prefs.getString(_kTranspositions);
+    if (json == null) return <String, int>{};
+    try {
+      final Map<String, dynamic> decoded = jsonDecode(json);
+      return decoded.map((k, v) => MapEntry(k, v as int));
+    } catch (_) {
+      return <String, int>{};
+    }
+  }
+
+  Future<void> saveTranspositions(Map<String, int> transpositions) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kTranspositions, jsonEncode(transpositions));
+  }
 
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
