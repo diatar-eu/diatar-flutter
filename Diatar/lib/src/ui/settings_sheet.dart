@@ -85,8 +85,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _projHCenter;
   late bool _projVCenter;
   late bool _projUseAkkord;
-  late bool _projUseKotta;
-  late bool _projShowBackgroundImage;
+    late bool _projUseKotta;
+    late bool _projShowBackgroundImage;
+    late bool _useSound;
   late bool _projUseTitle;
   late bool _projBoldText;
   late int _desktopProjectorMonitor;
@@ -148,6 +149,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projUseAkkord = s.projUseAkkord;
     _projUseKotta = s.projUseKotta;
     _projShowBackgroundImage = s.projShowBackgroundImage;
+    _useSound = s.useSound;
     _projUseTitle = s.projUseTitle;
     _projBoldText = s.projBoldText;
     _desktopProjectorMonitor = s.desktopProjectorMonitor;
@@ -1110,6 +1112,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               }),
             ],
             onChanged: (String? v) => setBoth(() => _appLanguage = v ?? ''),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _useSound,
+            onChanged: (bool v) => setBoth(() => _useSound = v),
+            title: Text(l10n.useSound),
           ),
         ];
       },
@@ -2241,6 +2249,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       desktopActionHotkeys: Map<String, String>.from(_desktopActionHotkeys),
       desktopSongHotkeys: Map<String, String>.from(_desktopSongHotkeys),
       projBoldText: _projBoldText,
+      useSound: _useSound,
       bkColor: _bkColor,
       txtColor: _txtColor,
       blankColor: _blankColor,

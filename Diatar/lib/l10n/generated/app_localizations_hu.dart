@@ -1275,4 +1275,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get controlPhotoViewPreview => 'Vetítés előnézet';
+
+  @override
+  String get useSound => 'Hang használata';
 }

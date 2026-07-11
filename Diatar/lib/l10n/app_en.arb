@@ -795,5 +795,6 @@
   "settingsSearchKeywordsSystem": "system exit stop shutdown epstop epshutdown",
   "controlPhotoView": "Toggle photo / projection",
   "controlPhotoViewPhoto": "Photo view",
-  "controlPhotoViewPreview": "Projection preview"
+  "controlPhotoViewPreview": "Projection preview",
+  "useSound": "Use sound"
 }

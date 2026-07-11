@@ -35,6 +35,7 @@ import '../services/sender_callback_coordinator.dart';
 import '../services/sender_transport_coordinator.dart';
 import '../services/song_search_service.dart';
 import '../services/settings_store.dart';
+import '../services/audio_service.dart';
 import '../services/tcp_sender_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
 import '../services/zsolozsma_service.dart';
@@ -145,6 +146,7 @@ class DiatarMainController extends ChangeNotifier {
   final ZsolozsmaService _zsolozsmaService = ZsolozsmaService();
   final ZsolozsmaBreviarDecoder _zsolozsmaDecoder = ZsolozsmaBreviarDecoder();
   final SongSearchService _searchService = SongSearchService();
+  final AudioService _audioService = AudioService();
   final TcpSenderService _sender = TcpSenderService(
     onStatusChanged: (bool connected) {},
     onError: (String code, Map<String, String> params) {},
@@ -205,8 +207,8 @@ class DiatarMainController extends ChangeNotifier {
   List<SongSearchSong> _searchIndex = const <SongSearchSong>[];
   List<SongSearchSong> get searchIndex => _searchIndex;
 
-  /// A .dtz fajlokbol betoltott dia-id -> foto utvonal lekepezes.
-  Map<String, String> _diaPhotoPaths = <String, String>{};
+  /// A .dtz fajlokbol betoltott dia-id -> DtxVerse lekepezes.
+  Map<String, DtxVerse> _dtzLibrary = <String, DtxVerse>{};
 
   /// Atmeneti, csak az adott munkamenetre ervenyes kapcsolo: a vezérlő ablak
   /// előnézetében a vetítési előnézet helyett a dia-id-hez tartozo fotot
@@ -226,15 +228,11 @@ class DiatarMainController extends ChangeNotifier {
     if (diaId == null || diaId.isEmpty) {
       return null;
     }
-    final String? path = _diaPhotoPaths[diaId];
-    if (path == null || path.isEmpty) {
-      return null;
-    }
-    return path;
+    final DtxVerse? verse = _dtzLibrary[diaId];
+    return verse?.fotoFilePath;
   }
 
   /// A kovetkezo versszak dia-id-jehez tartozo foto utvonala (RAM-előtolteshez),
-  /// vagy null.
   String? get nextPhotoPath {
     final DtxSong? s = currentSong;
     if (s == null || s.verses.isEmpty) {
@@ -248,11 +246,8 @@ class DiatarMainController extends ChangeNotifier {
     if (diaId == null || diaId.isEmpty) {
       return null;
     }
-    final String? path = _diaPhotoPaths[diaId];
-    if (path == null || path.isEmpty) {
-      return null;
-    }
-    return path;
+    final DtxVerse? verse = _dtzLibrary[diaId];
+    return verse?.fotoFilePath;
   }
 
   Map<String, String> get statusParams =>
@@ -328,6 +323,14 @@ class DiatarMainController extends ChangeNotifier {
     senderConnected = tcpConnected || mqttConnected;
   }
 
+  void _playCurrentVerseSound() {
+    if (!settings.useSound || !showing) {
+      _audioService.stop();
+      return;
+    }
+    _audioService.playSound(currentVerse?.soundFilePath);
+  }
+
   void markStartupDownloadDialogHandled() {
     _startupDownloadDialogHandled = true;
   }
@@ -387,7 +390,7 @@ class DiatarMainController extends ChangeNotifier {
         cursor: _customOrderCursor,
       );
     } else {
-      await _syncCurrentDia();
+      await _syncCurrentDia(playSound: false);
     }
   }
 
@@ -487,7 +490,7 @@ class DiatarMainController extends ChangeNotifier {
       _refreshSenderFlags();
     }
     notifyListeners();
-    await _syncCurrentDia();
+    await _syncCurrentDia(playSound: false);
     await _syncBackgroundImageAfterConnect();
   }
 
@@ -860,9 +863,9 @@ class DiatarMainController extends ChangeNotifier {
   /// Betolti a .dtz fajlokbol a dia-id -> foto utvonal lekepezeseket.
   Future<void> _loadDtzPhotos() async {
     try {
-      _diaPhotoPaths = await _dtzLibraryService.loadPhotos();
+      _dtzLibrary = await _dtzLibraryService.loadLibrary();
     } catch (_) {
-      _diaPhotoPaths = <String, String>{};
+      _dtzLibrary = <String, DtxVerse>{};
     }
   }
 
@@ -2380,7 +2383,7 @@ class DiatarMainController extends ChangeNotifier {
     _refreshSenderFlags();
   }
 
-  Future<void> _syncCurrentDia() async {
+  Future<void> _syncCurrentDia({bool playSound = true}) async {
     _projectedCustomCursor = -1;
     globals = globals.copyWith(projecting: showing, wordToHighlight: highPos);
     if (_projectionOutputLocked) {
@@ -2434,6 +2437,9 @@ class DiatarMainController extends ChangeNotifier {
     await _desktopProjectorBridge.sendIdle();
     _refreshSenderFlags();
     notifyListeners();
+    if (playSound) {
+      _playCurrentVerseSound();
+    }
   }
 
   Future<void> _projectCustomOrderEntry(

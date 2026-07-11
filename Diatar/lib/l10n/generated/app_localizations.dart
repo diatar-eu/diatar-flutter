@@ -2284,6 +2284,12 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Vetítés előnézet'**
   String get controlPhotoViewPreview;
+
+  /// No description provided for @useSound.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hang használata'**
+  String get useSound;
 }
 
 class _AppLocalizationsDelegate

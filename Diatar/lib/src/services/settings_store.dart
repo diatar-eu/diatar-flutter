@@ -46,6 +46,7 @@ class SettingsStore {
   static const String _kDesktopProjectorMonitor = 'DesktopProjectorMonitor';
   static const String _kDesktopActionHotkeys = 'DesktopActionHotkeys';
   static const String _kDesktopSongHotkeys = 'DesktopSongHotkeys';
+  static const String _kUseSound = 'UseSound';
 
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -122,6 +123,7 @@ class SettingsStore {
       desktopSongHotkeys: _decodeStringMap(
         prefs.getStringList(_kDesktopSongHotkeys),
       ),
+      useSound: prefs.getBool(_kUseSound) ?? false,
       bkColor: Color(prefs.getInt(_kBkColor) ?? 0xFF000000),
       txtColor: Color(prefs.getInt(_kTxColor) ?? 0xFFFFFFFF),
       blankColor: Color(prefs.getInt(_kBlankColor) ?? 0xFF000000),
@@ -197,6 +199,7 @@ class SettingsStore {
       _kDesktopSongHotkeys,
       _encodeStringMap(settings.desktopSongHotkeys),
     );
+    await prefs.setBool(_kUseSound, settings.useSound);
     await prefs.setInt(_kBkColor, settings.bkColor.toARGB32());
     await prefs.setInt(_kTxColor, settings.txtColor.toARGB32());
     await prefs.setInt(_kBlankColor, settings.blankColor.toARGB32());

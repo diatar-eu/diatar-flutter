@@ -1,11 +1,15 @@
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
+import 'package:diatar_common/diatar_common.dart';
 
 /// A .dtz fajlokat kezeli: a bennuk levo dia-id -> foto utvonal lekepezeset
 /// epiti fel. A formatum:
 ///   - 'b' sor: a fotok alapkonyvtara (base directory)
 ///   - 'f' sor: a dia-id, majd szokoz, majd a foto relatív utvonala
+///   - 'Z'/'z' sor: a dia-id, majd szokoz, majd a hangfajl relatív utvonala
+///   - 'F'/'f' sor: a dia-id, majd szokoz, majd a fotófajl relatív utvonala
+///   - 'i' sor: a dia-id, majd szokoz, majd a forwardMS (ms) ertek
 class DtzLibraryService {
   const DtzLibraryService();
 
@@ -15,13 +19,13 @@ class DtzLibraryService {
   }
 
   /// Beolvassa az osszes .dtz fajlt a DTXs konyvtarbol, es egyesiti a bennuk
-  /// levo dia-id -> foto utvonal lekepezeseket egy tombben.
-  Future<Map<String, String>> loadPhotos() async {
+  /// levo dia-id -> DtxVerse lekepezeseket egy tombben.
+  Future<Map<String, DtxVerse>> loadLibrary() async {
     final Directory dtzDir = await resolveDirectory();
-    final Map<String, String> photos = <String, String>{};
+    final Map<String, DtxVerse> entries = <String, DtxVerse>{};
 
     if (!await dtzDir.exists()) {
-      return photos;
+      return entries;
     }
 
     final List<FileSystemEntity> children = dtzDir.listSync();
@@ -35,16 +39,16 @@ class DtzLibraryService {
       }
       try {
         final String content = await child.readAsString();
-        _parseFile(content, photos);
+        _parseFile(content, entries);
       } catch (_) {
         // Hibas dtz fajlokat atugrunk, hogy az app hasznalhato maradjon.
       }
     }
 
-    return photos;
+    return entries;
   }
 
-  void _parseFile(String content, Map<String, String> photos) async {
+  void _parseFile(String content, Map<String, DtxVerse> entries) async {
     final List<String> lines = content.replaceAll('\r\n', '\n').split('\n');
     final Directory docs = await getApplicationDocumentsDirectory();
 
@@ -55,29 +59,79 @@ class DtzLibraryService {
         continue;
       }
 
-      if (raw.startsWith('b')) {
-        baseDir = raw.substring(1).trim().replaceAll('\\', '/');
+      final String prefix = raw[0];
+      final String rest = raw.substring(1).trim();
+
+      if (prefix == 'b' || prefix == 'B') {
+        baseDir = '${docs.path}/diatar/DTZs/${rest.replaceAll('\\', '/')}';
         continue;
       }
 
-      if (raw.startsWith('f')) {
-        // 'f' utan kozvetlenul a dia-id, majd space, majd az utvonal.
-        final String rest = raw.substring(1);
-        final int spaceIndex = rest.indexOf(' ');
-        if (spaceIndex <= 0) {
-          continue;
-        }
-        final String diaId = rest.substring(0, spaceIndex).trim();
-        final String relPath =
-            rest.substring(spaceIndex + 1).trim().replaceAll('\\', '/');
-        if (diaId.isEmpty || relPath.isEmpty) {
-          continue;
-        }
-        final String fullPath = baseDir.isEmpty
-            ? relPath
-            : '${baseDir.endsWith('/') || baseDir.endsWith(r'\') ? baseDir : '$baseDir/'}$relPath';
-        photos[diaId] = fullPath;
+      // A tobbi sor: <diaId> <ertek> formatumu
+      final int spaceIndex = rest.indexOf(' ');
+      if (spaceIndex <= 0) {
+        continue;
       }
+      final String diaId = rest.substring(0, spaceIndex).trim();
+      final String value =
+          rest.substring(spaceIndex + 1).trim().replaceAll('\\', '/');
+      if (diaId.isEmpty) {
+        continue;
+      }
+
+      // Meglévő vagy új bejegyzés lekérése
+      DtxVerse verse = entries[diaId] ??
+          DtxVerse(name: diaId, lines: const <String>[]);
+
+      switch (prefix) {
+        case 'f':
+        case 'F':
+          // Foto utvonal (dia-id szinten)
+          final String fullPath = baseDir.isEmpty
+              ? value
+              : '${baseDir.endsWith('/') ? baseDir : '$baseDir/'}$value';
+          verse = DtxVerse(
+            name: verse.name,
+            lines: verse.lines,
+            diaId: diaId,
+            soundFilePath: verse.soundFilePath,
+            fotoFilePath: fullPath,
+            forwardMS: verse.forwardMS,
+          );
+          break;
+        case 'Z':
+        case 'z':
+          // Hangfajl utvonala
+          final String fullPath = baseDir.isEmpty
+              ? value
+              : '${baseDir.endsWith('/') ? baseDir : '$baseDir/'}$value';
+          verse = DtxVerse(
+            name: verse.name,
+            lines: verse.lines,
+            diaId: diaId,
+            soundFilePath: fullPath,
+            fotoFilePath: verse.fotoFilePath,
+            forwardMS: verse.forwardMS,
+          );
+          break;
+        case 'i':
+        case 'I':
+          // ForwardMS (ms)
+          final int forwardMS = int.tryParse(value) ?? 0;
+          verse = DtxVerse(
+            name: verse.name,
+            lines: verse.lines,
+            diaId: diaId,
+            soundFilePath: verse.soundFilePath,
+            fotoFilePath: verse.fotoFilePath,
+            forwardMS: forwardMS,
+          );
+          break;
+        default:
+          continue;
+      }
+
+      entries[diaId] = verse;
     }
   }
 }

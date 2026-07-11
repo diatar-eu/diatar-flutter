@@ -56,6 +56,7 @@ class AppSettings {
     this.receiverUseAkkord = true,
     this.receiverUseKotta = true,
     this.receiverKeepStartupLogo = true,
+    this.useSound = false,
     Color? bkColor,
     Color? txtColor,
     Color? blankColor,
@@ -119,6 +120,7 @@ class AppSettings {
   final bool receiverUseAkkord;
   final bool receiverUseKotta;
   final bool receiverKeepStartupLogo;
+  final bool useSound;
   final Color? _bkColor;
   final Color? _txtColor;
   final Color? _blankColor;
@@ -189,6 +191,7 @@ class AppSettings {
     bool? receiverUseAkkord,
     bool? receiverUseKotta,
     bool? receiverKeepStartupLogo,
+    bool? useSound,
     Color? bkColor,
     Color? txtColor,
     Color? blankColor,
@@ -255,9 +258,10 @@ class AppSettings {
           receiverShowHighlight ?? this.receiverShowHighlight,
       receiverUseAkkord: receiverUseAkkord ?? this.receiverUseAkkord,
       receiverUseKotta: receiverUseKotta ?? this.receiverUseKotta,
-      receiverKeepStartupLogo:
-          receiverKeepStartupLogo ?? this.receiverKeepStartupLogo,
-      bkColor: bkColor ?? this.bkColor,
+       receiverKeepStartupLogo:
+           receiverKeepStartupLogo ?? this.receiverKeepStartupLogo,
+       useSound: useSound ?? this.useSound,
+       bkColor: bkColor ?? this.bkColor,
       txtColor: txtColor ?? this.txtColor,
       blankColor: blankColor ?? this.blankColor,
       hiColor: hiColor ?? this.hiColor,
@@ -303,8 +307,9 @@ class AppSettings {
       'receiverShowHighlight': receiverShowHighlight,
       'receiverUseAkkord': receiverUseAkkord,
       'receiverUseKotta': receiverUseKotta,
-      'receiverKeepStartupLogo': receiverKeepStartupLogo,
-    };
+       'receiverKeepStartupLogo': receiverKeepStartupLogo,
+       'useSound': useSound,
+     };
   }
 
   factory AppSettings.fromMap(Map<String, dynamic> map) {
@@ -376,7 +381,8 @@ class AppSettings {
       receiverShowHighlight: boolValue('receiverShowHighlight', true),
       receiverUseAkkord: boolValue('receiverUseAkkord', true),
       receiverUseKotta: boolValue('receiverUseKotta', true),
-      receiverKeepStartupLogo: boolValue('receiverKeepStartupLogo', true),
-    );
+       receiverKeepStartupLogo: boolValue('receiverKeepStartupLogo', true),
+       useSound: boolValue('useSound', false),
+     );
   }
 }

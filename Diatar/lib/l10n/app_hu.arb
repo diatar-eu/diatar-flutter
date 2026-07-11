@@ -795,5 +795,6 @@
   "settingsSearchKeywordsSystem": "rendszer kilepes leallas stop shutdown epstop epshutdown",
   "controlPhotoView": "Fénykép / vetítés váltása",
   "controlPhotoViewPhoto": "Fénykép nézet",
-  "controlPhotoViewPreview": "Vetítés előnézet"
+  "controlPhotoViewPreview": "Vetítés előnézet",
+  "useSound": "Hang használata"
 }

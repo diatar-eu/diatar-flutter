@@ -1273,4 +1273,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get controlPhotoViewPreview => 'Projection preview';
+
+  @override
+  String get useSound => 'Use sound';
 }
