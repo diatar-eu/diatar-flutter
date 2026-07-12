@@ -37,6 +37,7 @@ import '../services/sender_transport_coordinator.dart';
 import '../services/song_search_service.dart';
 import '../services/settings_store.dart';
 import '../services/audio_service.dart';
+import '../services/cast_service.dart';
 import '../services/tcp_sender_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
 import '../services/zsolozsma_service.dart';
@@ -158,6 +159,7 @@ class DiatarMainController extends ChangeNotifier {
   );
   final DesktopProjectorBridge _desktopProjectorBridge =
       DesktopProjectorBridge.instance;
+  final CastService _castService = CastService();
 
   List<DtxBook> books = <DtxBook>[];
   int bookIndex = 0;
@@ -381,6 +383,9 @@ class DiatarMainController extends ChangeNotifier {
     };
     _configureSender();
     await _applyTransport();
+    if (settings.castEnabled) {
+      await _castService.initialize();
+    }
     await reloadBooks();
     await _tryAutoLoadTodayDia();
     if (customOrderActive &&
@@ -2465,10 +2470,28 @@ class DiatarMainController extends ChangeNotifier {
     }
     await _desktopProjectorBridge.sendIdle();
     _refreshSenderFlags();
+    unawaited(_castCurrentSlide(title: title, lines: lines));
     notifyListeners();
     if (playSound) {
       _playCurrentVerseSound();
     }
+  }
+
+  /// Előkészíti és elküldi az aktuális vetítési állapotot a Cast eszközre.
+  Future<void> _castCurrentSlide({
+    required String title,
+    required List<String> lines,
+  }) async {
+    if (!settings.castEnabled) {
+      return;
+    }
+    await _castService.sendCastData(<String, dynamic>{
+      'type': 'text',
+      'title': title,
+      'lines': lines,
+      'showing': showing,
+      'highlight': highPos,
+    });
   }
 
   Future<void> _projectCustomOrderEntry(
@@ -2537,6 +2560,53 @@ class DiatarMainController extends ChangeNotifier {
 
     if (entry.isCustomImage) {
       await sendPicFromPath(entry.customImagePath ?? '');
+    }
+    if (settings.castEnabled) {
+      await _castCurrentImage(entry.customImagePath ?? '');
+    }
+  }
+
+  Future<void> _castCurrentImage(String path) async {
+    if (!settings.castEnabled) return;
+    final String normalized = path.trim();
+    if (normalized.isEmpty) return;
+
+    try {
+      final File file = File(normalized);
+      if (await file.exists()) {
+        final Uint8List bytes = await file.readAsBytes();
+        final String ext = _fileExtension(normalized);
+        await _castService.sendCastData(<String, dynamic>{
+          'type': 'image',
+          'path': normalized,
+          'ext': ext,
+          'bytes': base64Encode(bytes),
+        });
+      }
+    } catch (e) {
+      debugPrint('Cast image error: $e');
+    }
+  }
+
+  Future<void> _castCurrentBlank(String path) async {
+    if (!settings.castEnabled) return;
+    final String normalized = path.trim();
+    if (normalized.isEmpty) return;
+
+    try {
+      final File file = File(normalized);
+      if (await file.exists()) {
+        final Uint8List bytes = await file.readAsBytes();
+        final String ext = _fileExtension(normalized);
+        await _castService.sendCastData(<String, dynamic>{
+          'type': 'blank',
+          'path': normalized,
+          'ext': ext,
+          'bytes': base64Encode(bytes),
+        });
+      }
+    } catch (e) {
+      debugPrint('Cast blank error: $e');
     }
   }
 
@@ -2730,6 +2800,7 @@ class DiatarMainController extends ChangeNotifier {
             : normalized,
       });
       notifyListeners();
+      unawaited(_castCurrentImage(normalized));
     } catch (e) {
       _setStatus('statusImageSendError', <String, String>{'error': '$e'});
       notifyListeners();
@@ -2808,6 +2879,7 @@ class DiatarMainController extends ChangeNotifier {
         });
         notifyListeners();
       }
+      unawaited(_castCurrentBlank(normalized));
     } catch (e) {
       if (updateStatus) {
         _setStatus('statusBlankSendError', <String, String>{'error': '$e'});

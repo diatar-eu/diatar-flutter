@@ -54,6 +54,7 @@ dependencies:
   screen_retriever: ^0.2.2
   url_launcher: ^6.3.2
   audioplayers: ^5.2.1
+  flutter_chrome_cast: ^1.4.6
 
 dev_dependencies:
   flutter_test:

@@ -15,6 +15,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
 import '../services/dtx_library_service.dart';
 import '../services/mqtt_user_api_service.dart';
+import '../services/cast_service.dart';
 import '../utils/friendly_path.dart';
 
 class SongHotkeyOption {
@@ -94,6 +95,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _desktopProjectorEnabled;
   late bool _internetRelayEnabled;
   late bool _localNetworkEnabled;
+  late bool _castEnabled;
+  late String _castDeviceId;
+  late int _castPort;
+  late bool _castAutoConnect;
   late Map<String, String> _desktopActionHotkeys;
   late Map<String, String> _desktopSongHotkeys;
   late List<SongHotkeyOption> _availableSongs;
@@ -105,6 +110,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   bool _internetActionRunning = false;
   void Function(void Function())? _setInternetSectionState;
   late final MqttUserApiService _userApi;
+  late final CastService _castService;
   late Color _bkColor;
   late Color _txtColor;
   late Color _blankColor;
@@ -118,6 +124,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _userApi = MqttUserApiService(
       acceptLanguageProvider: _currentAcceptLanguage,
     );
+    _castService = CastService();
+    unawaited(_castService.initialize());
     _loadAppVersion();
     final AppSettings s = widget.initialSettings;
     _search = TextEditingController();
@@ -156,6 +164,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _desktopProjectorEnabled = s.desktopProjectorEnabled;
     _internetRelayEnabled = s.internetRelayEnabled;
     _localNetworkEnabled = s.tcpClientEnabled;
+    _castEnabled = s.castEnabled;
+    _castDeviceId = s.castDeviceId;
+    _castPort = s.castPort;
+    _castAutoConnect = s.castAutoConnect;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
     _desktopSongHotkeys = Map<String, String>.from(s.desktopSongHotkeys);
     _availableSongs = List<SongHotkeyOption>.from(widget.availableSongs);
@@ -217,6 +229,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   @override
   void dispose() {
+    _castService.dispose();
     _search.dispose();
     _tcpTargets.dispose();
     _mqttUser.dispose();
@@ -266,6 +279,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       'internet mqtt kozvetites felhasznalo user',
     );
     final bool showLan = _matches(query, 'helyi halozat tcp ip port');
+    final bool showCast = _castService.isSupported &&
+        _matches(query, 'cast google cast');
     final bool showColors = _matches(query, 'szinek hatter szoveg highlight');
     final bool showProjection = _matches(
       query,
@@ -289,6 +304,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final bool anyVisible =
         showInternet ||
         showLan ||
+        showCast ||
         showColors ||
         showProjection ||
         showFiles ||
@@ -371,11 +387,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       ),
                       onTap: _openLocalNetworkSettings,
                     ),
-                  if (showLan &&
-                      (showColors ||
-                          showProjection ||
-                          showFiles ||
-                          showGeneral))
+                  if (showLan && (showCast || showColors || showProjection || showFiles || showGeneral))
+                    const Divider(height: 1),
+          if (false && showCast && _castService.isSupported)
+            _settingsTile(
+              leading: const Icon(Icons.cast),
+              title: Text(l10n.castSettingsTitle),
+              subtitle: Text(l10n.castSettingsSummary),
+              onTap: _openCastSettings,
+            ),
+                  if (false && showCast && _castService.isSupported && (showColors || showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
                   if (showColors)
                     _settingsTile(
@@ -1152,6 +1173,120 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ];
       },
     );
+  }
+
+  Future<void> _openCastSettings() {
+    return _openSectionSheet(
+      title: context.l10n.castSettingsTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _castEnabled,
+            onChanged: (bool v) => setBoth(() => _castEnabled = v),
+            title: Text(l10n.castEnabledTitle),
+          ),
+          if (_castEnabled) ...<Widget>[
+            const Divider(height: 1),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.search),
+              title: Text(l10n.castSelectDeviceTitle),
+              subtitle: Text(_castDeviceId.isEmpty 
+                ? l10n.valueNotSet 
+                : 'ID: $_castDeviceId'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _openCastDeviceSelector(setBoth),
+            ),
+            const Divider(height: 1),
+            TextField(
+              controller: TextEditingController(text: _castDeviceId),
+              decoration: InputDecoration(labelText: l10n.castDeviceIdLabel),
+              onChanged: (v) => setBoth(() => _castDeviceId = v),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: TextEditingController(text: _castPort.toString()),
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: l10n.castPortLabel),
+              onChanged: (v) => setBoth(() => _castPort = int.tryParse(v) ?? 1024),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _castAutoConnect,
+              onChanged: (bool v) => setBoth(() => _castAutoConnect = v),
+              title: Text(l10n.castAutoConnectTitle),
+            ),
+          ],
+        ];
+      },
+    );
+  }
+
+  Future<void> _openCastDeviceSelector(void Function(void Function()) setBoth) async {
+    final l10n = context.l10n;
+    
+    await _openSectionSheet(
+      title: l10n.castSelectDeviceTitle,
+      builder: (BuildContext context, void Function(void Function()) setModalState) {
+        return [
+          AnimatedBuilder(
+            animation: _castService,
+            builder: (context, _) {
+              final devices = _castService.discoveredDevices;
+              if (devices.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text(l10n.castNoDevicesFound),
+                      TextButton(
+                        onPressed: () => _castService.startDiscovery(),
+                        child: Text(l10n.refreshTooltip),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return ListView.builder(
+                shrinkWrap: true,
+                itemCount: devices.length,
+                itemBuilder: (context, index) {
+                  final device = devices[index];
+                  return ListTile(
+                    leading: const Icon(Icons.cast),
+                    title: Text(device.friendlyName),
+                    subtitle: Text(device.deviceID),
+                    onTap: () async {
+                      setBoth(() {}); // Update main sheet
+                      try {
+                        await _castService.connectToDevice(device);
+                        setBoth(() {
+                          _castDeviceId = device.deviceID;
+                        });
+                        Navigator.of(context).pop(true);
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Connection failed: $e')),
+                        );
+                      }
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ];
+      },
+    ).then((_) {
+      _castService.stopDiscovery();
+    });
+    
+    // Start discovery when opening
+    _castService.startDiscovery();
   }
 
   Future<void> _openFileSettings() {
@@ -2250,6 +2385,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       desktopSongHotkeys: Map<String, String>.from(_desktopSongHotkeys),
       projBoldText: _projBoldText,
       useSound: _useSound,
+      castEnabled: _castEnabled,
+      castDeviceId: _castDeviceId,
+      castPort: _castPort,
+      castAutoConnect: _castAutoConnect,
       bkColor: _bkColor,
       txtColor: _txtColor,
       blankColor: _blankColor,

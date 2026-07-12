@@ -122,12 +122,6 @@ abstract class AppLocalizations {
   /// **'Énekrendek'**
   String get playlistsTitle;
 
-  /// No description provided for @playlistsMessage.
-  ///
-  /// In hu, this message translates to:
-  /// **'Ez a művelet később visszakaphatja a teljes dialógust.'**
-  String get playlistsMessage;
-
   /// No description provided for @customOrderTooltip.
   ///
   /// In hu, this message translates to:
@@ -2290,6 +2284,60 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Hang használata'**
   String get useSound;
+
+  /// No description provided for @castSettingsTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Google Cast beállítások'**
+  String get castSettingsTitle;
+
+  /// No description provided for @castSettingsSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Cast eszközök beállítása'**
+  String get castSettingsSummary;
+
+  /// No description provided for @castEnabledTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Cast használata'**
+  String get castEnabledTitle;
+
+  /// No description provided for @castDeviceIdLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Cast eszköz azonosító'**
+  String get castDeviceIdLabel;
+
+  /// No description provided for @castPortLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Cast port'**
+  String get castPortLabel;
+
+  /// No description provided for @castAutoConnectTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Automatikus csatlakozás'**
+  String get castAutoConnectTitle;
+
+  /// No description provided for @castSelectDeviceTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Cast eszköz kiválasztása'**
+  String get castSelectDeviceTitle;
+
+  /// No description provided for @castNoDevicesFound.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nem található Cast eszköz'**
+  String get castNoDevicesFound;
+
+  /// No description provided for @castConnecting.
+  ///
+  /// In hu, this message translates to:
+  /// **'Csatlakozás...'**
+  String get castConnecting;
 
   /// No description provided for @transposeDown.
   ///

@@ -21,10 +21,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get playlistsTitle => 'Playlists';
 
   @override
-  String get playlistsMessage =>
-      'This action can get back the full dialog later.';
-
-  @override
   String get customOrderTooltip => 'Custom order';
 
   @override
@@ -1276,6 +1272,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get useSound => 'Use sound';
+
+  @override
+  String get castSettingsTitle => 'Google Cast settings';
+
+  @override
+  String get castSettingsSummary => 'Configure Cast devices';
+
+  @override
+  String get castEnabledTitle => 'Use Cast';
+
+  @override
+  String get castDeviceIdLabel => 'Cast device ID';
+
+  @override
+  String get castPortLabel => 'Cast port';
+
+  @override
+  String get castAutoConnectTitle => 'Auto-connect';
+
+  @override
+  String get castSelectDeviceTitle => 'Select Cast Device';
+
+  @override
+  String get castNoDevicesFound => 'No Cast devices found';
+
+  @override
+  String get castConnecting => 'Connecting...';
 
   @override
   String get transposeDown => 'Transpose down';

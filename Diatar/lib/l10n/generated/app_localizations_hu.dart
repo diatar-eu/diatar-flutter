@@ -21,10 +21,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get playlistsTitle => 'Énekrendek';
 
   @override
-  String get playlistsMessage =>
-      'Ez a művelet később visszakaphatja a teljes dialógust.';
-
-  @override
   String get customOrderTooltip => 'Énekrend';
 
   @override
@@ -1278,6 +1274,33 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get useSound => 'Hang használata';
+
+  @override
+  String get castSettingsTitle => 'Google Cast beállítások';
+
+  @override
+  String get castSettingsSummary => 'Cast eszközök beállítása';
+
+  @override
+  String get castEnabledTitle => 'Cast használata';
+
+  @override
+  String get castDeviceIdLabel => 'Cast eszköz azonosító';
+
+  @override
+  String get castPortLabel => 'Cast port';
+
+  @override
+  String get castAutoConnectTitle => 'Automatikus csatlakozás';
+
+  @override
+  String get castSelectDeviceTitle => 'Cast eszköz kiválasztása';
+
+  @override
+  String get castNoDevicesFound => 'Nem található Cast eszköz';
+
+  @override
+  String get castConnecting => 'Csatlakozás...';
 
   @override
   String get transposeDown => 'Transzpozíció le';
