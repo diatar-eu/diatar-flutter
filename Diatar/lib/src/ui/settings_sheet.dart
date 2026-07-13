@@ -389,14 +389,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     ),
                   if (showLan && (showCast || showColors || showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
-          if (false && showCast && _castService.isSupported)
+          if (showCast && _castService.isSupported)
             _settingsTile(
               leading: const Icon(Icons.cast),
               title: Text(l10n.castSettingsTitle),
               subtitle: Text(l10n.castSettingsSummary),
               onTap: _openCastSettings,
             ),
-                  if (false && showCast && _castService.isSupported && (showColors || showProjection || showFiles || showGeneral))
+                  if (showCast && _castService.isSupported && (showColors || showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
                   if (showColors)
                     _settingsTile(

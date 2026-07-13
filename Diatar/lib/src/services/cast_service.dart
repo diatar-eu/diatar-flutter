@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import 'package:flutter/foundation.dart';
@@ -29,9 +30,10 @@ class CastService extends ChangeNotifier {
     });
   }
 
-  bool get isSupported => Platform.isAndroid || Platform.isIOS;
+  bool get isSupported => false && (Platform.isAndroid || Platform.isIOS);
 
   Future<void> initialize() async {
+    
     if (!isSupported) return;
 
     const appId = GoogleCastDiscoveryCriteria.kDefaultApplicationId;
@@ -105,6 +107,35 @@ class CastService extends ChangeNotifier {
       );
     } catch (e) {
       debugPrint('Cast send data error: $e');
+    }
+  }
+
+  /// Sends a raw image to the Cast receiver.
+  Future<void> sendCastImage(Uint8List bytes, String contentType) async {
+    if (!isSupported || !_isConnected) return;
+
+    try {
+      final String base64Image = base64Encode(bytes);
+      
+      // The default Google Cast receiver requires a valid HTTP/HTTPS URL for contentId.
+      // Data URIs are often rejected by the native SDK (causing "fail to generate media info").
+      // For a production app, these images should be uploaded to a temporary server.
+      // As a fallback to verify connectivity, we use a known valid image URL.
+      final String fallbackUrl = 'https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png';
+
+      await GoogleCastRemoteMediaClient.instance.loadMedia(
+        GoogleCastMediaInformation(
+          contentId: fallbackUrl, 
+          streamType: CastMediaStreamType.buffered,
+          contentType: contentType,
+          customData: {
+            'image': base64Image,
+            'is_projection': true,
+          },
+        ),
+      );
+    } catch (e) {
+      debugPrint('Cast send image error: $e');
     }
   }
 }

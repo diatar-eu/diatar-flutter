@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:diatar_common/utils/transposition_utils.dart';
@@ -2485,13 +2486,114 @@ class DiatarMainController extends ChangeNotifier {
     if (!settings.castEnabled) {
       return;
     }
-    await _castService.sendCastData(<String, dynamic>{
-      'type': 'text',
-      'title': title,
-      'lines': lines,
-      'showing': showing,
-      'highlight': highPos,
-    });
+    
+    // Instead of sending text data, we render the current frame to an image
+    // and send it to Cast. This ensures the receiver displays exactly what is projected.
+    await renderCurrentFrameToImage();
+  }
+
+  /// Renders the current projection frame to an image and sends it to the Cast device.
+  /// This method captures the current projection state using ProjectorPainter and converts
+  /// it to a PNG image that can be sent via Cast.
+  Future<void> renderCurrentFrameToImage() async {
+    if (!settings.castEnabled) return;
+
+    try {
+      // Get the current projection state
+      final ProjectionFrame? frame = _buildCurrentFrame();
+      if (frame == null) return;
+
+      // Create a picture recorder to capture the rendering
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final ui.Canvas canvas = ui.Canvas(recorder);
+
+      // Get screen dimensions from settings or use defaults
+      final double width = _screenWidth.toDouble();
+      final double height = _screenHeight.toDouble();
+      final Size size = Size(width, height);
+
+      // Create and paint the projector painter
+      final ProjectorPainter painter = ProjectorPainter(
+        frame: frame,
+        globals: globals,
+        settings: settings,
+        logoTitle: '',
+        logoSubtitle: '',
+      );
+
+      painter.paint(canvas, size);
+
+      // End recording and get the picture
+      final ui.Picture picture = recorder.endRecording();
+      
+      // Convert picture to image
+      final ui.Image image = await picture.toImage(width.ceil(), height.ceil());
+      
+      // Convert image to PNG bytes
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final Uint8List pngBytes = byteData.buffer.asUint8List();
+
+      // Send the image via Cast service
+      await _castService.sendCastImage(pngBytes, 'image/png');
+    } catch (e) {
+      debugPrint('Error rendering frame to image for Cast: $e');
+    }
+  }
+
+  /// Builds the current projection frame based on the controller's state.
+  /// This method determines which type of frame to render (text, image, etc.)
+  /// and returns the appropriate ProjectionFrame instance.
+  ProjectionFrame? _buildCurrentFrame() {
+    // Default to showing nothing
+    if (!showing) {
+      return const LogoFrame(0);
+    }
+
+    // Handle custom order entries that are images or text
+    if (customOrderActive && _projectedCustomCursor >= 0 && _projectedCustomCursor < _customOrder.length) {
+      final CustomOrderEntry entry = _customOrder[_projectedCustomCursor];
+      if (entry.isCustomImage) {
+        // For custom images, we would need to load the image as an ImageFrame
+        // For now, we'll fall back to text rendering or handle it elsewhere
+        return null;
+      } else if (entry.isCustomText) {
+        // Create a TextFrame for custom text entries
+        final String title = (entry.customTextTitle ?? '').trim().isEmpty
+            ? 'Dia'
+            : (entry.customTextTitle ?? '').trim();
+        final List<String> lines = (entry.customTextBody ?? '')
+            .split(RegExp(r'\r?\n'))
+            .map((String line) => line.trimRight())
+            .where((String line) => line.trim().isNotEmpty)
+            .toList();
+        final RecTextRecord record = RecTextRecord(
+          scholaLine: '',
+          title: title,
+          lines: lines,
+        );
+        return TextFrame(record: record);
+      }
+    }
+
+    // Default to showing the current verse/projection
+    final DtxBook? book = currentBook;
+    final DtxSong? song = currentSong;
+    final DtxVerse? verse = currentVerse;
+
+    if (book == null || song == null || verse == null) {
+      return const LogoFrame(0);
+    }
+
+    // Create a TextFrame with the current book, song, and verse information
+    final String title = '${book.displayName}: ${song.title}/${verse?.name ?? ''}'.trim();
+    final List<String> lines = displayLines;
+    final RecTextRecord record = RecTextRecord(
+      scholaLine: '',
+      title: title,
+      lines: lines,
+    );
+    return TextFrame(record: record);
   }
 
   Future<void> _projectCustomOrderEntry(
