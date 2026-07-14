@@ -3,6 +3,7 @@ import 'dart:io' if (dart.library.io) 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../utils/file_system_provider.dart';
 import 'package:html/dom.dart' as dom;
@@ -54,6 +55,7 @@ class ZsolozsmaService {
   static const String _baseUrl = 'https://breviar.sk/download/';
   static const String _baseSiteUrl = 'https://breviar.sk';
   static const String _cgiUrl = 'https://breviar.sk/cgi-bin/l.cgi';
+  static const String _webProxyUrl = 'https://diatar.eu/breviar.php';
 
   Future<ZsolozsmaSyncResult> ensureYearArchives({
     required Directory storageDir,
@@ -478,7 +480,7 @@ class ZsolozsmaService {
     required File target,
   }) async {
     final String sourceName = '$year-hu-plain.zip';
-    final Uri uri = Uri.parse('$_baseUrl$sourceName');
+    final Uri uri = _buildYearZipDownloadUri(sourceName);
     final File tmp = FileSystemProvider.instance.file('${target.path}.tmp');
     try {
       final http.Response response = await http.get(uri);
@@ -497,6 +499,18 @@ class ZsolozsmaService {
         await tmp.delete();
       }
     }
+  }
+
+  Uri _buildYearZipDownloadUri(String sourceName) {
+    if (!kIsWeb) {
+      return Uri.parse('$_baseUrl$sourceName');
+    }
+
+    return Uri.parse(_webProxyUrl).replace(
+      queryParameters: <String, String>{
+        'url': '/download/$sourceName',
+      },
+    );
   }
 
   Future<void> _extractArchiveToDisk(File zipFile, Directory targetDir) async {
