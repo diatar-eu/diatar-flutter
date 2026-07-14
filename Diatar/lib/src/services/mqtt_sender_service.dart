@@ -14,7 +14,9 @@ class MqttSenderService {
   SenderErrorCallback onError;
 
   static const String _host = 'mqtt.diatar.eu';
+  static const String _webHost = 'wss://mqttws.diatar.eu';
   static const int _port = 1883;
+  static const int _webPort = 443;
 
   MqttClient? _client;
   StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? _sub;
@@ -50,8 +52,10 @@ class MqttSenderService {
     _topicDia = '${_topicGroup}dia';
 
     final String clientId = 'sender-${DateTime.now().millisecondsSinceEpoch}';
-    final MqttClient client = createMqttClient(_host, clientId);
-    client.port = _port;
+    final String host = kIsWeb ? _webHost : _host;
+    final int port = kIsWeb ? _webPort : _port;
+    final MqttClient client = createMqttClient(host, clientId);
+    client.port = port;
 
     client
       ..logging(on: false)
