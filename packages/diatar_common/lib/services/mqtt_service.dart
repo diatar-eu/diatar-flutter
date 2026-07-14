@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:http/http.dart' as http;
 import 'package:mqtt_client/mqtt_client.dart';
-import 'package:mqtt_client/mqtt_server_client.dart';
+
+import 'mqtt_client_factory.dart';
 
 import '../models/mqtt_user.dart';
 import '../models/records.dart';
@@ -37,10 +38,11 @@ class MqttService {
   final MqttConnectionCallback? onConnection;
 
   static const String _host = 'mqtt.diatar.eu';
+  static const String _webHost = 'wss://mqttws.diatar.eu';
   static const int _port = 1883;
   static const String _apiBase = 'http://mqtt.diatar.eu';
 
-  MqttServerClient? _receiverClient;
+  MqttClient? _receiverClient;
   StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? _receiverSub;
 
   String _username = '';
@@ -73,8 +75,11 @@ class MqttService {
 
     final String clientId =
         'receiver-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(10000)}';
-    final MqttServerClient client = MqttServerClient(_host, clientId)
-      ..port = _port
+    final MqttClient testClient = createMqttClient(_host, clientId);
+    final bool isWeb = testClient.runtimeType.toString().contains('Browser');
+    final String host = isWeb ? _webHost : _host;
+    final MqttClient client = createMqttClient(host, clientId)
+      ..port = isWeb ? 443 : _port
       ..logging(on: false)
       ..keepAlivePeriod = 15
       ..autoReconnect = true
@@ -158,24 +163,24 @@ class MqttService {
 
   Future<void> _fillUserList() async {
     final Uri uri = Uri.parse('$_apiBase/api/v1/users/list');
-    final HttpClient client = HttpClient();
     try {
-      final HttpClientRequest request = await client
-          .getUrl(uri)
+      final http.Response response = await http
+          .get(
+            uri,
+            headers: <String, String>{
+              'Accept': 'application/json',
+            },
+          )
           .timeout(const Duration(seconds: 12));
-      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      final HttpClientResponse response = await request.close().timeout(
-        const Duration(seconds: 12),
-      );
-      if (response.statusCode != HttpStatus.ok) {
+
+      if (response.statusCode != 200) {
         onError(
           'Felhasznalolista lekerdezesi hiba: HTTP ${response.statusCode}.',
         );
         return;
       }
 
-      final String body = await utf8.decoder.bind(response).join();
-      final dynamic decoded = jsonDecode(body);
+      final dynamic decoded = jsonDecode(response.body);
       final List<String> usernames = _extractUsernames(decoded);
       _users = usernames
           .where((String u) => u.trim().isNotEmpty)
@@ -185,8 +190,6 @@ class MqttService {
       onUsers(List<MqttUser>.unmodifiable(_users));
     } catch (e) {
       onError('Felhasznalolista lekerdezesi hiba: $e');
-    } finally {
-      client.close(force: true);
     }
   }
 

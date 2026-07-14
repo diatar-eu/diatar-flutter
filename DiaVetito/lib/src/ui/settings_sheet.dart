@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -128,6 +129,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
   }
 
   Future<void> _loadLocalIp() async {
+    if (kIsWeb) {
+      return;
+    }
     try {
       final List<NetworkInterface> interfaces = await NetworkInterface.list(
         type: InternetAddressType.IPv4,
@@ -283,29 +287,29 @@ class _SettingsSheetState extends State<SettingsSheet> {
                           showGeneral ||
                           showSystem))
                     const Divider(height: 1),
-                  if (showLan)
-                    _settingsTile(
-                      leading: const Icon(Icons.lan),
-                      title: Text(l10n.settingsLocalNetworkTitle),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            l10n.settingsLocalNetworkSubtitle(
-                              localNetworkStatus,
-                              _port.text.trim().isEmpty
-                                  ? '-'
-                                  : _port.text.trim(),
-                            ),
-                          ),
-                          Text(
-                            l10n.settingsLocalNetworkIpLabel(_localIp),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                      onTap: _openLocalNetworkSettings,
-                    ),
+                   if (showLan && !kIsWeb)
+                     _settingsTile(
+                       leading: const Icon(Icons.lan),
+                       title: Text(l10n.settingsLocalNetworkTitle),
+                       subtitle: Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: <Widget>[
+                           Text(
+                             l10n.settingsLocalNetworkSubtitle(
+                               localNetworkStatus,
+                               _port.text.trim().isEmpty
+                                   ? '-'
+                                   : _port.text.trim(),
+                             ),
+                           ),
+                           Text(
+                             l10n.settingsLocalNetworkIpLabel(_localIp),
+                             style: Theme.of(context).textTheme.bodySmall,
+                           ),
+                         ],
+                       ),
+                       onTap: _openLocalNetworkSettings,
+                     ),
                   if (showLan &&
                       (showProjectionImage ||
                           showProjectionFilter ||

@@ -505,7 +505,7 @@ class ProjectionController extends ChangeNotifier {
 
   Future<void> _applyTransport() async {
     final String user = settings.mqttUser.trim();
-    if (user.isEmpty) {
+    if (user.isEmpty && !kIsWeb) {
       mqttActive = false;
       mqttConnected = false;
       connected = false;
@@ -517,6 +517,18 @@ class ProjectionController extends ChangeNotifier {
         'statusTcpListening',
         notify: false,
         params: <String, Object>{'port': settings.port},
+      );
+    } else if (user.isEmpty && kIsWeb) {
+      mqttActive = false;
+      mqttConnected = false;
+      connected = false;
+      _hasDataForCurrentConnection = false;
+      _ignoreNextMqttEndProgram = false;
+      await _mqtt.closeReceiver();
+      await _server.stop();
+      _setStatus(
+        'statusTcpOff',
+        notify: false,
       );
     } else {
       mqttActive = true;
