@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../core/settings/transport_settings_policy.dart';
 import 'mqtt_sender_service.dart';
 import 'tcp_sender_service.dart';
@@ -25,7 +27,7 @@ class SenderTransportCoordinator {
       await mqttSender.close();
     }
 
-    if (runtime.tcpConfigured) {
+    if (!kIsWeb && runtime.tcpConfigured) {
       await tcpSender.restart(runtime.tcpTargets);
       await tcpSender.sendScreenSize(width: screenWidth, height: screenHeight);
     } else {

@@ -282,7 +282,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       query,
       'internet mqtt kozvetites felhasznalo user',
     );
-    final bool showLan = _matches(query, 'helyi halozat tcp ip port');
+    final bool showLan =
+        !kIsWeb && _matches(query, 'helyi halozat tcp ip port');
     final bool showCast = (_castService?.isSupported ?? false) &&
         _matches(query, 'cast google cast');
     final bool showColors = _matches(query, 'szinek hatter szoveg highlight');
@@ -1075,8 +1076,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   bool _applyNetworkSettings() {
     final String mqttUser = _mqttUser.text.trim();
     final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
-    final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
-    final String? tcpError = _localNetworkEnabled
+    final List<String> tcpTargets = kIsWeb
+        ? const <String>[]
+        : _parseTcpTargets(_tcpTargets.text);
+    final bool localNetworkEnabled = kIsWeb ? false : _localNetworkEnabled;
+    final String? tcpError = localNetworkEnabled
         ? _validateTcpTargets(tcpTargets)
         : null;
     if (tcpError != null) {
@@ -1087,13 +1091,13 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     }
     _tcpTargets.text = tcpTargets.join('\n');
 
-    final int firstPort = _localNetworkEnabled
+    final int firstPort = localNetworkEnabled
         ? (_firstPortFromTargets(tcpTargets) ?? widget.initialSettings.port)
         : widget.initialSettings.port;
 
     final AppSettings updated = widget.initialSettings.copyWith(
       port: firstPort,
-      tcpClientEnabled: _localNetworkEnabled,
+      tcpClientEnabled: localNetworkEnabled,
       tcpTargets: tcpTargets,
       internetRelayEnabled: _internetRelayEnabled,
       mqttUser: mqttUser,
@@ -2290,8 +2294,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   void _save() {
     final String mqttUser = _mqttUser.text.trim();
     final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
-    final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
-    final String? tcpError = _localNetworkEnabled
+    final List<String> tcpTargets = kIsWeb
+        ? const <String>[]
+        : _parseTcpTargets(_tcpTargets.text);
+    final bool localNetworkEnabled = kIsWeb ? false : _localNetworkEnabled;
+    final String? tcpError = localNetworkEnabled
         ? _validateTcpTargets(tcpTargets)
         : null;
     if (tcpError != null) {
@@ -2300,7 +2307,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       ).showSnackBar(SnackBar(content: Text(tcpError)));
       return;
     }
-    final int firstPort = _localNetworkEnabled
+    final int firstPort = localNetworkEnabled
         ? (_firstPortFromTargets(tcpTargets) ?? widget.initialSettings.port)
         : widget.initialSettings.port;
 
@@ -2326,7 +2333,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
     final AppSettings updated = widget.initialSettings.copyWith(
       port: firstPort,
-      tcpClientEnabled: _localNetworkEnabled,
+      tcpClientEnabled: localNetworkEnabled,
       tcpTargets: tcpTargets,
       internetRelayEnabled: _internetRelayEnabled,
       mqttUser: mqttUser,

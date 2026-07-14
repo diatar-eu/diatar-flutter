@@ -2213,22 +2213,23 @@ class _SongDropdown extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Tooltip(
-            message: _statusTooltip(
-              context,
-              title: context.l10n.settingsLocalNetworkTitle,
-              state: _localNetworkIndicatorState(controller),
-            ),
-            child: InkResponse(
-              radius: 20,
-              onTap: onLocalNetworkSettingsTap,
-              child: _statusIcon(
-                icon: Icons.lan,
+          if (!kIsWeb)
+            Tooltip(
+              message: _statusTooltip(
+                context,
+                title: context.l10n.settingsLocalNetworkTitle,
                 state: _localNetworkIndicatorState(controller),
-                theme: theme,
+              ),
+              child: InkResponse(
+                radius: 20,
+                onTap: onLocalNetworkSettingsTap,
+                child: _statusIcon(
+                  icon: Icons.lan,
+                  state: _localNetworkIndicatorState(controller),
+                  theme: theme,
+                ),
               ),
             ),
-          ),
         ],
       );
     }
@@ -2277,23 +2278,24 @@ class _SongDropdown extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(width: 8),
-        Tooltip(
-          message: _statusTooltip(
-            context,
-            title: context.l10n.settingsLocalNetworkTitle,
-            state: _localNetworkIndicatorState(controller),
-          ),
-          child: InkResponse(
-            radius: 20,
-            onTap: onLocalNetworkSettingsTap,
-            child: _statusIcon(
-              icon: Icons.lan,
-              state: _localNetworkIndicatorState(controller),
-              theme: theme,
+          const SizedBox(width: 8),
+          if (!kIsWeb)
+            Tooltip(
+              message: _statusTooltip(
+                context,
+                title: context.l10n.settingsLocalNetworkTitle,
+                state: _localNetworkIndicatorState(controller),
+              ),
+              child: InkResponse(
+                radius: 20,
+                onTap: onLocalNetworkSettingsTap,
+                child: _statusIcon(
+                  icon: Icons.lan,
+                  state: _localNetworkIndicatorState(controller),
+                  theme: theme,
+                ),
+              ),
             ),
-          ),
-        ),
       ],
     );
   }
@@ -2691,22 +2693,23 @@ class _DialistPanelState extends State<_DialistPanel> {
               ),
             ),
             const SizedBox(height: 8),
-            Tooltip(
-              message: _statusTooltip(
-                context,
-                title: context.l10n.settingsLocalNetworkTitle,
-                state: _localNetworkIndicatorState(controller),
-              ),
-              child: InkResponse(
-                radius: 20,
-                onTap: widget.onLocalNetworkSettingsTap,
-                child: _statusIcon(
-                  icon: Icons.lan,
+            if (!kIsWeb)
+              Tooltip(
+                message: _statusTooltip(
+                  context,
+                  title: context.l10n.settingsLocalNetworkTitle,
                   state: _localNetworkIndicatorState(controller),
-                  theme: theme,
+                ),
+                child: InkResponse(
+                  radius: 20,
+                  onTap: widget.onLocalNetworkSettingsTap,
+                  child: _statusIcon(
+                    icon: Icons.lan,
+                    state: _localNetworkIndicatorState(controller),
+                    theme: theme,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ],
