@@ -1,7 +1,11 @@
 import 'dart:convert';
-import 'dart:io';
 
+import 'package:file/file.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../utils/file_system_provider.dart';
 
 class DtxDownloadItem {
   const DtxDownloadItem({
@@ -55,10 +59,7 @@ class DtxDownloadProgress {
 }
 
 class DtxDownloadSummary {
-  const DtxDownloadSummary({
-    required this.downloaded,
-    required this.skipped,
-  });
+  const DtxDownloadSummary({required this.downloaded, required this.skipped});
 
   final int downloaded;
   final int skipped;
@@ -72,9 +73,7 @@ class DtxDownloadService {
   Future<List<DtxDownloadItem>> listUpdates({required Directory targetDir}) async {
     final List<DtxDownloadItem> all = await listAll(targetDir: targetDir);
     return all
-        .where(
-          (DtxDownloadItem item) => item.isOfficial && item.updateAvailable,
-        )
+        .where((DtxDownloadItem item) => item.isOfficial && item.updateAvailable)
         .toList();
   }
 
@@ -124,9 +123,7 @@ class DtxDownloadService {
 
     for (final MapEntry<String, File> entry in localByName.entries) {
       final String fileName = entry.key;
-      final int localSize = entry.value.existsSync()
-          ? entry.value.lengthSync()
-          : 0;
+      final int localSize = entry.value.existsSync() ? entry.value.lengthSync() : 0;
       items.add(
         DtxDownloadItem(
           fileName: fileName,
@@ -203,9 +200,9 @@ class DtxDownloadService {
     await targetDir.create(recursive: true);
 
     final List<DtxDownloadItem> updates =
-      (selected ?? await listUpdates(targetDir: targetDir))
-        .where((DtxDownloadItem item) => item.isOfficial)
-        .toList();
+        (selected ?? await listUpdates(targetDir: targetDir))
+            .where((DtxDownloadItem item) => item.isOfficial)
+            .toList();
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     int downloaded = 0;
@@ -213,8 +210,11 @@ class DtxDownloadService {
 
     for (int i = 0; i < updates.length; i++) {
       final DtxDownloadItem item = updates[i];
-      final File local = File('${targetDir.path}/${item.fileName}');
-      final String oldStamp = prefs.getString('$_stampPrefix${item.fileName}') ?? '';
+      final File local = FileSystemProvider.instance.file(
+        '${targetDir.path}/${item.fileName}',
+      );
+      final String oldStamp =
+          prefs.getString('$_stampPrefix${item.fileName}') ?? '';
       final bool upToDate = local.existsSync() && oldStamp == item.timestamp;
       if (upToDate) {
         skipped++;
@@ -240,6 +240,8 @@ class DtxDownloadService {
       downloaded++;
     }
 
+    await FileSystemProvider.persistWebFileSystem();
+
     return DtxDownloadSummary(downloaded: downloaded, skipped: skipped);
   }
 
@@ -255,37 +257,36 @@ class DtxDownloadService {
         .where((String name) => name.isNotEmpty)
         .toSet();
     for (final String name in uniqueNames) {
-      final File local = File('${targetDir.path}/$name');
+      final File local = FileSystemProvider.instance.file(
+        '${targetDir.path}/$name',
+      );
       if (await local.exists()) {
         await local.delete();
         deleted++;
       }
       await prefs.remove('$_stampPrefix$name');
     }
+
+    await FileSystemProvider.persistWebFileSystem();
+
     return deleted;
   }
 
   Future<List<_RemoteDtx>> _fetchRemoteList() async {
-    final HttpClient client = HttpClient();
-    try {
-      final HttpClientRequest request = await client.getUrl(Uri.parse(_listUrl));
-      final HttpClientResponse response = await request.close();
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw HttpException('HTTP ${response.statusCode} while loading DTX list');
-      }
-
-      final String content = await response.transform(utf8.decoder).join();
-      final List<_RemoteDtx> result = <_RemoteDtx>[];
-      for (final String line in const LineSplitter().convert(content)) {
-        final _RemoteDtx? parsed = _parseListLine(line.trim());
-        if (parsed != null) {
-          result.add(parsed);
-        }
-      }
-      return result;
-    } finally {
-      client.close(force: true);
+    final http.Response response = await http.get(Uri.parse(_listUrl));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('HTTP ${response.statusCode} while loading DTX list');
     }
+
+    final String content = utf8.decode(response.bodyBytes);
+    final List<_RemoteDtx> result = <_RemoteDtx>[];
+    for (final String line in const LineSplitter().convert(content)) {
+      final _RemoteDtx? parsed = _parseListLine(line.trim());
+      if (parsed != null) {
+        result.add(parsed);
+      }
+    }
+    return result;
   }
 
   _RemoteDtx? _parseListLine(String line) {
@@ -309,11 +310,12 @@ class DtxDownloadService {
     }
 
     final String group = cells.length > 3 ? cells[3].trim() : '';
-    final int order = cells.length > 4 ? int.tryParse(cells[4].trim()) ?? 0 : 0;
+    final int order =
+        cells.length > 4 ? int.tryParse(cells[4].trim()) ?? 0 : 0;
     final String longName =
         cells.length > 5 && cells[5].trim().isNotEmpty
-        ? cells[5].trim()
-        : fileName;
+            ? cells[5].trim()
+            : fileName;
     final String shortName = cells.length > 6 ? cells[6].trim() : '';
 
     return _RemoteDtx(
@@ -362,40 +364,36 @@ class DtxDownloadService {
     void Function(DtxDownloadProgress progress)? onProgress,
   }) async {
     final Uri uri = Uri.parse('$_baseUrl${item.fileName}');
-    final HttpClient client = HttpClient();
-    try {
-      final HttpClientRequest request = await client.getUrl(uri);
-      final HttpClientResponse response = await request.close();
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw HttpException('HTTP ${response.statusCode} while downloading ${item.fileName}');
-      }
-
-      final int totalBytes = response.contentLength > 0 ? response.contentLength : item.size;
-      int received = 0;
-      final File tmp = File('${targetFile.path}.tmp');
-      final IOSink sink = tmp.openWrite();
-      await for (final List<int> chunk in response) {
-        sink.add(chunk);
-        received += chunk.length;
-        onProgress?.call(
-          DtxDownloadProgress(
-            currentFile: currentFile,
-            totalFiles: totalFiles,
-            fileName: item.fileName,
-            receivedBytes: received,
-            totalBytes: totalBytes,
-          ),
-        );
-      }
-      await sink.close();
-
-      if (targetFile.existsSync()) {
-        await targetFile.delete();
-      }
-      await tmp.rename(targetFile.path);
-    } finally {
-      client.close(force: true);
+    final http.Response response = await http.get(uri);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'HTTP ${response.statusCode} while downloading ${item.fileName}',
+      );
     }
+
+    final int totalBytes =
+        (response.contentLength != null && response.contentLength! > 0)
+            ? response.contentLength!
+            : item.size;
+    int received = 0;
+    final List<int> bytes = response.bodyBytes;
+    final int chunkSize = 64 * 1024;
+    for (int i = 0; i < bytes.length; i += chunkSize) {
+      received += (i + chunkSize < bytes.length
+              ? chunkSize
+              : bytes.length - i);
+      onProgress?.call(
+        DtxDownloadProgress(
+          currentFile: currentFile,
+          totalFiles: totalFiles,
+          fileName: item.fileName,
+          receivedBytes: received,
+          totalBytes: totalBytes,
+        ),
+      );
+    }
+
+    await targetFile.writeAsBytes(bytes);
   }
 }
 

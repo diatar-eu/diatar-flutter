@@ -1,7 +1,7 @@
-import 'dart:io';
-
-import 'package:path_provider/path_provider.dart';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:file/file.dart';
+import '../utils/path_helper.dart';
+import '../utils/file_system_provider.dart';
 
 /// A .dtz fajlokat kezeli: a bennuk levo dia-id -> foto utvonal lekepezeset
 /// epiti fel. A formatum:
@@ -14,8 +14,8 @@ class DtzLibraryService {
   const DtzLibraryService();
 
   Future<Directory> resolveDirectory() async {
-    final Directory docs = await getApplicationDocumentsDirectory();
-    return Directory('${docs.path}/diatar/DTZs');
+    final String docsPath = await PathHelper.getDocumentsDirectoryPath();
+    return FileSystemProvider.instance.directory('$docsPath/diatar/DTZs');
   }
 
   /// Beolvassa az osszes .dtz fajlt a DTXs konyvtarbol, es egyesiti a bennuk
@@ -50,9 +50,9 @@ class DtzLibraryService {
 
   void _parseFile(String content, Map<String, DtxVerse> entries) async {
     final List<String> lines = content.replaceAll('\r\n', '\n').split('\n');
-    final Directory docs = await getApplicationDocumentsDirectory();
+    final String docsPath = await PathHelper.getDocumentsDirectoryPath();
 
-    String baseDir = '${docs.path}/diatar/DTZs';
+    String baseDir = '$docsPath/diatar/DTZs';
 
     for (final String raw in lines) {
       if (raw.isEmpty) {
@@ -63,7 +63,7 @@ class DtzLibraryService {
       final String rest = raw.substring(1).trim();
 
       if (prefix == 'b' || prefix == 'B') {
-        baseDir = '${docs.path}/diatar/DTZs/${rest.replaceAll('\\', '/')}';
+        baseDir = '$docsPath/diatar/DTZs/${rest.replaceAll('\\', '/')}';
         continue;
       }
 

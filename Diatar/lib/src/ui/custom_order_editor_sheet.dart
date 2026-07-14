@@ -1,12 +1,13 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'dart:io';
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as path;
 
 import '../controllers/diatar_main_controller.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -439,7 +440,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                   ),
                   actions: <Widget>[
                     TextButton(
-                      onPressed: () => dialogNavigator.pop(),
+                      onPressed: () => Navigator.of(dialogContext).pop(),
                       child: Text(l10n.cancel),
                     ),
                     FilledButton.icon(
@@ -957,31 +958,30 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       final bool hadUsableConfiguredDir = initialDir != null;
 
       try {
-        final FileSaveLocation? target = await getSaveLocation(
-          suggestedName: defaultFileName,
+        final XFile? file = await openFile(
           acceptedTypeGroups: <XTypeGroup>[diaType],
           initialDirectory: initialDir,
         );
-        targetPath = target?.path;
-        if (!hadUsableConfiguredDir &&
-            targetPath != null &&
-            targetPath.trim().isNotEmpty) {
-          final String selectedDir = File(targetPath).parent.path.trim();
-          final String? existingSelectedDir = _existingDirectoryPathOrNull(
-            selectedDir,
-          );
-          if (existingSelectedDir != null) {
-            await controller.applySettings(
-              controller.settings.copyWith(diaExportPath: existingSelectedDir),
+        if (file != null) {
+          targetPath = file.path;
+          if (!hadUsableConfiguredDir) {
+            final String selectedDir = path.dirname(file.path).trim();
+            final String? existingSelectedDir = _existingDirectoryPathOrNull(
+              selectedDir,
             );
+            if (existingSelectedDir != null) {
+              await controller.applySettings(
+                controller.settings.copyWith(diaExportPath: existingSelectedDir),
+              );
+            }
           }
         }
-      } on UnimplementedError {
+      } catch (e) {
         nativeSaveDialogAvailable = false;
       }
 
       if (!nativeSaveDialogAvailable) {
-        if (Platform.isAndroid) {
+        if (!kIsWeb && Platform.isAndroid) {
           final String? savedPath = await _saveDiaWithAndroidSystemDialog(
             defaultFileName: defaultFileName,
           );
@@ -1027,7 +1027,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           );
         }
         targetPath =
-            '${exportDir.path}${Platform.pathSeparator}$fileBaseName.dia';
+            '${exportDir.path}/$fileBaseName.dia';
       }
 
       if (targetPath == null || targetPath.trim().isEmpty) {
@@ -1061,7 +1061,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     );
     try {
       final String tempPath =
-          '${tempDir.path}${Platform.pathSeparator}$defaultFileName';
+          '${tempDir.path}/$defaultFileName';
       final String exportedTempPath = await controller.exportCustomOrderToDia(
         tempPath,
       );
@@ -1114,7 +1114,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             lowered.contains('operation not permitted') ||
             lowered.contains('eacces') ||
             lowered.contains('eperm'));
-    if (Platform.isAndroid && permissionLikeError) {
+    if (!kIsWeb && Platform.isAndroid && permissionLikeError) {
       return l10n.customOrderSaveDiaPermissionDenied;
     }
     return l10n.customOrderSaveDiaGenericError(raw);
@@ -1336,18 +1336,18 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       selectedSet.add(0);
     }
     final List<int> originalSelection = selectedSet.toList()..sort();
-    final List<int>? selectedMany = await _showVerseSelectionSheet(
+    final List<int>? chosen = await _showVerseSelectionSheet(
       verses: verses,
       initialSelection: selectedSet,
       title: context.l10n.selectedVersesTitle,
       subtitle: context.l10n.selectedVersesSubtitle,
     );
 
-    if (selectedMany == null || selectedMany.isEmpty) {
+    if (chosen == null || chosen.isEmpty) {
       return;
     }
 
-    final List<int> normalized = selectedMany.toList()..sort();
+    final List<int> normalized = chosen.toList()..sort();
     if (listEquals(normalized, originalSelection)) {
       return;
     }
@@ -1355,14 +1355,14 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     setState(() {
       final List<CustomOrderEntry> replacements = normalized
           .map(
-            (int v) => controller.normalizeEntry(
-              base.copyWith(
-                verseIndex: v,
-                label: controller.buildEntryLabel(
-                  base.fileName,
-                  base.songIndex,
-                  v,
-                ),
+            (int verseIx) => CustomOrderEntry(
+              fileName: base.fileName,
+              songIndex: base.songIndex,
+              verseIndex: verseIx,
+              label: controller.buildEntryLabel(
+                base.fileName,
+                base.songIndex,
+                verseIx,
               ),
             ),
           )

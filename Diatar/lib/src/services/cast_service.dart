@@ -30,7 +30,7 @@ class CastService extends ChangeNotifier {
     });
   }
 
-  bool get isSupported => false && (Platform.isAndroid || Platform.isIOS);
+  bool get isSupported => false && !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
   Future<void> initialize() async {
     

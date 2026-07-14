@@ -3,6 +3,7 @@ import 'package:diatar_common/diatar_common.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
+import 'package:mqtt_client/mqtt_browser_client.dart';
 import 'package:typed_data/typed_buffers.dart';
 
 typedef SenderErrorCallback = void Function(String code, Map<String, String> params);
@@ -16,7 +17,7 @@ class MqttSenderService {
   static const String _host = 'mqtt.diatar.eu';
   static const int _port = 1883;
 
-  MqttServerClient? _client;
+  MqttClient? _client;
   StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? _sub;
   String _topicGroup = '';
   String _topicState = '';
@@ -50,8 +51,20 @@ class MqttSenderService {
     _topicDia = '${_topicGroup}dia';
 
     final String clientId = 'sender-${DateTime.now().millisecondsSinceEpoch}';
-    final MqttServerClient client = MqttServerClient(_host, clientId)
-      ..port = _port
+    final MqttClient client;
+
+    if (kIsWeb) {
+      client = MqttBrowserClient(_host, clientId);
+      // WebSockets usually use port 80 or 443. 
+      // If the server is configured for WS, it might be on a different port.
+      // We'll try the standard port first or assume the server handles it.
+      client.port = _port; 
+    } else {
+      client = MqttServerClient(_host, clientId);
+      client.port = _port;
+    }
+
+    client
       ..logging(on: false)
       ..keepAlivePeriod = 15
       ..autoReconnect = true
@@ -97,7 +110,7 @@ class MqttSenderService {
   }
 
   Future<void> clearRetainedMessages() async {
-    final MqttServerClient? client = _client;
+    final MqttClient? client = _client;
     if (client == null) {
       return;
     }
@@ -137,7 +150,7 @@ class MqttSenderService {
   }
 
   Future<void> _publish(String topic, Uint8List? payload) async {
-    final MqttServerClient? client = _client;
+    final MqttClient? client = _client;
     if (client == null || payload == null || topic.isEmpty) {
       return;
     }
@@ -147,7 +160,7 @@ class MqttSenderService {
   }
 
   Future<void> _publishEmpty(String topic) async {
-    final MqttServerClient? client = _client;
+    final MqttClient? client = _client;
     if (client == null || topic.isEmpty) {
       return;
     }

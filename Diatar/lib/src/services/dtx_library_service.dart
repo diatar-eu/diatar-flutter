@@ -1,9 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:diatar_common/diatar_common.dart';
+import 'package:file/file.dart';
 import 'package:file_selector/file_selector.dart';
-import 'package:path_provider/path_provider.dart';
+import '../utils/path_helper.dart';
+import '../utils/file_system_provider.dart';
 
 import '../core/dtx/dtx_import_policy.dart';
 
@@ -30,8 +31,8 @@ class DtxLibraryService {
   final DtxImportPolicy _importPolicy;
 
   Future<Directory> resolveDirectory() async {
-    final Directory docs = await getApplicationDocumentsDirectory();
-    return Directory('${docs.path}/diatar/DTXs');
+    final String docsPath = await PathHelper.getDocumentsDirectoryPath();
+    return FileSystemProvider.instance.directory('$docsPath/diatar/DTXs');
   }
 
   Future<List<DtxBook>> loadBooks() async {
@@ -89,13 +90,18 @@ class DtxLibraryService {
         final List<int> bytes = await file.readAsBytes();
         final String content = utf8.decode(bytes, allowMalformed: true);
         _parser.parse(fileName: targetName, content: content);
-        await File('${dtxDir.path}/$targetName').writeAsBytes(bytes);
+        final File targetFile = FileSystemProvider.instance.file(
+          '${dtxDir.path}/$targetName',
+        );
+        await targetFile.writeAsBytes(bytes);
         importedFileNames.add(targetName);
         importedCount++;
       } catch (e) {
         failures.add('$originalName: $e');
       }
     }
+
+    await FileSystemProvider.persistWebFileSystem();
 
     return DtxLibraryImportResult(
       importedCount: importedCount,

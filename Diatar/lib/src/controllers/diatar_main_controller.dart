@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'package:file/file.dart';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -9,7 +9,8 @@ import 'package:diatar_common/utils/transposition_utils.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
+import '../utils/path_helper.dart';
+import '../utils/file_system_provider.dart';
 
 import '../core/books/book_sort_policy.dart';
 import '../core/custom_order/custom_order_normalizer.dart';
@@ -160,7 +161,7 @@ class DiatarMainController extends ChangeNotifier {
   );
   final DesktopProjectorBridge _desktopProjectorBridge =
       DesktopProjectorBridge.instance;
-  final CastService _castService = CastService();
+  CastService? _castService;
 
   List<DtxBook> books = <DtxBook>[];
   int bookIndex = 0;
@@ -384,8 +385,9 @@ class DiatarMainController extends ChangeNotifier {
     };
     _configureSender();
     await _applyTransport();
-    if (settings.castEnabled) {
-      await _castService.initialize();
+    if (settings.castEnabled && !kIsWeb) {
+      _castService ??= CastService();
+      await _castService!.initialize();
     }
     await reloadBooks();
     await _tryAutoLoadTodayDia();
@@ -408,7 +410,9 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
-    final Directory dir = Directory(basePath);
+    if (kIsWeb) return;
+
+    final Directory dir = FileSystemProvider.instance.directory(basePath);
     if (!await dir.exists()) {
       return;
     }
@@ -438,7 +442,7 @@ class DiatarMainController extends ChangeNotifier {
     ];
 
     for (final String name in baseNames) {
-      final File candidate = File('${dir.path}/$name.dia');
+      final File candidate = FileSystemProvider.instance.file('${dir.path}/$name.dia');
       if (await candidate.exists()) {
         await importCustomOrderFromDia(candidate.path, activate: true);
         return;
@@ -562,8 +566,8 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<Directory> _resolveZsolozsmaDirectory() async {
-    final Directory docs = await getApplicationDocumentsDirectory();
-    return Directory('${docs.path}/zsolozsma');
+    final String docsPath = await PathHelper.getDocumentsDirectoryPath();
+    return FileSystemProvider.instance.directory('$docsPath/zsolozsma');
   }
 
   /// Copies the given [files] (picked via file picker) into the internal DTX
@@ -1415,7 +1419,7 @@ class DiatarMainController extends ChangeNotifier {
     final String safePath = path.toLowerCase().endsWith('.dia')
         ? path
         : '$path.dia';
-    final File diaFile = File(safePath);
+    final File diaFile = FileSystemProvider.instance.file(safePath);
     final Directory diaDir = diaFile.parent;
     if (!await diaDir.exists()) {
       await diaDir.create(recursive: true);
@@ -1516,7 +1520,7 @@ class DiatarMainController extends ChangeNotifier {
     bool activate = true,
     String? sourceFileName,
   }) async {
-    final File f = File(path);
+    final File f = FileSystemProvider.instance.file(path);
     if (!await f.exists()) {
       _setStatus('statusDiaFileMissing', <String, String>{'path': path});
       notifyListeners();
@@ -2221,7 +2225,19 @@ class DiatarMainController extends ChangeNotifier {
     if (prevSongIdx == null) {
       return;
     }
-    _selectSongAndVerse(prevSongIdx, 0, includeVerseInStatus: false);
+    final DtxBook? b = currentBook;
+    if (b == null) {
+      return;
+    }
+    final DtxSong prevSong = b.songs[prevSongIdx];
+    final int prevSongLastVerse = prevSong.verses.isEmpty
+        ? 0
+        : prevSong.verses.length - 1;
+    _selectSongAndVerse(
+      prevSongIdx,
+      prevSongLastVerse,
+      includeVerseInStatus: false,
+    );
   }
 
   int? _findSelectableSongIndex(int start, {required bool forward}) {
@@ -2535,7 +2551,7 @@ class DiatarMainController extends ChangeNotifier {
       final Uint8List pngBytes = byteData.buffer.asUint8List();
 
       // Send the image via Cast service
-      await _castService.sendCastImage(pngBytes, 'image/png');
+      await _castService?.sendCastImage(pngBytes, 'image/png');
     } catch (e) {
       debugPrint('Error rendering frame to image for Cast: $e');
     }
@@ -2663,6 +2679,10 @@ class DiatarMainController extends ChangeNotifier {
     if (entry.isCustomImage) {
       await sendPicFromPath(entry.customImagePath ?? '');
     }
+    if (settings.castEnabled && !kIsWeb) {
+      _castService ??= CastService();
+      await _castService!.initialize();
+    }
     if (settings.castEnabled) {
       await _castCurrentImage(entry.customImagePath ?? '');
     }
@@ -2674,11 +2694,11 @@ class DiatarMainController extends ChangeNotifier {
     if (normalized.isEmpty) return;
 
     try {
-      final File file = File(normalized);
+      final File file = FileSystemProvider.instance.file(normalized);
       if (await file.exists()) {
         final Uint8List bytes = await file.readAsBytes();
         final String ext = _fileExtension(normalized);
-        await _castService.sendCastData(<String, dynamic>{
+        await _castService?.sendCastData(<String, dynamic>{
           'type': 'image',
           'path': normalized,
           'ext': ext,
@@ -2696,11 +2716,11 @@ class DiatarMainController extends ChangeNotifier {
     if (normalized.isEmpty) return;
 
     try {
-      final File file = File(normalized);
+      final File file = FileSystemProvider.instance.file(normalized);
       if (await file.exists()) {
         final Uint8List bytes = await file.readAsBytes();
         final String ext = _fileExtension(normalized);
-        await _castService.sendCastData(<String, dynamic>{
+        await _castService?.sendCastData(<String, dynamic>{
           'type': 'blank',
           'path': normalized,
           'ext': ext,
@@ -2762,7 +2782,7 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
-    final File file = File(normalized);
+    final File file = FileSystemProvider.instance.file(normalized);
     if (!await file.exists()) {
       _setStatus('statusImageNotFound', <String, String>{'path': normalized});
       notifyListeners();
@@ -2835,11 +2855,7 @@ class DiatarMainController extends ChangeNotifier {
         await _mqttSender.sendText(title: effectiveTitle, lines: nonEmptyLines);
       }
       if (tcpConfigured) {
-        await _sender.sendState(
-          globals,
-          showing: showing,
-          wordToHighlight: highPos,
-        );
+        await _sender.sendState(globals, showing: showing, wordToHighlight: highPos);
         await _sender.sendText(
           title: effectiveTitle,
           lines: nonEmptyLines,
@@ -2868,7 +2884,7 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     try {
-      final File file = File(normalized);
+      final File file = FileSystemProvider.instance.file(normalized);
       if (!await file.exists()) {
         _setStatus('statusImageNotFound', <String, String>{'path': normalized});
         notifyListeners();
@@ -2898,8 +2914,8 @@ class DiatarMainController extends ChangeNotifier {
       lastPicPath = normalized;
       _setStatus('statusImageSent', <String, String>{
         'name': file.uri.pathSegments.isNotEmpty
-            ? file.uri.pathSegments.last
-            : normalized,
+              ? file.uri.pathSegments.last
+              : normalized,
       });
       notifyListeners();
       unawaited(_castCurrentImage(normalized));
@@ -2926,7 +2942,7 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     try {
-      final File file = File(normalized);
+      final File file = FileSystemProvider.instance.file(normalized);
       if (!await file.exists()) {
         globals = globals.copyWith(isBlankPic: false, showBlankPic: false);
         if (updateStatus) {
@@ -3002,7 +3018,6 @@ class DiatarMainController extends ChangeNotifier {
     );
 
     if (_projectionOutputLocked) {
-      notifyListeners();
       return;
     }
 
@@ -3029,8 +3044,6 @@ class DiatarMainController extends ChangeNotifier {
     try {
       globals = globals.copyWith(isBlankPic: false, showBlankPic: false);
       if (_projectionOutputLocked) {
-        _setStatus('statusBlankCleared');
-        notifyListeners();
         return;
       }
       if (mqttActive) {

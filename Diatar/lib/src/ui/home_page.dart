@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -1931,7 +1932,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
       label: 'DTX',
       extensions: <String>['dtx'],
     );
-    final List<XFile> files = Platform.isAndroid
+    final List<XFile> files = (kIsWeb || Platform.isAndroid)
         ? await openFiles()
         : await openFiles(acceptedTypeGroups: <XTypeGroup>[dtxType]);
     if (files.isEmpty || !context.mounted) {

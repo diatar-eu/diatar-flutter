@@ -10,6 +10,7 @@ import 'package:window_manager/window_manager.dart';
 import 'src/app.dart';
 import 'src/services/desktop_projector_bridge.dart';
 import 'src/ui/desktop_projector_window.dart';
+import 'src/utils/file_system_provider.dart';
 
 bool _isDesktopPlatform() {
   return !kIsWeb &&
@@ -34,6 +35,7 @@ Map<String, dynamic> _decodeArguments(String raw) {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await FileSystemProvider.init();
   await WakelockPlus.enable();
   if (_isDesktopPlatform()) {
     await windowManager.ensureInitialized();

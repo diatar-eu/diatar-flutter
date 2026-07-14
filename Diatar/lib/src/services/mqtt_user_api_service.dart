@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 class MqttUserApiException implements Exception {
   const MqttUserApiException({
@@ -23,7 +24,7 @@ class MqttUserApiService {
       : _acceptLanguageProvider = acceptLanguageProvider;
 
   final String? Function()? _acceptLanguageProvider;
-  final HttpClient _client = HttpClient();
+  final http.Client _client = http.Client();
 
   Future<void> createUser({
     required String username,
@@ -108,26 +109,23 @@ class MqttUserApiService {
   Future<void> _post(String path, Map<String, String> payload) async {
     Uri uri = Uri.parse('$_baseUrl$path');
     for (int redirectCount = 0; redirectCount <= _maxRedirects; redirectCount++) {
-      final HttpClientRequest request = await _client
-          .postUrl(uri)
-          .timeout(const Duration(seconds: 12));
-      request.followRedirects = false;
-      request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
-      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
       final String? acceptLanguage = _normalizeLanguageCode(
         _acceptLanguageProvider?.call(),
       );
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
       if (acceptLanguage != null) {
-        request.headers.set(HttpHeaders.acceptLanguageHeader, acceptLanguage);
+        headers['Accept-Language'] = acceptLanguage;
       }
-      request.write(jsonEncode(payload));
 
-      final HttpClientResponse response = await request
-          .close()
+      final http.Response response = await _client
+          .post(uri, headers: headers, body: jsonEncode(payload))
           .timeout(const Duration(seconds: 12));
 
-      if (_isRedirect(response.statusCode)) {
-        final String location = response.headers.value(HttpHeaders.locationHeader) ?? '';
+      if (response.statusCode >= 300 && response.statusCode < 400) {
+        final String location = response.headers['location'] ?? '';
         if (location.isEmpty) {
           throw MqttUserApiException(
             message: 'HTTP ${response.statusCode}',
@@ -138,7 +136,7 @@ class MqttUserApiService {
         continue;
       }
 
-      final String body = await utf8.decoder.bind(response).join();
+      final String body = response.body;
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw MqttUserApiException(
           message: _extractError(body, response.statusCode),
@@ -152,11 +150,7 @@ class MqttUserApiService {
   }
 
   bool _isRedirect(int statusCode) {
-    return statusCode == HttpStatus.movedPermanently ||
-        statusCode == HttpStatus.found ||
-        statusCode == HttpStatus.seeOther ||
-        statusCode == HttpStatus.temporaryRedirect ||
-        statusCode == HttpStatus.permanentRedirect;
+    return statusCode >= 300 && statusCode < 400;
   }
 
   String _extractError(String body, int statusCode) {

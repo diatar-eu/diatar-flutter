@@ -6,9 +6,11 @@ import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:path_provider/path_provider.dart';
+import '../utils/path_helper.dart';
+import '../utils/file_system_provider.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 
 import '../../l10n/generated/app_localizations.dart';
@@ -110,7 +112,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   bool _internetActionRunning = false;
   void Function(void Function())? _setInternetSectionState;
   late final MqttUserApiService _userApi;
-  late final CastService _castService;
+  CastService? _castService;
   late Color _bkColor;
   late Color _txtColor;
   late Color _blankColor;
@@ -124,8 +126,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _userApi = MqttUserApiService(
       acceptLanguageProvider: _currentAcceptLanguage,
     );
-    _castService = CastService();
-    unawaited(_castService.initialize());
+    if (!kIsWeb) {
+      _castService = CastService();
+      unawaited(_castService!.initialize());
+    }
     _loadAppVersion();
     final AppSettings s = widget.initialSettings;
     _search = TextEditingController();
@@ -229,7 +233,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   @override
   void dispose() {
-    _castService.dispose();
+    _castService?.dispose();
     _search.dispose();
     _tcpTargets.dispose();
     _mqttUser.dispose();
@@ -279,7 +283,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       'internet mqtt kozvetites felhasznalo user',
     );
     final bool showLan = _matches(query, 'helyi halozat tcp ip port');
-    final bool showCast = _castService.isSupported &&
+    final bool showCast = (_castService?.isSupported ?? false) &&
         _matches(query, 'cast google cast');
     final bool showColors = _matches(query, 'szinek hatter szoveg highlight');
     final bool showProjection = _matches(
@@ -389,14 +393,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     ),
                   if (showLan && (showCast || showColors || showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
-          if (showCast && _castService.isSupported)
+          if (showCast && (_castService?.isSupported ?? false))
             _settingsTile(
               leading: const Icon(Icons.cast),
               title: Text(l10n.castSettingsTitle),
               subtitle: Text(l10n.castSettingsSummary),
               onTap: _openCastSettings,
             ),
-                  if (showCast && _castService.isSupported && (showColors || showProjection || showFiles || showGeneral))
+                  if (showCast && (_castService?.isSupported ?? false) && (showColors || showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
                   if (showColors)
                     _settingsTile(
@@ -1232,9 +1236,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       builder: (BuildContext context, void Function(void Function()) setModalState) {
         return [
           AnimatedBuilder(
-            animation: _castService,
+            animation: _castService ?? ValueNotifier<bool>(false),
             builder: (context, _) {
-              final devices = _castService.discoveredDevices;
+              final devices = _castService?.discoveredDevices ?? <GoogleCastDevice>[];
               if (devices.isEmpty) {
                 return Center(
                   child: Column(
@@ -1244,7 +1248,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       const SizedBox(height: 16),
                       Text(l10n.castNoDevicesFound),
                       TextButton(
-                        onPressed: () => _castService.startDiscovery(),
+                        onPressed: () => _castService?.startDiscovery(),
                         child: Text(l10n.refreshTooltip),
                       ),
                     ],
@@ -1263,7 +1267,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     onTap: () async {
                       setBoth(() {}); // Update main sheet
                       try {
-                        await _castService.connectToDevice(device);
+                        await _castService?.connectToDevice(device);
                         setBoth(() {
                           _castDeviceId = device.deviceID;
                         });
@@ -1282,11 +1286,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ];
       },
     ).then((_) {
-      _castService.stopDiscovery();
+      _castService?.stopDiscovery();
     });
     
     // Start discovery when opening
-    _castService.startDiscovery();
+    _castService?.startDiscovery();
   }
 
   Future<void> _openFileSettings() {
@@ -1327,8 +1331,18 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 
   Future<void> _openDtxFolder() async {
-    final Directory docs = await getApplicationDocumentsDirectory();
-    final Directory diatarsDir = Directory('${docs.path}/diatar');
+    if (kIsWeb) {
+      // On web, we can't open the file system folder.
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.openDtxFolderTooltip)),
+      );
+      return;
+    }
+    final String docsPath = await PathHelper.getDocumentsDirectoryPath();
+    final Directory diatarsDir = FileSystemProvider.instance.directory('$docsPath/diatar');
     if (!await diatarsDir.exists()) {
       await diatarsDir.create(recursive: true);
     }

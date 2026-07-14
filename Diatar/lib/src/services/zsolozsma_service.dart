@@ -1,8 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' if (dart.library.io) 'dart:io';
 import 'dart:typed_data';
 
-import 'package:archive/archive_io.dart';
+import 'package:archive/archive.dart';
+import 'package:http/http.dart' as http;
+import '../utils/file_system_provider.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 
@@ -92,7 +94,7 @@ class ZsolozsmaService {
     final Map<int, String> failedByYear = <int, String>{};
 
     for (final int year in ordered) {
-      final File localZip = File('${storageDir.path}/$year.zip');
+      final File localZip = FileSystemProvider.instance.file('${storageDir.path}/$year.zip');
       if (await localZip.exists()) {
         continue;
       }
@@ -138,7 +140,7 @@ class ZsolozsmaService {
       );
     }
 
-    final File yearZip = File('${storageDir.path}/${date.year}.zip');
+    final File yearZip = FileSystemProvider.instance.file('${storageDir.path}/${date.year}.zip');
     if (!await yearZip.exists()) {
       diag.writeln('yearZip=${yearZip.path}');
       diag.writeln('yearZipExists=false');
@@ -364,7 +366,7 @@ class ZsolozsmaService {
       diag.writeln('webFallback=skipped_no_part_code');
     }
 
-    final File yearZip = File('${storageDir.path}/${date.year}.zip');
+    final File yearZip = FileSystemProvider.instance.file('${storageDir.path}/${date.year}.zip');
     final bool yearZipExists = await yearZip.exists();
     if (!yearZipExists) {
       diag.writeln('yearZipExists=false');
@@ -475,22 +477,16 @@ class ZsolozsmaService {
     required int year,
     required File target,
   }) async {
-    final HttpClient client = HttpClient();
     final String sourceName = '$year-hu-plain.zip';
     final Uri uri = Uri.parse('$_baseUrl$sourceName');
-    final File tmp = File('${target.path}.tmp');
+    final File tmp = FileSystemProvider.instance.file('${target.path}.tmp');
     try {
-      final HttpClientRequest request = await client.getUrl(uri);
-      final HttpClientResponse response = await request.close();
+      final http.Response response = await http.get(uri);
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw HttpException('HTTP ${response.statusCode} while downloading $sourceName');
+        throw Exception('HTTP ${response.statusCode} while downloading $sourceName');
       }
 
-      final IOSink sink = tmp.openWrite();
-      await for (final List<int> chunk in response) {
-        sink.add(chunk);
-      }
-      await sink.close();
+      await tmp.writeAsBytes(response.bodyBytes);
 
       if (await target.exists()) {
         await target.delete();
@@ -500,7 +496,22 @@ class ZsolozsmaService {
       if (await tmp.exists()) {
         await tmp.delete();
       }
-      client.close(force: true);
+    }
+  }
+
+  Future<void> _extractArchiveToDisk(File zipFile, Directory targetDir) async {
+    final List<int> bytes = await zipFile.readAsBytes();
+    final Archive archive = ZipDecoder().decodeBytes(bytes);
+    for (final ArchiveFile file in archive) {
+      final String path = '${targetDir.path}/${file.name}';
+      if (file.isFile) {
+        final File outFile = FileSystemProvider.instance.file(path);
+        await outFile.create(recursive: true);
+        await outFile.writeAsBytes(file.content);
+      } else {
+        final Directory outDir = FileSystemProvider.instance.directory(path);
+        await outDir.create(recursive: true);
+      }
     }
   }
 
@@ -528,7 +539,7 @@ class ZsolozsmaService {
     if (dayFilePath == null) {
       return null;
     }
-    final File dayFile = File(dayFilePath);
+    final File dayFile = FileSystemProvider.instance.file(dayFilePath);
     final List<int> content = await dayFile.readAsBytes();
     final int? uncompressedSize = await _findArchiveEntrySizeByName(
       yearZip: yearZip,
@@ -622,8 +633,8 @@ class ZsolozsmaService {
     required File yearZip,
   }) async {
     final String yearName = _fileName(yearZip.path).replaceAll('.zip', '');
-    final Directory cacheRoot = Directory('${storageDir.path}/_unzipped');
-    final Directory yearDir = Directory('${cacheRoot.path}/$yearName');
+    final Directory cacheRoot = FileSystemProvider.instance.directory('${storageDir.path}/_unzipped');
+    final Directory yearDir = FileSystemProvider.instance.directory('${cacheRoot.path}/$yearName');
 
     final bool mustExtract =
         !await yearDir.exists() ||
@@ -638,7 +649,7 @@ class ZsolozsmaService {
         await yearDir.delete(recursive: true);
       }
       await yearDir.create(recursive: true);
-      await extractFileToDisk(yearZip.path, yearDir.path);
+      await _extractArchiveToDisk(yearZip, yearDir);
       return yearDir;
     } catch (_) {
       if (await yearDir.exists()) {
@@ -709,7 +720,7 @@ class ZsolozsmaService {
     required Directory storageDir,
     required DateTime date,
   }) async {
-    final File yearZip = File('${storageDir.path}/${date.year}.zip');
+    final File yearZip = FileSystemProvider.instance.file('${storageDir.path}/${date.year}.zip');
     final Directory? yearDir = await _prepareExtractedYearDirectory(
       storageDir: storageDir,
       yearZip: yearZip,
@@ -732,7 +743,7 @@ class ZsolozsmaService {
       entryName: _fileName(path),
     );
     final String html = _decodeArchiveTextBytes(
-      await File(path).readAsBytes(),
+      await FileSystemProvider.instance.file(path).readAsBytes(),
       uncompressedSize: uncompressedSize,
     );
     final dom.Document document = html_parser.parse(html);
@@ -768,7 +779,7 @@ class ZsolozsmaService {
         break;
       }
 
-      final File preferredFile = File(preferredPath);
+      final File preferredFile = FileSystemProvider.instance.file(preferredPath);
       if (!await preferredFile.exists()) {
         break;
       }
@@ -1000,7 +1011,7 @@ class ZsolozsmaService {
       entryName: _fileName(filePath),
     );
     return _decodeArchiveTextBytes(
-      await File(filePath).readAsBytes(),
+      await FileSystemProvider.instance.file(filePath).readAsBytes(),
       uncompressedSize: uncompressedSize,
     );
   }
@@ -1017,10 +1028,10 @@ class ZsolozsmaService {
     String text = raw.replaceAll(RegExp(r'<[^>]+>'), ' ');
     text = text
         .replaceAll('&nbsp;', ' ')
-        .replaceAll('&amp;', '&')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>');
+        .replaceAll('&', '&')
+        .replaceAll('"', '"')
+        .replaceAll('<', '<')
+        .replaceAll('>', '>');
     return text.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
@@ -1364,56 +1375,34 @@ class ZsolozsmaService {
     required DateTime date,
     required String partCode,
   }) async {
-    final HttpClient client = HttpClient();
     try {
       final Uri uri = _buildDayPartUri(date: date, partCode: partCode);
-      final HttpClientRequest request = await client.getUrl(uri);
-      final HttpClientResponse response = await request.close();
+      final http.Response response = await http.get(uri);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return null;
       }
-      final List<int> bytes = await response.fold<List<int>>(
-        <int>[],
-        (List<int> out, List<int> chunk) {
-          out.addAll(chunk);
-          return out;
-        },
-      );
-      final String html = _decodeBytes(bytes);
+      final String html = _decodeBytes(response.bodyBytes);
       return await _resolveFullTextPreference(
         html: html,
         baseUri: uri,
       );
     } catch (_) {
       return null;
-    } finally {
-      client.close(force: true);
     }
   }
 
   Future<List<ZsolozsmaDayPart>> _listDayPartsFromWeb(DateTime date) async {
-    final HttpClient client = HttpClient();
     try {
       final Uri uri = _buildDayOverviewUri(date);
-      final HttpClientRequest request = await client.getUrl(uri);
-      final HttpClientResponse response = await request.close();
+      final http.Response response = await http.get(uri);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return const <ZsolozsmaDayPart>[];
       }
-      final List<int> bytes = await response.fold<List<int>>(
-        <int>[],
-        (List<int> out, List<int> chunk) {
-          out.addAll(chunk);
-          return out;
-        },
-      );
-      final String html = _decodeBytes(bytes);
+      final String html = _decodeBytes(response.bodyBytes);
       final document = html_parser.parse(html);
       return _extractDayPartsFromDocument(document: document, date: date);
     } catch (_) {
       return const <ZsolozsmaDayPart>[];
-    } finally {
-      client.close(force: true);
     }
   }
 
@@ -1447,30 +1436,19 @@ class ZsolozsmaService {
   }
 
   Future<String?> _loadHtmlFromHref(String href) async {
-    final HttpClient client = HttpClient();
     try {
       final Uri uri = Uri.parse(_normalizeHref(href));
-      final HttpClientRequest request = await client.getUrl(uri);
-      final HttpClientResponse response = await request.close();
+      final http.Response response = await http.get(uri);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return null;
       }
-      final List<int> bytes = await response.fold<List<int>>(
-        <int>[],
-        (List<int> out, List<int> chunk) {
-          out.addAll(chunk);
-          return out;
-        },
-      );
-      final String html = _decodeBytes(bytes);
+      final String html = _decodeBytes(response.bodyBytes);
       return await _resolveFullTextPreference(
         html: html,
         baseUri: uri,
       );
     } catch (_) {
       return null;
-    } finally {
-      client.close(force: true);
     }
   }
 
@@ -1494,22 +1472,13 @@ class ZsolozsmaService {
         break;
       }
 
-      final HttpClient client = HttpClient();
       try {
-        final HttpClientRequest request = await client.getUrl(preferredUri);
-        final HttpClientResponse response = await request.close();
+        final http.Response response = await http.get(preferredUri);
         if (response.statusCode < 200 || response.statusCode >= 300) {
           break;
         }
 
-        final List<int> bytes = await response.fold<List<int>>(
-          <int>[],
-          (List<int> out, List<int> chunk) {
-            out.addAll(chunk);
-            return out;
-          },
-        );
-        final String preferredHtml = _decodeBytes(bytes);
+        final String preferredHtml = _decodeBytes(response.bodyBytes);
         if (!_looksLikeValidPrayerHtml(preferredHtml)) {
           break;
         }
@@ -1518,8 +1487,6 @@ class ZsolozsmaService {
         currentBaseUri = preferredUri;
       } catch (_) {
         break;
-      } finally {
-        client.close(force: true);
       }
     }
 
