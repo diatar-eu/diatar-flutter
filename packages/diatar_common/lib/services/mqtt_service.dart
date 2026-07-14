@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:mqtt_client/mqtt_client.dart';
 
@@ -75,8 +75,7 @@ class MqttService {
 
     final String clientId =
         'receiver-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(10000)}';
-    final MqttClient testClient = createMqttClient(_host, clientId);
-    final bool isWeb = testClient.runtimeType.toString().contains('Browser');
+    final bool isWeb = kIsWeb;
     final String host = isWeb ? _webHost : _host;
     final MqttClient client = createMqttClient(host, clientId)
       ..port = isWeb ? 443 : _port
