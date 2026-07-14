@@ -40,7 +40,7 @@ class MqttService {
   static const String _host = 'mqtt.diatar.eu';
   static const String _webHost = 'wss://mqttws.diatar.eu';
   static const int _port = 1883;
-  static const String _apiBase = 'http://mqtt.diatar.eu';
+  static const String _apiBase = 'https://mqtt.diatar.eu';
 
   MqttClient? _receiverClient;
   StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? _receiverSub;
