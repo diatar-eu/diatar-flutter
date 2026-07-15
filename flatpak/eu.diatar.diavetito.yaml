@@ -1,0 +1,42 @@
+app-id: eu.diatar.diavetito
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.flutter
+command: diavetito
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=home
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.mpris.MediaPlayer2.*
+build-options:
+  append-path: /usr/lib/sdk/flutter/bin
+  env:
+    FLUTTER_ROOT: /usr/lib/sdk/flutter
+    XDG_DATA_DIRS: /usr/lib/sdk/flutter:/app/share:/usr/share
+modules:
+  - name: diavetito
+    buildsystem: simple
+    build-options:
+      env:
+        XDG_DATA_DIRS: /usr/lib/sdk/flutter:/app/share:/usr/share
+    build-commands:
+      - cd DiaVetito
+      - flutter config --enable-linux-desktop
+      - flutter pub get
+      - flutter build linux --release
+      - install -D -t /app/bin build/linux/x64/release/bundle/diavetito
+      - cp -r build/linux/x64/release/bundle/lib /app/bin/
+      - cp -r build/linux/x64/release/bundle/data /app/bin/
+      - install -Dm644 flatpak/eu.diatar.diavetito.desktop /app/share/applications/eu.diatar.diavetito.desktop
+      - install -Dm644 flatpak/eu.diatar.diavetito.metainfo.xml /app/share/metainfo/eu.diatar.diavetito.metainfo.xml
+      - install -Dm644 assets/icon/icon.png /app/share/icons/hicolor/512x512/apps/eu.diatar.diavetito.png
+    sources:
+      - type: dir
+        path: ..

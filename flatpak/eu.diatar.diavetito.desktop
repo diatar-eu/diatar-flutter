@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=DiaVetítő
+GenericName=Vetítő ablak
+Comment=Diatár vetítő ablak második kijelzőre
+Icon=eu.diatar.diavetito
+Exec=diavetito
+Terminal=false
+Categories=Utility;Religion;
+Keywords=diatar;vetítő;zsolozsma;liturgia;

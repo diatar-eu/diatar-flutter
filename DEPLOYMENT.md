@@ -1,6 +1,23 @@
-# Deployment to Play Store and App Store
+# Deployment to Play Store, App Store and Flathub
 
 This project uses **Fastlane** and **GitHub Actions** to automatically deploy the `Diatar` and `DiaVetito` apps to the Google Play Store and Apple App Store when a version tag (e.g., `v1.0.0`) is pushed.
+
+## Flatpak (Linux)
+
+When you push a tag starting with `v` (e.g., `git tag v9.1.0 && git push origin v9.1.0`), the workflow in `.github/workflows/flatpak.yml` builds a Flatpak bundle for both `Diatar` and `DiaVetito` and publishes them to a `flathub` branch in this repository.
+
+- The Flatpak manifests live in `flatpak/` (`eu.diatar.diatar.yaml`, `eu.diatar.diavetito.yaml`) together with the `.desktop` and `.metainfo.xml` files.
+- The published `flathub` branch acts as a self-hosted Flatpak repository. Users can install the apps with:
+
+  ```bash
+  flatpak remote-add --if-not-exists diatar-flutter \
+    https://github.com/vlacko0930/diatar-flutter.git
+  flatpak install diatar-flutter eu.diatar.diatar
+  flatpak install diatar-flutter eu.diatar.diavetito
+  ```
+
+- The version and release date are injected into the metainfo from the git tag automatically during the build.
+- To submit the apps to the official Flathub repository, move the manifests and metadata into a separate `flathub` fork and open a PR there (the manifests are already Flathub-compatible).
 
 ## How it works
 

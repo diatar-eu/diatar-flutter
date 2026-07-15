@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>eu.diatar.diatar</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Diatár</name>
+  <summary>Katolikus énekeskönyv, zsolozsma és liturgikus vetítés</summary>
+  <description>
+    <p>
+      A Diatár egy katolikus énekeskönyv és liturgikus segédprogram, amellyel
+      énekeket, zsolozsmát és szentmisét lehet vetíteni és kezelni.
+    </p>
+  </description>
+  <launchable type="desktop-id">eu.diatar.diatar.desktop</launchable>
+  <url type="homepage">https://github.com/vlacko0930/diatar-flutter</url>
+  <url type="bugtracker">https://github.com/vlacko0930/diatar-flutter/issues</url>
+  <developer id="eu.diatar">
+    <name>Diatár</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="__VERSION__" date="__DATE__"/>
+  </releases>
+</component>
