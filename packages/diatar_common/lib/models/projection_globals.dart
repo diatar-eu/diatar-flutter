@@ -19,7 +19,7 @@ class ProjectionGlobals {
     this.borderT = 0,
     this.borderR = 0,
     this.borderB = 0,
-    this.fontName = '',
+    this.fontName = 'Arial',
     this.isBlankPic = false,
     this.autoResize = true,
     this.projecting = false,
@@ -240,7 +240,7 @@ Uint8List encodeStateRecord(
   writeInt(40, globals.borderT);
   writeInt(44, globals.borderR);
   writeInt(48, globals.borderB);
-  writePascalString(52, globals.fontName);
+  writePascalString(52, 'Arial');
   writeBool(308, globals.isBlankPic);
   writeBool(309, globals.autoResize);
   writeBool(310, projecting);
