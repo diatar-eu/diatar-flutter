@@ -240,7 +240,7 @@ Uint8List encodeStateRecord(
   writeInt(40, globals.borderT);
   writeInt(44, globals.borderR);
   writeInt(48, globals.borderB);
-  writePascalString(52, 'Arial');
+  writePascalString(52, globals.fontName);
   writeBool(308, globals.isBlankPic);
   writeBool(309, globals.autoResize);
   writeBool(310, projecting);
