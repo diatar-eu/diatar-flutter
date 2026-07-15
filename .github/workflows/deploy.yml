@@ -45,7 +45,9 @@ jobs:
 
       - name: Decode Play Store JSON key
         run: |
-          echo "${{ secrets.PLAY_STORE_JSON_KEY }}" > ${{ matrix.app }}/android/play_store_key.json
+          # Use single quotes so bash does not interpret the double quotes
+          # inside the JSON secret (which would corrupt the file content).
+          echo '${{ secrets.PLAY_STORE_JSON_KEY }}' > ${{ matrix.app }}/android/play_store_key.json
 
       - name: Fastlane Deploy
         working-directory: ${{ matrix.app }}/android
