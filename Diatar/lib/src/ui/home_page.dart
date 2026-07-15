@@ -2229,7 +2229,9 @@ class _SongDropdown extends StatelessWidget {
                   theme: theme,
                 ),
               ),
-            ),
+            )
+          else
+            const SizedBox(width: 22),
         ],
       );
     }
@@ -2295,7 +2297,9 @@ class _SongDropdown extends StatelessWidget {
                   theme: theme,
                 ),
               ),
-            ),
+            )
+          else
+            const SizedBox(width: 22),
       ],
     );
   }
