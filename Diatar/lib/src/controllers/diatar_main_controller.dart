@@ -43,6 +43,7 @@ import '../services/cast_service.dart';
 import '../services/tcp_sender_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
 import '../services/zsolozsma_service.dart';
+import '../services/napi_lelki_batyu_service.dart';
 
 export '../models/custom_order_entry.dart';
 
@@ -149,6 +150,7 @@ class DiatarMainController extends ChangeNotifier {
   final DtxOrderStore _orderStore = DtxOrderStore();
   final ZsolozsmaService _zsolozsmaService = ZsolozsmaService();
   final ZsolozsmaBreviarDecoder _zsolozsmaDecoder = ZsolozsmaBreviarDecoder();
+  final NapiLelkiBatyuService _napiLelkiBatyuService = NapiLelkiBatyuService();
   final SongSearchService _searchService = SongSearchService();
   final AudioService _audioService = AudioService();
   final TcpSenderService _sender = TcpSenderService(
@@ -204,8 +206,10 @@ class DiatarMainController extends ChangeNotifier {
   bool _startupDownloadDialogHandled = false;
   String _zsolozsmaLastDiagnostics = '';
   static const String _customOrderSourceZsolozsmaUnsaved = 'zsolozsma-unsaved';
+  static const String _customOrderSourceBatyuUnsaved = 'batyu-unsaved';
   String? _customOrderSourceType;
   String? _zsolozsmaVirtualBookLabel;
+  String? _napiLelkiBatyuVirtualBookLabel;
 
   /// A kereséshez eloallitott, izolátumban keresheto index.
   /// `reloadBooks` után épül fel (háttérfolyamatban).
@@ -284,7 +288,16 @@ class DiatarMainController extends ChangeNotifier {
       _customOrderSourceType == _customOrderSourceZsolozsmaUnsaved;
   String? get zsolozsmaVirtualBookLabel =>
       customOrderIsUnsavedZsolozsma ? _zsolozsmaVirtualBookLabel : null;
+  bool get customOrderIsUnsavedBatyu =>
+      _customOrder.isNotEmpty &&
+      _customOrderSourceType == _customOrderSourceBatyuUnsaved;
+  String? get napiLelkiBatyuVirtualBookLabel =>
+      customOrderIsUnsavedBatyu ? _napiLelkiBatyuVirtualBookLabel : null;
   String? get suggestedCustomOrderBaseName {
+    final String? batyuLabel = napiLelkiBatyuVirtualBookLabel?.trim();
+    if (batyuLabel != null && batyuLabel.isNotEmpty) {
+      return batyuLabel;
+    }
     final String? zsolozsmaLabel = zsolozsmaVirtualBookLabel?.trim();
     if (zsolozsmaLabel != null && zsolozsmaLabel.isNotEmpty) {
       return zsolozsmaLabel;
@@ -297,6 +310,12 @@ class DiatarMainController extends ChangeNotifier {
       _customOrder.every(
         (CustomOrderEntry entry) =>
             entry.isCustomText && entry.label.startsWith('[Zsolozsma]'),
+      );
+  bool get customOrderLooksLikeBatyu =>
+      _customOrder.isNotEmpty &&
+      _customOrder.every(
+        (CustomOrderEntry entry) =>
+            entry.isCustomText && entry.label.startsWith('[Batyu]'),
       );
   String get zsolozsmaLastDiagnostics => _zsolozsmaLastDiagnostics;
   bool get hasImportedCustomOrderDia => _customOrder.isNotEmpty;
@@ -369,6 +388,7 @@ class DiatarMainController extends ChangeNotifier {
     _lastImportedCustomOrderBaseName = customOrderState.baseName;
     _customOrderSourceType = customOrderState.sourceType;
     _zsolozsmaVirtualBookLabel = customOrderState.zsolozsmaLabel;
+    _napiLelkiBatyuVirtualBookLabel = customOrderState.batyuLabel;
     _customOrderCursor = customOrderState.cursor;
     _diaVirtualBookSelected = customOrderState.diaVirtualBookSelected;
     globals = _projectionGlobalsPolicy.fromSettings(
@@ -719,6 +739,77 @@ class DiatarMainController extends ChangeNotifier {
     return true;
   }
 
+  /// Loads the celebrations (ünnepek) of a given day from the Napi Lelki Batyu
+  /// service. Returns an empty list if the data is not available.
+  Future<List<NapiLelkiBatyuCelebration>> loadBatyuCelebrations(
+    DateTime date,
+  ) async {
+    final DateTime day = DateTime(date.year, date.month, date.day);
+    try {
+      final Map<String, dynamic> dayJson = await _napiLelkiBatyuService
+          .fetchDayJson(day);
+      final List<NapiLelkiBatyuCelebration> celebrations =
+          _napiLelkiBatyuService.parseCelebrations(dayJson);
+      final String dateLabel = _formatDateIso(day);
+      if (celebrations.isEmpty) {
+        _setStatus('statusBatyuDayEmpty', <String, String>{'date': dateLabel});
+      } else {
+        _setStatus('statusBatyuDayLoaded', <String, String>{
+          'date': dateLabel,
+          'count': '${celebrations.length}',
+        });
+      }
+      notifyListeners();
+      return celebrations;
+    } catch (e) {
+      _setStatus('statusBatyuDayError', <String, String>{'error': '$e'});
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Imports a Napi Lelki Batyu celebration as a virtual custom-order book.
+  ///
+  /// [wordsPerSlide] controls how many words are kept on a single imported
+  /// slide before the text is split into the next slide.
+  Future<bool> importNapiLelkiBatyu(
+    DateTime date,
+    NapiLelkiBatyuCelebration celebration, {
+    int wordsPerSlide = 30,
+  }) async {
+    final DateTime day = DateTime(date.year, date.month, date.day);
+    final List<CustomOrderEntry> entries = _napiLelkiBatyuService
+        .buildEntries(celebration, wordsPerSlide: wordsPerSlide);
+
+    if (entries.isEmpty) {
+      _setStatus('statusBatyuPartLoadError', <String, String>{
+        'title': celebration.title,
+      });
+      notifyListeners();
+      return false;
+    }
+
+    await applyCustomOrder(entries, activate: true);
+    final String batyuLabel =
+        '${_formatDateIso(day)} ${celebration.title.trim()}'.trim();
+    _customOrderSourceType = _customOrderSourceBatyuUnsaved;
+    _napiLelkiBatyuVirtualBookLabel = batyuLabel;
+    _lastImportedCustomOrderBaseName = batyuLabel;
+    await _persistCurrentCustomOrder();
+    _diaVirtualBookSelected = entries.isNotEmpty;
+    if (entries.isNotEmpty) {
+      _selectByCustomOrderCursor(0, sync: true);
+    }
+
+    _setStatus('statusBatyuPartLoaded', <String, String>{
+      'date': _formatDateIso(day),
+      'title': celebration.title,
+      'count': '${entries.length}',
+    });
+    notifyListeners();
+    return true;
+  }
+
   void _logZsolozsmaDebug(String message) {
     debugPrint('[Zsolozsma] $message');
   }
@@ -1027,6 +1118,7 @@ class DiatarMainController extends ChangeNotifier {
       baseName: _customOrder.isEmpty ? null : _lastImportedCustomOrderBaseName,
       sourceType: _customOrder.isEmpty ? null : _customOrderSourceType,
       zsolozsmaLabel: _customOrder.isEmpty ? null : _zsolozsmaVirtualBookLabel,
+      batyuLabel: _customOrder.isEmpty ? null : _napiLelkiBatyuVirtualBookLabel,
     );
   }
 
@@ -1182,6 +1274,7 @@ class DiatarMainController extends ChangeNotifier {
       _lastImportedCustomOrderBaseName = null;
       _customOrderSourceType = null;
       _zsolozsmaVirtualBookLabel = null;
+      _napiLelkiBatyuVirtualBookLabel = null;
     }
     customOrderActive = activate && _customOrder.isNotEmpty;
     if (customOrderActive) {
@@ -1510,6 +1603,7 @@ class DiatarMainController extends ChangeNotifier {
         : savedName;
     _customOrderSourceType = null;
     _zsolozsmaVirtualBookLabel = null;
+    _napiLelkiBatyuVirtualBookLabel = null;
     await _persistCurrentCustomOrder();
     _setStatus('statusOrderSaved', <String, String>{'path': path});
     notifyListeners();
@@ -1665,6 +1759,7 @@ class DiatarMainController extends ChangeNotifier {
         : importedName;
     _customOrderSourceType = null;
     _zsolozsmaVirtualBookLabel = null;
+    _napiLelkiBatyuVirtualBookLabel = null;
     await _persistCurrentCustomOrder();
     _diaVirtualBookSelected = _customOrder.isNotEmpty;
     _setStatus('statusOrderLoaded', <String, String>{

@@ -122,6 +122,8 @@ class DtxOrderStore {
       'CurrentCustomOrderSourceType';
   static const String _kCurrentCustomOrderZsolozsmaLabel =
       'CurrentCustomOrderZsolozsmaLabel';
+  static const String _kCurrentCustomOrderBatyuLabel =
+      'CurrentCustomOrderBatyuLabel';
   static const String _kCustomOrderPresets = 'CustomOrderPresets';
 
   Future<Set<String>> loadDisabled() async {
@@ -144,6 +146,7 @@ class DtxOrderStore {
     String? baseName,
     String? sourceType,
     String? zsolozsmaLabel,
+    String? batyuLabel,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String json = jsonEncode(
@@ -161,6 +164,10 @@ class DtxOrderStore {
       _kCurrentCustomOrderZsolozsmaLabel,
       (zsolozsmaLabel ?? '').trim(),
     );
+    await prefs.setString(
+      _kCurrentCustomOrderBatyuLabel,
+      (batyuLabel ?? '').trim(),
+    );
   }
 
   Future<
@@ -170,6 +177,7 @@ class DtxOrderStore {
       String? baseName,
       String? sourceType,
       String? zsolozsmaLabel,
+      String? batyuLabel,
     })
   >
   loadCurrentCustomOrder() async {
@@ -191,6 +199,11 @@ class DtxOrderStore {
     final String? zsolozsmaLabel = zsolozsmaLabelRaw.trim().isEmpty
         ? null
         : zsolozsmaLabelRaw.trim();
+    final String batyuLabelRaw =
+        prefs.getString(_kCurrentCustomOrderBatyuLabel) ?? '';
+    final String? batyuLabel = batyuLabelRaw.trim().isEmpty
+        ? null
+        : batyuLabelRaw.trim();
 
     final List<StoredCustomOrderEntry> entries = <StoredCustomOrderEntry>[];
     try {
@@ -212,6 +225,7 @@ class DtxOrderStore {
       baseName: baseName,
       sourceType: sourceType,
       zsolozsmaLabel: zsolozsmaLabel,
+      batyuLabel: batyuLabel,
     );
   }
 

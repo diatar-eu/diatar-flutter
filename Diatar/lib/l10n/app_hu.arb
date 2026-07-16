@@ -13,6 +13,12 @@
   "zsolozsmaNoItems": "Erre a napra nincs elérhető napszak lista.",
   "zsolozsmaDiagnosticsLabel": "Diagnosztika",
   "zsolozsmaSelectionHint": "A kiválasztás most még csak listáz és kijelöl. A diasorra bontás a következő lépésben érkezik.",
+  "batyuTooltip": "Napi lelki batyu",
+  "batyuTitle": "Napi lelki batyu importálása",
+  "batyuDateLabel": "Dátum",
+  "batyuWordsPerSlide": "Szavak száma diánként",
+  "batyuNoItems": "Erre a napra nincs elérhető olvasmány a Napi lelki batyuban.",
+  "batyuBookLabel": "Napi lelki batyu ({name})",
   "addSlideTooltip": "Dia hozzáadása",
   "addTextSlide": "Szöveges dia",
   "addImageSlide": "Képes dia",
@@ -394,6 +400,12 @@
   },
   "zsolozsmaBookLabel": "Zsolozsma: {name}",
   "@zsolozsmaBookLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "batyuBookLabel": "Napi lelki batyu ({name})",
+  "@batyuBookLabel": {
     "placeholders": {
       "name": {}
     }

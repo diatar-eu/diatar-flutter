@@ -176,6 +176,42 @@ abstract class AppLocalizations {
   /// **'A kiválasztás most még csak listáz és kijelöl. A diasorra bontás a következő lépésben érkezik.'**
   String get zsolozsmaSelectionHint;
 
+  /// No description provided for @batyuTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Napi lelki batyu'**
+  String get batyuTooltip;
+
+  /// No description provided for @batyuTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Napi lelki batyu importálása'**
+  String get batyuTitle;
+
+  /// No description provided for @batyuDateLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dátum'**
+  String get batyuDateLabel;
+
+  /// No description provided for @batyuWordsPerSlide.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szavak száma diánként'**
+  String get batyuWordsPerSlide;
+
+  /// No description provided for @batyuNoItems.
+  ///
+  /// In hu, this message translates to:
+  /// **'Erre a napra nincs elérhető olvasmány a Napi lelki batyuban.'**
+  String get batyuNoItems;
+
+  /// No description provided for @batyuBookLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Napi lelki batyu ({name})'**
+  String batyuBookLabel(Object name);
+
   /// No description provided for @addSlideTooltip.
   ///
   /// In hu, this message translates to:

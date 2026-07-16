@@ -11,6 +11,7 @@ import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
 import '../services/dtx_download_service.dart';
 import '../services/zsolozsma_service.dart';
+import '../services/napi_lelki_batyu_service.dart';
 import '../utils/custom_entry_labels.dart';
 import '../utils/friendly_path.dart';
 import 'settings_sheet.dart';
@@ -566,6 +567,11 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             icon: const Icon(Icons.menu_book_outlined),
           ),
           IconButton(
+            tooltip: l10n.batyuTooltip,
+            onPressed: () => _openBatyuDialog(context),
+            icon: const Icon(Icons.auto_stories_outlined),
+          ),
+          IconButton(
             tooltip: l10n.downloadBooksTooltip,
             onPressed: () => _openDownloadDialog(context),
             icon: const Icon(Icons.download_for_offline_outlined),
@@ -903,45 +909,6 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                 tooltip: l10n.songNext,
                 onPressed: controller.nextSong,
               ),
-              /*const SizedBox(width: 8),
-              _actionIconButton(
-                context,
-                icon: Icons.remove,
-                tooltip: l10n.transposeDown,
-                onPressed: () =>
-                    unawaited(controller.setTransposition(controller.currentTransposition - 1)),
-              ),
-              const SizedBox(width: 4),
-              SizedBox(
-                width: 44,
-                child: Center(
-                  child: Text(
-                    controller.currentTransposition == 0
-                        ? '0'
-                        : (controller.currentTransposition > 0
-                            ? '+${controller.currentTransposition}'
-                            : '${controller.currentTransposition}'),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              _actionIconButton(
-                context,
-                icon: Icons.add,
-                tooltip: l10n.transposeUp,
-                onPressed: () =>
-                    unawaited(controller.setTransposition(controller.currentTransposition + 1)),
-              ),
-              const SizedBox(width: 8),
-              _actionIconButton(
-                context,
-                icon: Icons.restart_alt,
-                tooltip: l10n.transposeReset,
-                onPressed: () => unawaited(controller.setTransposition(0)),
-              ),*/
               if (controller.settings.homeShowHighlightControls) ...<Widget>[
                 const SizedBox(width: 8),
                 _actionIconButton(
@@ -1255,6 +1222,15 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     );
   }
 
+  Future<void> _openBatyuDialog(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return _BatyuDialog(controller: controller);
+      },
+    );
+  }
+
   void _openSearchSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -1472,6 +1448,208 @@ class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
                       onTap: () async {
                         final bool loaded = await widget.controller
                             .selectZsolozsmaPart(_selectedDate, part);
+                        if (loaded && context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.close),
+        ),
+      ],
+    );
+  }
+}
+
+class _BatyuDialog extends StatefulWidget {
+  const _BatyuDialog({required this.controller});
+
+  final DiatarMainController controller;
+
+  @override
+  State<_BatyuDialog> createState() => _BatyuDialogState();
+}
+
+class _BatyuDialogState extends State<_BatyuDialog> {
+  late DateTime _selectedDate;
+  bool _loading = false;
+  String? _error;
+  List<NapiLelkiBatyuCelebration> _celebrations =
+      const <NapiLelkiBatyuCelebration>[];
+  int _wordsPerSlide = 30;
+  final TextEditingController _wordsPerSlideController =
+      TextEditingController(text: '30');
+
+  @override
+  void initState() {
+    super.initState();
+    final DateTime now = DateTime.now();
+    _selectedDate = DateTime(now.year, now.month, now.day);
+    unawaited(_load());
+  }
+
+  @override
+  void dispose() {
+    _wordsPerSlideController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final List<NapiLelkiBatyuCelebration> celebrations = await widget
+          .controller
+          .loadBatyuCelebrations(_selectedDate);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _celebrations = celebrations;
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _celebrations = const <NapiLelkiBatyuCelebration>[];
+        _error = '$e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final DateTime now = DateTime.now();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(now.year - 1, 1, 1),
+      lastDate: DateTime(now.year + 1, 12, 31),
+    );
+    if (picked == null) {
+      return;
+    }
+    setState(() {
+      _selectedDate = DateTime(picked.year, picked.month, picked.day);
+    });
+    await _load();
+  }
+
+  String _dateLabel(DateTime date) {
+    final String yy = date.year.toString().padLeft(4, '0');
+    final String mm = date.month.toString().padLeft(2, '0');
+    final String dd = date.day.toString().padLeft(2, '0');
+    return '$yy-$mm-$dd';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.batyuTitle),
+      content: SizedBox(
+        width: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Text('${l10n.batyuDateLabel}:'),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: _loading ? null : _pickDate,
+                  child: Text(_dateLabel(_selectedDate)),
+                ),
+                const Spacer(),
+                OutlinedButton(
+                  onPressed: _loading ? null : _load,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(40, 40),
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: const Icon(Icons.sync),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                Text('${l10n.batyuWordsPerSlide}:'),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 72,
+                  child: TextFormField(
+                    controller: _wordsPerSlideController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                    ),
+                    onChanged: (String value) {
+                      final int? parsed = int.tryParse(value);
+                      setState(() {
+                        _wordsPerSlide = parsed == null || parsed < 1
+                            ? 1
+                            : parsed;
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_error != null)
+              Text(_error!)
+            else if (_celebrations.isEmpty)
+              Text(l10n.batyuNoItems)
+            else
+              SizedBox(
+                height: math.min(320, 72.0 * _celebrations.length),
+                child: ListView.builder(
+                  primary: false,
+                  padding: EdgeInsets.zero,
+                  itemCount: _celebrations.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final NapiLelkiBatyuCelebration celebration =
+                        _celebrations[index];
+                    return ListTile(
+                      dense: true,
+                      title: Text(celebration.title),
+                      subtitle: celebration.subtitle?.trim().isNotEmpty == true
+                          ? Text(celebration.subtitle!)
+                          : null,
+                      onTap: () async {
+                        final bool loaded = await widget.controller
+                            .importNapiLelkiBatyu(
+                              _selectedDate,
+                              celebration,
+                              wordsPerSlide: _wordsPerSlide,
+                            );
                         if (loaded && context.mounted) {
                           Navigator.of(context).pop();
                         }
@@ -2010,13 +2188,18 @@ class _BookDropdown extends StatelessWidget {
     }
     final ThemeData theme = Theme.of(context);
     final bool hasDia = controller.hasImportedCustomOrderDia;
-    final String fallbackDiaName = controller.customOrderLooksLikeZsolozsma
+    final String fallbackDiaName = controller.customOrderLooksLikeBatyu
+        ? context.l10n.batyuTooltip
+        : controller.customOrderLooksLikeZsolozsma
         ? context.l10n.zsolozsmaTooltip
         : context.l10n.customOrderUnnamedFileName;
     final String diaName =
         controller.suggestedCustomOrderBaseName ?? fallbackDiaName;
     final bool showZsolozsmaLabel = controller.customOrderIsUnsavedZsolozsma;
-    final String virtualBookLabel = showZsolozsmaLabel
+    final bool showBatyuLabel = controller.customOrderIsUnsavedBatyu;
+    final String virtualBookLabel = showBatyuLabel
+        ? context.l10n.batyuBookLabel(diaName)
+        : showZsolozsmaLabel
         ? context.l10n.zsolozsmaBookLabel(diaName)
         : context.l10n.diaBookLabel(diaName);
     final List<_BookDropdownEntry> entries = _buildBookDropdownEntries(
@@ -2609,7 +2792,9 @@ class _DialistPanelState extends State<_DialistPanel> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final String fallbackDiaName = controller.customOrderLooksLikeZsolozsma
+    final String fallbackDiaName = controller.customOrderLooksLikeBatyu
+        ? context.l10n.batyuTooltip
+        : controller.customOrderLooksLikeZsolozsma
         ? context.l10n.zsolozsmaTooltip
         : context.l10n.customOrderUnnamedFileName;
     final String dialistName =

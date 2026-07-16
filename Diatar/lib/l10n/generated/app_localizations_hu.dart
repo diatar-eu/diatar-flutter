@@ -49,6 +49,27 @@ class AppLocalizationsHu extends AppLocalizations {
       'A kiválasztás most még csak listáz és kijelöl. A diasorra bontás a következő lépésben érkezik.';
 
   @override
+  String get batyuTooltip => 'Napi lelki batyu';
+
+  @override
+  String get batyuTitle => 'Napi lelki batyu importálása';
+
+  @override
+  String get batyuDateLabel => 'Dátum';
+
+  @override
+  String get batyuWordsPerSlide => 'Szavak száma diánként';
+
+  @override
+  String get batyuNoItems =>
+      'Erre a napra nincs elérhető olvasmány a Napi lelki batyuban.';
+
+  @override
+  String batyuBookLabel(Object name) {
+    return 'Napi lelki batyu ($name)';
+  }
+
+  @override
   String get addSlideTooltip => 'Dia hozzáadása';
 
   @override
