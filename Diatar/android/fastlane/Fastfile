@@ -1,8 +1,59 @@
 default_platform(:android)
 
+def bump_build_number
+  pubspec_path = File.expand_path("../../pubspec.yaml", __dir__)
+  UI.user_error!("pubspec.yaml not found at #{pubspec_path}") unless File.exist?(pubspec_path)
+
+  content = File.read(pubspec_path)
+  match = content.match(/^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$/)
+  UI.user_error!("Could not parse the version line in #{pubspec_path}") unless match
+
+  base = match[1]
+  current = match[2].to_i
+  new_build = current + 1
+  new_version = "#{base}+#{new_build}"
+
+  content.gsub!(/^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$/, "version: #{new_version}")
+  File.write(pubspec_path, content)
+  UI.message("Incremented build number from #{current} to #{new_build}")
+
+  # Commit and push the bump so subsequent CI runs start from the new number
+  # and the Play Store / App Store never receive a duplicate versionCode /
+  # CFBundleVersion. The retry loop resolves races between the Android and iOS
+  # jobs of the same app, which both modify the shared pubspec.yaml.
+  push_branch = ENV["PUSH_BRANCH"] || "main"
+  sh("git", "config", "user.name", "github-actions[bot]")
+  sh("git", "config", "user.email", "github-actions[bot]@users.noreply.github.com")
+
+  max_retries = 10
+  (0...max_retries).each do |attempt|
+    sh("git", "add", pubspec_path)
+    sh("git", "commit", "-m", "ci: bump build number to #{new_build} [skip ci]")
+    begin
+      sh("git", "push", "origin", "HEAD:#{push_branch}")
+      UI.message("Pushed build number bump to #{push_branch}")
+      return new_build
+    rescue => e
+      UI.message("Push failed (attempt #{attempt + 1}/#{max_retries}), syncing and retrying...")
+      sh("git", "fetch", "origin", push_branch)
+      sh("git", "reset", "--hard", "origin/#{push_branch}")
+      content = File.read(pubspec_path)
+      match = content.match(/^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$/)
+      UI.user_error!("Could not parse the version line in #{pubspec_path}") unless match
+      new_build = match[2].to_i + 1
+      content.gsub!(/^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$/, "version: #{match[1]}+#{new_build}")
+      File.write(pubspec_path, content)
+      UI.message("Re-incremented build number to #{new_build} after sync")
+    end
+  end
+  UI.user_error!("Failed to push the build number bump after #{max_retries} attempts")
+end
+
 platform :android do
   desc "Build and deploy to the Play Store production track"
   lane :deploy do
+    bump_build_number
+
     # The Gradle wrapper (gradlew) is gitignored, so it is absent from CI
     # checkouts. `flutter build` generates it automatically, so we must not
     # invoke the `gradle` action before the wrapper exists. `flutter clean`

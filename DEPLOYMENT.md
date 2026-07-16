@@ -28,6 +28,14 @@ When you push a tag starting with `v` (e.g., `git tag v1.2.3 && git push origin 
 
 No new screenshots or metadata are uploaded; only the application binary is pushed to production.
 
+### Automatic build number bump
+
+Each `deploy` lane automatically increments the build number (the `+N` suffix in the app's `pubspec.yaml`, i.e. `version: X.Y.Z+N`) **before** building, and commits the change back to the repository with a `ci: bump build number to N [skip ci]` message. This guarantees that every store upload uses a strictly increasing `versionCode` (Android) / `CFBundleVersion` (iOS), so re-running a deploy (e.g. after a transient failure) never collides with an already-published build.
+
+- The bump is committed and pushed to the branch that triggered the run (`main` for tag pushes, the dispatched branch otherwise). The `[skip ci]` tag prevents the push from re-triggering the artifact build workflow.
+- Because the Android and iOS jobs of the same app run in parallel and share the same `pubspec.yaml`, the lane uses a retry loop: if the push is rejected because the other platform already bumped and pushed, it re-syncs, re-reads the new number, increments again and retries. This way both platforms always end up with distinct, increasing build numbers.
+- You no longer need to manually edit the build number in `pubspec.yaml` before releasing — Fastlane handles it on CI.
+
 ## Required GitHub Secrets
 
 You must configure the following repository secrets in **Settings → Secrets and variables → Actions** for the deployment to succeed:
@@ -41,7 +49,9 @@ You must configure the following repository secrets in **Settings → Secrets an
 | `ANDROID_KEY_PASSWORD` | Password for the key alias in the Android release keystore. |
 | `APPLE_ID` | Your Apple ID email address (e.g., `you@example.com`). |
 | `APPLE_TEAM_ID` | Your Apple Developer Team ID (10-character alphanumeric, e.g., `ABCDE12345`). |
-| `APPLE_APP_SPECIFIC_PASSWORD` | An app-specific password generated at [appleid.apple.com](https://appleid.apple.com) → Sign-In and Security → App-Specific Passwords. Used by Fastlane to download certificates and sign the iOS build. |
+| `APPLE_API_KEY_ID` | The App Store Connect API Key ID (e.g., `ABCDE12345`). Found in App Store Connect → Users and Access → Keys. Used by Fastlane to authenticate without an Apple ID password (avoids 2FA failures in CI). |
+| `APPLE_API_ISSUER_ID` | The App Store Connect API Key Issuer ID (UUID). Shown on the same Keys page as above. |
+| `APPLE_API_KEY_BASE64` | Base64-encoded content of the downloaded `.p8` API key file (`AuthKey_<KEY_ID>.p8`). Generate it with `base64 -i AuthKey_<KEY_ID>.p8`. |
 
 ### How to obtain these secrets
 
@@ -67,10 +77,12 @@ You must configure the following repository secrets in **Settings → Secrets an
    keytool -list -v -keystore keystore.jks -alias my-key-alias -keystore password
    ```
 
-#### 3. `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_SPECIFIC_PASSWORD`
+#### 3. `APPLE_ID`, `APPLE_TEAM_ID`, App Store Connect API key
 1. `APPLE_ID`: Your Apple ID email.
 2. `APPLE_TEAM_ID`: Found in the [Apple Developer Membership](https://developer.apple.com/account) page under "Team ID".
-3. `APPLE_APP_SPECIFIC_PASSWORD`: Generate it at [appleid.apple.com](https://appleid.apple.com) → Security → App-Specific Passwords.
+3. `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID`, `APPLE_API_KEY_BASE64`: Create an API key in **App Store Connect → Users and Access → Keys** (requires Admin role). Click "Generate API Key", give it a name and the "App Manager" access, then note the **Key ID** and **Issuer ID**. Download the `.p8` file (`AuthKey_<KEY_ID>.p8`) — it can only be downloaded once. Encode it with `base64 -i AuthKey_<KEY_ID>.p8` and store the output as `APPLE_API_KEY_BASE64`.
+
+   Using an API key is the recommended way to authenticate Fastlane in CI because it does not depend on the Apple ID password or two-factor authentication, which is what caused the previous `get_certificates` login failure.
 
 ## Local testing (optional)
 
@@ -86,4 +98,4 @@ bundle install
 bundle exec fastlane deploy
 ```
 
-Make sure the required environment variables (`PLAY_STORE_JSON_KEY_FILE`, `APPLE_ID`, `APPLE_TEAM_ID`, `FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD`) are set in your local shell.
+Make sure the required environment variables (`PLAY_STORE_JSON_KEY_FILE`, `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID`, `APPLE_API_KEY_FILEPATH`) are set in your local shell. `APPLE_API_KEY_FILEPATH` should point to the downloaded `AuthKey_<KEY_ID>.p8` file.

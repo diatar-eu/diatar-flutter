@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   android:
@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -62,6 +64,7 @@ jobs:
         working-directory: ${{ matrix.app }}/android
         env:
           PLAY_STORE_JSON_KEY_FILE: play_store_key.json
+          PUSH_BRANCH: ${{ startsWith(github.ref, 'refs/tags/') && (github.event.repository.default_branch || 'main') || github.ref_name }}
         run: bundle exec fastlane deploy
 
   ios:
@@ -77,6 +80,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -91,11 +96,17 @@ jobs:
           bundler-cache: true
           working-directory: ${{ matrix.app }}/ios
 
+      - name: Decode App Store Connect API key
+        run: |
+          echo "${{ secrets.APPLE_API_KEY_BASE64 }}" | base64 -d > ${{ matrix.app }}/ios/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+
       - name: Fastlane Deploy
         working-directory: ${{ matrix.app }}/ios
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          FASTLANE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_KEY_FILEPATH: AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+          PUSH_BRANCH: ${{ startsWith(github.ref, 'refs/tags/') && (github.event.repository.default_branch || 'main') || github.ref_name }}
         run: bundle exec fastlane deploy
