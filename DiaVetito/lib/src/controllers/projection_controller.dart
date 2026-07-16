@@ -153,9 +153,13 @@ class ProjectionController extends ChangeNotifier {
       return;
     }
     if (_shouldShowNoConnectionLogo) {
-      _logoFrame = const LogoFrame(80);
+      if (_logoTimer == null) {
+        _startLogo(restartStartup: false);
+      }
       return;
     }
+    _logoTimer?.cancel();
+    _logoTimer = null;
     _logoFrame = null;
   }
 
@@ -559,20 +563,29 @@ class ProjectionController extends ChangeNotifier {
     }
   }
 
-  void _startLogo() {
+  void _startLogo({bool restartStartup = true}) {
     _logoTimer?.cancel();
-    _startupAnimationFinished = false;
+    _logoTimer = null;
+    if (restartStartup) {
+      _startupAnimationFinished = false;
+    }
     _logoFrame = const LogoFrame(0);
     int phase = 0;
     _logoTimer = Timer.periodic(const Duration(milliseconds: 100), (Timer t) {
       if (phase > 80) {
         _startupAnimationFinished = true;
-        _syncNoConnectionLogo();
-        t.cancel();
+        if (_shouldShowNoConnectionLogo) {
+          phase = 0;
+          _logoFrame = const LogoFrame(0);
+        } else {
+          _logoFrame = null;
+          t.cancel();
+          _logoTimer = null;
+        }
       } else {
         _logoFrame = LogoFrame(phase);
+        phase++;
       }
-      phase++;
       if (!_disposed) {
         notifyListeners();
       }

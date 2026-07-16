@@ -2,6 +2,7 @@
   "@@locale": "hu",
   "appTitle": "DiaVetítő",
   "logoTitle": "Diatár Vetítő",
+  "startupLogoSemanticLabel": "Indító logó képernyő",
   "splashVersionSubtitle": "Verzió v{version} ({buildNumber})",
   "@splashVersionSubtitle": {
     "placeholders": {

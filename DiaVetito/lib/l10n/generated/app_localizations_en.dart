@@ -15,6 +15,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logoTitle => 'Diatar Vetito';
 
   @override
+  String get startupLogoSemanticLabel => 'Startup logo screen';
+
+  @override
   String splashVersionSubtitle(Object version, Object buildNumber) {
     return 'Version v$version ($buildNumber)';
   }

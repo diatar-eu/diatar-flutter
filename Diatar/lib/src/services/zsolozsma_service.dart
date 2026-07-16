@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:io' if (dart.library.io) 'dart:io';
-import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';

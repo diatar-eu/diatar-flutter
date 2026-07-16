@@ -1,4 +1,3 @@
-import 'package:diatar_common/diatar_common.dart';
 
 class TranspositionUtils {
   static const List<String> _chromaticScale = [

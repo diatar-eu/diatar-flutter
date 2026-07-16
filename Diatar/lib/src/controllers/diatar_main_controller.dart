@@ -2697,7 +2697,7 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     // Create a TextFrame with the current book, song, and verse information
-    final String title = '${book.displayName}: ${song.title}/${verse?.name ?? ''}'.trim();
+    final String title = '${book.displayName}: ${song.title}/${verse.name ?? ''}'.trim();
     final List<String> lines = displayLines;
     final RecTextRecord record = RecTextRecord(
       scholaLine: '',

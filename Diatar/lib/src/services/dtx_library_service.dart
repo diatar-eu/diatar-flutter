@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:diatar_common/diatar_common.dart';
-import 'package:file/file.dart';
 import 'package:file_selector/file_selector.dart';
 import '../utils/path_helper.dart';
 import '../utils/file_system_provider.dart';

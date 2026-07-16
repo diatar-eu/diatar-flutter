@@ -15,6 +15,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get logoTitle => 'Diatár Vetítő';
 
   @override
+  String get startupLogoSemanticLabel => 'Indító logó képernyő';
+
+  @override
   String splashVersionSubtitle(Object version, Object buildNumber) {
     return 'Verzió v$version ($buildNumber)';
   }

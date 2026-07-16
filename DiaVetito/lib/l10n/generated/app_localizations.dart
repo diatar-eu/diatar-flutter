@@ -110,6 +110,12 @@ abstract class AppLocalizations {
   /// **'Diatár Vetítő'**
   String get logoTitle;
 
+  /// No description provided for @startupLogoSemanticLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Indító logó képernyő'**
+  String get startupLogoSemanticLabel;
+
   /// No description provided for @splashVersionSubtitle.
   ///
   /// In hu, this message translates to:

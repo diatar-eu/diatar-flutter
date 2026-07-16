@@ -1,5 +1,4 @@
 import 'package:diatar_common/diatar_common.dart';
-import 'package:file/file.dart';
 import '../utils/path_helper.dart';
 import '../utils/file_system_provider.dart';
 

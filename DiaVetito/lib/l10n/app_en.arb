@@ -2,6 +2,7 @@
   "@@locale": "en",
   "appTitle": "DiaVetito",
   "logoTitle": "Diatar Vetito",
+  "startupLogoSemanticLabel": "Startup logo screen",
   "splashVersionSubtitle": "Version v{version} ({buildNumber})",
   "@splashVersionSubtitle": {
     "placeholders": {

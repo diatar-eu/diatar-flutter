@@ -64,6 +64,7 @@ class _HomePageState extends State<HomePage> {
                   : (initialCanvasHeight > viewportHeight
                         ? initialCanvasHeight
                         : viewportHeight);
+              final bool isLogoFrame = controller.activeFrame is LogoFrame;
 
               if (!fitToViewport) {
                 _scheduleHeightRefresh(
@@ -78,37 +79,19 @@ class _HomePageState extends State<HomePage> {
                   Positioned.fill(
                     child: GestureDetector(
                       onTap: () => _openSettings(context),
-                      child: fitToViewport
-                          ? SizedBox(
-                              width: constraints.maxWidth,
-                              height: viewportHeight,
-                              child: CustomPaint(
-                                size: Size(
-                                  constraints.maxWidth,
-                                  viewportHeight,
-                                ),
-                                painter: ProjectorPainter(
-                                  frame: controller.activeFrame,
-                                  globals: controller.globals,
-                                  settings: controller.settings,
-                                  logoTitle: context.l10n.logoTitle,
-                                  logoSubtitle: context.l10n
-                                      .splashVersionSubtitle(
-                                        _appVersion,
-                                        _buildNumber,
-                                      ),
-                                ),
-                              ),
-                            )
-                          : SingleChildScrollView(
-                              scrollDirection: Axis.vertical,
-                              child: SizedBox(
+                      child: Semantics(
+                        label: isLogoFrame
+                            ? context.l10n.startupLogoSemanticLabel
+                            : null,
+                        image: isLogoFrame,
+                        child: fitToViewport
+                            ? SizedBox(
                                 width: constraints.maxWidth,
-                                height: canvasHeight,
+                                height: viewportHeight,
                                 child: CustomPaint(
                                   size: Size(
                                     constraints.maxWidth,
-                                    canvasHeight,
+                                    viewportHeight,
                                   ),
                                   painter: ProjectorPainter(
                                     frame: controller.activeFrame,
@@ -122,8 +105,32 @@ class _HomePageState extends State<HomePage> {
                                         ),
                                   ),
                                 ),
+                              )
+                            : SingleChildScrollView(
+                                scrollDirection: Axis.vertical,
+                                child: SizedBox(
+                                  width: constraints.maxWidth,
+                                  height: canvasHeight,
+                                  child: CustomPaint(
+                                    size: Size(
+                                      constraints.maxWidth,
+                                      canvasHeight,
+                                    ),
+                                    painter: ProjectorPainter(
+                                      frame: controller.activeFrame,
+                                      globals: controller.globals,
+                                      settings: controller.settings,
+                                      logoTitle: context.l10n.logoTitle,
+                                      logoSubtitle: context.l10n
+                                          .splashVersionSubtitle(
+                                            _appVersion,
+                                            _buildNumber,
+                                          ),
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                      ),
                     ),
                   ),
                   if (controller.settings.receiverKeepStartupLogo &&
