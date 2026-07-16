@@ -1320,13 +1320,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             },
           ),
           const SizedBox(height: 16),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.folder_open),
-            title: Text(l10n.openDtxFolder),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _openDtxFolder,
-          ),
+          if (_isDesktopPlatform())
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.folder_open),
+              title: Text(l10n.openDtxFolder),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _openDtxFolder,
+            ),
         ];
       },
     );

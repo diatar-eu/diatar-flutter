@@ -566,11 +566,11 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             onPressed: () => _openZsolozsmaDialog(context),
             icon: const Icon(Icons.menu_book_outlined),
           ),
-          IconButton(
+          /* IconButton(
             tooltip: l10n.batyuTooltip,
             onPressed: () => _openBatyuDialog(context),
             icon: const Icon(Icons.auto_stories_outlined),
-          ),
+          ), */ 
           IconButton(
             tooltip: l10n.downloadBooksTooltip,
             onPressed: () => _openDownloadDialog(context),
@@ -829,7 +829,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                   onPressed: () => unawaited(controller.hideControlWindow()),
                 ),
               const SizedBox(width: 8),
-              _actionIconButton(
+              /* _actionIconButton(
                 context,
                 icon: controller.showPhotoInControl
                     ? Icons.photo
@@ -845,7 +845,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                     ? const Color(0xFF1976D2)
                     : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 8),*/ 
               _actionIconButton(
                 context,
                 icon: controller.settings.projectionLocked
