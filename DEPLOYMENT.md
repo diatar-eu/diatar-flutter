@@ -30,11 +30,12 @@ No new screenshots or metadata are uploaded; only the application binary is push
 
 ### Automatic build number bump
 
-Each `deploy` lane automatically increments the build number (the `+N` suffix in the app's `pubspec.yaml`, i.e. `version: X.Y.Z+N`) **before** building, and commits the change back to the repository with a `ci: bump build number to N [skip ci]` message. This guarantees that every store upload uses a strictly increasing `versionCode` (Android) / `CFBundleVersion` (iOS), so re-running a deploy (e.g. after a transient failure) never collides with an already-published build.
+The `deploy.yml` workflow automatically increments the build number (the `+N` suffix in the app's `pubspec.yaml`, i.e. `version: X.Y.Z+N`) **before** any store upload, and commits the change back to the repository with a `ci: bump build number to N [skip ci]` message. This guarantees that every store upload uses a strictly increasing `versionCode` (Android) / `CFBundleVersion` (iOS), so re-running a deploy (e.g. after a transient failure) never collides with an already-published build.
 
-- The bump is committed and pushed to the branch that triggered the run (`main` for tag pushes, the dispatched branch otherwise). The `[skip ci]` tag prevents the push from re-triggering the artifact build workflow.
-- Because the Android and iOS jobs of the same app run in parallel and share the same `pubspec.yaml`, the lane uses a retry loop: if the push is rejected because the other platform already bumped and pushed, it re-syncs, re-reads the new number, increments again and retries. This way both platforms always end up with distinct, increasing build numbers.
-- You no longer need to manually edit the build number in `pubspec.yaml` before releasing — Fastlane handles it on CI.
+- A dedicated `bump` job runs once per app at the very start of the workflow. It bumps the app's `pubspec.yaml`, commits and pushes the change to the branch that triggered the run (`main` for tag pushes, the dispatched branch otherwise). The Android and iOS deploy jobs wait for this job (`needs: bump`) and check out the bumped branch, so both platforms build with the same, already-incremented number.
+- Because `Diatar` and `DiaVetito` have separate `pubspec.yaml` files, their bumps never conflict with each other. The `bump` job also has a retry loop: if a push is rejected (e.g. due to a concurrent push), it re-syncs, re-reads the number, increments again and retries.
+- The `[skip ci]` tag in the commit message prevents the push from re-triggering the artifact build workflow.
+- You no longer need to manually edit the build number in `pubspec.yaml` before releasing — the CI handles it.
 
 ## Required GitHub Secrets
 
