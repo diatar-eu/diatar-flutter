@@ -43,6 +43,15 @@ jobs:
           bundler-cache: true
           working-directory: ${{ matrix.app }}/android
 
+      - name: Decode Android keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > ${{ matrix.app }}/android/keystore.jks
+          cd ${{ matrix.app }}/android
+          echo "storeFile=keystore.jks" > key.properties
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> key.properties
+          echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> key.properties
+          echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> key.properties
+
       - name: Decode Play Store JSON key
         run: |
           # Use single quotes so bash does not interpret the double quotes

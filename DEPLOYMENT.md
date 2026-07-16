@@ -35,6 +35,10 @@ You must configure the following repository secrets in **Settings → Secrets an
 | Secret Name | Description |
 | --- | --- |
 | `PLAY_STORE_JSON_KEY` | The full JSON content of a Google Play Service Account key (from Google Cloud Console) with access to the Play Console. Used to authenticate the Android upload. |
+| `ANDROID_KEYSTORE_BASE64` | Base64-encoded content of the Android release keystore file (`.jks`). Used to sign the Android App Bundle. |
+| `ANDROID_KEYSTORE_PASSWORD` | Password for the Android release keystore. |
+| `ANDROID_KEY_ALIAS` | Key alias name in the Android release keystore (e.g., `my-key-alias`). |
+| `ANDROID_KEY_PASSWORD` | Password for the key alias in the Android release keystore. |
 | `APPLE_ID` | Your Apple ID email address (e.g., `you@example.com`). |
 | `APPLE_TEAM_ID` | Your Apple Developer Team ID (10-character alphanumeric, e.g., `ABCDE12345`). |
 | `APPLE_APP_SPECIFIC_PASSWORD` | An app-specific password generated at [appleid.apple.com](https://appleid.apple.com) → Sign-In and Security → App-Specific Passwords. Used by Fastlane to download certificates and sign the iOS build. |
@@ -47,7 +51,23 @@ You must configure the following repository secrets in **Settings → Secrets an
 3. Generate a JSON key for the service account.
 4. Copy the entire JSON file content and paste it as the `PLAY_STORE_JSON_KEY` secret.
 
-#### 2. `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_SPECIFIC_PASSWORD`
+#### 2. Android signing keystore
+1. `ANDROID_KEYSTORE_BASE64`: Encode your release keystore file with `base64 -i keystore.jks` and paste the output as the secret.
+2. `ANDROID_KEYSTORE_PASSWORD`: The password you set when creating the keystore.
+3. `ANDROID_KEY_ALIAS`: The key alias (e.g., `my-key-alias`) used when generating the key.
+4. `ANDROID_KEY_PASSWORD`: The password for the key alias (often same as keystore password).
+
+   To create a new keystore:
+   ```bash
+   keytool -genkey -v -keystore ~/release-keystore.jks -alias my-key-alias -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+   To get the SHA1 fingerprint of an existing keystore (for Play Console key registration):
+   ```bash
+   keytool -list -v -keystore keystore.jks -alias my-key-alias -keystore password
+   ```
+
+#### 3. `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_SPECIFIC_PASSWORD`
 1. `APPLE_ID`: Your Apple ID email.
 2. `APPLE_TEAM_ID`: Found in the [Apple Developer Membership](https://developer.apple.com/account) page under "Team ID".
 3. `APPLE_APP_SPECIFIC_PASSWORD`: Generate it at [appleid.apple.com](https://appleid.apple.com) → Security → App-Specific Passwords.
