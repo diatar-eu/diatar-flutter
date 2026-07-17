@@ -1439,6 +1439,12 @@ abstract class AppLocalizations {
   /// **'Énekrend szerkesztése'**
   String get customOrderEditTitle;
 
+  /// No description provided for @customOrderGroupReorder.
+  ///
+  /// In hu, this message translates to:
+  /// **'Csoportos áthelyezés'**
+  String get customOrderGroupReorder;
+
   /// No description provided for @addSong.
   ///
   /// In hu, this message translates to:

@@ -41,6 +41,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   late List<CustomOrderEntry> _entries;
   String? _selectedInsertBookFileName;
   int? _selectedInsertSongIndex;
+  bool _groupReorder = true;
 
   int _safeEntryVerseIndex(CustomOrderEntry entry, {int fallback = 0}) {
     try {
@@ -57,6 +58,79 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
   String _normalizeSlashSpacing(String text) {
     return text.replaceAll(RegExp(r'\s*/\s*'), '/');
+  }
+
+  ({String prefix, String suffix})? _splitSlashLabel(String label) {
+    final int slashIndex = label.indexOf('/');
+    if (slashIndex <= 0 || slashIndex >= label.length - 1) {
+      return null;
+    }
+    final String prefix = label.substring(0, slashIndex).trim();
+    final String suffix = label.substring(slashIndex + 1).trim();
+    if (prefix.isEmpty || suffix.isEmpty) {
+      return null;
+    }
+    return (prefix: prefix, suffix: suffix);
+  }
+
+  /// Whether a non-song (custom text) entry continues the same logical item as
+  /// the previous entry, i.e. they share the same label prefix before a '/'.
+  ///
+  /// This mirrors the grouping used by the dialista (slide list) view so that
+  /// zsolozsma and napi lelki batyu verses are shown subdivided under one item
+  /// instead of as separate songs.
+  bool _isCustomTextContinuation(
+    AppLocalizations l10n,
+    int index,
+    CustomOrderEntry entry,
+  ) {
+    if (index <= 0) {
+      return false;
+    }
+    final CustomOrderEntry previous = _entries[index - 1];
+    if (previous.isSeparator) {
+      return false;
+    }
+    final String label = localizedCustomEntryLabel(l10n, entry);
+    final ({String prefix, String suffix})? split = _splitSlashLabel(label);
+    if (split == null) {
+      return false;
+    }
+    final String previousLabel = localizedCustomEntryLabel(l10n, previous);
+    final ({String prefix, String suffix})? previousSplit =
+        _splitSlashLabel(previousLabel);
+    if (previousSplit == null || previousSplit.prefix != split.prefix) {
+      return false;
+    }
+    return true;
+  }
+
+  /// Builds the title for a continuation entry: the shared prefix is rendered
+  /// transparent (so the verse suffix aligns under the parent item) and only
+  /// the '/suffix' part is visible, matching the dialista view.
+  Widget _buildContinuationTitle({
+    required String prefix,
+    required String suffix,
+    required String firstLine,
+  }) {
+    final List<InlineSpan> spans = <InlineSpan>[
+      TextSpan(text: prefix, style: const TextStyle(color: Colors.transparent)),
+      TextSpan(text: '/$suffix'),
+    ];
+    if (firstLine.trim().isNotEmpty) {
+      spans.add(
+        TextSpan(
+          text: ' ($firstLine)',
+          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w400),
+        ),
+      );
+    }
+    return Text.rich(
+      TextSpan(children: spans),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(height: 0.95),
+    );
   }
 
   Widget _buildTitleWithFirstLine({
@@ -247,6 +321,22 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 ),
               ),
               const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Row(
+                  children: <Widget>[
+                    Text(l10n.customOrderGroupReorder),
+                    const SizedBox(width: 8),
+                    Switch(
+                      value: _groupReorder,
+                      onChanged: (bool value) {
+                        setState(() => _groupReorder = value);
+                      },
+                    ),
+                    const Spacer(),
+                  ],
+                ),
+              ),
               Expanded(child: _buildCurrentOrderList()),
               const Divider(height: 1),
               Padding(
@@ -1204,22 +1294,42 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       buildDefaultDragHandles: false,
       onReorder: (int oldIndex, int newIndex) {
         setState(() {
-          if (newIndex > oldIndex) {
-            newIndex -= 1;
+          if (_groupReorder) {
+            final ({int start, int end}) group =
+                _contiguousGroupRange(oldIndex);
+            final int groupStart = group.start;
+            final int groupEnd = group.end;
+            // Dropping inside the same group is a no-op.
+            if (newIndex > groupStart && newIndex <= groupEnd) {
+              return;
+            }
+            final List<CustomOrderEntry> block = _entries.sublist(
+              groupStart,
+              groupEnd + 1,
+            );
+            _entries.removeRange(groupStart, groupEnd + 1);
+            final int insertAt = newIndex > groupEnd
+                ? newIndex - block.length
+                : newIndex;
+            _entries.insertAll(insertAt, block);
+          } else {
+            if (newIndex > oldIndex) {
+              newIndex -= 1;
+            }
+            final CustomOrderEntry entry = _entries.removeAt(oldIndex);
+            _entries.insert(newIndex, entry);
           }
-          final CustomOrderEntry entry = _entries.removeAt(oldIndex);
-          _entries.insert(newIndex, entry);
         });
         unawaited(_commitEntries());
       },
       itemBuilder: (BuildContext context, int index) {
         final CustomOrderEntry entry = _entries[index];
         final bool isSongEntry = controller.isSongOrderEntry(entry);
-        final bool isContinuation =
-            isSongEntry &&
-            index > 0 &&
-            _entries[index - 1].fileName == entry.fileName &&
-            _entries[index - 1].songIndex == entry.songIndex;
+        final bool isContinuation = isSongEntry
+            ? (index > 0 &&
+                _entries[index - 1].fileName == entry.fileName &&
+                _entries[index - 1].songIndex == entry.songIndex)
+            : _isCustomTextContinuation(context.l10n, index, entry);
         final List<DtxVerse> verses = isSongEntry
             ? controller.versesForEntry(entry)
             : const <DtxVerse>[];
@@ -1230,12 +1340,30 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         final String verseLabel = isSongEntry
             ? _normalizeSlashSpacing(rawVerseLabel)
             : rawVerseLabel;
-        final String titleText = isContinuation
-            ? verseLabel
-            : (isSongEntry
-                  ? _normalizeSlashSpacing(entry.label)
-                  : localizedCustomEntryLabel(context.l10n, entry));
+        final String fullLabel = isSongEntry
+            ? _normalizeSlashSpacing(entry.label)
+            : localizedCustomEntryLabel(context.l10n, entry);
         final String firstLine = controller.firstTextLineForEntry(entry);
+        final Widget titleWidget;
+        if (isContinuation && isSongEntry) {
+          titleWidget = _buildTitleWithFirstLine(
+            title: verseLabel,
+            firstLine: firstLine,
+          );
+        } else if (isContinuation) {
+          final ({String prefix, String suffix}) split =
+              _splitSlashLabel(fullLabel)!;
+          titleWidget = _buildContinuationTitle(
+            prefix: split.prefix,
+            suffix: split.suffix,
+            firstLine: firstLine,
+          );
+        } else {
+          titleWidget = _buildTitleWithFirstLine(
+            title: fullLabel,
+            firstLine: firstLine,
+          );
+        }
         return ListTile(
           key: ValueKey<String>('${entry.fileName}_${entry.songIndex}_$index'),
           dense: true,
@@ -1253,10 +1381,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             left: isContinuation ? 70 : 16,
             right: 8,
           ),
-          title: _buildTitleWithFirstLine(
-            title: titleText,
-            firstLine: firstLine,
-          ),
+          title: titleWidget,
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -1395,6 +1520,33 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       end++;
     }
     return (start: start, end: end);
+  }
+
+  /// Returns the inclusive range of entries that belong to the same logical
+  /// item as the entry at [index]: a song with all its verses, or a zsolozsma /
+  /// napi lelki batyu section with all its subdivided verses. Used so the whole
+  /// group can be reordered as a single unit.
+  ({int start, int end}) _contiguousGroupRange(int index) {
+    final CustomOrderEntry center = _entries[index];
+    if (controller.isSongOrderEntry(center)) {
+      return _contiguousSongGroup(index);
+    }
+    if (center.isCustomText) {
+      int start = index;
+      while (start > 0 &&
+          _entries[start - 1].isCustomText &&
+          _isCustomTextContinuation(context.l10n, start, _entries[start])) {
+        start--;
+      }
+      int end = index;
+      while (end + 1 < _entries.length &&
+          _entries[end + 1].isCustomText &&
+          _isCustomTextContinuation(context.l10n, end + 1, _entries[end + 1])) {
+        end++;
+      }
+      return (start: start, end: end);
+    }
+    return (start: index, end: index);
   }
 }
 

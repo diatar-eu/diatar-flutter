@@ -543,6 +543,7 @@
   "diatarPlaylistFileTypeLabel": "Diatar playlist",
   "customOrderSuggestedFileName": "order.dia",
   "customOrderEditTitle": "Edit custom order",
+  "customOrderGroupReorder": "Group reordering",
   "addSong": "Add song",
   "searchSongHint": "Book, song title or lyric",
   "customOrderInsertBookLabel": "Book",

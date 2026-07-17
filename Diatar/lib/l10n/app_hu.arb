@@ -543,6 +543,7 @@
   "diatarPlaylistFileTypeLabel": "Diatár playlist",
   "customOrderSuggestedFileName": "sorrend.dia",
   "customOrderEditTitle": "Énekrend szerkesztése",
+  "customOrderGroupReorder": "Csoportos áthelyezés",
   "addSong": "Ének hozzáadása",
   "searchSongHint": "Kötet, énekcím vagy dal szövege",
   "customOrderInsertBookLabel": "Kötet",

@@ -794,6 +794,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderEditTitle => 'Edit custom order';
 
   @override
+  String get customOrderGroupReorder => 'Group reordering';
+
+  @override
   String get addSong => 'Add song';
 
   @override

@@ -797,6 +797,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderEditTitle => 'Énekrend szerkesztése';
 
   @override
+  String get customOrderGroupReorder => 'Csoportos áthelyezés';
+
+  @override
   String get addSong => 'Ének hozzáadása';
 
   @override
