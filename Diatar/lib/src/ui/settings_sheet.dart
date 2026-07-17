@@ -33,6 +33,7 @@ class DiatarSettingsSheet extends StatefulWidget {
     required this.initialSettings,
     required this.onApply,
     required this.onExitRequested,
+    required this.onReloadBooksRequested,
     required this.onRemoteStopRequested,
     required this.onRemoteShutdownRequested,
     this.availableSongs = const <SongHotkeyOption>[],
@@ -44,6 +45,7 @@ class DiatarSettingsSheet extends StatefulWidget {
   final AppSettings initialSettings;
   final ValueChanged<AppSettings> onApply;
   final VoidCallback onExitRequested;
+  final VoidCallback onReloadBooksRequested;
   final VoidCallback onRemoteStopRequested;
   final VoidCallback onRemoteShutdownRequested;
   final List<SongHotkeyOption> availableSongs;
@@ -1165,6 +1167,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               FilledButton(
                 onPressed: widget.onExitRequested,
                 child: Text(l10n.localExit),
+              ),
+              OutlinedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  if (mounted) {
+                    Navigator.of(this.context).pop();
+                  }
+                  widget.onReloadBooksRequested();
+                },
+                child: Text(l10n.refreshTooltip),
               ),
               OutlinedButton(
                 onPressed: widget.onRemoteStopRequested,

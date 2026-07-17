@@ -576,11 +576,6 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             onPressed: () => _openDownloadDialog(context),
             icon: const Icon(Icons.download_for_offline_outlined),
           ),
-          IconButton(
-            tooltip: l10n.refreshTooltip,
-            onPressed: controller.reloadBooks,
-            icon: const Icon(Icons.refresh),
-          ),
         ],
       ),
       body: AnimatedBuilder(
@@ -1177,6 +1172,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           },
           onApply: (AppSettings settings) => controller.applySettings(settings),
           onExitRequested: controller.requestExit,
+          onReloadBooksRequested: () => unawaited(controller.reloadBooks()),
           onRemoteStopRequested: () => unawaited(controller.sendStop()),
           onRemoteShutdownRequested: () =>
               unawaited(controller.sendStop(wantShutdown: true)),

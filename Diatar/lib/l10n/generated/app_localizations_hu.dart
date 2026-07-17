@@ -1007,7 +1007,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get systemActionsSummary =>
-      'Kilépés, távoli program leállítása, távoli gép leállítása';
+      'Kilépés, frissítés, távoli program leállítása, távoli gép leállítása';
 
   @override
   String get systemActionsBack => 'Vissza';

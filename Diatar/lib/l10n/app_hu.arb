@@ -690,7 +690,7 @@
     }
   },
   "systemActionsTitle": "Rendszer műveletek",
-  "systemActionsSummary": "Kilépés, távoli program leállítása, távoli gép leállítása",
+  "systemActionsSummary": "Kilépés, frissítés, távoli program leállítása, távoli gép leállítása",
   "systemActionsBack": "Vissza",
   "localExit": "Kilépés",
   "remoteProgramStop": "Távoli program leállítása",

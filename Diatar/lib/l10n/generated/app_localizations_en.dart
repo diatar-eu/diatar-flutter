@@ -1005,7 +1005,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get systemActionsSummary =>
-      'Exit, remote program stop, remote machine stop';
+      'Exit, refresh, remote program stop, remote machine stop';
 
   @override
   String get systemActionsBack => 'Back';

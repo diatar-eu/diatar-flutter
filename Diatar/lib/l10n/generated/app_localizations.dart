@@ -1796,7 +1796,7 @@ abstract class AppLocalizations {
   /// No description provided for @systemActionsSummary.
   ///
   /// In hu, this message translates to:
-  /// **'Kilépés, távoli program leállítása, távoli gép leállítása'**
+  /// **'Kilépés, frissítés, távoli program leállítása, távoli gép leállítása'**
   String get systemActionsSummary;
 
   /// No description provided for @systemActionsBack.

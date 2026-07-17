@@ -690,7 +690,7 @@
     }
   },
   "systemActionsTitle": "System actions",
-  "systemActionsSummary": "Exit, remote program stop, remote machine stop",
+  "systemActionsSummary": "Exit, refresh, remote program stop, remote machine stop",
   "systemActionsBack": "Back",
   "localExit": "Exit",
   "remoteProgramStop": "Remote program stop",
