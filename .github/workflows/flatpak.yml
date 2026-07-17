@@ -1,9 +1,13 @@
 name: Build & Publish Flatpak
 
 on:
-  push:
-    tags:
-      - 'v*'
+  # Only run after the "Deploy to Stores" workflow has completed (it performs the
+  # version bump on the default branch). This guarantees the Flatpak build picks
+  # up the bumped pubspec version.
+  workflow_run:
+    workflows: ["Deploy to Stores"]
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -14,6 +18,13 @@ permissions:
 jobs:
   flatpak:
     name: Flatpak (${{ matrix.app }})
+    # Run on manual dispatch, or after a successful "Deploy to Stores" run that
+    # was triggered by a tag starting with 'v'.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
@@ -28,13 +39,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # After the stores deploy the bumped version lives on the default
+          # branch, so check that out to build with the updated pubspec.
+          ref: ${{ github.event_name == 'workflow_run' && github.event.repository.default_branch || github.ref_name }}
           submodules: recursive
 
       - name: Derive version and date from tag
         id: meta
+        env:
+          TAG_REF: ${{ github.event.workflow_run.head_branch || github.ref_name }}
         run: |
           # Tag is like v9.1.0 ; strip the leading 'v'
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${TAG_REF}"
           VERSION="${TAG#v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "date=$(date +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
@@ -52,7 +68,7 @@ jobs:
           bundle: ${{ matrix.app }}.flatpak
           manifest-path: flatpak/eu.diatar.${{ matrix.app == 'DiaVetito' && 'diavetito' || 'diatar' }}.yaml
           cache-key: flatpak-builder-${{ matrix.app }}
-          branch: ${{ github.ref_name }}
+          branch: ${{ github.event.workflow_run.head_branch || github.ref_name }}
           arch: x86_64
 
       - name: Publish to Flathub-style branch
@@ -63,4 +79,4 @@ jobs:
           repo-name: ${{ github.event.repository.name }}
           repo-branch: flathub
           flatpak-bundle: ${{ matrix.app }}.flatpak
-          comment: "Flatpak build for ${{ matrix.app }} (${{ github.ref_name }})"
+          comment: "Flatpak build for ${{ matrix.app }} (${{ github.event.workflow_run.head_branch || github.ref_name }})"

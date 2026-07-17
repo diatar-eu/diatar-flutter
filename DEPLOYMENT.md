@@ -4,7 +4,7 @@ This project uses **Fastlane** and **GitHub Actions** to automatically deploy th
 
 ## Flatpak (Linux)
 
-When you push a tag starting with `v` (e.g., `git tag v9.1.0 && git push origin v9.1.0`), the workflow in `.github/workflows/flatpak.yml` builds a Flatpak bundle for both `Diatar` and `DiaVetito` and publishes them to a `flathub` branch in this repository.
+When you push a tag starting with `v` (e.g., `git tag v9.1.0 && git push origin v9.1.0`), the `Deploy to Stores` workflow runs first and performs the automatic build-number bump (see below). Only **after** that workflow completes successfully does the workflow in `.github/workflows/flatpak.yml` build a Flatpak bundle for both `Diatar` and `DiaVetito` (checking out the bumped default branch) and publish them to a `flathub` branch in this repository.
 
 - The Flatpak manifests live in `flatpak/` (`eu.diatar.diatar.yaml`, `eu.diatar.diavetito.yaml`) together with the `.desktop` and `.metainfo.xml` files.
 - The published `flathub` branch acts as a self-hosted Flatpak repository. Users can install the apps with:
@@ -27,6 +27,10 @@ When you push a tag starting with `v` (e.g., `git tag v1.2.3 && git push origin 
 - **iOS**: Builds the IPA, signs it, and uploads it to App Store Connect, submitting it for review and automatic release via Fastlane (`upload_to_app_store`).
 
 No new screenshots or metadata are uploaded; only the application binary is pushed to production.
+
+### Flatpak and Web run after the stores deploy
+
+The Flatpak (`.github/workflows/flatpak.yml`) and Web (`.github/workflows/web-deploy.yml`) deployments do **not** start directly on the tag push. They are triggered by the `workflow_run` event of the `Deploy to Stores` workflow, so they only execute once the stores deploy — including the build-number bump — has finished successfully. This guarantees the Flatpak and Web builds pick up the bumped `pubspec.yaml` version.
 
 ### Automatic build number bump
 
