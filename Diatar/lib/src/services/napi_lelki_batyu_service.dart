@@ -40,7 +40,6 @@ class NapiLelkiBatyuCelebration {
 class NapiLelkiBatyuService {
   static const String _baseUrl =
       'https://szentjozsefhackathon.github.io/napi-lelki-batyu/';
-  static const String _webProxyUrl = 'https://diatar.eu/batyu.php';
 
   /// Fetches the day JSON for [date]. Tries the single-day file first, then
   /// falls back to the full-year file and extracts the requested day.
@@ -77,7 +76,7 @@ class NapiLelkiBatyuService {
 
   Future<Map<String, dynamic>?> _tryParse(String url) async {
     try {
-      final Uri uri = _buildUri(url);
+      final Uri uri = Uri.parse(url);
       final http.Response response = await http.get(uri);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return null;
@@ -90,16 +89,6 @@ class NapiLelkiBatyuService {
       return null;
     }
     return null;
-  }
-
-  Uri _buildUri(String url) {
-    if (!kIsWeb) {
-      return Uri.parse(url);
-    }
-    // On the web we route through a proxy to avoid CORS issues.
-    return Uri.parse(_webProxyUrl).replace(
-      queryParameters: <String, String>{'url': url},
-    );
   }
 
   /// Parses the celebrations (ünnepek) of a day JSON into a list.
@@ -122,10 +111,12 @@ class NapiLelkiBatyuService {
       final String title = _stringOrEmpty(raw['title']).isNotEmpty
           ? _stringOrEmpty(raw['title'])
           : name;
-      final List<dynamic>? parts = raw['parts'] as List<dynamic>?;
-      final List<Map<String, dynamic>> typedParts =
-          parts?.whereType<Map<String, dynamic>>().toList() ??
-              const <Map<String, dynamic>>[];
+      // A celebration may carry its sections in `parts` and/or `parts2`; both
+      // use the same structure and must be imported. `parts2` follows `parts`.
+      final List<Map<String, dynamic>> typedParts = <Map<String, dynamic>>[
+        ..._typedPartsFrom(raw['parts']),
+        ..._typedPartsFrom(raw['parts2']),
+      ];
       result.add(
         NapiLelkiBatyuCelebration(
           key: raw['celebrationKey'] is int ? raw['celebrationKey'] as int : i,
@@ -136,6 +127,31 @@ class NapiLelkiBatyuService {
       );
     }
     return result;
+  }
+
+  /// Normalizes a raw `parts`/`parts2` value into typed part maps.
+  ///
+  /// Each element is either a part dict or — for a "vagy" (either-or) section
+  /// in the single-day file — a bare list of variant dicts. The latter is
+  /// wrapped as `{type: 'array', content: [...]}` so the builder includes
+  /// every variant.
+  List<Map<String, dynamic>> _typedPartsFrom(dynamic rawParts) {
+    final List<Map<String, dynamic>> typed = <Map<String, dynamic>>[];
+    final List<dynamic>? parts = rawParts as List<dynamic>?;
+    if (parts == null) {
+      return typed;
+    }
+    for (final dynamic part in parts) {
+      if (part is Map<String, dynamic>) {
+        typed.add(part);
+      } else if (part is List) {
+        typed.add(<String, dynamic>{
+          'type': 'array',
+          'content': part,
+        });
+      }
+    }
+    return typed;
   }
 
   /// Builds the custom-order text entries (diák) for a celebration.
@@ -153,23 +169,8 @@ class NapiLelkiBatyuService {
   }) {
     final List<CustomOrderEntry> entries = <CustomOrderEntry>[];
 
-    // A title slide for the celebration itself.
-    if (celebration.title.trim().isNotEmpty) {
-      entries.add(
-        CustomOrderEntry(
-          fileName: '__custom_text__',
-          songIndex: -1,
-          verseIndex: 0,
-          label: '[Batyu] ${celebration.title.trim()}',
-          customTextTitle: celebration.title.trim(),
-          customTextBody: celebration.name.trim().isEmpty
-              ? celebration.title.trim()
-              : celebration.name.trim(),
-          customType: 'text',
-        ),
-      );
-    }
-
+    // The celebration's own title is shown as the virtual book label, not as
+    // a projected slide, so only the reading sections are turned into slides.
     for (final Map<String, dynamic> part in celebration.parts) {
       entries.addAll(_entriesForPart(part, wordsPerSlide: wordsPerSlide));
     }
@@ -183,58 +184,134 @@ class NapiLelkiBatyuService {
   }) {
     final String type = _stringOrEmpty(part['type']);
 
-    // Array type: multiple variants (e.g. I. év / II. év). Use the first one.
+    // Array type: multiple variants (e.g. I. év / II. év, or a "vagy" either-or
+    // form where a longer and a shorter reading are both offered). Every
+    // variant is included as its own set of slides, so the user can choose
+    // which one to project.
     if (type == 'array') {
       final List<dynamic>? content = part['content'] as List<dynamic>?;
       if (content != null && content.isNotEmpty) {
-        final dynamic first = content.first;
-        if (first is Map<String, dynamic>) {
-          return _entriesForPart(first, wordsPerSlide: wordsPerSlide);
+        final List<CustomOrderEntry> entries = <CustomOrderEntry>[];
+        final int variantCount = content.length;
+        for (int v = 0; v < variantCount; v++) {
+          final dynamic item = content[v];
+          if (item is! Map<String, dynamic>) {
+            continue;
+          }
+          final List<CustomOrderEntry> variantEntries =
+              _entriesForPart(item, wordsPerSlide: wordsPerSlide);
+          // When a part offers several alternatives (e.g. a longer and a
+          // shorter "vagy" reading), each alternative must appear as its own
+          // selectable item rather than being merged into one continuous
+          // verse sequence. We tag every alternative with a distinguishing
+          // suffix so the UI groups them separately, while a single
+          // alternative's own split verses stay together.
+          if (variantCount > 1) {
+            final String cause = _stringOrEmpty(item['cause']);
+            final String suffix =
+                cause.isNotEmpty ? cause : 'változat ${v + 1}';
+            entries.addAll(_tagVariantEntries(variantEntries, suffix));
+          } else {
+            entries.addAll(variantEntries);
+          }
         }
+        return entries;
       }
       return const <CustomOrderEntry>[];
     }
 
     final String shortTitle = _stringOrEmpty(part['short_title']);
-    final String title = _stringOrEmpty(part['title']);
-    final String ref = _stringOrEmpty(part['ref']);
-    final String ending = _stringOrEmpty(part['ending']);
 
-    final String slideTitle = title.isNotEmpty ? title : shortTitle;
-
-    // Collect the raw body lines (HTML stripped) for this part.
-    final List<String> bodyLines = <String>[];
-    if (ref.isNotEmpty) {
-      bodyLines.add(ref);
+    // Psalms are split along the cantor (Előénekes/E) and faithful (Hívek/H)
+    // lines and are not labelled with the generic "zsoltár" title.
+    if (shortTitle == 'zsoltár') {
+      return _psalmEntries(part, wordsPerSlide: wordsPerSlide);
+    }
+    // The alleluia acclamation is wrapped with "Alleluja" at the start and end.
+    if (shortTitle == 'alleluja') {
+      return _allelujaEntries(part, wordsPerSlide: wordsPerSlide);
     }
 
+    return _genericEntries(part, wordsPerSlide: wordsPerSlide);
+  }
+
+  /// Tags every entry of an array variant with [suffix] so the UI groups that
+  /// alternative as its own selectable item instead of merging it with the
+  /// other alternatives into one continuous verse sequence.
+  ///
+  /// The suffix is inserted before any "/N" verse number in the title (and the
+  /// matching label), so a variant that is split across several slides keeps
+  /// its own verses grouped together while still being distinct from the other
+  /// alternatives.
+  List<CustomOrderEntry> _tagVariantEntries(
+    List<CustomOrderEntry> entries,
+    String suffix,
+  ) {
+    if (suffix.isEmpty) {
+      return entries;
+    }
+    final String tag = ' ($suffix)';
+    return entries.map((CustomOrderEntry e) {
+      final String title = e.customTextTitle ?? '';
+      final int slashIdx = title.lastIndexOf('/');
+      final String newTitle = slashIdx >= 0
+          ? '${title.substring(0, slashIdx)}$tag${title.substring(slashIdx)}'
+          : '$title$tag';
+      final String newLabel =
+          e.label.startsWith('[Batyu] ') ? '[Batyu] $newTitle' : newTitle;
+      return e.copyWith(customTextTitle: newTitle, label: newLabel);
+    }).toList();
+  }
+
+  /// Builds the body lines (HTML stripped) for a part, optionally prefixed with
+  /// the [ref] line. Used by the specialized psalm/alleluia builders.
+  List<String> _bodyLinesForPart(Map<String, dynamic> part, {String ref = ''}) {
+    final List<String> lines = <String>[];
+    if (ref.isNotEmpty) {
+      lines.add(ref);
+    }
     final String? text = part['text'] as String?;
     if (text != null && text.trim().isNotEmpty) {
-      bodyLines.addAll(_stripHtmlToLines(text));
+      lines.addAll(_stripHtmlToLines(text));
     } else {
       final List<dynamic>? verses = part['verses'] as List<dynamic>?;
       if (verses != null && verses.isNotEmpty) {
         for (final dynamic verse in verses) {
           final String line = verse is String ? verse : '$verse';
-          final List<String> cleaned = _stripHtmlToLines(line);
-          for (final String trimmed in cleaned) {
-            if (trimmed.trim().isNotEmpty) {
-              bodyLines.add(trimmed);
-            }
-          }
+          lines.addAll(_stripHtmlToLines(line));
         }
         final String answer = _stringOrEmpty(part['answer']);
         if (answer.isNotEmpty) {
-          bodyLines.add('');
-          bodyLines.add(_stripHtmlToLines(answer).join(' '));
+          lines.add(_stripHtmlToWords(answer).join(' '));
         }
       }
     }
+    return lines;
+  }
 
-    if (ending.isNotEmpty) {
-      bodyLines.add('');
-      bodyLines.add(_stripHtmlToLines(ending).join(' '));
+  List<CustomOrderEntry> _genericEntries(
+    Map<String, dynamic> part, {
+    required int wordsPerSlide,
+  }) {
+    final String title = _stringOrEmpty(part['title']);
+    final String shortTitle = _stringOrEmpty(part['short_title']);
+    final String ref = _stringOrEmpty(part['ref']);
+
+    final String slideTitle = title.isNotEmpty ? title : shortTitle;
+
+    // Collect the raw body lines (HTML stripped) for this part. The title and
+    // the reference (where to read from) are kept at the beginning; the
+    // closing formula (ending) is intentionally dropped as it is not needed.
+    // Line breaks from the source are preserved as visual line breaks inside
+    // a slide, but they never force a new slide.
+    final List<String> bodyLines = <String>[];
+    if (slideTitle.isNotEmpty) {
+      bodyLines.add(slideTitle);
     }
+    if (ref.isNotEmpty) {
+      bodyLines.add(ref);
+    }
+    bodyLines.addAll(_bodyLinesForPart(part));
 
     if (bodyLines.isEmpty) {
       return const <CustomOrderEntry>[];
@@ -242,25 +319,29 @@ class NapiLelkiBatyuService {
 
     final String effectiveTitle = slideTitle.isNotEmpty ? slideTitle : 'Olvasmány';
 
-    // Split the body into multiple slides by word count so each slide stays
-    // readable (the projection would otherwise shrink a very long text).
-    final List<List<String>> chunks = _chunkLinesByWords(
+    // Split the body into multiple verses. We prefer to break at sentence,
+    // clause or quotation boundaries, but never exceed [wordsPerSlide] words.
+    // Each verse becomes a separate custom-text entry (songIndex = -1) so it
+    // can be paged through like a song's verses. The title uses a "Title/N"
+    // format so the order list groups them as one item with multiple verses
+    // (not as separate songs). Original line breaks are kept inside a verse.
+    final List<List<String>> chunks = _chunkLinesByBoundary(
       bodyLines,
       wordsPerSlide,
     );
     final List<CustomOrderEntry> entries = <CustomOrderEntry>[];
     for (int i = 0; i < chunks.length; i++) {
-      final String chunkTitle = chunks.length > 1
-          ? '$effectiveTitle (${i + 1}/${chunks.length})'
+      final String verseTitle = chunks.length > 1
+          ? '$effectiveTitle/${i + 1}'
           : effectiveTitle;
       entries.add(
         CustomOrderEntry(
           fileName: '__custom_text__',
           songIndex: -1,
-          verseIndex: 0,
-          label: '[Batyu] $chunkTitle',
-          customTextTitle: chunkTitle,
-          customTextBody: chunks[i].join('\n'),
+          verseIndex: i,
+          label: '[Batyu] $verseTitle',
+          customTextTitle: verseTitle,
+          customTextBody: _tokensToText(chunks[i]),
           customType: 'text',
         ),
       );
@@ -268,10 +349,175 @@ class NapiLelkiBatyuService {
     return entries;
   }
 
+  /// Builds the slides for a responsorial psalm.
+  ///
+  /// The psalm is split into cantor/faithful stanzas at every "Előénekes:"/"E:"
+  /// line (the cantor's verse), keeping the leading antiphon with the first
+  /// stanza. Consecutive stanzas are packed onto the same slide while the
+  /// combined word count stays within [wordsPerSlide] (so two short stanzas may
+  /// share a slide), but a single stanza is never split. The generic "zsoltár"
+  /// label is intentionally omitted from the title.
+  List<CustomOrderEntry> _psalmEntries(
+    Map<String, dynamic> part, {
+    required int wordsPerSlide,
+  }) {
+    final String ref = _stringOrEmpty(part['ref']);
+    final List<String> lines = _bodyLinesForPart(part, ref: ref);
+
+    if (lines.isEmpty) {
+      return const <CustomOrderEntry>[];
+    }
+
+    final List<List<String>> stanzas = _splitPsalmStanzas(lines);
+    final List<List<String>> slides = _packStanzas(stanzas, wordsPerSlide);
+
+    final List<CustomOrderEntry> entries = <CustomOrderEntry>[];
+    for (int i = 0; i < slides.length; i++) {
+      entries.add(
+        CustomOrderEntry(
+          fileName: '__custom_text__',
+          songIndex: -1,
+          verseIndex: i,
+          label: '[Batyu] Zsoltár/${i + 1}',
+          // The "Zsoltár" type name is shown as the slide title, but it is kept
+          // out of the body text (the antiphon itself starts the slide).
+          customTextTitle: slides.length > 1 ? 'Zsoltár/${i + 1}' : 'Zsoltár',
+          customTextBody: slides[i].join('\n'),
+          customType: 'text',
+        ),
+      );
+    }
+    return entries;
+  }
+
+  /// Builds the slides for the alleluia acclamation.
+  ///
+  /// The text is chunked by word count (with semantic boundaries) like any
+  /// other reading, but every slide is wrapped with "Alleluja" at the start and
+  /// at the end, as required for the acclamation.
+  List<CustomOrderEntry> _allelujaEntries(
+    Map<String, dynamic> part, {
+    required int wordsPerSlide,
+  }) {
+    final String teaser = _stringOrEmpty(part['teaser']);
+    final String ref = _stringOrEmpty(part['ref']);
+    final List<String> lines = _bodyLinesForPart(part, ref: ref);
+
+    if (lines.isEmpty) {
+      // Even an empty alleluia shows the acclamation.
+      return <CustomOrderEntry>[
+        CustomOrderEntry(
+          fileName: '__custom_text__',
+          songIndex: -1,
+          verseIndex: 0,
+          label: '[Batyu] Alleluja',
+          customTextTitle: 'Alleluja',
+          customTextBody: 'Alleluja\n\nAlleluja',
+          customType: 'text',
+        ),
+      ];
+    }
+
+    final List<List<String>> chunks = _chunkLinesByBoundary(lines, wordsPerSlide);
+    final List<CustomOrderEntry> entries = <CustomOrderEntry>[];
+    for (int i = 0; i < chunks.length; i++) {
+      final String body = _tokensToText(chunks[i]);
+      final List<String> wrapped = <String>['Alleluja', body, 'Alleluja'];
+      entries.add(
+        CustomOrderEntry(
+          fileName: '__custom_text__',
+          songIndex: -1,
+          verseIndex: i,
+          label: '[Batyu] Alleluja/${i + 1}',
+          // The "Alleluja" type name is shown as the slide title; the body is
+          // wrapped with "Alleluja" at the start and end.
+          customTextTitle: chunks.length > 1 ? 'Alleluja/${i + 1}' : 'Alleluja',
+          customTextBody: wrapped.join('\n'),
+          customType: 'text',
+        ),
+      );
+    }
+    return entries;
+  }
+
+  /// Splits psalm [lines] into stanzas. A new stanza begins at every line that
+  /// starts with "Előénekes:" or "E:" (the cantor's verse), but only when the
+  /// current stanza already contains a verse — so the leading antiphon lines
+  /// before the first verse stay attached to the first stanza instead of
+  /// becoming their own slide.
+  List<List<String>> _splitPsalmStanzas(List<String> lines) {
+    bool stanzaHasVerse(List<String> stanza) => stanza.any(
+          (String l) {
+            final String t = l.trim();
+            return t.startsWith('Előénekes:') || t.startsWith('E:');
+          },
+        );
+
+    final List<List<String>> stanzas = <List<String>>[];
+    List<String> current = <String>[];
+    for (final String line in lines) {
+      final String trimmed = line.trim();
+      final bool isVerseStart =
+          trimmed.startsWith('Előénekes:') || trimmed.startsWith('E:');
+      if (isVerseStart && stanzaHasVerse(current)) {
+        stanzas.add(current);
+        current = <String>[];
+      }
+      current.add(line);
+    }
+    if (current.isNotEmpty) {
+      stanzas.add(current);
+    }
+    return stanzas;
+  }
+
+  /// Packs psalm [stanzas] into slides, combining consecutive stanzas while the
+  /// combined word count stays within [maxWords]. A single stanza is never
+  /// split, so each slide is a whole cantor/faithful unit (or two when they fit
+  /// together). A blank line separates packed stanzas for readability.
+  List<List<String>> _packStanzas(List<List<String>> stanzas, int maxWords) {
+    final int limit = maxWords < 1 ? 1 : maxWords;
+    final List<List<String>> slides = <List<String>>[];
+    List<String> current = <String>[];
+    int currentWords = 0;
+    for (final List<String> stanza in stanzas) {
+      final int stanzaWords = _countWordsInLines(stanza);
+      if (current.isEmpty) {
+        current = List<String>.from(stanza);
+        currentWords = stanzaWords;
+      } else if (currentWords + stanzaWords <= limit) {
+        current.add('');
+        current.addAll(stanza);
+        currentWords += stanzaWords;
+      } else {
+        slides.add(current);
+        current = List<String>.from(stanza);
+        currentWords = stanzaWords;
+      }
+    }
+    if (current.isNotEmpty) {
+      slides.add(current);
+    }
+    return slides;
+  }
+
+  int _countWordsInLines(List<String> lines) {
+    int count = 0;
+    for (final String line in lines) {
+      count += line
+          .split(RegExp(r'\s+'))
+          .where((String w) => w.trim().isNotEmpty)
+          .length;
+    }
+    return count;
+  }
+
   /// Converts an HTML-ish string into clean text lines.
   ///
-  /// `<br>` and `</p>`-like tags become line breaks, inline tags such as `<b>`
-  /// are removed, and HTML entities are decoded.
+  /// `<br>` and block-level closing tags become line breaks, inline tags such
+  /// as `<b>` are removed, and HTML entities are decoded. The resulting lines
+  /// preserve the original line structure (useful for keeping line breaks on
+  /// the slide) but each line is a single string of space-joined words.
   List<String> _stripHtmlToLines(String html) {
     String working = html;
     // Line breaks first so block elements separate into lines.
@@ -307,37 +553,200 @@ class NapiLelkiBatyuService {
         .toList();
   }
 
-  /// Splits [lines] into chunks so that each chunk contains at most
-  /// [wordsPerSlide] words. Lines are kept intact (a line is never split in
-  /// the middle), so a chunk may slightly exceed the limit when a single line
-  /// is longer than [wordsPerSlide].
-  List<List<String>> _chunkLinesByWords(List<String> lines, int wordsPerSlide) {
-    final int limit = wordsPerSlide < 1 ? 1 : wordsPerSlide;
-    final List<List<String>> chunks = <List<String>>[];
-    List<String> current = <String>[];
-    int wordCount = 0;
+  /// Converts an HTML-ish string into a flat list of clean words.
+  ///
+  /// All tags are removed, HTML entities are decoded, and the text is split
+  /// into individual words (whitespace-separated). Line structure is
+  /// intentionally discarded so the caller can re-flow the text freely.
+  List<String> _stripHtmlToWords(String html) {
+    return _stripHtmlToLines(html)
+        .expand((String line) => line.split(RegExp(r'\s+')))
+        .where((String w) => w.trim().isNotEmpty)
+        .toList();
+  }
 
-    void flush() {
-      if (current.isNotEmpty) {
-        chunks.add(current);
-        current = <String>[];
-        wordCount = 0;
-      }
+  /// Splits [lines] into chunks of at most [maxWords] words.
+  ///
+  /// The split prefers natural boundaries in this order:
+  ///  1. sentence end (`.`, `!`, `?` possibly followed by `"`/`»`/`”`)
+  ///  2. clause boundary (`,`, `;`, `:`, `–`, `—`)
+  ///  3. quotation edge (`„`, `”`, `»`, `«`, `"`)
+  ///  4. hard word limit as a last resort
+  ///
+  /// Once the word count reaches [maxWords], the chunk breaks at the *first*
+  /// available boundary (so a slide ends at a sentence or clause rather than
+  /// mid-thought). Original line breaks are preserved inside each chunk.
+  List<List<String>> _chunkLinesByBoundary(List<String> lines, int maxWords) {
+    final int limit = maxWords < 1 ? 1 : maxWords;
+    if (lines.isEmpty) {
+      return const <List<String>>[];
     }
 
-    for (final String line in lines) {
-      final int lineWords = line
+    bool isSentenceEnd(String w) =>
+        w.endsWith('.') ||
+        w.endsWith('!') ||
+        w.endsWith('?') ||
+        w.endsWith('."') ||
+        w.endsWith('!"') ||
+        w.endsWith('?"') ||
+        w.endsWith('.”') ||
+        w.endsWith('!”') ||
+        w.endsWith('?”') ||
+        w.endsWith('.»') ||
+        w.endsWith('!”') ||
+        w.endsWith('?»');
+
+    bool isClauseBoundary(String w) =>
+        w.endsWith(',') ||
+        w.endsWith(';') ||
+        w.endsWith(':') ||
+        w.endsWith('–') ||
+        w.endsWith('—') ||
+        w.endsWith('”,') ||
+        w.endsWith('”.') ||
+        w.endsWith('»,') ||
+        w.endsWith('».');
+
+    bool isQuoteEdge(String w) =>
+        w.startsWith('„') ||
+        w.startsWith('»') ||
+        w.startsWith('“') ||
+        w.startsWith('"') ||
+        w.endsWith('”') ||
+        w.endsWith('«') ||
+        w.endsWith('”') ||
+        w.endsWith('"');
+
+    // Flatten lines into a word stream, remembering line breaks.
+    // Each entry is either a word or the sentinel '\n' for a line break.
+    final List<String> tokens = <String>[];
+    for (int li = 0; li < lines.length; li++) {
+      if (li > 0) {
+        tokens.add('\n');
+      }
+      final List<String> words = lines[li]
           .split(RegExp(r'\s+'))
           .where((String w) => w.trim().isNotEmpty)
-          .length;
-      if (current.isNotEmpty && wordCount + lineWords > limit) {
-        flush();
-      }
-      current.add(line);
-      wordCount += lineWords;
+          .toList();
+      tokens.addAll(words);
     }
-    flush();
+
+    bool isBoundary(String w) =>
+        isSentenceEnd(w) || isClauseBoundary(w) || isQuoteEdge(w);
+
+    // Index in [toks] right after the [n]-th word (line-break sentinels are
+    // skipped). Returns [toks.length] when there are fewer than [n] words.
+    int indexAfterNthWord(List<String> toks, int n) {
+      int c = 0;
+      for (int k = 0; k < toks.length; k++) {
+        if (toks[k] != '\n') {
+          c++;
+          if (c == n) {
+            return k + 1;
+          }
+        }
+      }
+      return toks.length;
+    }
+
+    // Recomputes the word count and the index of the last boundary within the
+    // first [limit] words of [toks].
+    (int, int) scanOverflow(List<String> toks) {
+      int c = 0;
+      int lb = -1;
+      for (int k = 0; k < toks.length; k++) {
+        final String t = toks[k];
+        if (t == '\n') {
+          continue;
+        }
+        c++;
+        if (c <= limit && isBoundary(t)) {
+          lb = k;
+        }
+      }
+      return (c, lb);
+    }
+
+    final List<List<String>> chunks = <List<String>>[];
+    List<String> current = <String>[];
+    int count = 0;
+    int lastBoundaryIndex = -1;
+
+    for (int i = 0; i < tokens.length; i++) {
+      final String tok = tokens[i];
+      if (tok == '\n') {
+        // Preserve line break inside the current chunk.
+        current.add('\n');
+        continue;
+      }
+
+      current.add(tok);
+      count++;
+      // Remember the most recent semantic boundary that lies at or before the
+      // word limit, so we can fall back to it when the limit is exceeded.
+      if (count <= limit && isBoundary(tok)) {
+        lastBoundaryIndex = current.length - 1;
+      }
+
+      final bool atEnd = i == tokens.length - 1;
+
+      // Close the chunk as soon as we pass the limit. We break at the last
+      // semantic boundary at or before the limit so a slide ends on a
+      // sentence/clause/quote and never contains more than [limit] words. If a
+      // run has no boundary at all we hard-cut at exactly [limit] words. The
+      // overflow (words after the cut) starts the next chunk.
+      if (atEnd || count > limit) {
+        if (count > limit && lastBoundaryIndex >= 0) {
+          final List<String> overflow = current.sublist(lastBoundaryIndex + 1);
+          current = current.sublist(0, lastBoundaryIndex + 1);
+          chunks.add(current);
+          current = overflow;
+        } else if (count > limit) {
+          final int cut = indexAfterNthWord(current, limit);
+          final List<String> overflow = current.sublist(cut);
+          current = current.sublist(0, cut);
+          chunks.add(current);
+          current = overflow;
+        } else {
+          // Reached the end within the limit: final chunk.
+          chunks.add(current);
+          current = <String>[];
+        }
+        final (int nc, int nlb) = scanOverflow(current);
+        count = nc;
+        lastBoundaryIndex = nlb;
+      }
+    }
+
+    if (current.isNotEmpty) {
+      chunks.add(current);
+    }
     return chunks;
+  }
+
+  /// Joins a token list (words and '\n' line-break sentinels) into a single
+  /// string where words on the same source line are space-joined and '\n'
+  /// tokens become real line breaks. This keeps the original line structure
+  /// without putting every word on its own line.
+  String _tokensToText(List<String> tokens) {
+    final StringBuffer buffer = StringBuffer();
+    for (int i = 0; i < tokens.length; i++) {
+      final String tok = tokens[i];
+      if (tok == '\n') {
+        // Avoid leading/trailing/double newlines.
+        final String text = buffer.toString();
+        if (text.endsWith('\n') || text.isEmpty) {
+          continue;
+        }
+        buffer.write('\n');
+      } else {
+        if (buffer.isNotEmpty && !buffer.toString().endsWith('\n')) {
+          buffer.write(' ');
+        }
+        buffer.write(tok);
+      }
+    }
+    return buffer.toString().trim();
   }
 
   String _stringOrEmpty(dynamic value) {

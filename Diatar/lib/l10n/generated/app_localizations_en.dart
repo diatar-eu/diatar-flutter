@@ -49,10 +49,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Selection currently loads and picks an item only. Slide splitting comes in the next step.';
 
   @override
-  String get batyuTooltip => 'Daily spiritual bag';
+  String get batyuTooltip => 'Daily readings (in Hungarian)';
 
   @override
-  String get batyuTitle => 'Import Daily spiritual bag';
+  String get batyuTitle => 'Import Daily readings (in Hungarian)';
 
   @override
   String get batyuDateLabel => 'Date';
@@ -61,12 +61,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get batyuWordsPerSlide => 'Words per slide';
 
   @override
-  String get batyuNoItems =>
-      'No readings are available for this date in the Daily spiritual bag.';
+  String get batyuNoItems => 'No readings are available for this date.';
 
   @override
   String batyuBookLabel(Object name) {
-    return 'Daily spiritual bag ($name)';
+    return 'Daily reading ($name)';
   }
 
   @override
