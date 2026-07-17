@@ -13,6 +13,7 @@ import 'package:path/path.dart' as path;
 import '../controllers/diatar_main_controller.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
+import '../models/custom_order_set.dart';
 import '../utils/custom_entry_labels.dart';
 import '../utils/escape_sequences.dart';
 import '../utils/friendly_path.dart';
@@ -334,6 +335,70 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 ),
               ),
               const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        isDense: true,
+                        initialValue: controller.activeCustomOrderSetId,
+                        decoration: InputDecoration(
+                          labelText: l10n.customOrderSetSelectorLabel,
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        items: controller.customOrderSets
+                            .map(
+                              (CustomOrderSet set) => DropdownMenuItem<String>(
+                                value: set.id,
+                                child: Text(
+                                  set.displayName,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  style: set.enabled
+                                      ? null
+                                      : const TextStyle(
+                                          decoration: TextDecoration.lineThrough,
+                                        ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (String? value) {
+                          if (value == null) {
+                            return;
+                          }
+                          unawaited(_switchEditingSet(value));
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      tooltip: l10n.customOrderSetToggleEnabledTooltip,
+                      icon: Icon(
+                        _currentSetEnabled
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: controller.customOrderSets.length > 1
+                          ? _toggleCurrentSetEnabled
+                          : null,
+                    ),
+                    IconButton(
+                      tooltip: l10n.customOrderSetRemove,
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      onPressed: controller.customOrderSets.length > 1
+                          ? _confirmRemoveCurrentSet
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 child: Row(
@@ -1053,6 +1118,95 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
   }
 
+  /// Az éppen aktív (szerkesztett) énekrend engedélyezve van-e.
+  bool get _currentSetEnabled {
+    final int index = controller.activeCustomOrderSetIndex;
+    if (index < 0 || index >= controller.customOrderSets.length) {
+      return true;
+    }
+    return controller.customOrderSets[index].enabled;
+  }
+
+  /// Elmenti az éppen szerkesztett énekrendet, majd átvált a megadott
+  /// azonosítójú énekrendre, hogy azt lehessen szerkeszteni. Ha a cél
+  /// énekrend le van tiltva, előbb engedélyezi, hogy szerkeszthető legyen.
+  Future<void> _switchEditingSet(String id) async {
+    await _commitEntries();
+    if (!mounted) {
+      return;
+    }
+    final int index = controller.customOrderSets.indexWhere(
+      (CustomOrderSet s) => s.id == id,
+    );
+    if (index >= 0 && !controller.customOrderSets[index].enabled) {
+      await controller.toggleCustomOrderSetEnabled(index);
+      if (!mounted) {
+        return;
+      }
+    }
+    await controller.setActiveCustomOrderSetById(id);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _entries = List<CustomOrderEntry>.from(controller.customOrder);
+    });
+  }
+
+  /// Be-/kikapcsolja az éppen aktív énekrendet. A kikapcsolt énekrend nem
+  /// jelenik meg a nézetekben, de megmarad (újra kiválasztható a listából).
+  Future<void> _toggleCurrentSetEnabled() async {
+    final int index = controller.activeCustomOrderSetIndex;
+    if (index < 0) {
+      return;
+    }
+    await controller.toggleCustomOrderSetEnabled(index);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _entries = List<CustomOrderEntry>.from(controller.customOrder);
+    });
+  }
+
+  /// Megerősítés után eltávolítja az éppen aktív énekrendet a betöltöttek közül.
+  Future<void> _confirmRemoveCurrentSet() async {
+    final int index = controller.activeCustomOrderSetIndex;
+    if (index < 0) {
+      return;
+    }
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        final AppLocalizations l10n = dialogContext.l10n;
+        return AlertDialog(
+          title: Text(l10n.customOrderSetRemove),
+          content: Text(l10n.customOrderSetRemoveConfirm),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.customOrderSetRemove),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    await controller.removeCustomOrderSet(index);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _entries = List<CustomOrderEntry>.from(controller.customOrder);
+    });
+  }
+
   Future<void> _exportDia() async {
     final l10n = context.l10n;
     final XTypeGroup diaType = XTypeGroup(
@@ -1279,6 +1433,31 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     return result;
   }
 
+  Future<CustomOrderImportMode?> _askImportMode() async {
+    final AppLocalizations l10n = context.l10n;
+    return showDialog<CustomOrderImportMode>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.customOrderLoadModeTitle),
+          content: Text(l10n.customOrderLoadModeMessage),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext)
+                  .pop(CustomOrderImportMode.overwriteActive),
+              child: Text(l10n.customOrderLoadModeOverwrite),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext)
+                  .pop(CustomOrderImportMode.addNew),
+              child: Text(l10n.customOrderLoadModeAdd),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _importDia() async {
     final XTypeGroup diaType = XTypeGroup(
       label: context.l10n.diatarPlaylistFileTypeLabel,
@@ -1290,9 +1469,14 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     if (file == null) {
       return;
     }
+    final CustomOrderImportMode? mode = await _askImportMode();
+    if (mode == null) {
+      return;
+    }
     final int count = await controller.importCustomOrderFromDia(
       file.path,
       activate: true,
+      mode: mode,
       sourceFileName: file.name,
     );
     if (!mounted) {

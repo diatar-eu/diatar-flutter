@@ -906,6 +906,56 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderClearVerseSelection => 'Egyik sem';
 
   @override
+  String get customOrderSetsSection => 'Énekrendek';
+
+  @override
+  String get customOrderSetSelectorLabel => 'Aktív énekrend';
+
+  @override
+  String get customOrderSetActive => 'Aktív';
+
+  @override
+  String get customOrderSetEmpty => 'Üres énekrend';
+
+  @override
+  String customOrderSetEntryCount(int count) {
+    return '$count tétel';
+  }
+
+  @override
+  String get customOrderSetRename => 'Átnevezés';
+
+  @override
+  String get customOrderSetRemove => 'Eltávolítás';
+
+  @override
+  String get customOrderSetRenameTitle => 'Énekrend átnevezése';
+
+  @override
+  String get customOrderSetRemoveConfirm =>
+      'Biztosan eltávolítod ezt az énekrendet?';
+
+  @override
+  String get customOrderSetToggleEnabledTooltip =>
+      'Énekrend be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)';
+
+  @override
+  String get customOrderLoadModeTitle => 'Énekrend betöltése';
+
+  @override
+  String get customOrderLoadModeOverwrite => 'Felülírja az aktuálist';
+
+  @override
+  String get customOrderLoadModeAdd => 'Mellé tölti (párhuzamos)';
+
+  @override
+  String get customOrderLoadModeMessage =>
+      'Hogyan töltsük be a kiválasztott énekrendet?';
+
+  @override
+  String get volumeListTitle => 'Kötetlista';
+
+  @override
   String get apply => 'Alkalmaz';
 
   @override

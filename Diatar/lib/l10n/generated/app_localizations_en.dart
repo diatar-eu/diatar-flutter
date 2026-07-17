@@ -903,6 +903,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderClearVerseSelection => 'Clear';
 
   @override
+  String get customOrderSetsSection => 'Custom orders';
+
+  @override
+  String get customOrderSetSelectorLabel => 'Active custom order';
+
+  @override
+  String get customOrderSetActive => 'Active';
+
+  @override
+  String get customOrderSetEmpty => 'Empty custom order';
+
+  @override
+  String customOrderSetEntryCount(int count) {
+    return '$count items';
+  }
+
+  @override
+  String get customOrderSetRename => 'Rename';
+
+  @override
+  String get customOrderSetRemove => 'Remove';
+
+  @override
+  String get customOrderSetRenameTitle => 'Rename custom order';
+
+  @override
+  String get customOrderSetRemoveConfirm => 'Remove this custom order?';
+
+  @override
+  String get customOrderSetToggleEnabledTooltip =>
+      'Enable or disable the custom order (a disabled one is hidden from the views)';
+
+  @override
+  String get customOrderLoadModeTitle => 'Load custom order';
+
+  @override
+  String get customOrderLoadModeOverwrite => 'Overwrite the current one';
+
+  @override
+  String get customOrderLoadModeAdd => 'Load alongside (parallel)';
+
+  @override
+  String get customOrderLoadModeMessage =>
+      'How should the selected custom order be loaded?';
+
+  @override
+  String get volumeListTitle => 'Volume list';
+
+  @override
   String get apply => 'Apply';
 
   @override

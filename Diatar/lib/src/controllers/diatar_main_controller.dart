@@ -27,6 +27,7 @@ import '../core/navigation/song_selection_policy.dart';
 import '../core/settings/projection_globals_policy.dart';
 import '../core/settings/transport_settings_policy.dart';
 import '../models/custom_order_entry.dart';
+import '../models/custom_order_set.dart';
 import '../services/mqtt_sender_service.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/dtx_download_service.dart';
@@ -104,6 +105,14 @@ class DtxManageItem {
 
   final DtxDownloadItem item;
   final bool excluded;
+}
+
+/// Egy énekrend betöltésekor választható viselkedés:
+/// felülírja az aktuálisan aktív énekrendet, vagy új, párhuzamos énekrendként
+/// töltődik be a már betöltöttek mellé.
+enum CustomOrderImportMode {
+  overwriteActive,
+  addNew,
 }
 
 class DiatarMainController extends ChangeNotifier {
@@ -209,6 +218,296 @@ class DiatarMainController extends ChangeNotifier {
   String? _customOrderSourceType;
   String? _zsolozsmaVirtualBookLabel;
   String? _napiLelkiBatyuVirtualBookLabel;
+
+  /// A párhuzamosan betöltött énekrendek (saját diasorok) listája.
+  List<CustomOrderSet> _customOrderSets = <CustomOrderSet>[];
+
+  /// Az éppen aktív (navigált/vetített) énekrend indexe a [_customOrderSets]
+  /// listában, vagy -1 ha nincs betöltve egy sem.
+  int _activeOrderSetIndex = -1;
+
+  /// Egyedi azonosító-generálás új énekrendekhez.
+  int _customOrderSetIdCounter = 0;
+
+  CustomOrderSet? get _activeOrderSet {
+    if (_activeOrderSetIndex < 0 ||
+        _activeOrderSetIndex >= _customOrderSets.length) {
+      return null;
+    }
+    return _customOrderSets[_activeOrderSetIndex];
+  }
+
+  /// Az aktív énekrend egyedi azonosítója, vagy null ha nincs betöltve.
+  String? get activeCustomOrderSetId => _activeOrderSet?.id;
+
+  String _nextCustomOrderSetId() {
+    _customOrderSetIdCounter++;
+    return 'set_${DateTime.now().microsecondsSinceEpoch}_$_customOrderSetIdCounter';
+  }
+
+  /// Betölti a párhuzamosan tárolt énekrendeket a perzisztenciából.
+  /// Visszamenőleges kompatibilitás: ha még nincs elmentett énekrend-készlet,
+  /// de létezik a régi egyetlen saját sorrend, azt átvezeti egyetlen
+  /// énekrendként.
+  Future<void> _loadCustomOrderSets() async {
+    final ({List<StoredCustomOrderSet> sets, int activeIndex}) storedSets =
+        await _orderStore.loadCustomOrderSets();
+    if (storedSets.sets.isNotEmpty) {
+      _customOrderSets = storedSets.sets
+          .map(
+            (StoredCustomOrderSet s) => CustomOrderSet(
+              id: s.id,
+              name: s.name,
+              entries: s.entries
+                  .map(_customOrderEntryMapper.fromStored)
+                  .toList(),
+              enabled: s.enabled,
+              baseName: s.baseName,
+              sourceType: s.sourceType,
+              zsolozsmaLabel: s.zsolozsmaLabel,
+              batyuLabel: s.batyuLabel,
+            ),
+          )
+          .toList();
+      _activeOrderSetIndex = storedSets.activeIndex;
+      final CustomOrderSet? active = _activeOrderSet;
+      if (active != null) {
+        _customOrder = List<CustomOrderEntry>.from(active.entries);
+        _lastImportedCustomOrderBaseName = active.baseName;
+        _customOrderSourceType = active.sourceType;
+        _zsolozsmaVirtualBookLabel = active.zsolozsmaLabel;
+        _napiLelkiBatyuVirtualBookLabel = active.batyuLabel;
+        customOrderActive = active.entries.isNotEmpty;
+        _diaVirtualBookSelected = active.entries.isNotEmpty;
+      } else {
+        _customOrder = const <CustomOrderEntry>[];
+        customOrderActive = false;
+        _diaVirtualBookSelected = false;
+      }
+    } else {
+      // Visszamenőleges kompatibilitás: régi egyéni sorrend átvezetése.
+      final CustomOrderBootstrapState customOrderState =
+          _customOrderBootstrapPolicy.fromStored(
+            await _orderStore.loadCurrentCustomOrder(),
+          );
+      _customOrder = customOrderState.entries;
+      customOrderActive = customOrderState.active;
+      _lastImportedCustomOrderBaseName = customOrderState.baseName;
+      _customOrderSourceType = customOrderState.sourceType;
+      _zsolozsmaVirtualBookLabel = customOrderState.zsolozsmaLabel;
+      _napiLelkiBatyuVirtualBookLabel = customOrderState.batyuLabel;
+      _diaVirtualBookSelected = customOrderState.diaVirtualBookSelected;
+      if (_customOrder.isNotEmpty) {
+        _customOrderSets = <CustomOrderSet>[
+          CustomOrderSet(
+            id: _nextCustomOrderSetId(),
+            name: customOrderState.baseName ?? 'Énekrend',
+            entries: List<CustomOrderEntry>.from(_customOrder),
+            enabled: true,
+            baseName: customOrderState.baseName,
+            sourceType: customOrderState.sourceType,
+            zsolozsmaLabel: customOrderState.zsolozsmaLabel,
+            batyuLabel: customOrderState.batyuLabel,
+          ),
+        ];
+        _activeOrderSetIndex = 0;
+      }
+    }
+    _customOrderCursor = _customOrder.isEmpty ? -1 : 0;
+  }
+
+  /// A jelenleg aktív énekrend munkapéldányának (_customOrder) és a hozzá
+  /// tartozó metaadatoknak a visszaírása az énekrend-készletbe.
+  void _persistActiveSetToSets() {
+    if (_activeOrderSetIndex < 0 ||
+        _activeOrderSetIndex >= _customOrderSets.length) {
+      return;
+    }
+    _customOrderSets[_activeOrderSetIndex] = _customOrderSets[_activeOrderSetIndex]
+        .copyWith(
+          entries: List<CustomOrderEntry>.from(_customOrder),
+          baseName: _lastImportedCustomOrderBaseName,
+          sourceType: _customOrderSourceType,
+          zsolozsmaLabel: _zsolozsmaVirtualBookLabel,
+          batyuLabel: _napiLelkiBatyuVirtualBookLabel,
+        );
+  }
+
+  /// Az összes énekrend perzisztens mentése (azonnali írás a tárolóba).
+  Future<void> _persistAllSets() async {
+    final List<StoredCustomOrderSet> stored = _customOrderSets
+        .map(
+          (CustomOrderSet s) => StoredCustomOrderSet(
+            id: s.id,
+            name: s.name,
+            entries: s.entries
+                .map(
+                  (CustomOrderEntry e) => _customOrderEntryMapper.toStored(
+                    e,
+                    verseIndex: _safeVerseIndex(e),
+                  ),
+                )
+                .toList(),
+            enabled: s.enabled,
+            baseName: s.baseName,
+            sourceType: s.sourceType,
+            zsolozsmaLabel: s.zsolozsmaLabel,
+            batyuLabel: s.batyuLabel,
+          ),
+        )
+        .toList();
+    await _orderStore.saveCustomOrderSets(
+      stored,
+      activeIndex: _activeOrderSetIndex,
+    );
+  }
+
+  /// Átvált a megadott indexű énekrendre: először menti az aktuális munkapéldányt,
+  /// majd betölti az új énekrend bejegyzéseit és metaadatait a munkapéldányba.
+  Future<void> _switchActiveSet(int index) async {
+    if (index < 0 || index >= _customOrderSets.length) {
+      return;
+    }
+    if (index == _activeOrderSetIndex) {
+      return;
+    }
+    _persistActiveSetToSets();
+    _activeOrderSetIndex = index;
+    final CustomOrderSet set = _customOrderSets[index];
+    _customOrder = List<CustomOrderEntry>.from(set.entries);
+    _lastImportedCustomOrderBaseName = set.baseName;
+    _customOrderSourceType = set.sourceType;
+    _zsolozsmaVirtualBookLabel = set.zsolozsmaLabel;
+    _napiLelkiBatyuVirtualBookLabel = set.batyuLabel;
+    customOrderActive = set.entries.isNotEmpty;
+    _diaVirtualBookSelected = set.entries.isNotEmpty;
+    _customOrderCursor = set.entries.isEmpty ? -1 : 0;
+    _projectedCustomCursor = -1;
+    await _persistAllSets();
+    if (customOrderActive) {
+      _selectByCustomOrderCursor(_customOrderCursor, sync: false);
+      await _syncCurrentDia();
+    } else {
+      notifyListeners();
+    }
+  }
+
+  /// A betöltött énekrendek (saját diasorok) listája, csak olvashatóan.
+  List<CustomOrderSet> get customOrderSets =>
+      List<CustomOrderSet>.unmodifiable(_customOrderSets);
+
+  /// Az éppen aktív énekrend indexe a [customOrderSets] listában (-1 ha nincs).
+  int get activeCustomOrderSetIndex => _activeOrderSetIndex;
+
+  /// Kiválasztja az aktív énekrendet a megadott index alapján.
+  Future<void> setActiveCustomOrderSet(int index) async {
+    await _switchActiveSet(index);
+  }
+
+  /// Kiválasztja az aktív énekrendet a megadott egyedi azonosító alapján.
+  Future<void> setActiveCustomOrderSetById(String id) async {
+    final int index = _customOrderSets.indexWhere(
+      (CustomOrderSet s) => s.id == id,
+    );
+    if (index < 0) {
+      return;
+    }
+    await _switchActiveSet(index);
+  }
+
+  /// Be-/kikapcsolja a megadott énekrendet a betöltöttek közül.
+  /// A kikapcsolt énekrend nem lesz elérhető a nézetekben, de megmarad.
+  /// Az utolsó engedélyezett énekrend nem kapcsolható ki, és ha az aktív
+  /// énekrendet kapcsoljuk ki, az aktív kiválasztás átvált egy másik
+  /// engedélyezett énekrendre.
+  Future<void> toggleCustomOrderSetEnabled(int index) async {
+    if (index < 0 || index >= _customOrderSets.length) {
+      return;
+    }
+    final bool currentlyEnabled = _customOrderSets[index].enabled;
+    if (currentlyEnabled) {
+      final int enabledCount =
+          _customOrderSets.where((CustomOrderSet s) => s.enabled).length;
+      if (enabledCount <= 1) {
+        return;
+      }
+    }
+    _customOrderSets[index] = _customOrderSets[index].copyWith(
+      enabled: !currentlyEnabled,
+    );
+    if (currentlyEnabled && index == _activeOrderSetIndex) {
+      final int nextActive = _customOrderSets.indexWhere(
+        (CustomOrderSet s) => s.enabled,
+      );
+      if (nextActive >= 0) {
+        await _switchActiveSet(nextActive);
+        return;
+      }
+    }
+    await _persistAllSets();
+    notifyListeners();
+  }
+
+  /// Eltávolítja a megadott énekrendet a betöltöttek közül.
+  Future<void> removeCustomOrderSet(int index) async {
+    if (index < 0 || index >= _customOrderSets.length) {
+      return;
+    }
+    final bool wasActive = index == _activeOrderSetIndex;
+    _customOrderSets.removeAt(index);
+    if (_customOrderSets.isEmpty) {
+      _activeOrderSetIndex = -1;
+      _customOrder = const <CustomOrderEntry>[];
+      customOrderActive = false;
+      _diaVirtualBookSelected = false;
+      _customOrderCursor = -1;
+      _projectedCustomCursor = -1;
+      _lastImportedCustomOrderBaseName = null;
+      _customOrderSourceType = null;
+      _zsolozsmaVirtualBookLabel = null;
+      _napiLelkiBatyuVirtualBookLabel = null;
+    } else {
+      if (_activeOrderSetIndex > index) {
+        _activeOrderSetIndex--;
+      } else if (wasActive) {
+        _activeOrderSetIndex = _activeOrderSetIndex.clamp(
+          0,
+          _customOrderSets.length - 1,
+        );
+        final CustomOrderSet set = _customOrderSets[_activeOrderSetIndex];
+        _customOrder = List<CustomOrderEntry>.from(set.entries);
+        _lastImportedCustomOrderBaseName = set.baseName;
+        _customOrderSourceType = set.sourceType;
+        _zsolozsmaVirtualBookLabel = set.zsolozsmaLabel;
+        _napiLelkiBatyuVirtualBookLabel = set.batyuLabel;
+        customOrderActive = set.entries.isNotEmpty;
+        _diaVirtualBookSelected = set.entries.isNotEmpty;
+        _customOrderCursor = set.entries.isEmpty ? -1 : 0;
+        _projectedCustomCursor = -1;
+      }
+    }
+    await _persistAllSets();
+    if (customOrderActive) {
+      _selectByCustomOrderCursor(_customOrderCursor, sync: false);
+      await _syncCurrentDia();
+    } else {
+      notifyListeners();
+    }
+  }
+
+  /// Átnevezi a megadott énekrendet.
+  Future<void> renameCustomOrderSet(int index, String name) async {
+    if (index < 0 || index >= _customOrderSets.length) {
+      return;
+    }
+    final String trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+    _customOrderSets[index] = _customOrderSets[index].copyWith(name: trimmed);
+    await _persistAllSets();
+    notifyListeners();
+  }
 
   /// A kereséshez eloallitott, izolátumban keresheto index.
   /// `reloadBooks` után épül fel (háttérfolyamatban).
@@ -378,18 +677,7 @@ class DiatarMainController extends ChangeNotifier {
     _transpositions = await _settingsStore.loadTranspositions();
     lastBlankPath = settings.blankPicPath;
     _disabledSongbooks = await _orderStore.loadDisabled();
-    final CustomOrderBootstrapState customOrderState =
-        _customOrderBootstrapPolicy.fromStored(
-          await _orderStore.loadCurrentCustomOrder(),
-        );
-    _customOrder = customOrderState.entries;
-    customOrderActive = customOrderState.active;
-    _lastImportedCustomOrderBaseName = customOrderState.baseName;
-    _customOrderSourceType = customOrderState.sourceType;
-    _zsolozsmaVirtualBookLabel = customOrderState.zsolozsmaLabel;
-    _napiLelkiBatyuVirtualBookLabel = customOrderState.batyuLabel;
-    _customOrderCursor = customOrderState.cursor;
-    _diaVirtualBookSelected = customOrderState.diaVirtualBookSelected;
+    await _loadCustomOrderSets();
     globals = _projectionGlobalsPolicy.fromSettings(
       settings,
       projecting: showing,
@@ -735,6 +1023,8 @@ class DiatarMainController extends ChangeNotifier {
     }
     _lastImportedCustomOrderBaseName = zsolozsmaLabel;
     await _persistCurrentCustomOrder();
+    _persistActiveSetToSets();
+    await _persistAllSets();
     _diaVirtualBookSelected = combined.isNotEmpty;
     final int selectIndex = insertAtIndex == null
         ? 0
@@ -821,6 +1111,8 @@ class DiatarMainController extends ChangeNotifier {
     }
     _lastImportedCustomOrderBaseName = batyuLabel;
     await _persistCurrentCustomOrder();
+    _persistActiveSetToSets();
+    await _persistAllSets();
     _diaVirtualBookSelected = combined.isNotEmpty;
     final int selectIndex = insertAtIndex == null
         ? 0
@@ -1006,6 +1298,8 @@ class DiatarMainController extends ChangeNotifier {
       }
       await _loadDtzPhotos();
       await _persistCurrentCustomOrder();
+      _persistActiveSetToSets();
+      await _persistAllSets();
 
       // Keresési index építése háttérfolyamatban (nem fagyasztja az UI-t).
       _searchIndex = await compute(buildSearchIndex, books);
@@ -1351,6 +1645,8 @@ class DiatarMainController extends ChangeNotifier {
         _selectByCustomOrderCursor(_customOrderCursor, sync: false);
       }
       await _persistCurrentCustomOrder();
+      _persistActiveSetToSets();
+      await _persistAllSets();
       if (syncProjection &&
           _customOrderCursor >= 0 &&
           _customOrderCursor < _customOrder.length &&
@@ -1368,6 +1664,8 @@ class DiatarMainController extends ChangeNotifier {
       _customOrderCursor = -1;
       _projectedCustomCursor = -1;
       await _persistCurrentCustomOrder();
+      _persistActiveSetToSets();
+      await _persistAllSets();
       notifyListeners();
     }
   }
@@ -1669,6 +1967,7 @@ class DiatarMainController extends ChangeNotifier {
     String path, {
     bool activate = true,
     String? sourceFileName,
+    CustomOrderImportMode mode = CustomOrderImportMode.addNew,
   }) async {
     final File f = FileSystemProvider.instance.file(path);
     if (!await f.exists()) {
@@ -1806,17 +2105,58 @@ class DiatarMainController extends ChangeNotifier {
       );
     }
 
-    await applyCustomOrder(imported, activate: activate);
     final String importedName = _stripFileExtension(
       (sourceFileName ?? _fileNameFromPath(path)).trim(),
     );
-    _lastImportedCustomOrderBaseName = importedName.trim().isEmpty
-        ? null
-        : importedName;
-    _customOrderSourceType = null;
-    _zsolozsmaVirtualBookLabel = null;
-    _napiLelkiBatyuVirtualBookLabel = null;
-    await _persistCurrentCustomOrder();
+    final String? baseName = importedName.trim().isEmpty ? null : importedName;
+
+    if (mode == CustomOrderImportMode.overwriteActive &&
+        _activeOrderSetIndex >= 0) {
+      // Felülírjuk az éppen aktív énekrendet a betöltöttel.
+      await applyCustomOrder(imported, activate: activate);
+      _lastImportedCustomOrderBaseName = baseName;
+      _customOrderSourceType = null;
+      _zsolozsmaVirtualBookLabel = null;
+      _napiLelkiBatyuVirtualBookLabel = null;
+      _customOrderSets[_activeOrderSetIndex] = _customOrderSets[_activeOrderSetIndex]
+          .copyWith(
+            name: baseName ?? _customOrderSets[_activeOrderSetIndex].name,
+            baseName: baseName,
+            sourceType: null,
+            zsolozsmaLabel: null,
+            batyuLabel: null,
+          );
+      await _persistCurrentCustomOrder();
+      await _persistAllSets();
+    } else {
+      // Új, párhuzamos énekrendként töltjük be a már betöltöttek mellé.
+      final CustomOrderSet newSet = CustomOrderSet(
+        id: _nextCustomOrderSetId(),
+        name: baseName ?? 'Énekrend',
+        entries: imported.map(normalizeEntry).toList(),
+        enabled: true,
+        baseName: baseName,
+        sourceType: null,
+      );
+      _customOrderSets.add(newSet);
+      _activeOrderSetIndex = _customOrderSets.length - 1;
+      _customOrder = List<CustomOrderEntry>.from(newSet.entries);
+      _lastImportedCustomOrderBaseName = baseName;
+      _customOrderSourceType = null;
+      _zsolozsmaVirtualBookLabel = null;
+      _napiLelkiBatyuVirtualBookLabel = null;
+      customOrderActive = activate && imported.isNotEmpty;
+      _diaVirtualBookSelected = imported.isNotEmpty;
+      _customOrderCursor = imported.isEmpty ? -1 : 0;
+      _projectedCustomCursor = -1;
+      await _persistCurrentCustomOrder();
+      await _persistAllSets();
+      if (customOrderActive) {
+        _selectByCustomOrderCursor(_customOrderCursor, sync: false);
+        await _syncCurrentDia();
+      }
+    }
+
     _diaVirtualBookSelected = _customOrder.isNotEmpty;
     _setStatus('statusOrderLoaded', <String, String>{
       'count': '${imported.length}',
@@ -2888,6 +3228,8 @@ class DiatarMainController extends ChangeNotifier {
     customOrderActive = _customOrder.isNotEmpty;
     _customOrderCursor = _customOrder.length - 1;
     await _persistCurrentCustomOrder();
+    _persistActiveSetToSets();
+    await _persistAllSets();
     notifyListeners();
   }
 

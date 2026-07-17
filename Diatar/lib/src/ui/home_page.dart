@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
+import '../models/custom_order_set.dart';
 import '../services/dtx_download_service.dart';
 import '../utils/custom_entry_labels.dart';
 import '../utils/friendly_path.dart';
@@ -559,6 +560,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             onPressed: () => _openCustomOrderEditor(context),
             icon: const Icon(Icons.queue_music),
           ),
+
           IconButton(
             tooltip: l10n.downloadBooksTooltip,
             onPressed: () => _openDownloadDialog(context),
@@ -735,7 +737,10 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
 
   Widget _buildKotetekSelectors(BuildContext context) {
     return Column(
+      
       children: <Widget>[
+        _CustomOrderSetSelector(controller: controller),
+        const SizedBox(height: 4),
         _BookDropdown(
           controller: controller,
           onInternetSettingsTap: () => _openSettings(
@@ -759,7 +764,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             Expanded(child: _VerseDropdown(controller: controller)),
             const SizedBox(width: 30),
           ],
-        ),
+        )
       ],
     );
   }
@@ -2190,6 +2195,51 @@ class _VerseDropdown extends StatelessWidget {
   }
 }
 
+class _CustomOrderSetSelector extends StatelessWidget {
+  const _CustomOrderSetSelector({required this.controller});
+
+  final DiatarMainController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<CustomOrderSet> enabledSets = controller.customOrderSets
+        .where((CustomOrderSet s) => s.enabled)
+        .toList();
+    if (enabledSets.length <= 1) {
+      return const SizedBox.shrink();
+    }
+    final String? activeId = controller.activeCustomOrderSetId;
+    return DropdownButtonFormField<String>(
+      initialValue: activeId,
+      isExpanded: true,
+      isDense: true,
+      decoration: InputDecoration(
+        labelText: context.l10n.customOrderSetSelectorLabel,
+        border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 8,
+        ),
+      ),
+      items: enabledSets.map((CustomOrderSet set) {
+        return DropdownMenuItem<String>(
+          value: set.id,
+          child: Text(
+            set.displayName,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        );
+      }).toList(),
+      onChanged: (String? value) {
+        if (value != null) {
+          unawaited(controller.setActiveCustomOrderSetById(value));
+        }
+      },
+    );
+  }
+}
+
 String _dialistEntryLabel(
   AppLocalizations l10n,
   DiatarMainController controller,
@@ -2405,102 +2455,121 @@ class _DialistPanelState extends State<_DialistPanel> {
 
     _ensureSelectedVisible(selectedCursor, entries.length);
 
-    return Row(
+    final List<CustomOrderSet> enabledSets = controller.customOrderSets
+        .where((CustomOrderSet s) => s.enabled)
+        .toList();
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        _CustomOrderSetSelector(controller: controller),
+        if (enabledSets.length > 1) const SizedBox(height: 6),
         Expanded(
-          child: InputDecorator(
-            decoration: InputDecoration(
-              labelText: context.l10n.dialistNamedLabel(dialistName),
-              border: const OutlineInputBorder(),
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 6,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Expanded(
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: context.l10n.dialistNamedLabel(dialistName),
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
+                  ),
+                  child: entries.isEmpty
+                      ? const SizedBox.shrink()
+                      : ListView.builder(
+                          controller: _scrollController,
+                          primary: false,
+                          itemCount: entries.length,
+                          itemExtent: _itemExtent,
+                          itemBuilder: (BuildContext context, int index) {
+                            final CustomOrderEntry entry = entries[index];
+                            final bool isSeparator = entry.isSeparator;
+                            final bool selected = index == selectedCursor;
+                            return ListTile(
+                              dense: true,
+                              visualDensity: const VisualDensity(
+                                horizontal: 0,
+                                vertical: -2,
+                              ),
+                              minTileHeight: 38,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                              title: _buildDialistTitle(
+                                context,
+                                theme: theme,
+                                entries: entries,
+                                index: index,
+                                selectedCursor: selectedCursor,
+                              ),
+                              selected: selected,
+                              selectedColor:
+                                  theme.colorScheme.onPrimaryContainer,
+                              selectedTileColor: theme
+                                  .colorScheme.primaryContainer
+                                  .withValues(alpha: 0.55),
+                              onTap: isSeparator
+                                  ? null
+                                  : () {
+                                      controller
+                                          .selectCustomOrderEntryAt(index);
+                                      _ensureSelectedVisible(
+                                        index,
+                                        entries.length,
+                                      );
+                                    },
+                            );
+                          },
+                        ),
+                ),
               ),
-            ),
-            child: entries.isEmpty
-                ? const SizedBox.shrink()
-                : ListView.builder(
-                    controller: _scrollController,
-                    primary: false,
-                    itemCount: entries.length,
-                    itemExtent: _itemExtent,
-                    itemBuilder: (BuildContext context, int index) {
-                      final CustomOrderEntry entry = entries[index];
-                      final bool isSeparator = entry.isSeparator;
-                      final bool selected = index == selectedCursor;
-                      return ListTile(
-                        dense: true,
-                        visualDensity: const VisualDensity(
-                          horizontal: 0,
-                          vertical: -2,
-                        ),
-                        minTileHeight: 38,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                        ),
-                        title: _buildDialistTitle(
-                          context,
+              const SizedBox(width: 8),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: <Widget>[
+                  Tooltip(
+                    message: _statusTooltip(
+                      context,
+                      title: context.l10n.settingsInternetTitle,
+                      state: _mqttIndicatorState(controller),
+                    ),
+                    child: InkResponse(
+                      radius: 20,
+                      onTap: widget.onInternetSettingsTap,
+                      child: _statusIcon(
+                        icon: Icons.public,
+                        state: _mqttIndicatorState(controller),
+                        theme: theme,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (!kIsWeb)
+                    Tooltip(
+                      message: _statusTooltip(
+                        context,
+                        title: context.l10n.settingsLocalNetworkTitle,
+                        state: _localNetworkIndicatorState(controller),
+                      ),
+                      child: InkResponse(
+                        radius: 20,
+                        onTap: widget.onLocalNetworkSettingsTap,
+                        child: _statusIcon(
+                          icon: Icons.lan,
+                          state: _localNetworkIndicatorState(controller),
                           theme: theme,
-                          entries: entries,
-                          index: index,
-                          selectedCursor: selectedCursor,
                         ),
-                        selected: selected,
-                        selectedColor: theme.colorScheme.onPrimaryContainer,
-                        selectedTileColor: theme.colorScheme.primaryContainer
-                            .withValues(alpha: 0.55),
-                        onTap: isSeparator
-                            ? null
-                            : () {
-                                controller.selectCustomOrderEntryAt(index);
-                                _ensureSelectedVisible(index, entries.length);
-                              },
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ),
-        ),
-        const SizedBox(width: 8),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            Tooltip(
-              message: _statusTooltip(
-                context,
-                title: context.l10n.settingsInternetTitle,
-                state: _mqttIndicatorState(controller),
-              ),
-              child: InkResponse(
-                radius: 20,
-                onTap: widget.onInternetSettingsTap,
-                child: _statusIcon(
-                  icon: Icons.public,
-                  state: _mqttIndicatorState(controller),
-                  theme: theme,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (!kIsWeb)
-              Tooltip(
-                message: _statusTooltip(
-                  context,
-                  title: context.l10n.settingsLocalNetworkTitle,
-                  state: _localNetworkIndicatorState(controller),
-                ),
-                child: InkResponse(
-                  radius: 20,
-                  onTap: widget.onLocalNetworkSettingsTap,
-                  child: _statusIcon(
-                    icon: Icons.lan,
-                    state: _localNetworkIndicatorState(controller),
-                    theme: theme,
-                  ),
-                ),
-              ),
-          ],
         ),
       ],
     );
