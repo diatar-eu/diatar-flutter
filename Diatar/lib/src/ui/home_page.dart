@@ -79,6 +79,8 @@ class _DiaSongGroup {
 }
 
 const int _diaVirtualBookValue = -1000000;
+const int _customOrderSetHeaderValue = -3000000;
+const int _customOrderSetValueBase = -2000000;
 
 enum _ProjectionDisplayToggle { kotta, chords, backgroundImage }
 
@@ -737,10 +739,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
 
   Widget _buildKotetekSelectors(BuildContext context) {
     return Column(
-      
       children: <Widget>[
-        _CustomOrderSetSelector(controller: controller),
-        const SizedBox(height: 4),
         _BookDropdown(
           controller: controller,
           onInternetSettingsTap: () => _openSettings(
@@ -1815,6 +1814,13 @@ class _BookDropdown extends StatelessWidget {
     final int initial = controller.diaVirtualBookSelected
         ? _diaVirtualBookValue
         : controller.bookIndex;
+
+    final List<CustomOrderSet> enabledSets = controller.customOrderSets
+        .where((CustomOrderSet s) => s.enabled)
+        .toList();
+    final String? activeId = controller.activeCustomOrderSetId;
+    final bool hasSets = enabledSets.isNotEmpty;
+
     return Row(
       children: <Widget>[
         Expanded(
@@ -1831,6 +1837,49 @@ class _BookDropdown extends StatelessWidget {
             ),
             isExpanded: true,
             items: <DropdownMenuItem<int>>[
+              if (hasSets) ...<DropdownMenuItem<int>>[
+                DropdownMenuItem<int>(
+                  value: _customOrderSetHeaderValue,
+                  enabled: false,
+                  child: Text(
+                    '[${context.l10n.customOrderSetsSection}]',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                ...enabledSets.asMap().entries.map((
+                  MapEntry<int, CustomOrderSet> e,
+                ) {
+                  final CustomOrderSet set = e.value;
+                  final bool isActive = set.id == activeId;
+                  return DropdownMenuItem<int>(
+                    value: _customOrderSetValueBase - e.key,
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            set.displayName,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                        if (isActive)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: Text(
+                              context.l10n.customOrderSetActive,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
               if (hasDia)
                 DropdownMenuItem<int>(
                   value: _diaVirtualBookValue,
@@ -1878,6 +1927,26 @@ class _BookDropdown extends StatelessWidget {
             ],
             selectedItemBuilder: (BuildContext context) {
               return <Widget>[
+                if (hasSets) ...<Widget>[
+                  SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      context.l10n.customOrderSetsSection,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                  ...enabledSets.map((CustomOrderSet set) {
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        set.displayName,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    );
+                  }),
+                ],
                 if (hasDia)
                   Align(
                     alignment: Alignment.centerLeft,
@@ -1900,11 +1969,23 @@ class _BookDropdown extends StatelessWidget {
               ];
             },
             onChanged: (int? value) {
+              if (value == null) {
+                return;
+              }
+              if (value <= _customOrderSetValueBase) {
+                final int idx = _customOrderSetValueBase - value;
+                if (idx >= 0 && idx < enabledSets.length) {
+                  unawaited(
+                    controller.setActiveCustomOrderSetById(enabledSets[idx].id),
+                  );
+                }
+                return;
+              }
               if (value == _diaVirtualBookValue) {
                 controller.selectDiaVirtualBook();
                 return;
               }
-              if (value != null && value >= 0) {
+              if (value >= 0) {
                 controller.setBookIndex(value);
               }
             },

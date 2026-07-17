@@ -940,6 +940,15 @@ class AppLocalizationsHu extends AppLocalizations {
       'Énekrend be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)';
 
   @override
+  String get customOrderSetCreate => 'Új énekrend';
+
+  @override
+  String get customOrderSetCreateTitle => 'Új énekrend létrehozása';
+
+  @override
+  String get customOrderSetCreateNameLabel => 'Énekrend neve';
+
+  @override
   String get customOrderLoadModeTitle => 'Énekrend betöltése';
 
   @override

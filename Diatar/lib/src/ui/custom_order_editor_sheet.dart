@@ -396,6 +396,16 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                           ? _confirmRemoveCurrentSet
                           : null,
                     ),
+                    IconButton(
+                      tooltip: l10n.customOrderSetRename,
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: _renameCurrentSet,
+                    ),
+                    IconButton(
+                      tooltip: l10n.customOrderSetCreate,
+                      icon: const Icon(Icons.add_circle_outline),
+                      onPressed: _createNewSet,
+                    ),
                   ],
                 ),
               ),
@@ -1199,6 +1209,105 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       return;
     }
     await controller.removeCustomOrderSet(index);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _entries = List<CustomOrderEntry>.from(controller.customOrder);
+    });
+  }
+
+  /// Átnevezi az éppen aktív énekrendet a megadott névre.
+  Future<void> _renameCurrentSet() async {
+    final int index = controller.activeCustomOrderSetIndex;
+    if (index < 0 || index >= controller.customOrderSets.length) {
+      return;
+    }
+    final String currentName = controller.customOrderSets[index].name;
+    final TextEditingController nameController = TextEditingController(
+      text: currentName,
+    );
+    final String? enteredName = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        final AppLocalizations l10n = dialogContext.l10n;
+        return AlertDialog(
+          title: Text(l10n.customOrderSetRenameTitle),
+          content: TextField(
+            controller: nameController,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: l10n.customOrderSetCreateNameLabel,
+              border: const OutlineInputBorder(),
+            ),
+            onSubmitted: (String value) {
+              Navigator.of(dialogContext).pop(value);
+            },
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(nameController.text),
+              child: Text(l10n.apply),
+            ),
+          ],
+        );
+      },
+    );
+    if (enteredName == null || enteredName.trim().isEmpty || !mounted) {
+      return;
+    }
+    await controller.renameCustomOrderSet(index, enteredName.trim());
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _entries = List<CustomOrderEntry>.from(controller.customOrder);
+    });
+  }
+
+  /// Létrehoz egy új, üres énekrendet a megadott névvel, és aktívvá teszi.
+  Future<void> _createNewSet() async {
+    final TextEditingController nameController = TextEditingController();
+    final String? enteredName = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        final AppLocalizations l10n = dialogContext.l10n;
+        return AlertDialog(
+          title: Text(l10n.customOrderSetCreateTitle),
+          content: TextField(
+            controller: nameController,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: l10n.customOrderSetCreateNameLabel,
+              border: const OutlineInputBorder(),
+            ),
+            onSubmitted: (String value) {
+              Navigator.of(dialogContext).pop(value);
+            },
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(nameController.text),
+              child: Text(l10n.customOrderSetCreate),
+            ),
+          ],
+        );
+      },
+    );
+    if (enteredName == null || enteredName.trim().isEmpty || !mounted) {
+      return;
+    }
+    await controller.createCustomOrderSet(enteredName.trim());
     if (!mounted) {
       return;
     }
