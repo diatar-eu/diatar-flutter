@@ -29,7 +29,7 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isDesktopPlatform()) {
+    if (!_supportsMainWindowHotkeys()) {
       return widget.child;
     }
 
@@ -47,6 +47,12 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
     }
     if (_isTypingIntoTextField()) {
       return KeyEventResult.ignored;
+    }
+
+    final String? requiredAction = _requiredActionForKey(event.logicalKey);
+    if (requiredAction != null) {
+      _runAction(requiredAction);
+      return KeyEventResult.handled;
     }
 
     final String combo = _eventToCombo(event);
@@ -86,13 +92,47 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
     return focusContext.widget is EditableText;
   }
 
-  bool _isDesktopPlatform() {
+  bool _supportsMainWindowHotkeys() {
     if (kIsWeb) {
-      return false;
+      return true;
     }
     return defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux;
+  }
+
+  String? _requiredActionForKey(LogicalKeyboardKey key) {
+    if (HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isAltPressed ||
+        HardwareKeyboard.instance.isShiftPressed ||
+        HardwareKeyboard.instance.isMetaPressed) {
+      return null;
+    }
+
+    if (key == LogicalKeyboardKey.arrowUp) {
+      return 'prevVerse';
+    }
+    if (key == LogicalKeyboardKey.arrowDown) {
+      return 'nextVerse';
+    }
+    if (key == LogicalKeyboardKey.pageUp) {
+      return 'prevSong';
+    }
+    if (key == LogicalKeyboardKey.pageDown) {
+      return 'nextSong';
+    }
+    if (key == LogicalKeyboardKey.escape) {
+      return 'toggleProjection';
+    }
+    if (key == LogicalKeyboardKey.arrowLeft &&
+        widget.controller.settings.homeShowHighlightControls) {
+      return 'highlightPrev';
+    }
+    if (key == LogicalKeyboardKey.arrowRight &&
+        widget.controller.settings.homeShowHighlightControls) {
+      return 'highlightNext';
+    }
+    return null;
   }
 
   void _runAction(String actionId) {
@@ -113,9 +153,15 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
         widget.controller.nextSong();
         break;
       case 'highlightPrev':
+        if (!widget.controller.settings.homeShowHighlightControls) {
+          break;
+        }
         widget.controller.highlightPrev();
         break;
       case 'highlightNext':
+        if (!widget.controller.settings.homeShowHighlightControls) {
+          break;
+        }
         widget.controller.highlightNext();
         break;
     }
