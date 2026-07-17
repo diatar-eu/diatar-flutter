@@ -936,6 +936,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enable or disable the custom order (a disabled one is hidden from the views)';
 
   @override
+  String get customOrderSetCreate => 'New custom order';
+
+  @override
+  String get customOrderSetCreateTitle => 'Create new custom order';
+
+  @override
+  String get customOrderSetCreateNameLabel => 'Custom order name';
+
+  @override
   String get customOrderLoadModeTitle => 'Load custom order';
 
   @override

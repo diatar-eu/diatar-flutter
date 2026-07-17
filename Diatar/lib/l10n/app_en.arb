@@ -639,6 +639,18 @@
   "@customOrderSetToggleEnabledTooltip": {
     "description": "Tooltip to enable or disable a custom order in the editor"
   },
+  "customOrderSetCreate": "New custom order",
+  "@customOrderSetCreate": {
+    "description": "Button to create a new custom order"
+  },
+  "customOrderSetCreateTitle": "Create new custom order",
+  "@customOrderSetCreateTitle": {
+    "description": "Title of the create new custom order dialog"
+  },
+  "customOrderSetCreateNameLabel": "Custom order name",
+  "@customOrderSetCreateNameLabel": {
+    "description": "Label for the name field when creating a new custom order"
+  },
   "customOrderLoadModeTitle": "Load custom order",
   "@customOrderLoadModeTitle": {
     "description": "Title of the dialog asking how to load an imported custom order"

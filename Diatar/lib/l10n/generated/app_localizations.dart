@@ -1697,6 +1697,24 @@ abstract class AppLocalizations {
   /// **'Énekrend be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)'**
   String get customOrderSetToggleEnabledTooltip;
 
+  /// Button to create a new custom order
+  ///
+  /// In hu, this message translates to:
+  /// **'Új énekrend'**
+  String get customOrderSetCreate;
+
+  /// Title of the create new custom order dialog
+  ///
+  /// In hu, this message translates to:
+  /// **'Új énekrend létrehozása'**
+  String get customOrderSetCreateTitle;
+
+  /// Label for the name field when creating a new custom order
+  ///
+  /// In hu, this message translates to:
+  /// **'Énekrend neve'**
+  String get customOrderSetCreateNameLabel;
+
   /// Title of the dialog asking how to load an imported custom order
   ///
   /// In hu, this message translates to:

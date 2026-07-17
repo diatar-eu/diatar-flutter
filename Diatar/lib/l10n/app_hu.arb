@@ -639,6 +639,18 @@
   "@customOrderSetToggleEnabledTooltip": {
     "description": "Tooltip to enable or disable a custom order in the editor"
   },
+  "customOrderSetCreate": "Új énekrend",
+  "@customOrderSetCreate": {
+    "description": "Button to create a new custom order"
+  },
+  "customOrderSetCreateTitle": "Új énekrend létrehozása",
+  "@customOrderSetCreateTitle": {
+    "description": "Title of the create new custom order dialog"
+  },
+  "customOrderSetCreateNameLabel": "Énekrend neve",
+  "@customOrderSetCreateNameLabel": {
+    "description": "Label for the name field when creating a new custom order"
+  },
   "customOrderLoadModeTitle": "Énekrend betöltése",
   "@customOrderLoadModeTitle": {
     "description": "Title of the dialog asking how to load an imported custom order"

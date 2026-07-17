@@ -509,6 +509,36 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Létrehoz egy új, üres énekrendet a megadott névvel, hozzáadja a
+  /// betöltöttekhez, és aktívvá teszi (az előző énekrend szerkesztett
+  /// állapota előbb elmentésre kerül).
+  Future<void> createCustomOrderSet(String name) async {
+    final String trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+    _persistActiveSetToSets();
+    final CustomOrderSet newSet = CustomOrderSet(
+      id: _nextCustomOrderSetId(),
+      name: trimmed,
+      entries: const <CustomOrderEntry>[],
+      enabled: true,
+    );
+    _customOrderSets.add(newSet);
+    _activeOrderSetIndex = _customOrderSets.length - 1;
+    _customOrder = const <CustomOrderEntry>[];
+    _lastImportedCustomOrderBaseName = trimmed;
+    _customOrderSourceType = null;
+    _zsolozsmaVirtualBookLabel = null;
+    _napiLelkiBatyuVirtualBookLabel = null;
+    customOrderActive = false;
+    _diaVirtualBookSelected = false;
+    _customOrderCursor = -1;
+    _projectedCustomCursor = -1;
+    await _persistAllSets();
+    notifyListeners();
+  }
+
   /// A kereséshez eloallitott, izolátumban keresheto index.
   /// `reloadBooks` után épül fel (háttérfolyamatban).
   List<SongSearchSong> _searchIndex = const <SongSearchSong>[];
