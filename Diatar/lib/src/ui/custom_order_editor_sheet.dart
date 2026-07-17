@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
@@ -16,6 +17,8 @@ import '../utils/custom_entry_labels.dart';
 import '../utils/escape_sequences.dart';
 import '../utils/friendly_path.dart';
 import '../services/song_search_service.dart';
+import '../services/zsolozsma_service.dart';
+import '../services/napi_lelki_batyu_service.dart';
 import 'song_search_sheet.dart';
 
 class CustomOrderEditorPanel extends StatefulWidget {
@@ -311,6 +314,16 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                       tooltip: l10n.addImageSlideTooltip,
                       onPressed: _pickAndSendImageSlide,
                       icon: const Icon(Icons.image),
+                    ),
+                    IconButton(
+                      tooltip: l10n.zsolozsmaTooltip,
+                      onPressed: _openZsolozsmaDialog,
+                      icon: const Icon(Icons.menu_book_outlined),
+                    ),
+                    IconButton(
+                      tooltip: l10n.batyuTooltip,
+                      onPressed: _openBatyuDialog,
+                      icon: const Icon(Icons.auto_stories_outlined),
                     ),
                     IconButton(
                       tooltip: l10n.customOrderClearAllTooltip,
@@ -767,6 +780,24 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     if (mounted) {
       controller.selectCustomOrderEntryForEditing(lastInsertedIndex);
     }
+  }
+
+  Future<void> _openZsolozsmaDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return _ZsolozsmaDialog(controller: controller);
+      },
+    );
+  }
+
+  Future<void> _openBatyuDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return _BatyuDialog(controller: controller);
+      },
+    );
   }
 
   Future<void> _insertSeparator() async {
@@ -1815,6 +1846,371 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
                   }
                 },
           child: Text(l10n.saveDia),
+        ),
+      ],
+    );
+  }
+}
+
+class _ZsolozsmaDialog extends StatefulWidget {
+  const _ZsolozsmaDialog({required this.controller});
+
+  final DiatarMainController controller;
+
+  @override
+  State<_ZsolozsmaDialog> createState() => _ZsolozsmaDialogState();
+}
+
+class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
+  late DateTime _selectedDate;
+  bool _loading = false;
+  bool _syncing = false;
+  String? _error;
+  List<ZsolozsmaDayPart> _parts = const <ZsolozsmaDayPart>[];
+
+  @override
+  void initState() {
+    super.initState();
+    final DateTime now = DateTime.now();
+    _selectedDate = DateTime(now.year, now.month, now.day);
+    unawaited(_load(syncArchives: true));
+  }
+
+  Future<void> _load({required bool syncArchives}) async {
+    setState(() {
+      _loading = true;
+      _syncing = syncArchives;
+      _error = null;
+    });
+    try {
+      final List<ZsolozsmaDayPart> parts = await widget.controller
+          .loadZsolozsmaDayParts(_selectedDate, syncArchives: syncArchives);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _parts = parts;
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _parts = const <ZsolozsmaDayPart>[];
+        _error = '$e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _syncing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final DateTime now = DateTime.now();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(now.year - 1, 1, 1),
+      lastDate: DateTime(now.year + 1, 12, 31),
+    );
+    if (picked == null) {
+      return;
+    }
+    setState(() {
+      _selectedDate = DateTime(picked.year, picked.month, picked.day);
+    });
+    await _load(syncArchives: false);
+  }
+
+  String _dateLabel(DateTime date) {
+    final String yy = date.year.toString().padLeft(4, '0');
+    final String mm = date.month.toString().padLeft(2, '0');
+    final String dd = date.day.toString().padLeft(2, '0');
+    return '$yy-$mm-$dd';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.zsolozsmaTitle),
+      content: SizedBox(
+        width: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Text('${l10n.zsolozsmaDateLabel}:'),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: _loading ? null : _pickDate,
+                  child: Text(_dateLabel(_selectedDate)),
+                ),
+                const Spacer(),
+                OutlinedButton(
+                  onPressed: _loading ? null : () => _load(syncArchives: true),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(40, 40),
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: _syncing
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.sync),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_error != null)
+              Text(_error!)
+            else if (_parts.isEmpty)
+              Text(l10n.zsolozsmaNoItems)
+            else
+              SizedBox(
+                height: math.min(320, 72.0 * _parts.length),
+                child: ListView.builder(
+                  primary: false,
+                  padding: EdgeInsets.zero,
+                  itemCount: _parts.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final ZsolozsmaDayPart part = _parts[index];
+                    return ListTile(
+                      dense: true,
+                      title: Text(part.title),
+                      onTap: () async {
+                        final bool loaded = await widget.controller
+                            .selectZsolozsmaPart(_selectedDate, part);
+                        if (loaded && context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.close),
+        ),
+      ],
+    );
+  }
+}
+
+class _BatyuDialog extends StatefulWidget {
+  const _BatyuDialog({required this.controller});
+
+  final DiatarMainController controller;
+
+  @override
+  State<_BatyuDialog> createState() => _BatyuDialogState();
+}
+
+class _BatyuDialogState extends State<_BatyuDialog> {
+  late DateTime _selectedDate;
+  bool _loading = false;
+  String? _error;
+  List<NapiLelkiBatyuCelebration> _celebrations =
+      const <NapiLelkiBatyuCelebration>[];
+  int _wordsPerSlide = 30;
+  final TextEditingController _wordsPerSlideController =
+      TextEditingController(text: '30');
+
+  @override
+  void initState() {
+    super.initState();
+    final DateTime now = DateTime.now();
+    _selectedDate = DateTime(now.year, now.month, now.day);
+    unawaited(_load());
+  }
+
+  @override
+  void dispose() {
+    _wordsPerSlideController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final List<NapiLelkiBatyuCelebration> celebrations = await widget
+          .controller
+          .loadBatyuCelebrations(_selectedDate);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _celebrations = celebrations;
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _celebrations = const <NapiLelkiBatyuCelebration>[];
+        _error = '$e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final DateTime now = DateTime.now();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(now.year - 1, 1, 1),
+      lastDate: DateTime(now.year + 1, 12, 31),
+    );
+    if (picked == null) {
+      return;
+    }
+    setState(() {
+      _selectedDate = DateTime(picked.year, picked.month, picked.day);
+    });
+    await _load();
+  }
+
+  String _dateLabel(DateTime date) {
+    final String yy = date.year.toString().padLeft(4, '0');
+    final String mm = date.month.toString().padLeft(2, '0');
+    final String dd = date.day.toString().padLeft(2, '0');
+    return '$yy-$mm-$dd';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.batyuTitle),
+      content: SizedBox(
+        width: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Text('${l10n.batyuDateLabel}:'),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: _loading ? null : _pickDate,
+                  child: Text(_dateLabel(_selectedDate)),
+                ),
+                const Spacer(),
+                OutlinedButton(
+                  onPressed: _loading ? null : _load,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(40, 40),
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: const Icon(Icons.sync),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                Text('${l10n.batyuWordsPerSlide}:'),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 72,
+                  child: TextFormField(
+                    controller: _wordsPerSlideController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                    ),
+                    onChanged: (String value) {
+                      final int? parsed = int.tryParse(value);
+                      setState(() {
+                        _wordsPerSlide = parsed == null || parsed < 1
+                            ? 1
+                            : parsed;
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_error != null)
+              Text(_error!)
+            else if (_celebrations.isEmpty)
+              Text(l10n.batyuNoItems)
+            else
+              SizedBox(
+                height: math.min(320, 72.0 * _celebrations.length),
+                child: ListView.builder(
+                  primary: false,
+                  padding: EdgeInsets.zero,
+                  itemCount: _celebrations.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final NapiLelkiBatyuCelebration celebration =
+                        _celebrations[index];
+                    return ListTile(
+                      dense: true,
+                      title: Text(celebration.title),
+                      subtitle: celebration.subtitle?.trim().isNotEmpty == true
+                          ? Text(celebration.subtitle!)
+                          : null,
+                      onTap: () async {
+                        final bool loaded = await widget.controller
+                            .importNapiLelkiBatyu(
+                              _selectedDate,
+                              celebration,
+                              wordsPerSlide: _wordsPerSlide,
+                            );
+                        if (loaded && context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.close),
         ),
       ],
     );
