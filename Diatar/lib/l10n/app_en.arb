@@ -13,12 +13,12 @@
   "zsolozsmaNoItems": "No dayparts are available for this date.",
   "zsolozsmaDiagnosticsLabel": "Diagnostics",
   "zsolozsmaSelectionHint": "Selection currently loads and picks an item only. Slide splitting comes in the next step.",
-  "batyuTooltip": "Daily spiritual bag",
-  "batyuTitle": "Import Daily spiritual bag",
+  "batyuTooltip": "Daily readings (in Hungarian)",
+  "batyuTitle": "Import Daily readings (in Hungarian)",
   "batyuDateLabel": "Date",
   "batyuWordsPerSlide": "Words per slide",
-  "batyuNoItems": "No readings are available for this date in the Daily spiritual bag.",
-  "batyuBookLabel": "Daily spiritual bag ({name})",
+  "batyuNoItems": "No readings are available for this date.",
+  "batyuBookLabel": "Daily readings (in Hungarian) ({name})",
   "addSlideTooltip": "Add slide",
   "addTextSlide": "Text slide",
   "addImageSlide": "Image slide",
@@ -404,7 +404,7 @@
       "name": {}
     }
   },
-  "batyuBookLabel": "Daily spiritual bag ({name})",
+  "batyuBookLabel": "Daily reading ({name})",
   "@batyuBookLabel": {
     "placeholders": {
       "name": {}
