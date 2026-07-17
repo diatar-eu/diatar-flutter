@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:file/file.dart';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
