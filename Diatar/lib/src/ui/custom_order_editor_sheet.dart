@@ -1993,7 +1993,12 @@ class _ZsolozsmaDialogState extends State<_ZsolozsmaDialog> {
                       title: Text(part.title),
                       onTap: () async {
                         final bool loaded = await widget.controller
-                            .selectZsolozsmaPart(_selectedDate, part);
+                            .selectZsolozsmaPart(
+                              _selectedDate,
+                              part,
+                              insertAtIndex:
+                                  widget.controller.customOrderInsertionIndex,
+                            );
                         if (loaded && context.mounted) {
                           Navigator.of(context).pop();
                         }
@@ -2195,6 +2200,8 @@ class _BatyuDialogState extends State<_BatyuDialog> {
                               _selectedDate,
                               celebration,
                               wordsPerSlide: _wordsPerSlide,
+                              insertAtIndex:
+                                  widget.controller.customOrderInsertionIndex,
                             );
                         if (loaded && context.mounted) {
                           Navigator.of(context).pop();

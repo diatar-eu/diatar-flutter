@@ -662,7 +662,11 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
-  Future<bool> selectZsolozsmaPart(DateTime date, ZsolozsmaDayPart part) async {
+  Future<bool> selectZsolozsmaPart(
+    DateTime date,
+    ZsolozsmaDayPart part, {
+    int? insertAtIndex,
+  }) async {
     final DateTime day = DateTime(date.year, date.month, date.day);
     final Directory dir = await _resolveZsolozsmaDirectory();
     _logZsolozsmaDebug(
@@ -712,18 +716,28 @@ class DiatarMainController extends ChangeNotifier {
       return false;
     }
 
-    await applyCustomOrder(entries, activate: true);
+    final bool wasEmpty = _customOrder.isEmpty;
+    final List<CustomOrderEntry> combined = _insertEntriesIntoOrder(
+      entries,
+      insertAtIndex,
+    );
+    await applyCustomOrder(combined, activate: true);
     _logZsolozsmaDebug('applyCustomOrder complete entries=${entries.length}');
     final String zsolozsmaLabel = '${_formatDateIso(day)} ${part.title.trim()}'
         .trim();
-    _customOrderSourceType = _customOrderSourceZsolozsmaUnsaved;
-    _zsolozsmaVirtualBookLabel = zsolozsmaLabel;
+    if (wasEmpty) {
+      _customOrderSourceType = _customOrderSourceZsolozsmaUnsaved;
+      _zsolozsmaVirtualBookLabel = zsolozsmaLabel;
+    }
     _lastImportedCustomOrderBaseName = zsolozsmaLabel;
     await _persistCurrentCustomOrder();
-    _diaVirtualBookSelected = entries.isNotEmpty;
-    if (entries.isNotEmpty) {
-      _selectByCustomOrderCursor(0, sync: true);
-      _logZsolozsmaDebug('selected first custom order entry');
+    _diaVirtualBookSelected = combined.isNotEmpty;
+    final int selectIndex = insertAtIndex == null
+        ? 0
+        : insertAtIndex.clamp(0, combined.length - 1);
+    if (combined.isNotEmpty) {
+      _selectByCustomOrderCursor(selectIndex, sync: true);
+      _logZsolozsmaDebug('selected custom order entry at $selectIndex');
     }
 
     _setStatus('statusZsolozsmaPartLoaded', <String, String>{
@@ -775,6 +789,7 @@ class DiatarMainController extends ChangeNotifier {
     DateTime date,
     NapiLelkiBatyuCelebration celebration, {
     int wordsPerSlide = 30,
+    int? insertAtIndex,
   }) async {
     final DateTime day = DateTime(date.year, date.month, date.day);
     final List<CustomOrderEntry> entries = _napiLelkiBatyuService
@@ -788,16 +803,26 @@ class DiatarMainController extends ChangeNotifier {
       return false;
     }
 
-    await applyCustomOrder(entries, activate: true);
+    final bool wasEmpty = _customOrder.isEmpty;
+    final List<CustomOrderEntry> combined = _insertEntriesIntoOrder(
+      entries,
+      insertAtIndex,
+    );
+    await applyCustomOrder(combined, activate: true);
     final String batyuLabel =
         '${_formatDateIso(day)} ${celebration.title.trim()}'.trim();
-    _customOrderSourceType = _customOrderSourceBatyuUnsaved;
-    _napiLelkiBatyuVirtualBookLabel = batyuLabel;
+    if (wasEmpty) {
+      _customOrderSourceType = _customOrderSourceBatyuUnsaved;
+      _napiLelkiBatyuVirtualBookLabel = batyuLabel;
+    }
     _lastImportedCustomOrderBaseName = batyuLabel;
     await _persistCurrentCustomOrder();
-    _diaVirtualBookSelected = entries.isNotEmpty;
-    if (entries.isNotEmpty) {
-      _selectByCustomOrderCursor(0, sync: true);
+    _diaVirtualBookSelected = combined.isNotEmpty;
+    final int selectIndex = insertAtIndex == null
+        ? 0
+        : insertAtIndex.clamp(0, combined.length - 1);
+    if (combined.isNotEmpty) {
+      _selectByCustomOrderCursor(selectIndex, sync: true);
     }
 
     _setStatus('statusBatyuPartLoaded', <String, String>{
@@ -807,6 +832,34 @@ class DiatarMainController extends ChangeNotifier {
     });
     notifyListeners();
     return true;
+  }
+
+  /// Returns the index at which a newly inserted block should be placed:
+  /// right after the current cursor, or at the end when the cursor is invalid.
+  int get customOrderInsertionIndex {
+    if (_customOrder.isEmpty) {
+      return 0;
+    }
+    final int cursor = _customOrderCursor;
+    if (cursor < 0 || cursor >= _customOrder.length) {
+      return _customOrder.length;
+    }
+    return cursor + 1;
+  }
+
+  List<CustomOrderEntry> _insertEntriesIntoOrder(
+    List<CustomOrderEntry> entries,
+    int? insertAtIndex,
+  ) {
+    if (insertAtIndex == null) {
+      return entries;
+    }
+    final int index = insertAtIndex.clamp(0, _customOrder.length);
+    final List<CustomOrderEntry> combined = List<CustomOrderEntry>.from(
+      _customOrder,
+    );
+    combined.insertAll(index, entries);
+    return combined;
   }
 
   void _logZsolozsmaDebug(String message) {
