@@ -1158,7 +1158,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             }
             return songOptions;
           },
-          onApply: (AppSettings settings) => controller.applySettings(settings),
+          onApply: controller.applySettings,
           onExitRequested: controller.requestExit,
           onReloadBooksRequested: () => unawaited(controller.reloadBooks()),
           onRemoteStopRequested: () => unawaited(controller.sendStop()),

@@ -43,7 +43,7 @@ class DiatarSettingsSheet extends StatefulWidget {
   });
 
   final AppSettings initialSettings;
-  final ValueChanged<AppSettings> onApply;
+  final Future<void> Function(AppSettings) onApply;
   final VoidCallback onExitRequested;
   final VoidCallback onReloadBooksRequested;
   final VoidCallback onRemoteStopRequested;
@@ -726,8 +726,40 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
     await _runUserApiAction(
       successMessage: l10n.userActionDeleteUserSuccess,
-      action: () => _userApi.deleteUser(username: username, password: password),
+      action: () async {
+        await _disableInternetRelayBeforeDeletingActiveSender(username);
+        await _userApi.deleteUser(username: username, password: password);
+      },
     );
+  }
+
+  Future<void> _disableInternetRelayBeforeDeletingActiveSender(
+    String username,
+  ) async {
+    final String deletingUser = username.trim();
+    final String senderUser = _mqttUser.text.trim();
+    final bool shouldDisableRelay =
+        _internetRelayEnabled &&
+        deletingUser.isNotEmpty &&
+        senderUser.isNotEmpty &&
+        deletingUser == senderUser;
+    if (!shouldDisableRelay) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _internetRelayEnabled = false;
+      });
+    }
+
+    final AppSettings relayDisabled = widget.initialSettings.copyWith(
+      internetRelayEnabled: false,
+      mqttUser: senderUser,
+      mqttPassword: '',
+      mqttChannel: '1',
+    );
+    await widget.onApply(relayDisabled);
   }
 
   Future<void> _forgotPassword() async {
@@ -1105,7 +1137,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       mqttChannel: '1',
     );
 
-    widget.onApply(updated);
+    unawaited(widget.onApply(updated));
     return true;
   }
 
@@ -2427,7 +2459,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       hiColor: _hiColor,
     );
 
-    widget.onApply(updated);
+    unawaited(widget.onApply(updated));
     Navigator.of(context).pop();
   }
 
