@@ -21,7 +21,7 @@ class AppSettings {
     this.dtxPath = '',
     this.blankPicPath = '',
     this.diaExportPath = '',
-    this.projFontSize = 70,
+    this.projFontSize = 255,
     this.projTitleSize = 12,
     this.projLeftIndent = 2,
     this.projBorderL = 0,
