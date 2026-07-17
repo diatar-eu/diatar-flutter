@@ -617,11 +617,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 icon: const Icon(Icons.alternate_email),
                 label: Text(l10n.userActionChangeEmail),
               ),
-              OutlinedButton.icon(
-                onPressed: _internetActionRunning ? null : _changeUsername,
-                icon: const Icon(Icons.manage_accounts),
-                label: Text(l10n.userActionChangeUsername),
-              ),
             ],
           ),
           if (_internetActionRunning) ...<Widget>[
