@@ -593,6 +593,72 @@
   "selectedVersesSubtitle": "Többet is kijelölhetsz.",
   "customOrderSelectAllVerses": "Összes",
   "customOrderClearVerseSelection": "Egyik sem",
+  "customOrderSetsSection": "Énekrendek",
+  "@customOrderSetsSection": {
+    "description": "Section header for the list of loaded custom orders (énekrendek) in the volume list dialog."
+  },
+  "customOrderSetSelectorLabel": "Aktív énekrend",
+  "@customOrderSetSelectorLabel": {
+    "description": "Label for the dropdown that selects the active énekrend in the Diasor (dialist) panel."
+  },
+  "customOrderSetActive": "Aktív",
+  "@customOrderSetActive": {
+    "description": "Badge shown next to the currently active custom order"
+  },
+  "customOrderSetEmpty": "Üres énekrend",
+  "@customOrderSetEmpty": {
+    "description": "Shown when a loaded custom order has no entries"
+  },
+  "customOrderSetEntryCount": "{count} tétel",
+  "@customOrderSetEntryCount": {
+    "description": "Shows the number of entries in a loaded custom order",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "customOrderSetRename": "Átnevezés",
+  "@customOrderSetRename": {
+    "description": "Menu item to rename a loaded custom order"
+  },
+  "customOrderSetRemove": "Eltávolítás",
+  "@customOrderSetRemove": {
+    "description": "Menu item to remove a loaded custom order"
+  },
+  "customOrderSetRenameTitle": "Énekrend átnevezése",
+  "@customOrderSetRenameTitle": {
+    "description": "Title of the rename custom order dialog"
+  },
+  "customOrderSetRemoveConfirm": "Biztosan eltávolítod ezt az énekrendet?",
+  "@customOrderSetRemoveConfirm": {
+    "description": "Confirmation message before removing a loaded custom order"
+  },
+  "customOrderSetToggleEnabledTooltip": "Énekrend be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)",
+  "@customOrderSetToggleEnabledTooltip": {
+    "description": "Tooltip to enable or disable a custom order in the editor"
+  },
+  "customOrderLoadModeTitle": "Énekrend betöltése",
+  "@customOrderLoadModeTitle": {
+    "description": "Title of the dialog asking how to load an imported custom order"
+  },
+  "customOrderLoadModeOverwrite": "Felülírja az aktuálist",
+  "@customOrderLoadModeOverwrite": {
+    "description": "Option to overwrite the currently active custom order with the imported one"
+  },
+  "customOrderLoadModeAdd": "Mellé tölti (párhuzamos)",
+  "@customOrderLoadModeAdd": {
+    "description": "Option to load the imported custom order alongside the already loaded ones"
+  },
+  "customOrderLoadModeMessage": "Hogyan töltsük be a kiválasztott énekrendet?",
+  "@customOrderLoadModeMessage": {
+    "description": "Question shown in the load mode dialog"
+  },
+  "volumeListTitle": "Kötetlista",
+  "@volumeListTitle": {
+    "description": "Title of the volume list dialog"
+  },
   "apply": "Alkalmaz",
   "internetUserActionsTitle": "Felhasználói műveletek (API)",
   "internetStatusOn": "Be",

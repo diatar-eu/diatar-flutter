@@ -593,6 +593,72 @@
   "selectedVersesSubtitle": "You can select multiple.",
   "customOrderSelectAllVerses": "Select all",
   "customOrderClearVerseSelection": "Clear",
+  "customOrderSetsSection": "Custom orders",
+  "@customOrderSetsSection": {
+    "description": "Section header for the list of loaded custom orders (énekrendek) in the volume list dialog."
+  },
+  "customOrderSetSelectorLabel": "Active custom order",
+  "@customOrderSetSelectorLabel": {
+    "description": "Label for the dropdown that selects the active énekrend in the Diasor (dialist) panel."
+  },
+  "customOrderSetActive": "Active",
+  "@customOrderSetActive": {
+    "description": "Badge shown next to the currently active custom order"
+  },
+  "customOrderSetEmpty": "Empty custom order",
+  "@customOrderSetEmpty": {
+    "description": "Shown when a loaded custom order has no entries"
+  },
+  "customOrderSetEntryCount": "{count} items",
+  "@customOrderSetEntryCount": {
+    "description": "Shows the number of entries in a loaded custom order",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "customOrderSetRename": "Rename",
+  "@customOrderSetRename": {
+    "description": "Menu item to rename a loaded custom order"
+  },
+  "customOrderSetRemove": "Remove",
+  "@customOrderSetRemove": {
+    "description": "Menu item to remove a loaded custom order"
+  },
+  "customOrderSetRenameTitle": "Rename custom order",
+  "@customOrderSetRenameTitle": {
+    "description": "Title of the rename custom order dialog"
+  },
+  "customOrderSetRemoveConfirm": "Remove this custom order?",
+  "@customOrderSetRemoveConfirm": {
+    "description": "Confirmation message before removing a loaded custom order"
+  },
+  "customOrderSetToggleEnabledTooltip": "Enable or disable the custom order (a disabled one is hidden from the views)",
+  "@customOrderSetToggleEnabledTooltip": {
+    "description": "Tooltip to enable or disable a custom order in the editor"
+  },
+  "customOrderLoadModeTitle": "Load custom order",
+  "@customOrderLoadModeTitle": {
+    "description": "Title of the dialog asking how to load an imported custom order"
+  },
+  "customOrderLoadModeOverwrite": "Overwrite the current one",
+  "@customOrderLoadModeOverwrite": {
+    "description": "Option to overwrite the currently active custom order with the imported one"
+  },
+  "customOrderLoadModeAdd": "Load alongside (parallel)",
+  "@customOrderLoadModeAdd": {
+    "description": "Option to load the imported custom order alongside the already loaded ones"
+  },
+  "customOrderLoadModeMessage": "How should the selected custom order be loaded?",
+  "@customOrderLoadModeMessage": {
+    "description": "Question shown in the load mode dialog"
+  },
+  "volumeListTitle": "Volume list",
+  "@volumeListTitle": {
+    "description": "Title of the volume list dialog"
+  },
   "apply": "Apply",
   "internetUserActionsTitle": "User actions (API)",
   "internetStatusOn": "On",

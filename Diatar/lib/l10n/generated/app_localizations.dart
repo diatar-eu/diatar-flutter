@@ -1637,6 +1637,96 @@ abstract class AppLocalizations {
   /// **'Egyik sem'**
   String get customOrderClearVerseSelection;
 
+  /// Section header for the list of loaded custom orders (énekrendek) in the volume list dialog.
+  ///
+  /// In hu, this message translates to:
+  /// **'Énekrendek'**
+  String get customOrderSetsSection;
+
+  /// Label for the dropdown that selects the active énekrend in the Diasor (dialist) panel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Aktív énekrend'**
+  String get customOrderSetSelectorLabel;
+
+  /// Badge shown next to the currently active custom order
+  ///
+  /// In hu, this message translates to:
+  /// **'Aktív'**
+  String get customOrderSetActive;
+
+  /// Shown when a loaded custom order has no entries
+  ///
+  /// In hu, this message translates to:
+  /// **'Üres énekrend'**
+  String get customOrderSetEmpty;
+
+  /// Shows the number of entries in a loaded custom order
+  ///
+  /// In hu, this message translates to:
+  /// **'{count} tétel'**
+  String customOrderSetEntryCount(int count);
+
+  /// Menu item to rename a loaded custom order
+  ///
+  /// In hu, this message translates to:
+  /// **'Átnevezés'**
+  String get customOrderSetRename;
+
+  /// Menu item to remove a loaded custom order
+  ///
+  /// In hu, this message translates to:
+  /// **'Eltávolítás'**
+  String get customOrderSetRemove;
+
+  /// Title of the rename custom order dialog
+  ///
+  /// In hu, this message translates to:
+  /// **'Énekrend átnevezése'**
+  String get customOrderSetRenameTitle;
+
+  /// Confirmation message before removing a loaded custom order
+  ///
+  /// In hu, this message translates to:
+  /// **'Biztosan eltávolítod ezt az énekrendet?'**
+  String get customOrderSetRemoveConfirm;
+
+  /// Tooltip to enable or disable a custom order in the editor
+  ///
+  /// In hu, this message translates to:
+  /// **'Énekrend be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)'**
+  String get customOrderSetToggleEnabledTooltip;
+
+  /// Title of the dialog asking how to load an imported custom order
+  ///
+  /// In hu, this message translates to:
+  /// **'Énekrend betöltése'**
+  String get customOrderLoadModeTitle;
+
+  /// Option to overwrite the currently active custom order with the imported one
+  ///
+  /// In hu, this message translates to:
+  /// **'Felülírja az aktuálist'**
+  String get customOrderLoadModeOverwrite;
+
+  /// Option to load the imported custom order alongside the already loaded ones
+  ///
+  /// In hu, this message translates to:
+  /// **'Mellé tölti (párhuzamos)'**
+  String get customOrderLoadModeAdd;
+
+  /// Question shown in the load mode dialog
+  ///
+  /// In hu, this message translates to:
+  /// **'Hogyan töltsük be a kiválasztott énekrendet?'**
+  String get customOrderLoadModeMessage;
+
+  /// Title of the volume list dialog
+  ///
+  /// In hu, this message translates to:
+  /// **'Kötetlista'**
+  String get volumeListTitle;
+
   /// No description provided for @apply.
   ///
   /// In hu, this message translates to:

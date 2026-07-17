@@ -112,6 +112,87 @@ class StoredCustomOrderEntry {
   }
 }
 
+/// Egy betöltött énekrend (saját diasor) perzisztált állapota.
+class StoredCustomOrderSet {
+  const StoredCustomOrderSet({
+    required this.id,
+    required this.name,
+    required this.entries,
+    this.enabled = true,
+    this.baseName,
+    this.sourceType,
+    this.zsolozsmaLabel,
+    this.batyuLabel,
+  });
+
+  final String id;
+  final String name;
+  final List<StoredCustomOrderEntry> entries;
+  final bool enabled;
+  final String? baseName;
+  final String? sourceType;
+  final String? zsolozsmaLabel;
+  final String? batyuLabel;
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> out = <String, dynamic>{
+      'id': id,
+      'name': name,
+      'enabled': enabled,
+      'entries': entries.map((StoredCustomOrderEntry e) => e.toJson()).toList(),
+    };
+    if (baseName != null && baseName!.trim().isNotEmpty) {
+      out['baseName'] = baseName!.trim();
+    }
+    if (sourceType != null && sourceType!.trim().isNotEmpty) {
+      out['sourceType'] = sourceType!.trim();
+    }
+    if (zsolozsmaLabel != null && zsolozsmaLabel!.trim().isNotEmpty) {
+      out['zsolozsmaLabel'] = zsolozsmaLabel!.trim();
+    }
+    if (batyuLabel != null && batyuLabel!.trim().isNotEmpty) {
+      out['batyuLabel'] = batyuLabel!.trim();
+    }
+    return out;
+  }
+
+  static StoredCustomOrderSet? fromJson(Object? raw) {
+    if (raw is! Map) {
+      return null;
+    }
+    final Object? id = raw['id'];
+    final Object? name = raw['name'];
+    if (id is! String || name is! String) {
+      return null;
+    }
+    final List<StoredCustomOrderEntry> entries = <StoredCustomOrderEntry>[];
+    final Object? rawEntries = raw['entries'];
+    if (rawEntries is List) {
+      for (final Object? e in rawEntries) {
+        final StoredCustomOrderEntry? parsed = StoredCustomOrderEntry.fromJson(e);
+        if (parsed != null) {
+          entries.add(parsed);
+        }
+      }
+    }
+    final Object? enabled = raw['enabled'];
+    final Object? baseName = raw['baseName'];
+    final Object? sourceType = raw['sourceType'];
+    final Object? zsolozsmaLabel = raw['zsolozsmaLabel'];
+    final Object? batyuLabel = raw['batyuLabel'];
+    return StoredCustomOrderSet(
+      id: id,
+      name: name,
+      entries: entries,
+      enabled: enabled is bool ? enabled : true,
+      baseName: baseName is String ? baseName.trim() : null,
+      sourceType: sourceType is String ? sourceType.trim() : null,
+      zsolozsmaLabel: zsolozsmaLabel is String ? zsolozsmaLabel.trim() : null,
+      batyuLabel: batyuLabel is String ? batyuLabel.trim() : null,
+    );
+  }
+}
+
 class DtxOrderStore {
   static const String _kDisabledSongbooks = 'DisabledSongbooks';
   static const String _kCurrentCustomOrder = 'CurrentCustomOrder';
@@ -125,6 +206,8 @@ class DtxOrderStore {
   static const String _kCurrentCustomOrderBatyuLabel =
       'CurrentCustomOrderBatyuLabel';
   static const String _kCustomOrderPresets = 'CustomOrderPresets';
+  static const String _kCustomOrderSets = 'CustomOrderSets';
+  static const String _kCustomOrderSetsActive = 'CustomOrderSetsActive';
 
   Future<Set<String>> loadDisabled() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -272,5 +355,48 @@ class DtxOrderStore {
           .toList();
     });
     await prefs.setString(_kCustomOrderPresets, jsonEncode(serializable));
+  }
+
+  Future<void> saveCustomOrderSets(
+    List<StoredCustomOrderSet> sets, {
+    required int activeIndex,
+  }) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String json = jsonEncode(
+      sets.map((StoredCustomOrderSet s) => s.toJson()).toList(),
+    );
+    await prefs.setString(_kCustomOrderSets, json);
+    await prefs.setInt(_kCustomOrderSetsActive, activeIndex);
+  }
+
+  Future<({List<StoredCustomOrderSet> sets, int activeIndex})>
+      loadCustomOrderSets() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String raw = prefs.getString(_kCustomOrderSets) ?? '[]';
+    final int activeIndex = prefs.getInt(_kCustomOrderSetsActive) ?? -1;
+
+    final List<StoredCustomOrderSet> sets = <StoredCustomOrderSet>[];
+    try {
+      final Object? decoded = jsonDecode(raw);
+      if (decoded is List) {
+        for (final Object? e in decoded) {
+          final StoredCustomOrderSet? parsed = StoredCustomOrderSet.fromJson(e);
+          if (parsed != null) {
+            sets.add(parsed);
+          }
+        }
+      }
+    } catch (_) {}
+
+    int safeActive = activeIndex;
+    if (safeActive < 0 || safeActive >= sets.length) {
+      safeActive = sets.isEmpty
+          ? -1
+          : sets.indexWhere((StoredCustomOrderSet s) => s.enabled);
+      if (safeActive < 0 && sets.isNotEmpty) {
+        safeActive = 0;
+      }
+    }
+    return (sets: sets, activeIndex: safeActive);
   }
 }
