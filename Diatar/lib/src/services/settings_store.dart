@@ -50,6 +50,17 @@ class SettingsStore {
   static const String _kUseSound = 'UseSound';
   static const String _kTranspositions = 'Transpositions';
 
+  static const Map<String, String> _defaultDesktopActionHotkeys =
+      <String, String>{
+        'prevVerse': 'ArrowUp',
+        'nextVerse': 'ArrowDown',
+        'prevSong': 'PageUp',
+        'nextSong': 'PageDown',
+        'toggleProjection': 'Escape',
+        'highlightPrev': 'ArrowLeft',
+        'highlightNext': 'ArrowRight',
+      };
+
   Future<Map<String, int>> loadTranspositions() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? json = prefs.getString(_kTranspositions);
@@ -85,6 +96,12 @@ class SettingsStore {
             .toList();
     final bool tcpClientEnabled =
         prefs.getBool(_kTcpClientEnabled) ?? tcpTargets.isNotEmpty;
+    final bool hasDesktopActionHotkeys = prefs.containsKey(
+      _kDesktopActionHotkeys,
+    );
+    final Map<String, String> desktopActionHotkeys = _decodeStringMap(
+      prefs.getStringList(_kDesktopActionHotkeys),
+    );
     return AppSettings(
       port: legacyPort,
       tcpClientEnabled: tcpClientEnabled,
@@ -136,9 +153,9 @@ class SettingsStore {
           prefs.getBool(_kDesktopProjectorEnabled) ?? true,
       desktopProjectorMonitor:
           prefs.getInt(_kDesktopProjectorMonitor) ?? -1,
-      desktopActionHotkeys: _decodeStringMap(
-        prefs.getStringList(_kDesktopActionHotkeys),
-      ),
+      desktopActionHotkeys: hasDesktopActionHotkeys
+          ? desktopActionHotkeys
+          : _defaultDesktopActionHotkeys,
       desktopSongHotkeys: _decodeStringMap(
         prefs.getStringList(_kDesktopSongHotkeys),
       ),

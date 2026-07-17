@@ -277,7 +277,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final String blankSummary = _blankPicPath.text.trim().isEmpty
         ? l10n.valueNotSet
         : shortFriendlyPathLabel(_blankPicPath.text.trim(), l10n);
-    final bool desktopHotkeysAvailable = _isDesktopPlatform();
+    final bool desktopHotkeysAvailable = _supportsHotkeysPlatform();
     final bool showInternet = _matches(
       query,
       'internet mqtt kozvetites felhasznalo user',
@@ -1844,6 +1844,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     return defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux;
+  }
+
+  bool _supportsHotkeysPlatform() {
+    return kIsWeb || _isDesktopPlatform();
   }
 
   String _eventToCombo(KeyEvent event) {
