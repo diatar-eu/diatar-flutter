@@ -28,9 +28,12 @@ class TcpSenderService {
   Uint8List? _cachedPic;
   Uint8List? _cachedScrSize;
   bool _lastStatus = false;
+  bool _lastAllTargetsConnected = false;
 
   bool get running => _running;
   bool get hasClients => _clients.isNotEmpty;
+  bool get allTargetsConnected =>
+      _targetKeys.isNotEmpty && _clients.length == _targetKeys.length;
 
   Future<void> start(List<String> targets) async {
     await stop();
@@ -270,8 +273,12 @@ class TcpSenderService {
 
   void _emitStatus({bool force = false}) {
     final bool connected = _clients.isNotEmpty;
-    if (force || connected != _lastStatus) {
+    final bool allConnected = allTargetsConnected;
+    if (force ||
+        connected != _lastStatus ||
+        allConnected != _lastAllTargetsConnected) {
       _lastStatus = connected;
+      _lastAllTargetsConnected = allConnected;
       onStatusChanged(connected);
     }
   }

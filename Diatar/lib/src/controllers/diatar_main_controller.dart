@@ -472,14 +472,18 @@ class DiatarMainController extends ChangeNotifier {
   void _configureSender() {
     _sender.onStatusChanged = _senderCallbackCoordinator.buildStatusChangedHandler(
       setConnected: (bool connected) => tcpConnected = connected,
-      clearError: () => tcpHasError = false,
+      clearError: () {
+        if (_sender.allTargetsConnected) {
+          tcpHasError = false;
+        }
+      },
       syncAfterConnect: _syncBackgroundImageAfterConnect,
       refreshFlags: _refreshSenderFlags,
       notify: notifyListeners,
     );
     _sender.onError = _senderCallbackCoordinator.buildTcpErrorHandler(
       isActive: () => tcpActive,
-      isConnected: () => tcpConnected,
+      isConnected: () => tcpConnected && _sender.allTargetsConnected,
       markHasError: () => tcpHasError = true,
       setStatus: _setStatus,
       refreshFlags: _refreshSenderFlags,

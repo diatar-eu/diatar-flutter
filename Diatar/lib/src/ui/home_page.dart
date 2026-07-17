@@ -379,11 +379,11 @@ _TransportIndicatorState _localNetworkIndicatorState(
   if (!controller.tcpActive) {
     return _TransportIndicatorState.off;
   }
-  if (controller.tcpConnected) {
-    return _TransportIndicatorState.connected;
-  }
   if (controller.tcpHasError) {
     return _TransportIndicatorState.error;
+  }
+  if (controller.tcpConnected) {
+    return _TransportIndicatorState.connected;
   }
   return _TransportIndicatorState.connecting;
 }
