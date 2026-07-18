@@ -1116,33 +1116,42 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     if (controller.showPhotoInControl) {
       final String? photoPath = controller.currentPhotoPath;
       if (photoPath != null && photoPath.isNotEmpty) {
-        return _SwipePagingPreview(
-          controller: controller,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                l10n.controlPhotoViewPhoto,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: controller.globals.txtColor.withValues(alpha: 0.75),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: SizedBox.expand(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: _FileImageWidget(
-                      path: photoPath,
-                      notFoundLabel: photoPath,
+        final Widget image = ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: _FileImageWidget(
+            path: photoPath,
+            notFoundLabel: photoPath,
+          ),
+        );
+        return LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final bool bounded = constraints.maxHeight.isFinite;
+            return _SwipePagingPreview(
+              controller: controller,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    l10n.controlPhotoViewPhoto,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: controller.globals.txtColor.withValues(alpha: 0.75),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 10),
+                  if (bounded)
+                    Expanded(child: SizedBox.expand(child: image))
+                  else
+                    SizedBox(
+                      width: constraints.maxWidth,
+                      height: constraints.maxWidth * 0.7,
+                      child: image,
+                    ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       }
     }
@@ -3235,13 +3244,11 @@ class _CustomImagePreview extends StatelessWidget {
         ? ''
         : formatFriendlyPathLabel(normalized, context.l10n);
 
-    final Widget content = SizedBox.expand(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: _FileImageWidget(
-          path: normalized,
-          notFoundLabel: friendlyPath,
-        ),
+    final Widget image = ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: _FileImageWidget(
+        path: normalized,
+        notFoundLabel: friendlyPath,
       ),
     );
 
@@ -3249,23 +3256,35 @@ class _CustomImagePreview extends StatelessWidget {
       color: controller.globals.txtColor.withValues(alpha: 0.75),
     );
 
-    return _SwipePagingPreview(
-      controller: controller,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          if (showTitle) ...<Widget>[
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: titleStyle,
-            ),
-            const SizedBox(height: 10),
-          ],
-          Expanded(child: content),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool bounded = constraints.maxHeight.isFinite;
+        return _SwipePagingPreview(
+          controller: controller,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (showTitle) ...<Widget>[
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: titleStyle,
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (bounded)
+                Expanded(child: SizedBox.expand(child: image))
+              else
+                SizedBox(
+                  width: constraints.maxWidth,
+                  height: constraints.maxWidth * 0.7,
+                  child: image,
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
