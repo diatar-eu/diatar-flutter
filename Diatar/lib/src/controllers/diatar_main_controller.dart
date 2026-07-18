@@ -279,6 +279,9 @@ class DiatarMainController extends ChangeNotifier {
         _napiLelkiBatyuVirtualBookLabel = active.batyuLabel;
         customOrderActive = active.entries.isNotEmpty;
         _diaVirtualBookSelected = active.entries.isNotEmpty;
+        _customOrderCursor = active.entries.isEmpty
+            ? -1
+            : active.cursor.clamp(0, active.entries.length - 1);
       } else {
         _customOrder = const <CustomOrderEntry>[];
         customOrderActive = false;
@@ -311,9 +314,9 @@ class DiatarMainController extends ChangeNotifier {
           ),
         ];
         _activeOrderSetIndex = 0;
+        _customOrderCursor = _customOrder.isEmpty ? -1 : 0;
       }
     }
-    _customOrderCursor = _customOrder.isEmpty ? -1 : 0;
   }
 
   /// A jelenleg aktív énekrend munkapéldányának (_customOrder) és a hozzá
@@ -323,6 +326,9 @@ class DiatarMainController extends ChangeNotifier {
         _activeOrderSetIndex >= _customOrderSets.length) {
       return;
     }
+    final int safeCursor = _customOrder.isEmpty
+        ? -1
+        : _customOrderCursor.clamp(0, _customOrder.length - 1);
     _customOrderSets[_activeOrderSetIndex] = _customOrderSets[_activeOrderSetIndex]
         .copyWith(
           entries: List<CustomOrderEntry>.from(_customOrder),
@@ -330,6 +336,7 @@ class DiatarMainController extends ChangeNotifier {
           sourceType: _customOrderSourceType,
           zsolozsmaLabel: _zsolozsmaVirtualBookLabel,
           batyuLabel: _napiLelkiBatyuVirtualBookLabel,
+          cursor: safeCursor,
         );
   }
 
@@ -381,7 +388,9 @@ class DiatarMainController extends ChangeNotifier {
     _napiLelkiBatyuVirtualBookLabel = set.batyuLabel;
     customOrderActive = set.entries.isNotEmpty;
     _diaVirtualBookSelected = set.entries.isNotEmpty;
-    _customOrderCursor = set.entries.isEmpty ? -1 : 0;
+    _customOrderCursor = set.entries.isEmpty
+        ? -1
+        : set.cursor.clamp(0, set.entries.length - 1);
     _projectedCustomCursor = -1;
     await _persistAllSets();
     if (customOrderActive) {
@@ -482,7 +491,9 @@ class DiatarMainController extends ChangeNotifier {
         _napiLelkiBatyuVirtualBookLabel = set.batyuLabel;
         customOrderActive = set.entries.isNotEmpty;
         _diaVirtualBookSelected = set.entries.isNotEmpty;
-        _customOrderCursor = set.entries.isEmpty ? -1 : 0;
+        _customOrderCursor = set.entries.isEmpty
+            ? -1
+            : set.cursor.clamp(0, set.entries.length - 1);
         _projectedCustomCursor = -1;
       }
     }
@@ -2155,11 +2166,17 @@ class DiatarMainController extends ChangeNotifier {
             sourceType: null,
             zsolozsmaLabel: null,
             batyuLabel: null,
+            cursor: _customOrder.isEmpty
+                ? -1
+                : _customOrderCursor.clamp(0, _customOrder.length - 1),
           );
       await _persistCurrentCustomOrder();
       await _persistAllSets();
     } else {
       // Új, párhuzamos énekrendként töltjük be a már betöltöttek mellé.
+      // Előbb elmentjük az eddigi aktív énekrend kurzorát, mielőtt
+      // átváltunk az újonnan betöltöttre.
+      _persistActiveSetToSets();
       final CustomOrderSet newSet = CustomOrderSet(
         id: _nextCustomOrderSetId(),
         name: baseName ?? 'Énekrend',

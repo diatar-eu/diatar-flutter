@@ -16,6 +16,7 @@ class CustomOrderSet {
     this.sourceType,
     this.zsolozsmaLabel,
     this.batyuLabel,
+    this.cursor = -1,
   });
 
   final String id;
@@ -26,6 +27,11 @@ class CustomOrderSet {
   final String? sourceType;
   final String? zsolozsmaLabel;
   final String? batyuLabel;
+
+  /// Az énekrend utoljára ismert kurzorpozíciója (a bejegyzéslistában).
+  /// Énekrendek közötti váltáskor ezt tároljuk el, hogy visszaváltáskor
+  /// ugyanoda kerüljön a kurzor. Érvénytelen (üres lista) esetén -1.
+  final int cursor;
 
   /// A felhasználói felületen megjelenítendő név.
   ///
@@ -57,6 +63,8 @@ class CustomOrderSet {
     bool clearZsolozsmaLabel = false,
     String? batyuLabel,
     bool clearBatyuLabel = false,
+    int? cursor,
+    bool clearCursor = false,
   }) {
     return CustomOrderSet(
       id: id ?? this.id,
@@ -68,6 +76,7 @@ class CustomOrderSet {
       zsolozsmaLabel:
           clearZsolozsmaLabel ? null : (zsolozsmaLabel ?? this.zsolozsmaLabel),
       batyuLabel: clearBatyuLabel ? null : (batyuLabel ?? this.batyuLabel),
+      cursor: clearCursor ? -1 : (cursor ?? this.cursor),
     );
   }
 }

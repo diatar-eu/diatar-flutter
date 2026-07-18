@@ -123,6 +123,7 @@ class StoredCustomOrderSet {
     this.sourceType,
     this.zsolozsmaLabel,
     this.batyuLabel,
+    this.cursor = -1,
   });
 
   final String id;
@@ -134,12 +135,17 @@ class StoredCustomOrderSet {
   final String? zsolozsmaLabel;
   final String? batyuLabel;
 
+  /// Az énekrend utoljára ismert kurzorpozíciója. Visszamenőleges
+  /// kompatibilitás: ha a tárolt JSON nem tartalmazza, -1 a default.
+  final int cursor;
+
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> out = <String, dynamic>{
       'id': id,
       'name': name,
       'enabled': enabled,
       'entries': entries.map((StoredCustomOrderEntry e) => e.toJson()).toList(),
+      'cursor': cursor,
     };
     if (baseName != null && baseName!.trim().isNotEmpty) {
       out['baseName'] = baseName!.trim();
@@ -180,6 +186,7 @@ class StoredCustomOrderSet {
     final Object? sourceType = raw['sourceType'];
     final Object? zsolozsmaLabel = raw['zsolozsmaLabel'];
     final Object? batyuLabel = raw['batyuLabel'];
+    final Object? cursor = raw['cursor'];
     return StoredCustomOrderSet(
       id: id,
       name: name,
@@ -189,6 +196,7 @@ class StoredCustomOrderSet {
       sourceType: sourceType is String ? sourceType.trim() : null,
       zsolozsmaLabel: zsolozsmaLabel is String ? zsolozsmaLabel.trim() : null,
       batyuLabel: batyuLabel is String ? batyuLabel.trim() : null,
+      cursor: cursor is num ? cursor.toInt() : -1,
     );
   }
 }
