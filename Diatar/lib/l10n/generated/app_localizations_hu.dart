@@ -95,12 +95,6 @@ class AppLocalizationsHu extends AppLocalizations {
       'Jelöld be a letölteni kívánt DTZ fájlokat és a hozzájuk tartozó képeket (zip).';
 
   @override
-  String get downloadDtzSelectAll => 'Összes kijelölése';
-
-  @override
-  String get downloadDtzDeselectAll => 'Kijelölés törlése';
-
-  @override
   String get downloadDtzWithImages => 'Képek (zip) is';
 
   @override

@@ -27,8 +27,6 @@
   "downloadDtz": "DTZ letöltése",
   "downloadDtzTitle": "DTX kották (DTZ) letöltése",
   "downloadDtzHint": "Jelöld be a letölteni kívánt DTZ fájlokat és a hozzájuk tartozó képeket (zip).",
-  "downloadDtzSelectAll": "Összes kijelölése",
-  "downloadDtzDeselectAll": "Kijelölés törlése",
   "downloadDtzWithImages": "Képek (zip) is",
   "downloadDtzCount": "{count} elem kijelölve",
   "@downloadDtzCount": {

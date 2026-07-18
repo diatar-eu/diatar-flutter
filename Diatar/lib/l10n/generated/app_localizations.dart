@@ -260,18 +260,6 @@ abstract class AppLocalizations {
   /// **'Jelöld be a letölteni kívánt DTZ fájlokat és a hozzájuk tartozó képeket (zip).'**
   String get downloadDtzHint;
 
-  /// No description provided for @downloadDtzSelectAll.
-  ///
-  /// In hu, this message translates to:
-  /// **'Összes kijelölése'**
-  String get downloadDtzSelectAll;
-
-  /// No description provided for @downloadDtzDeselectAll.
-  ///
-  /// In hu, this message translates to:
-  /// **'Kijelölés törlése'**
-  String get downloadDtzDeselectAll;
-
   /// No description provided for @downloadDtzWithImages.
   ///
   /// In hu, this message translates to:

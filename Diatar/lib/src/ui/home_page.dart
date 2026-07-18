@@ -1451,6 +1451,30 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
     });
   }
 
+  /// A hivatalos (official) DTZ elemek kijeloltségi allapota a fejlecben
+  /// megjelenito tristate jelolodobozhoz:
+  ///  - true:  mind kijelolve
+  ///  - false: egyik sem kijelolve
+  ///  - null:  reszleges kijeloles
+  bool? _dtzAllSelectedValue() {
+    final List<DtzManageItem> official = _dtzAllItems
+        .where((DtzManageItem item) => item.item.isOfficial)
+        .toList();
+    if (official.isEmpty) {
+      return false;
+    }
+    final int selectedOfficial = official
+        .where((DtzManageItem item) => _dtzDownloadSelected.contains(item.item.fileName))
+        .length;
+    if (selectedOfficial == 0) {
+      return false;
+    }
+    if (selectedOfficial == official.length) {
+      return true;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -1803,6 +1827,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
         }
 
         final int selectedCount = _dtzDownloadSelected.length;
+        final bool? headerValue = _dtzAllSelectedValue();
+        final bool canToggleAll = _dtzAllItems
+            .any((DtzManageItem item) => item.item.isOfficial);
 
         return Column(
           children: <Widget>[
@@ -1810,20 +1837,20 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
               padding: const EdgeInsets.only(bottom: 8, top: 4),
               child: Row(
                 children: <Widget>[
+                  Checkbox(
+                    tristate: true,
+                    value: headerValue,
+                    onChanged: canToggleAll
+                        ? (bool? value) {
+                            _dtzToggleAll(headerValue != true);
+                          }
+                        : null,
+                  ),
                   Expanded(
                     child: Text(
                       l10n.downloadDtzCount(selectedCount),
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () => _dtzToggleAll(true),
-                    child: Text(l10n.downloadDtzSelectAll),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () => _dtzToggleAll(false),
-                    child: Text(l10n.downloadDtzDeselectAll),
                   ),
                 ],
               ),

@@ -94,12 +94,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Select the DTZ files to download and the related images (zip).';
 
   @override
-  String get downloadDtzSelectAll => 'Select all';
-
-  @override
-  String get downloadDtzDeselectAll => 'Clear selection';
-
-  @override
   String get downloadDtzWithImages => 'Images (zip) too';
 
   @override
