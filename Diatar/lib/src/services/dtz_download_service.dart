@@ -217,6 +217,7 @@ class DtzDownloadService {
             onProgress: onProgress,
           );
           await _extractZip(zipFile, targetDir);
+          await zipFile.delete();
           await prefs.setString('$_stampPrefix$zip', zipEntry.timestamp);
           neededSomething = true;
         }
@@ -227,6 +228,30 @@ class DtzDownloadService {
       } else {
         skipped++;
       }
+    }
+
+    // Remove the downloaded zip archives after extraction to save disk space.
+    // Only zips that were successfully extracted (have a stamp) are removed,
+    // which also cleans up leftovers from previous runs.
+    try {
+      final List<FileSystemEntity> existing =
+          await targetDir.list().toList();
+      for (final FileSystemEntity entity in existing) {
+        if (entity is! File) {
+          continue;
+        }
+        final String name = entity.uri.pathSegments
+            .lastWhere((String s) => s.isNotEmpty, orElse: () => '');
+        if (!name.toLowerCase().endsWith('.zip')) {
+          continue;
+        }
+        final String stamp = prefs.getString('$_stampPrefix$name') ?? '';
+        if (stamp.isNotEmpty) {
+          await entity.delete();
+        }
+      }
+    } catch (_) {
+      // Ignore cleanup errors; extracted content is already in place.
     }
 
     await FileSystemProvider.persistWebFileSystem();
