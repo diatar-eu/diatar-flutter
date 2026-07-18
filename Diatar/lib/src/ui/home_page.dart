@@ -13,6 +13,7 @@ import '../models/custom_order_set.dart';
 import '../services/dtx_download_service.dart';
 import '../services/dtz_download_service.dart';
 import '../utils/custom_entry_labels.dart';
+import '../utils/file_system_provider.dart';
 import '../utils/friendly_path.dart';
 import 'settings_sheet.dart';
 import 'custom_order_editor_sheet.dart';
@@ -1115,8 +1116,6 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     if (controller.showPhotoInControl) {
       final String? photoPath = controller.currentPhotoPath;
       if (photoPath != null && photoPath.isNotEmpty) {
-        final File photoFile = File(photoPath);
-        final bool photoExists = photoFile.existsSync();
         return _SwipePagingPreview(
           controller: controller,
           child: Column(
@@ -1132,22 +1131,15 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
               ),
               const SizedBox(height: 10),
               Expanded(
-                child: !photoExists
-                    ? Align(
-                        alignment: Alignment.topLeft,
-                        child: Text(
-                          context.l10n.statusImageNotFound(photoPath),
-                        ),
-                      )
-                    : SizedBox.expand(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            photoFile,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
+                child: SizedBox.expand(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: _FileImageWidget(
+                      path: photoPath,
+                      notFoundLabel: photoPath,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -3123,6 +3115,80 @@ class _CustomTextPreview extends StatelessWidget {
   }
 }
 
+/// Platform-fuggetlen kepfajl-megjelenito. A dart:io helyett a
+/// FileSystemProvider altal biztositott (weben MemoryFileSystem) fajlrendszert
+/// hasznalja, igy weben sem dob "Unsupported operation _Namespace" hibat.
+class _FileImageWidget extends StatefulWidget {
+  const _FileImageWidget({
+    required this.path,
+    required this.notFoundLabel,
+  });
+
+  final String path;
+  final String notFoundLabel;
+
+  @override
+  State<_FileImageWidget> createState() => _FileImageWidgetState();
+}
+
+class _FileImageWidgetState extends State<_FileImageWidget> {
+  late Future<Uint8List?> _bytesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _bytesFuture = _loadBytes();
+  }
+
+  @override
+  void didUpdateWidget(_FileImageWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.path != widget.path) {
+      _bytesFuture = _loadBytes();
+    }
+  }
+
+  Future<Uint8List?> _loadBytes() async {
+    final String path = widget.path.trim();
+    if (path.isEmpty) {
+      return null;
+    }
+    try {
+      final file = FileSystemProvider.instance.file(path);
+      if (!await file.exists()) {
+        return null;
+      }
+      final List<int> data = await file.readAsBytes();
+      if (data.isEmpty) {
+        return null;
+      }
+      return Uint8List.fromList(data);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List?>(
+      future: _bytesFuture,
+      builder: (BuildContext context, AsyncSnapshot<Uint8List?> snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final Uint8List? bytes = snapshot.data;
+        if (bytes == null) {
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Text(context.l10n.statusImageNotFound(widget.notFoundLabel)),
+          );
+        }
+        return Image.memory(bytes, fit: BoxFit.contain);
+      },
+    );
+  }
+}
+
 class _CustomImagePreview extends StatelessWidget {
   const _CustomImagePreview({
     required this.controller,
@@ -3141,20 +3207,16 @@ class _CustomImagePreview extends StatelessWidget {
     final String friendlyPath = normalized.isEmpty
         ? ''
         : formatFriendlyPathLabel(normalized, context.l10n);
-    final File f = File(normalized);
-    final bool exists = normalized.isNotEmpty && f.existsSync();
 
-    final Widget content = !exists
-        ? Align(
-            alignment: Alignment.topLeft,
-            child: Text(context.l10n.statusImageNotFound(friendlyPath)),
-          )
-        : SizedBox.expand(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.file(f, fit: BoxFit.contain),
-            ),
-          );
+    final Widget content = SizedBox.expand(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: _FileImageWidget(
+          path: normalized,
+          notFoundLabel: friendlyPath,
+        ),
+      ),
+    );
 
     final TextStyle titleStyle = TextStyle(
       color: controller.globals.txtColor.withValues(alpha: 0.75),
