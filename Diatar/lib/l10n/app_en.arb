@@ -24,6 +24,21 @@
   "addImageSlide": "Image slide",
   "addImageSlideTooltip": "Add image",
   "downloadBooksTooltip": "Download songbooks",
+  "downloadDtz": "Download DTZ",
+  "downloadDtzTitle": "Download DTX scores (DTZ)",
+  "downloadDtzHint": "Select the DTZ files to download and the related images (zip).",
+  "downloadDtzSelectAll": "Select all",
+  "downloadDtzDeselectAll": "Clear selection",
+  "downloadDtzWithImages": "Images (zip) too",
+  "downloadDtzCount": "{count} selected",
+  "@downloadDtzCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadDtzNoItems": "No downloadable DTZ files.",
   "downloadTitle": "Download",
   "downloadManagerNameColumn": "DTX",
   "downloadManagerUpdateColumn": "Update",

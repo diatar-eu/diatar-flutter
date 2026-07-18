@@ -1,0 +1,404 @@
+import 'dart:convert';
+
+import 'package:archive/archive.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../utils/file_system_provider.dart';
+import '../utils/path_helper.dart';
+
+class DtzDownloadItem {
+  const DtzDownloadItem({
+    required this.fileName,
+    required this.timestamp,
+    required this.size,
+    required this.title,
+    required this.zips,
+    this.isInstalled = false,
+    this.updateAvailable = false,
+    this.isOfficial = true,
+  });
+
+  final String fileName;
+  final String timestamp;
+  final int size;
+  final String title;
+  final List<String> zips;
+  final bool isInstalled;
+  final bool updateAvailable;
+  final bool isOfficial;
+
+  String get longName => fileName.replaceAll(RegExp(r'\.[^.]+$'), '');
+
+  List<String> get zipNames => zips;
+}
+
+class DtzDownloadProgress {
+  const DtzDownloadProgress({
+    required this.currentFile,
+    required this.totalFiles,
+    required this.fileName,
+    required this.receivedBytes,
+    required this.totalBytes,
+  });
+
+  final int currentFile;
+  final int totalFiles;
+  final String fileName;
+  final int receivedBytes;
+  final int totalBytes;
+
+  double get fraction {
+    if (totalBytes <= 0) {
+      return 0;
+    }
+    return (receivedBytes / totalBytes).clamp(0, 1);
+  }
+}
+
+class DtzDownloadSummary {
+  const DtzDownloadSummary({required this.downloaded, required this.skipped});
+
+  final int downloaded;
+  final int skipped;
+}
+
+class DtzManageItem {
+  const DtzManageItem({required this.item, required this.excluded});
+
+  final DtzDownloadItem item;
+  final bool excluded;
+}
+
+class DtzDownloadService {
+  static const String _listUrl = 'https://diatar.eu/downloads/kottak/_list.php';
+  static const String _baseUrl = 'https://diatar.eu/downloads/kottak/';
+  static const String _kottakTxtUrl =
+      'https://diatar.eu/downloads/kottak/kottak.txt';
+  static const String _stampPrefix = 'dtz_stamp_';
+
+  Future<Directory> resolveDirectory() async {
+    final String docsPath = await PathHelper.getDocumentsDirectoryPath();
+    return FileSystemProvider.instance.directory('$docsPath/diatar/DTZs');
+  }
+
+  Future<List<DtzDownloadItem>> listAll({
+    required Directory targetDir,
+    Map<String, String> dtxTitles = const <String, String>{},
+  }) async {
+    await targetDir.create(recursive: true);
+
+    final List<_RemoteEntry> remoteList = await _fetchRemoteList();
+    final Map<String, List<String>> kottakMap = await _fetchKottakMap();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    final Map<String, _RemoteEntry> remoteByName = <String, _RemoteEntry>{
+      for (final _RemoteEntry e in remoteList) e.fileName: e,
+    };
+
+    final List<DtzDownloadItem> items = <DtzDownloadItem>[];
+
+    for (final MapEntry<String, List<String>> entry in kottakMap.entries) {
+      final String dtzName = entry.key;
+      final _RemoteEntry? dtzEntry = remoteByName[dtzName];
+      if (dtzEntry == null) {
+        continue;
+      }
+
+      final List<String> zips = entry.value
+          .where((String z) => remoteByName.containsKey(z))
+          .toList();
+
+      final File dtzFile =
+          FileSystemProvider.instance.file('${targetDir.path}/$dtzName');
+      final bool installed = await dtzFile.exists();
+
+      final List<String> allFiles = <String>[dtzName, ...zips];
+      bool upToDate = installed;
+      for (final String name in allFiles) {
+        final String oldStamp =
+            prefs.getString('$_stampPrefix$name') ?? '';
+        final _RemoteEntry entryForName =
+            name == dtzName ? dtzEntry : remoteByName[name]!;
+        if (oldStamp != entryForName.timestamp) {
+          upToDate = false;
+          break;
+        }
+      }
+
+      final String baseName = dtzName.replaceAll(RegExp(r'\.[^.]+$'), '');
+      final String title = dtxTitles[baseName] ?? dtzName;
+
+      items.add(
+        DtzDownloadItem(
+          fileName: dtzName,
+          timestamp: dtzEntry.timestamp,
+          size: dtzEntry.size,
+          title: title,
+          zips: zips,
+          isInstalled: installed,
+          updateAvailable: !upToDate,
+          isOfficial: true,
+        ),
+      );
+    }
+
+    items.sort(
+      (DtzDownloadItem a, DtzDownloadItem b) =>
+          a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+    );
+    return items;
+  }
+
+  Future<DtzDownloadSummary> downloadUpdates({
+    required Directory targetDir,
+    List<DtzDownloadItem>? selected,
+    void Function(DtzDownloadProgress progress)? onProgress,
+  }) async {
+    await targetDir.create(recursive: true);
+
+    final List<DtzDownloadItem> items =
+        selected ?? await listAll(targetDir: targetDir);
+    final List<DtzDownloadItem> toDownload =
+        items.where((DtzDownloadItem i) => i.isOfficial).toList();
+
+    final Map<String, _RemoteEntry> remote = <String, _RemoteEntry>{
+      for (final _RemoteEntry e in await _fetchRemoteList()) e.fileName: e,
+    };
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    int downloaded = 0;
+    int skipped = 0;
+    final Set<String> handledZips = <String>{};
+    final int total = toDownload.length;
+
+    for (int i = 0; i < toDownload.length; i++) {
+      final DtzDownloadItem item = toDownload[i];
+      final int currentFile = i + 1;
+      bool neededSomething = false;
+
+      final File dtzFile =
+          FileSystemProvider.instance.file('${targetDir.path}/${item.fileName}');
+      if (await _needsDownload(dtzFile, item.fileName, item.timestamp, prefs)) {
+        await _downloadOne(
+          fileName: item.fileName,
+          targetFile: dtzFile,
+          currentFile: currentFile,
+          totalFiles: total,
+          onProgress: onProgress,
+        );
+        await prefs.setString('$_stampPrefix${item.fileName}', item.timestamp);
+        neededSomething = true;
+      }
+
+      for (final String zip in item.zips) {
+        final _RemoteEntry? zipEntry = remote[zip];
+        if (zipEntry == null) {
+          continue;
+        }
+        if (handledZips.contains(zip)) {
+          continue;
+        }
+        handledZips.add(zip);
+
+        final File zipFile =
+            FileSystemProvider.instance.file('${targetDir.path}/$zip');
+        if (await _needsDownload(
+          zipFile,
+          zip,
+          zipEntry.timestamp,
+          prefs,
+        )) {
+          await _downloadOne(
+            fileName: zip,
+            targetFile: zipFile,
+            currentFile: currentFile,
+            totalFiles: total,
+            onProgress: onProgress,
+          );
+          await _extractZip(zipFile, targetDir);
+          await prefs.setString('$_stampPrefix$zip', zipEntry.timestamp);
+          neededSomething = true;
+        }
+      }
+
+      if (neededSomething) {
+        downloaded++;
+      } else {
+        skipped++;
+      }
+    }
+
+    await FileSystemProvider.persistWebFileSystem();
+
+    return DtzDownloadSummary(downloaded: downloaded, skipped: skipped);
+  }
+
+  Future<bool> _needsDownload(
+    File local,
+    String name,
+    String timestamp,
+    SharedPreferences prefs,
+  ) async {
+    final String oldStamp = prefs.getString('$_stampPrefix$name') ?? '';
+    return !(await local.exists() && oldStamp == timestamp);
+  }
+
+  Future<List<_RemoteEntry>> _fetchRemoteList() async {
+    final http.Response response = await http.get(Uri.parse(_listUrl));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('HTTP ${response.statusCode} while loading DTZ list');
+    }
+
+    final String content = utf8.decode(response.bodyBytes);
+    final List<_RemoteEntry> result = <_RemoteEntry>[];
+    for (final String line in const LineSplitter().convert(content)) {
+      final _RemoteEntry? parsed = _parseListLine(line.trim());
+      if (parsed != null) {
+        result.add(parsed);
+      }
+    }
+    return result;
+  }
+
+  _RemoteEntry? _parseListLine(String line) {
+    if (line.isEmpty) {
+      return null;
+    }
+    final List<String> cells = line.split(',');
+    if (cells.length < 3) {
+      return null;
+    }
+
+    final String fileName = cells[0].trim();
+    if (!fileName.toLowerCase().endsWith('.dtz') &&
+        !fileName.toLowerCase().endsWith('.zip')) {
+      return null;
+    }
+
+    final int size = int.tryParse(cells[1].trim()) ?? 0;
+    final String timestamp = cells[2].trim();
+    if (timestamp.isEmpty) {
+      return null;
+    }
+
+    return _RemoteEntry(
+      fileName: fileName,
+      size: size,
+      timestamp: timestamp,
+    );
+  }
+
+  Future<Map<String, List<String>>> _fetchKottakMap() async {
+    final http.Response response = await http.get(Uri.parse(_kottakTxtUrl));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('HTTP ${response.statusCode} while loading kottak.txt');
+    }
+
+    final String content = utf8.decode(response.bodyBytes);
+    final Map<String, List<String>> map = <String, List<String>>{};
+
+    for (final String line in const LineSplitter().convert(content)) {
+      final String trimmed = line.trim();
+      if (trimmed.isEmpty) {
+        continue;
+      }
+
+      final int eq = trimmed.indexOf('=');
+      final String dtz;
+      final String rest;
+      if (eq >= 0) {
+        dtz = trimmed.substring(0, eq).trim();
+        rest = trimmed.substring(eq + 1).trim();
+      } else {
+        dtz = trimmed;
+        rest = '';
+      }
+
+      if (!dtz.toLowerCase().endsWith('.dtz')) {
+        continue;
+      }
+
+      final List<String> zips = rest
+          .split(',')
+          .map((String s) => s.trim())
+          .where((String s) => s.isNotEmpty)
+          .toList();
+      map[dtz] = zips;
+    }
+
+    return map;
+  }
+
+  Future<void> _downloadOne({
+    required String fileName,
+    required File targetFile,
+    required int currentFile,
+    required int totalFiles,
+    void Function(DtzDownloadProgress progress)? onProgress,
+  }) async {
+    final Uri uri = Uri.parse('$_baseUrl$fileName');
+    final http.Response response = await http.get(uri);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'HTTP ${response.statusCode} while downloading $fileName',
+      );
+    }
+
+    final int totalBytes =
+        (response.contentLength != null && response.contentLength! > 0)
+            ? response.contentLength!
+            : 0;
+    int received = 0;
+    final List<int> bytes = response.bodyBytes;
+    const int chunkSize = 64 * 1024;
+    for (int i = 0; i < bytes.length; i += chunkSize) {
+      received += (i + chunkSize < bytes.length
+          ? chunkSize
+          : bytes.length - i);
+      onProgress?.call(
+        DtzDownloadProgress(
+          currentFile: currentFile,
+          totalFiles: totalFiles,
+          fileName: fileName,
+          receivedBytes: received,
+          totalBytes: totalBytes,
+        ),
+      );
+    }
+
+    await targetFile.writeAsBytes(bytes);
+  }
+
+  Future<void> _extractZip(File zipFile, Directory targetDir) async {
+    final List<int> bytes = await zipFile.readAsBytes();
+    final Archive archive = ZipDecoder().decodeBytes(bytes);
+    for (final ArchiveFile file in archive) {
+      if (!file.isFile) {
+        continue;
+      }
+      final String normalized = file.name.replaceAll('\\', '/');
+      if (normalized.startsWith('/') ||
+          normalized.startsWith('../') ||
+          normalized.contains('/../')) {
+        continue;
+      }
+      final File outFile = FileSystemProvider.instance
+          .file('${targetDir.path}/$normalized');
+      await outFile.create(recursive: true);
+      await outFile.writeAsBytes(file.content);
+    }
+  }
+}
+
+class _RemoteEntry {
+  const _RemoteEntry({
+    required this.fileName,
+    required this.size,
+    required this.timestamp,
+  });
+
+  final String fileName;
+  final int size;
+  final String timestamp;
+}

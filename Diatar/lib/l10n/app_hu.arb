@@ -24,6 +24,21 @@
   "addImageSlide": "Képes dia",
   "addImageSlideTooltip": "Kép hozzáadása",
   "downloadBooksTooltip": "Énektárak letöltése",
+  "downloadDtz": "DTZ letöltése",
+  "downloadDtzTitle": "DTX kották (DTZ) letöltése",
+  "downloadDtzHint": "Jelöld be a letölteni kívánt DTZ fájlokat és a hozzájuk tartozó képeket (zip).",
+  "downloadDtzSelectAll": "Összes kijelölése",
+  "downloadDtzDeselectAll": "Kijelölés törlése",
+  "downloadDtzWithImages": "Képek (zip) is",
+  "downloadDtzCount": "{count} elem kijelölve",
+  "@downloadDtzCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadDtzNoItems": "Nincs letölthető DTZ fájl.",
   "downloadTitle": "Letöltés",
   "downloadManagerNameColumn": "DTX",
   "downloadManagerUpdateColumn": "Frissítés",

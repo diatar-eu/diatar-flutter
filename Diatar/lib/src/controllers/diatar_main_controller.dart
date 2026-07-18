@@ -31,6 +31,7 @@ import '../models/custom_order_set.dart';
 import '../services/mqtt_sender_service.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/dtx_download_service.dart';
+import '../services/dtz_download_service.dart';
 import '../services/dtx_library_service.dart';
 import '../services/dtx_order_store.dart';
 import '../services/dtz_library_service.dart';
@@ -152,6 +153,7 @@ class DiatarMainController extends ChangeNotifier {
       );
   final SettingsStore _settingsStore = SettingsStore();
   final DtxDownloadService _downloadService = DtxDownloadService();
+  final DtzDownloadService _dtzDownloadService = DtzDownloadService();
   late final DtxLibraryService _dtxLibraryService =
       DtxLibraryService(parser: _parser);
   final DtzLibraryService _dtzLibraryService = const DtzLibraryService();
@@ -1973,6 +1975,101 @@ class DiatarMainController extends ChangeNotifier {
           ),
         )
         .toList();
+  }
+
+  Future<List<DtzManageItem>> loadDtzManagerItems() async {
+    final Directory dtzDir = await _dtzDownloadService.resolveDirectory();
+    final Map<String, String> dtxTitles = <String, String>{};
+    for (final DtxBook book in books) {
+      final String base = book.fileName.replaceAll(RegExp(r'\.[^.]+$'), '');
+      dtxTitles[base] = book.displayName;
+    }
+    final List<DtzDownloadItem> all = await _dtzDownloadService.listAll(
+      targetDir: dtzDir,
+      dtxTitles: dtxTitles,
+    );
+    return all
+        .map(
+          (DtzDownloadItem item) => DtzManageItem(
+            item: item,
+            excluded: false,
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> applyDtzManagerSelection({
+    required Set<String> downloadSelected,
+  }) async {
+    loading = true;
+    downloadInProgress = true;
+    downloadCurrentFile = 0;
+    downloadTotalFiles = 0;
+    downloadCurrentName = '';
+    downloadCurrentFraction = 0;
+    _setStatus('statusDownloadListLoading');
+    notifyListeners();
+
+    try {
+      final Directory dtzDir = await _dtzDownloadService.resolveDirectory();
+      final List<DtzDownloadItem> all = await _dtzDownloadService.listAll(
+        targetDir: dtzDir,
+      );
+      final Map<String, DtzDownloadItem> byFile = <String, DtzDownloadItem>{
+        for (final DtzDownloadItem item in all) item.fileName: item,
+      };
+
+      final Set<String> effectiveDownload = downloadSelected
+          .map((String n) => n.trim())
+          .where((String n) => n.isNotEmpty)
+          .where((String n) => byFile[n] != null && byFile[n]!.isOfficial)
+          .toSet();
+
+      downloadTotalFiles = effectiveDownload.length;
+
+      final List<DtzDownloadItem> selected = effectiveDownload
+          .map((String n) => byFile[n]!)
+          .toList();
+
+      DtzDownloadSummary summary = const DtzDownloadSummary(
+        downloaded: 0,
+        skipped: 0,
+      );
+      if (selected.isNotEmpty) {
+        summary = await _dtzDownloadService.downloadUpdates(
+          targetDir: dtzDir,
+          selected: selected,
+          onProgress: (DtzDownloadProgress progress) {
+            downloadCurrentFile = progress.currentFile;
+            downloadTotalFiles = progress.totalFiles;
+            downloadCurrentName = progress.fileName;
+            downloadCurrentFraction = progress.fraction;
+            _setStatus('statusDownloadProgress', <String, String>{
+              'current': '${progress.currentFile}',
+              'total': '${progress.totalFiles}',
+              'name': progress.fileName,
+              'percent': (progress.fraction * 100).toStringAsFixed(0),
+            });
+            notifyListeners();
+          },
+        );
+      }
+
+      if (summary.downloaded == 0) {
+        _setStatus('statusDownloadSummaryNone');
+      } else {
+        _setStatus('statusDownloadSummary', <String, String>{
+          'downloaded': '${summary.downloaded}',
+          'skipped': '${summary.skipped}',
+        });
+      }
+    } catch (e) {
+      _setStatus('statusDownloadError', <String, String>{'error': '$e'});
+    } finally {
+      downloadInProgress = false;
+      loading = false;
+      notifyListeners();
+    }
   }
 
   Future<String> exportCustomOrderToDia(String path) async {

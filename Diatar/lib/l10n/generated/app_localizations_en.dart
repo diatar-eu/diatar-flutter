@@ -84,6 +84,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadBooksTooltip => 'Download songbooks';
 
   @override
+  String get downloadDtz => 'Download DTZ';
+
+  @override
+  String get downloadDtzTitle => 'Download DTX scores (DTZ)';
+
+  @override
+  String get downloadDtzHint =>
+      'Select the DTZ files to download and the related images (zip).';
+
+  @override
+  String get downloadDtzSelectAll => 'Select all';
+
+  @override
+  String get downloadDtzDeselectAll => 'Clear selection';
+
+  @override
+  String get downloadDtzWithImages => 'Images (zip) too';
+
+  @override
+  String downloadDtzCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get downloadDtzNoItems => 'No downloadable DTZ files.';
+
+  @override
   String get downloadTitle => 'Download';
 
   @override

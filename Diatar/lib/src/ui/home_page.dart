@@ -11,6 +11,7 @@ import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
 import '../models/custom_order_set.dart';
 import '../services/dtx_download_service.dart';
+import '../services/dtz_download_service.dart';
 import '../utils/custom_entry_labels.dart';
 import '../utils/friendly_path.dart';
 import 'settings_sheet.dart';
@@ -568,6 +569,11 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             onPressed: () => _openDownloadDialog(context),
             icon: const Icon(Icons.download_for_offline_outlined),
           ),
+          IconButton(
+            tooltip: l10n.downloadDtz,
+            onPressed: () => _openDownloadDtzDialog(context),
+            icon: const Icon(Icons.music_note_outlined),
+          ),
         ],
       ),
       body: AnimatedBuilder(
@@ -816,7 +822,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                   onPressed: () => unawaited(controller.hideControlWindow()),
                 ),
               const SizedBox(width: 8),
-              /* _actionIconButton(
+              _actionIconButton(
                 context,
                 icon: controller.showPhotoInControl
                     ? Icons.photo
@@ -832,7 +838,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                     ? const Color(0xFF1976D2)
                     : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(width: 8),*/
+              const SizedBox(width: 8),
               _actionIconButton(
                 context,
                 icon: controller.settings.projectionLocked
@@ -1198,6 +1204,20 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         downloadSelected: selected.downloadSelected,
         excludedSelected: selected.excludedSelected,
       ),
+    );
+  }
+
+  Future<void> _openDownloadDtzDialog(BuildContext context) async {
+    final Set<String>? selected = await showDialog<Set<String>>(
+      context: context,
+      builder: (BuildContext context) =>
+          _DownloadDtzDialog(controller: controller),
+    );
+    if (selected == null) {
+      return;
+    }
+    unawaited(
+      controller.applyDtzManagerSelection(downloadSelected: selected),
     );
   }
 
@@ -1774,6 +1794,196 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog> {
         ),
       );
     }
+  }
+}
+
+class _DownloadDtzDialog extends StatefulWidget {
+  const _DownloadDtzDialog({required this.controller});
+
+  final DiatarMainController controller;
+
+  @override
+  State<_DownloadDtzDialog> createState() => _DownloadDtzDialogState();
+}
+
+class _DownloadDtzDialogState extends State<_DownloadDtzDialog> {
+  late Future<List<DtzManageItem>> _itemsFuture;
+  final Set<String> _downloadSelected = <String>{};
+  List<DtzManageItem> _allItems = const <DtzManageItem>[];
+  bool _selectionInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _itemsFuture = widget.controller.loadDtzManagerItems();
+  }
+
+  void _reload() {
+    setState(() {
+      _selectionInitialized = false;
+      _downloadSelected.clear();
+      _allItems = const <DtzManageItem>[];
+      _itemsFuture = widget.controller.loadDtzManagerItems();
+    });
+  }
+
+  void _toggleAll(bool select) {
+    setState(() {
+      if (select) {
+        _downloadSelected
+          ..clear()
+          ..addAll(
+            _allItems
+                .where((DtzManageItem item) => item.item.isOfficial)
+                .map((DtzManageItem item) => item.item.fileName),
+          );
+      } else {
+        _downloadSelected.clear();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Row(
+        children: <Widget>[
+          Expanded(child: Text(l10n.downloadDtzTitle)),
+          IconButton(
+            tooltip: l10n.refreshTooltip,
+            onPressed: _reload,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 640,
+        child: FutureBuilder<List<DtzManageItem>>(
+          future: _itemsFuture,
+          builder: (
+            BuildContext context,
+            AsyncSnapshot<List<DtzManageItem>> snapshot,
+          ) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 12),
+                    Text(l10n.statusDownloadListLoading),
+                  ],
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Text(l10n.statusDownloadError('${snapshot.error}'));
+            }
+
+            final List<DtzManageItem> items =
+                snapshot.data ?? const <DtzManageItem>[];
+            _allItems = items;
+            if (!_selectionInitialized) {
+              _downloadSelected
+                ..clear()
+                ..addAll(
+                  items
+                      .where((DtzManageItem item) => item.item.isOfficial)
+                      .map((DtzManageItem item) => item.item.fileName),
+                );
+              _selectionInitialized = true;
+            }
+
+            if (items.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(l10n.downloadDtzNoItems),
+              );
+            }
+
+            final int selectedCount = _downloadSelected.length;
+
+            return ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 460),
+              child: Column(
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            l10n.downloadDtzCount(selectedCount),
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _toggleAll(true),
+                          child: Text(l10n.downloadDtzSelectAll),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () => _toggleAll(false),
+                          child: Text(l10n.downloadDtzDeselectAll),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: items.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final DtzManageItem managed = items[index];
+                        final DtzDownloadItem item = managed.item;
+                        final bool canDownload = item.isOfficial;
+                        final String zipInfo = item.zipNames.isEmpty
+                            ? ''
+                            : ' (${item.zipNames.join(', ')})';
+                        return CheckboxListTile(
+                          dense: true,
+                          value: _downloadSelected.contains(item.fileName),
+                          onChanged: canDownload
+                              ? (bool? checked) {
+                                  setState(() {
+                                    if (checked ?? false) {
+                                      _downloadSelected.add(item.fileName);
+                                    } else {
+                                      _downloadSelected.remove(item.fileName);
+                                    }
+                                  });
+                                }
+                              : null,
+                          title: Text(item.longName),
+                          subtitle: Text('${item.title}$zipInfo'),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.close),
+        ),
+        FilledButton(
+          onPressed: widget.controller.downloadInProgress
+              ? null
+              : () => Navigator.of(context).pop(
+                    Set<String>.from(_downloadSelected),
+                  ),
+          child: Text(l10n.apply),
+        ),
+      ],
+    );
   }
 }
 

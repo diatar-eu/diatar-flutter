@@ -85,6 +85,33 @@ class AppLocalizationsHu extends AppLocalizations {
   String get downloadBooksTooltip => 'Énektárak letöltése';
 
   @override
+  String get downloadDtz => 'DTZ letöltése';
+
+  @override
+  String get downloadDtzTitle => 'DTX kották (DTZ) letöltése';
+
+  @override
+  String get downloadDtzHint =>
+      'Jelöld be a letölteni kívánt DTZ fájlokat és a hozzájuk tartozó képeket (zip).';
+
+  @override
+  String get downloadDtzSelectAll => 'Összes kijelölése';
+
+  @override
+  String get downloadDtzDeselectAll => 'Kijelölés törlése';
+
+  @override
+  String get downloadDtzWithImages => 'Képek (zip) is';
+
+  @override
+  String downloadDtzCount(int count) {
+    return '$count elem kijelölve';
+  }
+
+  @override
+  String get downloadDtzNoItems => 'Nincs letölthető DTZ fájl.';
+
+  @override
   String get downloadTitle => 'Letöltés';
 
   @override

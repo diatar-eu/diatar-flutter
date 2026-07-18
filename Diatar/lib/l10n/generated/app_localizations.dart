@@ -242,6 +242,54 @@ abstract class AppLocalizations {
   /// **'Énektárak letöltése'**
   String get downloadBooksTooltip;
 
+  /// No description provided for @downloadDtz.
+  ///
+  /// In hu, this message translates to:
+  /// **'DTZ letöltése'**
+  String get downloadDtz;
+
+  /// No description provided for @downloadDtzTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'DTX kották (DTZ) letöltése'**
+  String get downloadDtzTitle;
+
+  /// No description provided for @downloadDtzHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Jelöld be a letölteni kívánt DTZ fájlokat és a hozzájuk tartozó képeket (zip).'**
+  String get downloadDtzHint;
+
+  /// No description provided for @downloadDtzSelectAll.
+  ///
+  /// In hu, this message translates to:
+  /// **'Összes kijelölése'**
+  String get downloadDtzSelectAll;
+
+  /// No description provided for @downloadDtzDeselectAll.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kijelölés törlése'**
+  String get downloadDtzDeselectAll;
+
+  /// No description provided for @downloadDtzWithImages.
+  ///
+  /// In hu, this message translates to:
+  /// **'Képek (zip) is'**
+  String get downloadDtzWithImages;
+
+  /// No description provided for @downloadDtzCount.
+  ///
+  /// In hu, this message translates to:
+  /// **'{count} elem kijelölve'**
+  String downloadDtzCount(int count);
+
+  /// No description provided for @downloadDtzNoItems.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nincs letölthető DTZ fájl.'**
+  String get downloadDtzNoItems;
+
   /// No description provided for @downloadTitle.
   ///
   /// In hu, this message translates to:
