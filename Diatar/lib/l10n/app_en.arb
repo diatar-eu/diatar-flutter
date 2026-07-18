@@ -790,6 +790,8 @@
   "settingsHotkeyActionToggleProjection": "Toggle projection",
   "settingsHotkeyActionNextVerse": "Next verse",
   "settingsHotkeyActionNextSong": "Next song",
+  "settingsHotkeyActionPrevOrderSet": "Previous custom order",
+  "settingsHotkeyActionNextOrderSet": "Next custom order",
   "settingsHotkeyActionHighlightPrev": "Highlight previous word",
   "settingsHotkeyActionHighlightNext": "Highlight next word",
   "settingsHotkeyConflict": "Conflicting hotkey: {hotkey}",

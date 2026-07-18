@@ -424,6 +424,49 @@ class DiatarMainController extends ChangeNotifier {
     await _switchActiveSet(index);
   }
 
+  /// A következő engedélyezett énekrendre vált (körkörösen).
+  /// Ha nincs betöltött énekrend, nem csinál semmit.
+  Future<void> nextCustomOrderSet() async {
+    if (_customOrderSets.isEmpty) {
+      return;
+    }
+    final List<int> enabledIndexes = <int>[];
+    for (int i = 0; i < _customOrderSets.length; i++) {
+      if (_customOrderSets[i].enabled) {
+        enabledIndexes.add(i);
+      }
+    }
+    if (enabledIndexes.length <= 1) {
+      return;
+    }
+    final int currentPos = enabledIndexes.indexOf(_activeOrderSetIndex);
+    final int nextPos =
+        currentPos < 0 ? 0 : (currentPos + 1) % enabledIndexes.length;
+    await _switchActiveSet(enabledIndexes[nextPos]);
+  }
+
+  /// Az előző engedélyezett énekrendre vált (körkörösen).
+  /// Ha nincs betöltött énekrend, nem csinál semmit.
+  Future<void> prevCustomOrderSet() async {
+    if (_customOrderSets.isEmpty) {
+      return;
+    }
+    final List<int> enabledIndexes = <int>[];
+    for (int i = 0; i < _customOrderSets.length; i++) {
+      if (_customOrderSets[i].enabled) {
+        enabledIndexes.add(i);
+      }
+    }
+    if (enabledIndexes.length <= 1) {
+      return;
+    }
+    final int currentPos = enabledIndexes.indexOf(_activeOrderSetIndex);
+    final int prevPos = currentPos < 0
+        ? 0
+        : (currentPos - 1 + enabledIndexes.length) % enabledIndexes.length;
+    await _switchActiveSet(enabledIndexes[prevPos]);
+  }
+
   /// Be-/kikapcsolja a megadott énekrendet a betöltöttek közül.
   /// A kikapcsolt énekrend nem lesz elérhető a nézetekben, de megmarad.
   /// Az utolsó engedélyezett énekrend nem kapcsolható ki, és ha az aktív

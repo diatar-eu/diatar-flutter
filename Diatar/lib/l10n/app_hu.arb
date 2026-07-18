@@ -790,6 +790,8 @@
   "settingsHotkeyActionToggleProjection": "Vetítés ki/be",
   "settingsHotkeyActionNextVerse": "Következő versszak",
   "settingsHotkeyActionNextSong": "Következő ének",
+  "settingsHotkeyActionPrevOrderSet": "Előző énekrend",
+  "settingsHotkeyActionNextOrderSet": "Következő énekrend",
   "settingsHotkeyActionHighlightPrev": "Kiemelés előző szó",
   "settingsHotkeyActionHighlightNext": "Kiemelés következő szó",
   "settingsHotkeyConflict": "Ütköző gyorsbillentyű: {hotkey}",

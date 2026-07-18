@@ -2033,6 +2033,18 @@ abstract class AppLocalizations {
   /// **'Következő ének'**
   String get settingsHotkeyActionNextSong;
 
+  /// No description provided for @settingsHotkeyActionPrevOrderSet.
+  ///
+  /// In hu, this message translates to:
+  /// **'Előző énekrend'**
+  String get settingsHotkeyActionPrevOrderSet;
+
+  /// No description provided for @settingsHotkeyActionNextOrderSet.
+  ///
+  /// In hu, this message translates to:
+  /// **'Következő énekrend'**
+  String get settingsHotkeyActionNextOrderSet;
+
   /// No description provided for @settingsHotkeyActionHighlightPrev.
   ///
   /// In hu, this message translates to:

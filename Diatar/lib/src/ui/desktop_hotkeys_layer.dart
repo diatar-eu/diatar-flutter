@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -111,6 +113,12 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
         break;
       case 'nextSong':
         widget.controller.nextSong();
+        break;
+      case 'prevOrderSet':
+        unawaited(widget.controller.prevCustomOrderSet());
+        break;
+      case 'nextOrderSet':
+        unawaited(widget.controller.nextCustomOrderSet());
         break;
       case 'highlightPrev':
         if (!widget.controller.settings.homeShowHighlightControls) {

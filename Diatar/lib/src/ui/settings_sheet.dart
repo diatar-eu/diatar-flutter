@@ -1462,6 +1462,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 l10n.settingsHotkeyActionNextSong,
               ),
               MapEntry<String, String>(
+                'prevOrderSet',
+                l10n.settingsHotkeyActionPrevOrderSet,
+              ),
+              MapEntry<String, String>(
+                'nextOrderSet',
+                l10n.settingsHotkeyActionNextOrderSet,
+              ),
+              MapEntry<String, String>(
                 'highlightPrev',
                 l10n.settingsHotkeyActionHighlightPrev,
               ),

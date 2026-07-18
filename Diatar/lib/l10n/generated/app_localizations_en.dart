@@ -1130,6 +1130,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHotkeyActionNextSong => 'Next song';
 
   @override
+  String get settingsHotkeyActionPrevOrderSet => 'Previous custom order';
+
+  @override
+  String get settingsHotkeyActionNextOrderSet => 'Next custom order';
+
+  @override
   String get settingsHotkeyActionHighlightPrev => 'Highlight previous word';
 
   @override

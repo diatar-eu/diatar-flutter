@@ -1134,6 +1134,12 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsHotkeyActionNextSong => 'Következő ének';
 
   @override
+  String get settingsHotkeyActionPrevOrderSet => 'Előző énekrend';
+
+  @override
+  String get settingsHotkeyActionNextOrderSet => 'Következő énekrend';
+
+  @override
   String get settingsHotkeyActionHighlightPrev => 'Kiemelés előző szó';
 
   @override
