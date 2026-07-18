@@ -1,4 +1,4 @@
-app-id: eu.diatar.diavetito
+app-id: eu.diatar.vetito
 runtime: org.freedesktop.Platform
 runtime-version: '24.08'
 sdk: org.freedesktop.Sdk
@@ -34,9 +34,9 @@ modules:
       - install -D -t /app/bin build/linux/x64/release/bundle/diavetito
       - cp -r build/linux/x64/release/bundle/lib /app/bin/
       - cp -r build/linux/x64/release/bundle/data /app/bin/
-      - install -Dm644 flatpak/eu.diatar.diavetito.desktop /app/share/applications/eu.diatar.diavetito.desktop
-      - install -Dm644 flatpak/eu.diatar.diavetito.metainfo.xml /app/share/metainfo/eu.diatar.diavetito.metainfo.xml
-      - install -Dm644 assets/icon/icon.png /app/share/icons/hicolor/512x512/apps/eu.diatar.diavetito.png
+      - install -Dm644 flatpak/eu.diatar.vetito.desktop /app/share/applications/eu.diatar.vetito.desktop
+      - install -Dm644 flatpak/eu.diatar.vetito.metainfo.xml /app/share/metainfo/eu.diatar.vetito.metainfo.xml
+      - install -Dm644 assets/icon/icon.png /app/share/icons/hicolor/512x512/apps/eu.diatar.vetito.png
     sources:
       - type: dir
         path: ..

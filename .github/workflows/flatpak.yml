@@ -66,7 +66,7 @@ jobs:
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           bundle: ${{ matrix.app }}.flatpak
-          manifest-path: flatpak/eu.diatar.${{ matrix.app == 'DiaVetito' && 'diavetito' || 'diatar' }}.yaml
+          manifest-path: flatpak/eu.diatar.${{ matrix.app == 'DiaVetito' && 'vetito' || 'diatar' }}.yaml
           cache-key: flatpak-builder-${{ matrix.app }}
           branch: ${{ github.event.workflow_run.head_branch || github.ref_name }}
           arch: x86_64

@@ -6,14 +6,14 @@ This project uses **Fastlane** and **GitHub Actions** to automatically deploy th
 
 When you push a tag starting with `v` (e.g., `git tag v9.1.0 && git push origin v9.1.0`), the `Deploy to Stores` workflow runs first and performs the automatic build-number bump (see below). Only **after** that workflow completes successfully does the workflow in `.github/workflows/flatpak.yml` build a Flatpak bundle for both `Diatar` and `DiaVetito` (checking out the bumped default branch) and publish them to a `flathub` branch in this repository.
 
-- The Flatpak manifests live in `flatpak/` (`eu.diatar.diatar.yaml`, `eu.diatar.diavetito.yaml`) together with the `.desktop` and `.metainfo.xml` files.
+- The Flatpak manifests live in `flatpak/` (`eu.diatar.diatar.yaml`, `eu.diatar.vetito.yaml`) together with the `.desktop` and `.metainfo.xml` files.
 - The published `flathub` branch acts as a self-hosted Flatpak repository. Users can install the apps with:
 
   ```bash
   flatpak remote-add --if-not-exists diatar-flutter \
     https://github.com/vlacko0930/diatar-flutter.git
   flatpak install diatar-flutter eu.diatar.diatar
-  flatpak install diatar-flutter eu.diatar.diavetito
+  flatpak install diatar-flutter eu.diatar.vetito
   ```
 
 - The version and release date are injected into the metainfo from the git tag automatically during the build.

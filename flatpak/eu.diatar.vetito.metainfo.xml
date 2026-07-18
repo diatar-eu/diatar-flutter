@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>eu.diatar.diavetito</id>
+  <id>eu.diatar.vetito</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>DiaVetítő</name>
@@ -11,7 +11,7 @@
       jeleníti meg egy második kijelzőn.
     </p>
   </description>
-  <launchable type="desktop-id">eu.diatar.diavetito.desktop</launchable>
+  <launchable type="desktop-id">eu.diatar.vetito.desktop</launchable>
   <url type="homepage">https://github.com/vlacko0930/diatar-flutter</url>
   <url type="bugtracker">https://github.com/vlacko0930/diatar-flutter/issues</url>
   <developer id="eu.diatar">
