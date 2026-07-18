@@ -395,7 +395,16 @@ class DiatarMainController extends ChangeNotifier {
     await _persistAllSets();
     if (customOrderActive) {
       _selectByCustomOrderCursor(_customOrderCursor, sync: false);
-      await _syncCurrentDia();
+      if (_customOrderCursor >= 0 &&
+          _customOrderCursor < _customOrder.length &&
+          !_customOrder[_customOrderCursor].isSongEntry) {
+        await _projectCustomOrderEntry(
+          _customOrder[_customOrderCursor],
+          cursor: _customOrderCursor,
+        );
+      } else {
+        await _syncCurrentDia();
+      }
     } else {
       notifyListeners();
     }
@@ -543,7 +552,16 @@ class DiatarMainController extends ChangeNotifier {
     await _persistAllSets();
     if (customOrderActive) {
       _selectByCustomOrderCursor(_customOrderCursor, sync: false);
-      await _syncCurrentDia();
+      if (_customOrderCursor >= 0 &&
+          _customOrderCursor < _customOrder.length &&
+          !_customOrder[_customOrderCursor].isSongEntry) {
+        await _projectCustomOrderEntry(
+          _customOrder[_customOrderCursor],
+          cursor: _customOrderCursor,
+        );
+      } else {
+        await _syncCurrentDia();
+      }
     } else {
       notifyListeners();
     }
