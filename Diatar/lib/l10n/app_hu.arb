@@ -39,6 +39,8 @@
     }
   },
   "downloadDtzNoItems": "Nincs letölthető DTZ fájl.",
+  "downloadTabDtx": "DTX énektárak",
+  "downloadTabDtz": "DTZ kották",
   "downloadTitle": "Letöltés",
   "downloadManagerNameColumn": "DTX",
   "downloadManagerUpdateColumn": "Frissítés",

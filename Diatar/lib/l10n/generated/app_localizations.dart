@@ -290,6 +290,18 @@ abstract class AppLocalizations {
   /// **'Nincs letölthető DTZ fájl.'**
   String get downloadDtzNoItems;
 
+  /// No description provided for @downloadTabDtx.
+  ///
+  /// In hu, this message translates to:
+  /// **'DTX énektárak'**
+  String get downloadTabDtx;
+
+  /// No description provided for @downloadTabDtz.
+  ///
+  /// In hu, this message translates to:
+  /// **'DTZ kották'**
+  String get downloadTabDtz;
+
   /// No description provided for @downloadTitle.
   ///
   /// In hu, this message translates to:

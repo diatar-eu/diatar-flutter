@@ -112,6 +112,12 @@ class AppLocalizationsHu extends AppLocalizations {
   String get downloadDtzNoItems => 'Nincs letölthető DTZ fájl.';
 
   @override
+  String get downloadTabDtx => 'DTX énektárak';
+
+  @override
+  String get downloadTabDtz => 'DTZ kották';
+
+  @override
   String get downloadTitle => 'Letöltés';
 
   @override
