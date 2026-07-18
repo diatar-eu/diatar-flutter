@@ -150,6 +150,10 @@ jobs:
           bundler-cache: true
           working-directory: ${{ matrix.app }}/ios
 
+      - name: Install CocoaPods
+        working-directory: ${{ matrix.app }}/ios
+        run: gem install cocoapods
+
       - name: Decode App Store Connect API key
         run: |
           echo "${{ secrets.APPLE_API_KEY_BASE64 }}" | base64 -d > ${{ matrix.app }}/ios/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
