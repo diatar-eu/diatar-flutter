@@ -401,6 +401,7 @@
   "homeControlModeTooltip": "Képernyőmód",
   "homeControlModeBooks": "Kötetek",
   "homeControlModeDialist": "Diasor",
+  "homeControlModePresentation": "Vetítés",
   "dialistNamedLabel": "Diasor: {name}",
   "@dialistNamedLabel": {
     "placeholders": {

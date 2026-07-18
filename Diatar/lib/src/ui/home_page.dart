@@ -89,6 +89,8 @@ enum _ProjectionDisplayToggle { kotta, chords, backgroundImage }
 
 enum _HomeControlMode { books, dialist }
 
+enum _HomeScreenMode { books, dialist, presentation }
+
 String _cleanSeparatorLabel(CustomOrderEntry entry) {
   final String explicit = (entry.customTextTitle ?? '').trim();
   if (explicit.isNotEmpty) {
@@ -472,6 +474,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
   static const double _portraitDialistHeight = 148;
 
   _HomeControlMode _homeControlMode = _HomeControlMode.books;
+  int _homeLayoutMode = 0;
 
   DiatarMainController get controller => widget.controller;
 
@@ -487,7 +490,8 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     final _HomeControlMode stored = _homeControlModeFromValue(
       controller.settings.homeViewMode,
     );
-    if (stored == _homeControlMode) {
+    final int storedLayout = controller.settings.homeLayoutMode;
+    if (stored == _homeControlMode && storedLayout == _homeLayoutMode) {
       return;
     }
 
@@ -497,11 +501,44 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       }
       setState(() {
         _homeControlMode = stored;
+        _homeLayoutMode = storedLayout;
       });
       if (stored == _HomeControlMode.dialist) {
         controller.selectDiaVirtualBook();
       }
     });
+  }
+
+  _HomeScreenMode get _currentScreenMode {
+    if (_homeLayoutMode == 1) {
+      return _HomeScreenMode.presentation;
+    }
+    return _homeControlMode == _HomeControlMode.dialist
+        ? _HomeScreenMode.dialist
+        : _HomeScreenMode.books;
+  }
+
+  void _setHomeScreenMode(_HomeScreenMode mode) {
+    switch (mode) {
+      case _HomeScreenMode.books:
+        _setHomeControlMode(_HomeControlMode.books);
+        _setHomeLayoutMode(0);
+      case _HomeScreenMode.dialist:
+        _setHomeControlMode(_HomeControlMode.dialist);
+        _setHomeLayoutMode(0);
+      case _HomeScreenMode.presentation:
+        _setHomeLayoutMode(1);
+    }
+  }
+
+  void _setHomeLayoutMode(int mode) {
+    if (_homeLayoutMode == mode) {
+      return;
+    }
+    setState(() {
+      _homeLayoutMode = mode;
+    });
+    unawaited(controller.setHomeLayoutMode(mode));
   }
 
   void _setHomeControlMode(_HomeControlMode mode) {
@@ -524,28 +561,36 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
   Widget build(BuildContext context) {
     _syncHomeModeFromSettings();
     final l10n = context.l10n;
-    final IconData modeIcon = _homeControlMode == _HomeControlMode.books
-        ? Icons.library_books_outlined
-        : Icons.view_list_outlined;
+    final IconData modeIcon = _currentScreenMode == _HomeScreenMode.presentation
+        ? Icons.fit_screen
+        : (_homeControlMode == _HomeControlMode.books
+            ? Icons.library_books_outlined
+            : Icons.view_list_outlined);
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.appTitle),
         actions: <Widget>[
-          PopupMenuButton<_HomeControlMode>(
+          PopupMenuButton<_HomeScreenMode>(
             tooltip: l10n.homeControlModeTooltip,
-            initialValue: _homeControlMode,
-            onSelected: _setHomeControlMode,
+            initialValue: _currentScreenMode,
+            onSelected: _setHomeScreenMode,
             itemBuilder: (BuildContext context) =>
-                <PopupMenuEntry<_HomeControlMode>>[
-                  CheckedPopupMenuItem<_HomeControlMode>(
-                    value: _HomeControlMode.books,
-                    checked: _homeControlMode == _HomeControlMode.books,
+                <PopupMenuEntry<_HomeScreenMode>>[
+                  CheckedPopupMenuItem<_HomeScreenMode>(
+                    value: _HomeScreenMode.books,
+                    checked: _currentScreenMode == _HomeScreenMode.books,
                     child: Text(l10n.homeControlModeBooks),
                   ),
-                  CheckedPopupMenuItem<_HomeControlMode>(
-                    value: _HomeControlMode.dialist,
-                    checked: _homeControlMode == _HomeControlMode.dialist,
+                  CheckedPopupMenuItem<_HomeScreenMode>(
+                    value: _HomeScreenMode.dialist,
+                    checked: _currentScreenMode == _HomeScreenMode.dialist,
                     child: Text(l10n.homeControlModeDialist),
+                  ),
+                  CheckedPopupMenuItem<_HomeScreenMode>(
+                    value: _HomeScreenMode.presentation,
+                    checked:
+                        _currentScreenMode == _HomeScreenMode.presentation,
+                    child: Text(l10n.homeControlModePresentation),
                   ),
                 ],
             icon: Icon(modeIcon),
@@ -602,6 +647,19 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
   Widget _buildSimpleView(BuildContext context) {
     final MediaQueryData mq = MediaQuery.of(context);
     final bool isLandscape = mq.orientation == Orientation.landscape;
+
+    if (_homeLayoutMode == 1) {
+      return Column(
+        children: <Widget>[
+          Expanded(child: _buildSimplePreviewPane(context)),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: _buildActionButtons(context),
+          ),
+        ],
+      );
+    }
 
     if (isLandscape) {
       return LayoutBuilder(

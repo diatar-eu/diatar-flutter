@@ -44,6 +44,7 @@ class AppSettings {
     this.projShowBackgroundImage = true,
     this.homeViewMode = 0,
     this.homeShowHighlightControls = false,
+    this.homeLayoutMode = 0,
     this.appThemeMode = 0,
     this.appLanguage = '',
     this.projectionLocked = false,
@@ -112,6 +113,7 @@ class AppSettings {
   final bool projShowBackgroundImage;
   final int homeViewMode;
   final bool homeShowHighlightControls;
+  final int homeLayoutMode;
   final int appThemeMode;
   final String appLanguage;
   final bool projectionLocked;
@@ -187,6 +189,7 @@ class AppSettings {
     bool? projShowBackgroundImage,
     int? homeViewMode,
     bool? homeShowHighlightControls,
+    int? homeLayoutMode,
     int? appThemeMode,
     String? appLanguage,
     bool? projectionLocked,
@@ -255,6 +258,7 @@ class AppSettings {
       homeViewMode: homeViewMode ?? this.homeViewMode,
       homeShowHighlightControls:
           homeShowHighlightControls ?? this.homeShowHighlightControls,
+      homeLayoutMode: homeLayoutMode ?? this.homeLayoutMode,
       appThemeMode: appThemeMode ?? this.appThemeMode,
       appLanguage: appLanguage ?? this.appLanguage,
       projectionLocked: projectionLocked ?? this.projectionLocked,

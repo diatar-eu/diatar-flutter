@@ -479,6 +479,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get homeControlModeDialist => 'Diasor';
 
   @override
+  String get homeControlModePresentation => 'Vetítés';
+
+  @override
   String dialistNamedLabel(Object name) {
     return 'Diasor: $name';
   }

@@ -476,6 +476,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeControlModeDialist => 'Slide list';
 
   @override
+  String get homeControlModePresentation => 'Presentation';
+
+  @override
   String dialistNamedLabel(Object name) {
     return 'Slide list: $name';
   }

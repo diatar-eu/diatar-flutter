@@ -930,6 +930,15 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setHomeLayoutMode(int mode) async {
+    if (settings.homeLayoutMode == mode) {
+      return;
+    }
+    settings = settings.copyWith(homeLayoutMode: mode);
+    await _settingsStore.save(settings);
+    notifyListeners();
+  }
+
   Future<void> _sendProjectionState() async {
     if (mqttActive) {
       await _mqttSender.sendState(

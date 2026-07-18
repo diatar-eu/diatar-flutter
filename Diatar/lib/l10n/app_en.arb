@@ -401,6 +401,7 @@
   "homeControlModeTooltip": "Screen mode",
   "homeControlModeBooks": "Books",
   "homeControlModeDialist": "Slide list",
+  "homeControlModePresentation": "Presentation",
   "dialistNamedLabel": "Slide list: {name}",
   "@dialistNamedLabel": {
     "placeholders": {

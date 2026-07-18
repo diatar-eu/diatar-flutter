@@ -833,6 +833,12 @@ abstract class AppLocalizations {
   /// **'Diasor'**
   String get homeControlModeDialist;
 
+  /// No description provided for @homeControlModePresentation.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vetítés'**
+  String get homeControlModePresentation;
+
   /// No description provided for @dialistNamedLabel.
   ///
   /// In hu, this message translates to:

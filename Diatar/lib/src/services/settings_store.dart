@@ -40,6 +40,7 @@ class SettingsStore {
   static const String _kProjShowBackgroundImage = 'ProjShowBackgroundImage';
   static const String _kHomeViewMode = 'HomeViewMode';
   static const String _kHomeShowHighlightControls = 'HomeShowHighlightControls';
+  static const String _kHomeLayoutMode = 'HomeLayoutMode';
   static const String _kAppThemeMode = 'AppThemeMode';
   static const String _kAppLanguage = 'AppLanguage';
   static const String _kProjectionLocked = 'ProjectionLocked';
@@ -146,6 +147,7 @@ class SettingsStore {
       homeViewMode: prefs.getInt(_kHomeViewMode) ?? 0,
         homeShowHighlightControls:
           prefs.getBool(_kHomeShowHighlightControls) ?? false,
+      homeLayoutMode: prefs.getInt(_kHomeLayoutMode) ?? 0,
       appThemeMode: prefs.getInt(_kAppThemeMode) ?? 0,
       appLanguage: prefs.getString(_kAppLanguage) ?? '',
       projectionLocked: prefs.getBool(_kProjectionLocked) ?? false,
@@ -216,6 +218,7 @@ class SettingsStore {
       _kHomeShowHighlightControls,
       settings.homeShowHighlightControls,
     );
+    await prefs.setInt(_kHomeLayoutMode, settings.homeLayoutMode);
     await prefs.setInt(_kAppThemeMode, settings.appThemeMode);
     await prefs.setString(_kAppLanguage, settings.appLanguage);
     await prefs.setBool(_kProjectionLocked, settings.projectionLocked);
