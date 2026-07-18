@@ -1479,6 +1479,17 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
+    // Ha beállított énekrend van aktív, a kötetek nézetben is maradjon
+    // kiválasztva (ne ugorjon vissza egy kötetre), így az énekrend
+    // váltása minden nézetben nyomon követhető.
+    if (_activeOrderSetIndex >= 0 && _customOrder.isNotEmpty) {
+      _diaVirtualBookSelected = true;
+      _projectedCustomCursor = -1;
+      notifyListeners();
+      unawaited(_syncCurrentDia());
+      return;
+    }
+
     _diaVirtualBookSelected = false;
     _projectedCustomCursor = -1;
     notifyListeners();

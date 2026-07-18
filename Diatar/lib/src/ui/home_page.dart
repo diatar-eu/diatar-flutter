@@ -1792,7 +1792,10 @@ class _BookDropdown extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final ThemeData theme = Theme.of(context);
-    final bool hasDia = controller.hasImportedCustomOrderDia;
+    final bool hasDia = controller.hasImportedCustomOrderDia &&
+        controller.customOrderSets
+            .where((CustomOrderSet s) => s.enabled)
+            .isEmpty;
     final String fallbackDiaName = controller.customOrderLooksLikeBatyu
         ? context.l10n.batyuTooltip
         : controller.customOrderLooksLikeZsolozsma
@@ -1812,7 +1815,9 @@ class _BookDropdown extends StatelessWidget {
       context.l10n.ungroupedBookGroupLabel,
     );
     final int initial = controller.diaVirtualBookSelected
-        ? _diaVirtualBookValue
+        ? (controller.activeCustomOrderSetIndex >= 0
+            ? _customOrderSetValueBase - controller.activeCustomOrderSetIndex
+            : _diaVirtualBookValue)
         : controller.bookIndex;
 
     final List<CustomOrderSet> enabledSets = controller.customOrderSets
@@ -1825,6 +1830,7 @@ class _BookDropdown extends StatelessWidget {
       children: <Widget>[
         Expanded(
           child: DropdownButtonFormField<int>(
+            key: ValueKey<int>(initial),
             initialValue: initial,
             decoration: InputDecoration(
               labelText: context.l10n.bookLabel,
@@ -2291,6 +2297,7 @@ class _CustomOrderSetSelector extends StatelessWidget {
     }
     final String? activeId = controller.activeCustomOrderSetId;
     return DropdownButtonFormField<String>(
+      key: ValueKey<String?>(activeId),
       initialValue: activeId,
       isExpanded: true,
       isDense: true,
