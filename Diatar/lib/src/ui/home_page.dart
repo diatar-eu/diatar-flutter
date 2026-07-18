@@ -1196,16 +1196,12 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     if (selected == null) {
       return;
     }
-    unawaited(
-      controller.applyDtxManagerSelection(
-        downloadSelected: selected.dtxDownloadSelected,
-        excludedSelected: selected.dtxExcludedSelected,
-      ),
+    await controller.applyDtxManagerSelection(
+      downloadSelected: selected.dtxDownloadSelected,
+      excludedSelected: selected.dtxExcludedSelected,
     );
-    unawaited(
-      controller.applyDtzManagerSelection(
-        downloadSelected: selected.dtzDownloadSelected,
-      ),
+    await controller.applyDtzManagerSelection(
+      downloadSelected: selected.dtzDownloadSelected,
     );
   }
 

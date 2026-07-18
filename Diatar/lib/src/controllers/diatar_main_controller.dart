@@ -2055,6 +2055,8 @@ class DiatarMainController extends ChangeNotifier {
         );
       }
 
+      await _loadDtzPhotos();
+
       if (summary.downloaded == 0) {
         _setStatus('statusDownloadSummaryNone');
       } else {
