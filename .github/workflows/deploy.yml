@@ -152,10 +152,11 @@ jobs:
           bundler-cache: true
           working-directory: ${{ matrix.app }}/ios
 
-      - name: Install CocoaPods
+      - name: Install CocoaPods and fastlane
         run: |
           sudo gem uninstall cocoapods -x || true
           brew install cocoapods
+          brew install fastlane
           echo "/opt/homebrew/bin" >> $GITHUB_PATH
           pod --version
 
