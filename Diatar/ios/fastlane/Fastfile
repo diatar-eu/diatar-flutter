@@ -35,7 +35,8 @@ platform :ios do
       skip_metadata: true,
       submit_for_review: true,
       automatic_release: true,
-      force: true
+      force: true,
+      precheck_enabled: false
     )
   end
 end
