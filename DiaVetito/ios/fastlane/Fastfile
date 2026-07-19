@@ -17,6 +17,7 @@ platform :ios do
       verbose: true
     )
     sh("flutter", "pub", "get")
+    sh("pod", "install", "--repo-update")
     build_app(
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
