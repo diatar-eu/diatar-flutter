@@ -145,21 +145,21 @@ jobs:
           channel: stable
           cache: false
 
-      # - name: Setup Ruby
-      #   uses: ruby/setup-ruby@v1
-      #   with:
-      #     ruby-version: '3.2'
-      #     bundler-cache: true
-      #     working-directory: ${{ matrix.app }}/ios
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ${{ matrix.app }}/ios
 
-      # - name: Install CocoaPods
-      #   working-directory: ${{ matrix.app }}/ios
-      #   env:
-      #     BUNDLE_GEMFILE: ""
-      #   run: |
-      #     gem install cocoapods
-      #     echo "$(gem environment gemdir)/bin" >> "$GITHUB_PATH"
-      #     pod --version
+      - name: Install CocoaPods
+        working-directory: ${{ matrix.app }}/ios
+        env:
+          BUNDLE_GEMFILE: ""
+        run: |
+          gem install cocoapods
+          echo "$(gem environment gemdir)/bin" >> "$GITHUB_PATH"
+          pod --version
 
       - name: Decode App Store Connect API key
         run: |
