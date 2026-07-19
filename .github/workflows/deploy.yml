@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   bump:
+    if: false
     name: Bump build number (${{ matrix.app }})
     runs-on: ubuntu-latest
     strategy:
@@ -62,6 +63,7 @@ jobs:
           fi
 
   android:
+    if: false
     name: Deploy Android (${{ matrix.app }})
     needs: bump
     runs-on: ubuntu-latest
@@ -121,7 +123,7 @@ jobs:
 
   ios:
     name: Deploy iOS (${{ matrix.app }})
-    needs: bump
+    # needs: bump
     runs-on: macos-latest
     strategy:
       fail-fast: false
@@ -143,16 +145,21 @@ jobs:
           channel: stable
           cache: false
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
-          working-directory: ${{ matrix.app }}/ios
+      # - name: Setup Ruby
+      #   uses: ruby/setup-ruby@v1
+      #   with:
+      #     ruby-version: '3.2'
+      #     bundler-cache: true
+      #     working-directory: ${{ matrix.app }}/ios
 
-      - name: Install CocoaPods
-        working-directory: ${{ matrix.app }}/ios
-        run: gem install cocoapods
+      # - name: Install CocoaPods
+      #   working-directory: ${{ matrix.app }}/ios
+      #   env:
+      #     BUNDLE_GEMFILE: ""
+      #   run: |
+      #     gem install cocoapods
+      #     echo "$(gem environment gemdir)/bin" >> "$GITHUB_PATH"
+      #     pod --version
 
       - name: Decode App Store Connect API key
         run: |
