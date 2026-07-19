@@ -153,12 +153,10 @@ jobs:
           working-directory: ${{ matrix.app }}/ios
 
       - name: Install CocoaPods
-        working-directory: ${{ matrix.app }}/ios
-        env:
-          BUNDLE_GEMFILE: ""
         run: |
-          gem install cocoapods
-          echo "$(gem environment gemdir)/bin" >> "$GITHUB_PATH"
+          sudo gem uninstall cocoapods -x || true
+          brew install cocoapods
+          echo "/opt/homebrew/bin" >> $GITHUB_PATH
           pod --version
 
       - name: Decode App Store Connect API key
