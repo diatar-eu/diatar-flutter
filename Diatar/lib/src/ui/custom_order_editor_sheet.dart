@@ -43,9 +43,56 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   );
 
   late List<CustomOrderEntry> _entries;
+  late final ScrollController _headerActionsScrollController;
+  bool _canScrollHeaderActionsLeft = false;
+  bool _canScrollHeaderActionsRight = false;
+  bool _headerActionsRefreshScheduled = false;
   String? _selectedInsertBookFileName;
   int? _selectedInsertSongIndex;
   bool _groupReorder = true;
+
+  void _updateHeaderActionsScrollIndicators() {
+    if (!_headerActionsScrollController.hasClients) {
+      return;
+    }
+    final ScrollPosition position = _headerActionsScrollController.position;
+    final bool canLeft = position.pixels > 0.5;
+    final bool canRight =
+        position.maxScrollExtent - position.pixels > 0.5;
+    if (canLeft == _canScrollHeaderActionsLeft &&
+        canRight == _canScrollHeaderActionsRight) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _canScrollHeaderActionsLeft = canLeft;
+      _canScrollHeaderActionsRight = canRight;
+    });
+  }
+
+  void _scheduleHeaderActionsIndicatorRefresh() {
+    if (_headerActionsRefreshScheduled || !mounted) {
+      return;
+    }
+    _headerActionsRefreshScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _headerActionsRefreshScheduled = false;
+      _updateHeaderActionsScrollIndicators();
+    });
+  }
+
+  Widget _buildHeaderScrollHint(bool visible, IconData icon) {
+    return AnimatedOpacity(
+      opacity: visible ? 1 : 0,
+      duration: const Duration(milliseconds: 150),
+      child: SizedBox(
+        width: 14,
+        child: Icon(icon, size: 14, color: Theme.of(context).hintColor),
+      ),
+    );
+  }
 
   int _safeEntryVerseIndex(CustomOrderEntry entry, {int fallback = 0}) {
     try {
@@ -262,6 +309,19 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   void initState() {
     super.initState();
     _entries = List<CustomOrderEntry>.from(controller.customOrder);
+    _headerActionsScrollController = ScrollController()
+      ..addListener(_updateHeaderActionsScrollIndicators);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateHeaderActionsScrollIndicators();
+    });
+  }
+
+  @override
+  void dispose() {
+    _headerActionsScrollController
+      ..removeListener(_updateHeaderActionsScrollIndicators)
+      ..dispose();
+    super.dispose();
   }
 
   @override
@@ -291,45 +351,98 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                         ),
                       ),
                     ),
-                    IconButton(
-                      tooltip: l10n.addSong,
-                      onPressed: () => _openSearchSheet(context),
-                      icon: const Icon(Icons.search),
-                    ),
-                    IconButton(
-                      tooltip: l10n.customOrderInsertVersesAction,
-                      onPressed: _openInsertVersesDialog,
-                      icon: const Icon(Icons.playlist_add),
-                    ),
-                    IconButton(
-                      tooltip: l10n.customOrderInsertSeparatorAction,
-                      onPressed: _insertSeparator,
-                      icon: const Icon(Icons.horizontal_rule),
-                    ),
-                    IconButton(
-                      tooltip: l10n.addTextSlide,
-                      onPressed: _openCustomTextSlideDialog,
-                      icon: const Icon(Icons.text_fields),
-                    ),
-                    IconButton(
-                      tooltip: l10n.addImageSlideTooltip,
-                      onPressed: _pickAndSendImageSlide,
-                      icon: const Icon(Icons.image),
-                    ),
-                    IconButton(
-                      tooltip: l10n.zsolozsmaTooltip,
-                      onPressed: _openZsolozsmaDialog,
-                      icon: const Icon(Icons.menu_book_outlined),
-                    ),
-                    IconButton(
-                      tooltip: l10n.batyuTooltip,
-                      onPressed: _openBatyuDialog,
-                      icon: const Icon(Icons.auto_stories_outlined),
-                    ),
-                    IconButton(
-                      tooltip: l10n.customOrderClearAllTooltip,
-                      onPressed: _entries.isEmpty ? null : _confirmAndClearAll,
-                      icon: const Icon(Icons.delete_sweep, color: Colors.red),
+                    Flexible(
+                      child: SizedBox(
+                        height: 40,
+                        child: Row(
+                          children: <Widget>[
+                            _buildHeaderScrollHint(
+                              _canScrollHeaderActionsLeft,
+                              Icons.chevron_left,
+                            ),
+                            Expanded(
+                              child: NotificationListener<
+                                ScrollMetricsNotification
+                              >(
+                                onNotification: (
+                                  ScrollMetricsNotification notification,
+                                ) {
+                                  _scheduleHeaderActionsIndicatorRefresh();
+                                  return false;
+                                },
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: SingleChildScrollView(
+                                    controller: _headerActionsScrollController,
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        IconButton(
+                                          tooltip: l10n.addSong,
+                                          onPressed: () =>
+                                              _openSearchSheet(context),
+                                          icon: const Icon(Icons.search),
+                                        ),
+                                        IconButton(
+                                          tooltip: l10n
+                                              .customOrderInsertVersesAction,
+                                          onPressed: _openInsertVersesDialog,
+                                          icon: const Icon(Icons.playlist_add),
+                                        ),
+                                        IconButton(
+                                          tooltip: l10n
+                                              .customOrderInsertSeparatorAction,
+                                          onPressed: _insertSeparator,
+                                          icon: const Icon(Icons.horizontal_rule),
+                                        ),
+                                        IconButton(
+                                          tooltip: l10n.addTextSlide,
+                                          onPressed: _openCustomTextSlideDialog,
+                                          icon: const Icon(Icons.text_fields),
+                                        ),
+                                        IconButton(
+                                          tooltip: l10n.addImageSlideTooltip,
+                                          onPressed: _pickAndSendImageSlide,
+                                          icon: const Icon(Icons.image),
+                                        ),
+                                        IconButton(
+                                          tooltip: l10n.zsolozsmaTooltip,
+                                          onPressed: _openZsolozsmaDialog,
+                                          icon: const Icon(
+                                            Icons.menu_book_outlined,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: l10n.batyuTooltip,
+                                          onPressed: _openBatyuDialog,
+                                          icon: const Icon(
+                                            Icons.auto_stories_outlined,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: l10n.customOrderClearAllTooltip,
+                                          onPressed: _entries.isEmpty
+                                              ? null
+                                              : _confirmAndClearAll,
+                                          icon: const Icon(
+                                            Icons.delete_sweep,
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            _buildHeaderScrollHint(
+                              _canScrollHeaderActionsRight,
+                              Icons.chevron_right,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
