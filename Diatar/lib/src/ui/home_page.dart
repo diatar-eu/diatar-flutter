@@ -823,10 +823,51 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         Row(
           children: <Widget>[
             Expanded(child: _VerseDropdown(controller: controller)),
-            const SizedBox(width: 30),
+            const SizedBox(width: 8),
+            _buildProjectionDisplayButton(context),
           ],
         )
       ],
+    );
+  }
+
+  Widget _buildProjectionDisplayButton(BuildContext context) {
+    return Builder(
+      builder: (BuildContext menuContext) {
+        final bool nothingShown =
+            !controller.settings.projUseKotta &&
+            !controller.settings.projUseAkkord;
+        final ThemeData theme = Theme.of(menuContext);
+        final Color displayButtonColor = nothingShown
+            ? const Color(0xFFF9A825)
+            : theme.colorScheme.onSurfaceVariant;
+        return Tooltip(
+          message:
+              '${menuContext.l10n.showKotta} / ${menuContext.l10n.showChords} / ${menuContext.l10n.showBackgroundImage}',
+          child: InkResponse(
+            radius: 20,
+            onTap: () => unawaited(_showProjectionDisplayMenu(menuContext)),
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: Center(
+                child: Text(
+                  '\u266B',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: displayButtonColor,
+                    decoration: nothingShown
+                        ? TextDecoration.lineThrough
+                        : TextDecoration.none,
+                    decorationThickness: 2.0,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -912,37 +953,6 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                 foregroundColor: controller.settings.projectionLocked
                     ? const Color(0xFFF9A825)
                     : Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 8),
-              Builder(
-                builder: (BuildContext menuContext) {
-                  final bool nothingShown =
-                      !controller.settings.projUseKotta &&
-                      !controller.settings.projUseAkkord;
-                  final Color displayButtonColor = nothingShown
-                      ? const Color(0xFFF9A825)
-                      : Theme.of(menuContext).colorScheme.onSurfaceVariant;
-                  return _actionIconButton(
-                    menuContext,
-                    child: Text(
-                      '\u266B',
-                      style: TextStyle(
-                        fontSize: 23,
-                        fontWeight: FontWeight.w700,
-                        decoration: nothingShown
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
-                        decorationThickness: 2.0,
-                      ),
-                    ),
-                    tooltip:
-                        '${l10n.showKotta} / ${l10n.showChords} / ${l10n.showBackgroundImage}',
-                    onPressed: () =>
-                        unawaited(_showProjectionDisplayMenu(menuContext)),
-                    backgroundColor: displayButtonColor.withValues(alpha: 0.15),
-                    foregroundColor: displayButtonColor,
-                  );
-                },
               ),
               const SizedBox(width: 8),
               _actionIconButton(
