@@ -2948,12 +2948,9 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
     final DtxSong prevSong = b.songs[prevSongIdx];
-    final int prevSongLastVerse = prevSong.verses.isEmpty
-        ? 0
-        : prevSong.verses.length - 1;
     _selectSongAndVerse(
       prevSongIdx,
-      prevSongLastVerse,
+      0,
       includeVerseInStatus: false,
     );
   }
