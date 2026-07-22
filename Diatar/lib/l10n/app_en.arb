@@ -37,10 +37,10 @@
     }
   },
   "downloadDtzNoItems": "No downloadable DTZ files.",
-  "downloadTabDtx": "DTX songbooks",
-  "downloadTabDtz": "DTZ scores",
+  "downloadTabDtx": "Songbooks",
+  "downloadTabDtz": "Scores",
   "downloadTitle": "Download",
-  "downloadManagerNameColumn": "DTX",
+  "downloadManagerNameColumn": "Volumes",
   "downloadManagerUpdateColumn": "Update",
   "downloadManagerExcludedColumn": "Excluded",
   "downloadManagerUserImportedTag": "User imported",

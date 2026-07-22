@@ -109,17 +109,18 @@ class DtzDownloadService {
           .where((String z) => remoteByName.containsKey(z))
           .toList();
 
-      final File dtzFile =
-          FileSystemProvider.instance.file('${targetDir.path}/$dtzName');
+      final File dtzFile = FileSystemProvider.instance.file(
+        '${targetDir.path}/$dtzName',
+      );
       final bool installed = await dtzFile.exists();
 
       final List<String> allFiles = <String>[dtzName, ...zips];
       bool upToDate = installed;
       for (final String name in allFiles) {
-        final String oldStamp =
-            prefs.getString('$_stampPrefix$name') ?? '';
-        final _RemoteEntry entryForName =
-            name == dtzName ? dtzEntry : remoteByName[name]!;
+        final String oldStamp = prefs.getString('$_stampPrefix$name') ?? '';
+        final _RemoteEntry entryForName = name == dtzName
+            ? dtzEntry
+            : remoteByName[name]!;
         if (oldStamp != entryForName.timestamp) {
           upToDate = false;
           break;
@@ -159,8 +160,9 @@ class DtzDownloadService {
 
     final List<DtzDownloadItem> items =
         selected ?? await listAll(targetDir: targetDir);
-    final List<DtzDownloadItem> toDownload =
-        items.where((DtzDownloadItem i) => i.isOfficial).toList();
+    final List<DtzDownloadItem> toDownload = items
+        .where((DtzDownloadItem i) => i.isOfficial)
+        .toList();
 
     final Map<String, _RemoteEntry> remote = <String, _RemoteEntry>{
       for (final _RemoteEntry e in await _fetchRemoteList()) e.fileName: e,
@@ -177,8 +179,9 @@ class DtzDownloadService {
       final int currentFile = i + 1;
       bool neededSomething = false;
 
-      final File dtzFile =
-          FileSystemProvider.instance.file('${targetDir.path}/${item.fileName}');
+      final File dtzFile = FileSystemProvider.instance.file(
+        '${targetDir.path}/${item.fileName}',
+      );
       if (await _needsDownload(dtzFile, item.fileName, item.timestamp, prefs)) {
         await _downloadOne(
           fileName: item.fileName,
@@ -201,14 +204,10 @@ class DtzDownloadService {
         }
         handledZips.add(zip);
 
-        final File zipFile =
-            FileSystemProvider.instance.file('${targetDir.path}/$zip');
-        if (await _needsDownload(
-          zipFile,
-          zip,
-          zipEntry.timestamp,
-          prefs,
-        )) {
+        final File zipFile = FileSystemProvider.instance.file(
+          '${targetDir.path}/$zip',
+        );
+        if (await _needsDownload(zipFile, zip, zipEntry.timestamp, prefs)) {
           await _downloadOne(
             fileName: zip,
             targetFile: zipFile,
@@ -234,14 +233,15 @@ class DtzDownloadService {
     // Only zips that were successfully extracted (have a stamp) are removed,
     // which also cleans up leftovers from previous runs.
     try {
-      final List<FileSystemEntity> existing =
-          await targetDir.list().toList();
+      final List<FileSystemEntity> existing = await targetDir.list().toList();
       for (final FileSystemEntity entity in existing) {
         if (entity is! File) {
           continue;
         }
-        final String name = entity.uri.pathSegments
-            .lastWhere((String s) => s.isNotEmpty, orElse: () => '');
+        final String name = entity.uri.pathSegments.lastWhere(
+          (String s) => s.isNotEmpty,
+          orElse: () => '',
+        );
         if (!name.toLowerCase().endsWith('.zip')) {
           continue;
         }
@@ -257,6 +257,33 @@ class DtzDownloadService {
     await FileSystemProvider.persistWebFileSystem();
 
     return DtzDownloadSummary(downloaded: downloaded, skipped: skipped);
+  }
+
+  Future<int> deleteLocalFiles({
+    required Directory targetDir,
+    required Iterable<String> fileNames,
+  }) async {
+    await targetDir.create(recursive: true);
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    int deleted = 0;
+    final Set<String> uniqueNames = fileNames
+        .map((String name) => name.trim())
+        .where((String name) => name.isNotEmpty)
+        .toSet();
+    for (final String name in uniqueNames) {
+      final File local = FileSystemProvider.instance.file(
+        '${targetDir.path}/$name',
+      );
+      if (await local.exists()) {
+        await local.delete();
+        deleted++;
+      }
+      await prefs.remove('$_stampPrefix$name');
+    }
+
+    await FileSystemProvider.persistWebFileSystem();
+
+    return deleted;
   }
 
   Future<bool> _needsDownload(
@@ -307,11 +334,7 @@ class DtzDownloadService {
       return null;
     }
 
-    return _RemoteEntry(
-      fileName: fileName,
-      size: size,
-      timestamp: timestamp,
-    );
+    return _RemoteEntry(fileName: fileName, size: size, timestamp: timestamp);
   }
 
   Future<Map<String, List<String>>> _fetchKottakMap() async {
@@ -372,15 +395,13 @@ class DtzDownloadService {
 
     final int totalBytes =
         (response.contentLength != null && response.contentLength! > 0)
-            ? response.contentLength!
-            : 0;
+        ? response.contentLength!
+        : 0;
     int received = 0;
     final List<int> bytes = response.bodyBytes;
     const int chunkSize = 64 * 1024;
     for (int i = 0; i < bytes.length; i += chunkSize) {
-      received += (i + chunkSize < bytes.length
-          ? chunkSize
-          : bytes.length - i);
+      received += (i + chunkSize < bytes.length ? chunkSize : bytes.length - i);
       onProgress?.call(
         DtzDownloadProgress(
           currentFile: currentFile,
@@ -408,8 +429,9 @@ class DtzDownloadService {
           normalized.contains('/../')) {
         continue;
       }
-      final File outFile = FileSystemProvider.instance
-          .file('${targetDir.path}/$normalized');
+      final File outFile = FileSystemProvider.instance.file(
+        '${targetDir.path}/$normalized',
+      );
       await outFile.create(recursive: true);
       await outFile.writeAsBytes(file.content);
     }

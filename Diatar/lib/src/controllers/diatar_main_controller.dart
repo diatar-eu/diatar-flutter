@@ -8,6 +8,7 @@ import 'package:diatar_common/utils/transposition_utils.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/path_helper.dart';
 import '../utils/file_system_provider.dart';
 
@@ -111,10 +112,7 @@ class DtxManageItem {
 /// Egy énekrend betöltésekor választható viselkedés:
 /// felülírja az aktuálisan aktív énekrendet, vagy új, párhuzamos énekrendként
 /// töltődik be a már betöltöttek mellé.
-enum CustomOrderImportMode {
-  overwriteActive,
-  addNew,
-}
+enum CustomOrderImportMode { overwriteActive, addNew }
 
 class DiatarMainController extends ChangeNotifier {
   final DtxParser _parser = const DtxParser();
@@ -135,9 +133,9 @@ class DiatarMainController extends ChangeNotifier {
       const ProjectionGlobalsPolicy();
   final TransportSettingsPolicy _transportSettingsPolicy =
       const TransportSettingsPolicy();
-    final SenderCallbackCoordinator _senderCallbackCoordinator =
+  final SenderCallbackCoordinator _senderCallbackCoordinator =
       SenderCallbackCoordinator();
-    final SenderTransportCoordinator _senderTransportCoordinator =
+  final SenderTransportCoordinator _senderTransportCoordinator =
       const SenderTransportCoordinator();
   final EntryResolver _entryResolver = const EntryResolver();
   late final EntryMatchPolicy _entryMatchPolicy = EntryMatchPolicy(
@@ -154,8 +152,9 @@ class DiatarMainController extends ChangeNotifier {
   final SettingsStore _settingsStore = SettingsStore();
   final DtxDownloadService _downloadService = DtxDownloadService();
   final DtzDownloadService _dtzDownloadService = DtzDownloadService();
-  late final DtxLibraryService _dtxLibraryService =
-      DtxLibraryService(parser: _parser);
+  late final DtxLibraryService _dtxLibraryService = DtxLibraryService(
+    parser: _parser,
+  );
   final DtzLibraryService _dtzLibraryService = const DtzLibraryService();
   final DtxOrderStore _orderStore = DtxOrderStore();
   final ZsolozsmaService _zsolozsmaService = ZsolozsmaService();
@@ -207,6 +206,7 @@ class DiatarMainController extends ChangeNotifier {
   int _screenWidth = 1920;
   int _screenHeight = 1080;
   Set<String> _disabledSongbooks = <String>{};
+  Set<String> _disabledDtzFiles = <String>{};
   List<CustomOrderEntry> _customOrder = <CustomOrderEntry>[];
   bool customOrderActive = false;
   int _customOrderCursor = -1;
@@ -220,6 +220,7 @@ class DiatarMainController extends ChangeNotifier {
   String? _customOrderSourceType;
   String? _zsolozsmaVirtualBookLabel;
   String? _napiLelkiBatyuVirtualBookLabel;
+  static const String _disabledDtzPrefsKey = 'disabled_dtz_files';
 
   /// A párhuzamosan betöltött énekrendek (saját diasorok) listája.
   List<CustomOrderSet> _customOrderSets = <CustomOrderSet>[];
@@ -331,8 +332,8 @@ class DiatarMainController extends ChangeNotifier {
     final int safeCursor = _customOrder.isEmpty
         ? -1
         : _customOrderCursor.clamp(0, _customOrder.length - 1);
-    _customOrderSets[_activeOrderSetIndex] = _customOrderSets[_activeOrderSetIndex]
-        .copyWith(
+    _customOrderSets[_activeOrderSetIndex] =
+        _customOrderSets[_activeOrderSetIndex].copyWith(
           entries: List<CustomOrderEntry>.from(_customOrder),
           baseName: _lastImportedCustomOrderBaseName,
           sourceType: _customOrderSourceType,
@@ -451,8 +452,9 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
     final int currentPos = enabledIndexes.indexOf(_activeOrderSetIndex);
-    final int nextPos =
-        currentPos < 0 ? 0 : (currentPos + 1) % enabledIndexes.length;
+    final int nextPos = currentPos < 0
+        ? 0
+        : (currentPos + 1) % enabledIndexes.length;
     await _switchActiveSet(enabledIndexes[nextPos]);
   }
 
@@ -489,8 +491,9 @@ class DiatarMainController extends ChangeNotifier {
     }
     final bool currentlyEnabled = _customOrderSets[index].enabled;
     if (currentlyEnabled) {
-      final int enabledCount =
-          _customOrderSets.where((CustomOrderSet s) => s.enabled).length;
+      final int enabledCount = _customOrderSets
+          .where((CustomOrderSet s) => s.enabled)
+          .length;
       if (enabledCount <= 1) {
         return;
       }
@@ -752,7 +755,7 @@ class DiatarMainController extends ChangeNotifier {
       !loading &&
       statusCode == 'statusNoDtxFiles';
   bool get tcpActive => settings.tcpClientEnabled;
-    bool get tcpConfigured => _transportSettingsPolicy.isTcpConfigured(settings);
+  bool get tcpConfigured => _transportSettingsPolicy.isTcpConfigured(settings);
 
   /// True, ha asztali környezeten a vetítőablak (külön ablak) elérhető.
   /// Ez a beállítás értékét tükrözi (a felhasználó kapcsolhatja ki).
@@ -805,6 +808,7 @@ class DiatarMainController extends ChangeNotifier {
     _transpositions = await _settingsStore.loadTranspositions();
     lastBlankPath = settings.blankPicPath;
     _disabledSongbooks = await _orderStore.loadDisabled();
+    _disabledDtzFiles = await _loadDisabledDtzFiles();
     await _loadCustomOrderSets();
     globals = _projectionGlobalsPolicy.fromSettings(
       settings,
@@ -877,7 +881,9 @@ class DiatarMainController extends ChangeNotifier {
     ];
 
     for (final String name in baseNames) {
-      final File candidate = FileSystemProvider.instance.file('${dir.path}/$name.dia');
+      final File candidate = FileSystemProvider.instance.file(
+        '${dir.path}/$name.dia',
+      );
       if (await candidate.exists()) {
         await importCustomOrderFromDia(candidate.path, activate: true);
         return;
@@ -885,18 +891,39 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
+  Future<Set<String>> _loadDisabledDtzFiles() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(_disabledDtzPrefsKey) ?? const <String>[])
+        .map((String name) => name.trim())
+        .where((String name) => name.isNotEmpty)
+        .toSet();
+  }
+
+  Future<void> _saveDisabledDtzFiles(Set<String> files) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final List<String> normalized =
+        files
+            .map((String name) => name.trim())
+            .where((String name) => name.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    await prefs.setStringList(_disabledDtzPrefsKey, normalized);
+  }
+
   void _configureSender() {
-    _sender.onStatusChanged = _senderCallbackCoordinator.buildStatusChangedHandler(
-      setConnected: (bool connected) => tcpConnected = connected,
-      clearError: () {
-        if (_sender.allTargetsConnected) {
-          tcpHasError = false;
-        }
-      },
-      syncAfterConnect: _syncBackgroundImageAfterConnect,
-      refreshFlags: _refreshSenderFlags,
-      notify: notifyListeners,
-    );
+    _sender.onStatusChanged = _senderCallbackCoordinator
+        .buildStatusChangedHandler(
+          setConnected: (bool connected) => tcpConnected = connected,
+          clearError: () {
+            if (_sender.allTargetsConnected) {
+              tcpHasError = false;
+            }
+          },
+          syncAfterConnect: _syncBackgroundImageAfterConnect,
+          refreshFlags: _refreshSenderFlags,
+          notify: notifyListeners,
+        );
     _sender.onError = _senderCallbackCoordinator.buildTcpErrorHandler(
       isActive: () => tcpActive,
       isConnected: () => tcpConnected && _sender.allTargetsConnected,
@@ -905,13 +932,14 @@ class DiatarMainController extends ChangeNotifier {
       refreshFlags: _refreshSenderFlags,
       notify: notifyListeners,
     );
-    _mqttSender.onStatusChanged = _senderCallbackCoordinator.buildStatusChangedHandler(
-      setConnected: (bool connected) => mqttConnected = connected,
-      clearError: () => mqttHasError = false,
-      syncAfterConnect: _syncBackgroundImageAfterConnect,
-      refreshFlags: _refreshSenderFlags,
-      notify: notifyListeners,
-    );
+    _mqttSender.onStatusChanged = _senderCallbackCoordinator
+        .buildStatusChangedHandler(
+          setConnected: (bool connected) => mqttConnected = connected,
+          clearError: () => mqttHasError = false,
+          syncAfterConnect: _syncBackgroundImageAfterConnect,
+          refreshFlags: _refreshSenderFlags,
+          notify: notifyListeners,
+        );
     _mqttSender.onError = _senderCallbackCoordinator.buildMqttErrorHandler(
       isActive: () => mqttActive,
       isConnected: () => mqttConnected,
@@ -1223,8 +1251,10 @@ class DiatarMainController extends ChangeNotifier {
     int? insertAtIndex,
   }) async {
     final DateTime day = DateTime(date.year, date.month, date.day);
-    final List<CustomOrderEntry> entries = _napiLelkiBatyuService
-        .buildEntries(celebration, wordsPerSlide: wordsPerSlide);
+    final List<CustomOrderEntry> entries = _napiLelkiBatyuService.buildEntries(
+      celebration,
+      wordsPerSlide: wordsPerSlide,
+    );
 
     if (entries.isEmpty) {
       _setStatus('statusBatyuPartLoadError', <String, String>{
@@ -2025,7 +2055,7 @@ class DiatarMainController extends ChangeNotifier {
         .map(
           (DtzDownloadItem item) => DtzManageItem(
             item: item,
-            excluded: false,
+            excluded: _disabledDtzFiles.contains(item.fileName),
           ),
         )
         .toList();
@@ -2033,6 +2063,7 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<void> applyDtzManagerSelection({
     required Set<String> downloadSelected,
+    required Set<String> excludedSelected,
   }) async {
     loading = true;
     downloadInProgress = true;
@@ -2055,14 +2086,32 @@ class DiatarMainController extends ChangeNotifier {
       final Set<String> effectiveDownload = downloadSelected
           .map((String n) => n.trim())
           .where((String n) => n.isNotEmpty)
-          .where((String n) => byFile[n] != null && byFile[n]!.isOfficial)
+          .where((String n) {
+            final DtzDownloadItem? item = byFile[n];
+            return item != null && item.isOfficial && item.updateAvailable;
+          })
           .toSet();
+
+      final Set<String> effectiveExcluded = excludedSelected
+          .map((String name) => name.trim())
+          .where((String name) => name.isNotEmpty)
+          .toSet();
+
+      final Set<String> filesToDelete = effectiveExcluded.where((String name) {
+        final DtzDownloadItem? item = byFile[name];
+        return item != null && item.isInstalled;
+      }).toSet();
 
       downloadTotalFiles = effectiveDownload.length;
 
       final List<DtzDownloadItem> selected = effectiveDownload
           .map((String n) => byFile[n]!)
           .toList();
+
+      final int deletedCount = await _dtzDownloadService.deleteLocalFiles(
+        targetDir: dtzDir,
+        fileNames: filesToDelete,
+      );
 
       DtzDownloadSummary summary = const DtzDownloadSummary(
         downloaded: 0,
@@ -2088,9 +2137,13 @@ class DiatarMainController extends ChangeNotifier {
         );
       }
 
+      effectiveExcluded.removeAll(effectiveDownload);
+      _disabledDtzFiles = effectiveExcluded;
+      await _saveDisabledDtzFiles(_disabledDtzFiles);
+
       await _loadDtzPhotos();
 
-      if (summary.downloaded == 0) {
+      if (summary.downloaded == 0 && deletedCount == 0) {
         _setStatus('statusDownloadSummaryNone');
       } else {
         _setStatus('statusDownloadSummary', <String, String>{
@@ -2363,8 +2416,8 @@ class DiatarMainController extends ChangeNotifier {
       _customOrderSourceType = null;
       _zsolozsmaVirtualBookLabel = null;
       _napiLelkiBatyuVirtualBookLabel = null;
-      _customOrderSets[_activeOrderSetIndex] = _customOrderSets[_activeOrderSetIndex]
-          .copyWith(
+      _customOrderSets[_activeOrderSetIndex] =
+          _customOrderSets[_activeOrderSetIndex].copyWith(
             name: baseName ?? _customOrderSets[_activeOrderSetIndex].name,
             baseName: baseName,
             sourceType: null,
@@ -2635,7 +2688,9 @@ class DiatarMainController extends ChangeNotifier {
     }
     final int offset = currentTransposition;
     if (offset == 0) return v.lines;
-    return v.lines.map((line) => TranspositionUtils.transposeLine(line, offset)).toList();
+    return v.lines
+        .map((line) => TranspositionUtils.transposeLine(line, offset))
+        .toList();
   }
 
   /// Beallitja az aktualis enek transzpozicio eltolasat es ujrajelzi a vetítést.
@@ -2744,7 +2799,11 @@ class DiatarMainController extends ChangeNotifier {
 
   /// Egy adott ének/versszak közvetlen megjelenítése a vezérlőben és a
   /// vetítésben, egyetlen szinkronizálással (a keresőből való ugráshoz).
-  void goToSong(int targetBookIndex, int targetSongIndex, int targetVerseIndex) {
+  void goToSong(
+    int targetBookIndex,
+    int targetSongIndex,
+    int targetVerseIndex,
+  ) {
     if (books.isEmpty) {
       return;
     }
@@ -2972,11 +3031,7 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
     final DtxSong prevSong = b.songs[prevSongIdx];
-    _selectSongAndVerse(
-      prevSongIdx,
-      0,
-      includeVerseInStatus: false,
-    );
+    _selectSongAndVerse(prevSongIdx, 0, includeVerseInStatus: false);
   }
 
   int? _findSelectableSongIndex(int start, {required bool forward}) {
@@ -3241,7 +3296,7 @@ class DiatarMainController extends ChangeNotifier {
     if (!settings.castEnabled) {
       return;
     }
-    
+
     // Instead of sending text data, we render the current frame to an image
     // and send it to Cast. This ensures the receiver displays exactly what is projected.
     await renderCurrentFrameToImage();
@@ -3280,12 +3335,14 @@ class DiatarMainController extends ChangeNotifier {
 
       // End recording and get the picture
       final ui.Picture picture = recorder.endRecording();
-      
+
       // Convert picture to image
       final ui.Image image = await picture.toImage(width.ceil(), height.ceil());
-      
+
       // Convert image to PNG bytes
-      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final ByteData? byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       if (byteData == null) return;
       final Uint8List pngBytes = byteData.buffer.asUint8List();
 
@@ -3306,7 +3363,9 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     // Handle custom order entries that are images or text
-    if (customOrderActive && _projectedCustomCursor >= 0 && _projectedCustomCursor < _customOrder.length) {
+    if (customOrderActive &&
+        _projectedCustomCursor >= 0 &&
+        _projectedCustomCursor < _customOrder.length) {
       final CustomOrderEntry entry = _customOrder[_projectedCustomCursor];
       if (entry.isCustomImage) {
         // For custom images, we would need to load the image as an ImageFrame
@@ -3341,7 +3400,8 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     // Create a TextFrame with the current book, song, and verse information
-    final String title = '${book.displayName}: ${song.title}/${verse.name ?? ''}'.trim();
+    final String title =
+        '${book.displayName}: ${song.title}/${verse.name ?? ''}'.trim();
     final List<String> lines = displayLines;
     final RecTextRecord record = RecTextRecord(
       scholaLine: '',
@@ -3596,7 +3656,11 @@ class DiatarMainController extends ChangeNotifier {
         await _mqttSender.sendText(title: effectiveTitle, lines: nonEmptyLines);
       }
       if (tcpConfigured) {
-        await _sender.sendState(globals, showing: showing, wordToHighlight: highPos);
+        await _sender.sendState(
+          globals,
+          showing: showing,
+          wordToHighlight: highPos,
+        );
         await _sender.sendText(
           title: effectiveTitle,
           lines: nonEmptyLines,
@@ -3655,8 +3719,8 @@ class DiatarMainController extends ChangeNotifier {
       lastPicPath = normalized;
       _setStatus('statusImageSent', <String, String>{
         'name': file.uri.pathSegments.isNotEmpty
-              ? file.uri.pathSegments.last
-              : normalized,
+            ? file.uri.pathSegments.last
+            : normalized,
       });
       notifyListeners();
       unawaited(_castCurrentImage(normalized));

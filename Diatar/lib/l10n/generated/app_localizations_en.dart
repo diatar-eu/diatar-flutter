@@ -105,16 +105,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadDtzNoItems => 'No downloadable DTZ files.';
 
   @override
-  String get downloadTabDtx => 'DTX songbooks';
+  String get downloadTabDtx => 'Songbooks';
 
   @override
-  String get downloadTabDtz => 'DTZ scores';
+  String get downloadTabDtz => 'Scores';
 
   @override
   String get downloadTitle => 'Download';
 
   @override
-  String get downloadManagerNameColumn => 'DTX';
+  String get downloadManagerNameColumn => 'Volumes';
 
   @override
   String get downloadManagerUpdateColumn => 'Update';

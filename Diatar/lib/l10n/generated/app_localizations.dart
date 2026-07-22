@@ -281,13 +281,13 @@ abstract class AppLocalizations {
   /// No description provided for @downloadTabDtx.
   ///
   /// In hu, this message translates to:
-  /// **'DTX énektárak'**
+  /// **'Énektárak'**
   String get downloadTabDtx;
 
   /// No description provided for @downloadTabDtz.
   ///
   /// In hu, this message translates to:
-  /// **'DTZ kották'**
+  /// **'Kották'**
   String get downloadTabDtz;
 
   /// No description provided for @downloadTitle.
@@ -299,7 +299,7 @@ abstract class AppLocalizations {
   /// No description provided for @downloadManagerNameColumn.
   ///
   /// In hu, this message translates to:
-  /// **'DTX'**
+  /// **'Kötetek'**
   String get downloadManagerNameColumn;
 
   /// No description provided for @downloadManagerUpdateColumn.

@@ -37,11 +37,13 @@ class _DownloadDialogResult {
     required this.dtxDownloadSelected,
     required this.dtxExcludedSelected,
     required this.dtzDownloadSelected,
+    required this.dtzExcludedSelected,
   });
 
   final Set<String> dtxDownloadSelected;
   final Set<String> dtxExcludedSelected;
   final Set<String> dtzDownloadSelected;
+  final Set<String> dtzExcludedSelected;
 }
 
 class _DtxManagerListEntry {
@@ -981,10 +983,9 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                   onPressed: () => controller.toggleControlPhotoView(),
                   backgroundColor: controller.showPhotoInControl
                       ? const Color(0xFF1976D2).withValues(alpha: 0.15)
-                      : Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant
-                            .withValues(alpha: 0.08),
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
                   foregroundColor: controller.showPhotoInControl
                       ? const Color(0xFF1976D2)
                       : Theme.of(context).colorScheme.onSurfaceVariant,
@@ -1325,6 +1326,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     );
     await controller.applyDtzManagerSelection(
       downloadSelected: selected.dtzDownloadSelected,
+      excludedSelected: selected.dtzExcludedSelected,
     );
   }
 
@@ -1414,6 +1416,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
   bool _dtxSelectionInitialized = false;
 
   final Set<String> _dtzDownloadSelected = <String>{};
+  final Set<String> _dtzExcludedFiles = <String>{};
   List<DtzManageItem> _dtzAllItems = const <DtzManageItem>[];
   bool _dtzSelectionInitialized = false;
 
@@ -1440,6 +1443,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
 
       _dtzSelectionInitialized = false;
       _dtzDownloadSelected.clear();
+      _dtzExcludedFiles.clear();
       _dtzAllItems = const <DtzManageItem>[];
       _dtzItemsFuture = widget.controller.loadDtzManagerItems();
     });
@@ -1508,44 +1512,45 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
     return l10n.downloadManagerUpToDate;
   }
 
-  void _dtzToggleAll(bool select) {
-    setState(() {
-      if (select) {
-        _dtzDownloadSelected
-          ..clear()
-          ..addAll(
-            _dtzAllItems
-                .where((DtzManageItem item) => item.item.isOfficial)
-                .map((DtzManageItem item) => item.item.fileName),
-          );
-      } else {
-        _dtzDownloadSelected.clear();
-      }
-    });
-  }
-
-  /// A hivatalos (official) DTZ elemek kijeloltségi allapota a fejlecben
-  /// megjelenito tristate jelolodobozhoz:
-  ///  - true:  mind kijelolve
-  ///  - false: egyik sem kijelolve
-  ///  - null:  reszleges kijeloles
-  bool? _dtzAllSelectedValue() {
-    final List<DtzManageItem> official = _dtzAllItems
-        .where((DtzManageItem item) => item.item.isOfficial)
+  bool? _dtzUpdateValue() {
+    final List<DtzManageItem> eligible = _dtzAllItems
+        .where(
+          (DtzManageItem item) =>
+              item.item.isOfficial && item.item.updateAvailable,
+        )
         .toList();
-    if (official.isEmpty) {
+    if (eligible.isEmpty) {
       return false;
     }
-    final int selectedOfficial = official
+    final int selected = eligible
         .where(
           (DtzManageItem item) =>
               _dtzDownloadSelected.contains(item.item.fileName),
         )
         .length;
-    if (selectedOfficial == 0) {
+    if (selected == 0) {
       return false;
     }
-    if (selectedOfficial == official.length) {
+    if (selected == eligible.length) {
+      return true;
+    }
+    return null;
+  }
+
+  bool? _dtzExcludedValue() {
+    if (_dtzAllItems.isEmpty) {
+      return false;
+    }
+    final int selected = _dtzAllItems
+        .where(
+          (DtzManageItem item) =>
+              _dtzExcludedFiles.contains(item.item.fileName),
+        )
+        .length;
+    if (selected == 0) {
+      return false;
+    }
+    if (selected == _dtzAllItems.length) {
       return true;
     }
     return null;
@@ -1603,6 +1608,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                     dtxDownloadSelected: Set<String>.from(_downloadSelected),
                     dtxExcludedSelected: Set<String>.from(_excludedFiles),
                     dtzDownloadSelected: Set<String>.from(_dtzDownloadSelected),
+                    dtzExcludedSelected: Set<String>.from(_dtzExcludedFiles),
                   ),
                 ),
           child: Text(l10n.apply),
@@ -1671,203 +1677,247 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
               }
             }
 
-            return Column(
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8, top: 4),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          l10n.downloadManagerNameColumn,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                      ),
-                      SizedBox(
-                        width: 92,
-                        child: Text(
-                          l10n.downloadManagerUpdateColumn,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                      ),
-                      SizedBox(
-                        width: 92,
-                        child: Text(
-                          l10n.downloadManagerExcludedColumn,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: entries.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final _DtxManagerListEntry entry = entries[index];
-                      if (entry.isHeader) {
-                        final List<DtxManageItem> groupItems =
-                            grouped[entry.group!] ?? const <DtxManageItem>[];
-                        final bool hasDownloadEligible = groupItems.any(
-                          (DtxManageItem item) =>
-                              item.item.isOfficial && item.item.updateAvailable,
-                        );
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8, bottom: 2),
-                          child: Row(
-                            children: <Widget>[
-                              Expanded(
-                                child: Text(
-                                  '[${entry.group!}]',
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurfaceVariant,
-                                      ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 92,
-                                child: Center(
-                                  child: Checkbox(
-                                    tristate: true,
-                                    value: _groupDownloadValue(groupItems),
-                                    onChanged: hasDownloadEligible
-                                        ? (bool? checked) {
-                                            setState(() {
-                                              for (final DtxManageItem item
-                                                  in groupItems) {
-                                                if (!item.item.isOfficial ||
-                                                    !item
-                                                        .item
-                                                        .updateAvailable) {
-                                                  continue;
-                                                }
-                                                if (checked == true) {
-                                                  _downloadSelected.add(
-                                                    item.item.fileName,
-                                                  );
-                                                  _excludedFiles.remove(
-                                                    item.item.fileName,
-                                                  );
-                                                } else {
-                                                  _downloadSelected.remove(
-                                                    item.item.fileName,
-                                                  );
-                                                }
-                                              }
-                                            });
-                                          }
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 92,
-                                child: Center(
-                                  child: Checkbox(
-                                    tristate: true,
-                                    value: _groupExcludedValue(groupItems),
-                                    onChanged: (bool? checked) {
-                                      setState(() {
-                                        for (final DtxManageItem item
-                                            in groupItems) {
-                                          if (checked == true) {
-                                            _excludedFiles.add(
-                                              item.item.fileName,
-                                            );
-                                            _downloadSelected.remove(
-                                              item.item.fileName,
-                                            );
-                                          } else {
-                                            _excludedFiles.remove(
-                                              item.item.fileName,
-                                            );
-                                          }
-                                        }
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
+            return LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final bool compactMode = constraints.maxWidth < 560;
+                final double actionColumnWidth = compactMode ? 56 : 92;
 
-                      final DtxManageItem managed = entry.item!;
-                      final DtxDownloadItem item = managed.item;
-                      final bool canUpdate =
-                          item.isOfficial && item.updateAvailable;
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 12),
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: ListTile(
-                                dense: true,
-                                contentPadding: EdgeInsets.zero,
-                                title: Text(item.longName),
-                                subtitle: Text(_subtitleFor(item, context)),
-                              ),
+                return Column(
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8, top: 4),
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Text(
+                              l10n.downloadManagerNameColumn,
+                              style: Theme.of(context).textTheme.titleSmall,
                             ),
-                            SizedBox(
-                              width: 92,
-                              child: Center(
-                                child: canUpdate
-                                    ? Checkbox(
-                                        value: _downloadSelected.contains(
-                                          item.fileName,
-                                        ),
+                          ),
+                          SizedBox(
+                            width: actionColumnWidth,
+                            child: compactMode
+                                ? Tooltip(
+                                    message: l10n.downloadManagerUpdateColumn,
+                                    child: const Icon(Icons.refresh, size: 18),
+                                  )
+                                : Text(
+                                    l10n.downloadManagerUpdateColumn,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                  ),
+                          ),
+                          SizedBox(
+                            width: actionColumnWidth,
+                            child: compactMode
+                                ? Tooltip(
+                                    message: l10n.downloadManagerExcludedColumn,
+                                    child: const Icon(
+                                      Icons.not_interested,
+                                      size: 18,
+                                    ),
+                                  )
+                                : Text(
+                                    l10n.downloadManagerExcludedColumn,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: entries.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final _DtxManagerListEntry entry = entries[index];
+                          if (entry.isHeader) {
+                            final List<DtxManageItem> groupItems =
+                                grouped[entry.group!] ??
+                                const <DtxManageItem>[];
+                            final bool hasDownloadEligible = groupItems.any(
+                              (DtxManageItem item) =>
+                                  item.item.isOfficial &&
+                                  item.item.updateAvailable,
+                            );
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8, bottom: 2),
+                              child: Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: Text(
+                                      '[${entry.group!}]',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: actionColumnWidth,
+                                    child: Center(
+                                      child: Checkbox(
+                                        tristate: true,
+                                        value: _groupDownloadValue(groupItems),
+                                        onChanged: hasDownloadEligible
+                                            ? (bool? checked) {
+                                                setState(() {
+                                                  for (final DtxManageItem item
+                                                      in groupItems) {
+                                                    if (!item.item.isOfficial ||
+                                                        !item
+                                                            .item
+                                                            .updateAvailable) {
+                                                      continue;
+                                                    }
+                                                    if (checked == true) {
+                                                      if (_excludedFiles
+                                                          .contains(
+                                                            item.item.fileName,
+                                                          )) {
+                                                        continue;
+                                                      }
+                                                      _downloadSelected.add(
+                                                        item.item.fileName,
+                                                      );
+                                                    } else {
+                                                      _downloadSelected.remove(
+                                                        item.item.fileName,
+                                                      );
+                                                    }
+                                                  }
+                                                });
+                                              }
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: actionColumnWidth,
+                                    child: Center(
+                                      child: Checkbox(
+                                        tristate: true,
+                                        value: _groupExcludedValue(groupItems),
                                         onChanged: (bool? checked) {
                                           setState(() {
-                                            if (checked ?? false) {
-                                              _downloadSelected.add(
-                                                item.fileName,
-                                              );
-                                              _excludedFiles.remove(
-                                                item.fileName,
-                                              );
-                                            } else {
-                                              _downloadSelected.remove(
-                                                item.fileName,
-                                              );
+                                            for (final DtxManageItem item
+                                                in groupItems) {
+                                              if (checked == true) {
+                                                _excludedFiles.add(
+                                                  item.item.fileName,
+                                                );
+                                                _downloadSelected.remove(
+                                                  item.item.fileName,
+                                                );
+                                              } else {
+                                                _excludedFiles.remove(
+                                                  item.item.fileName,
+                                                );
+                                              }
                                             }
                                           });
                                         },
-                                      )
-                                    : const Icon(Icons.remove, size: 16),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            SizedBox(
-                              width: 92,
-                              child: Center(
-                                child: Checkbox(
-                                  value: _excludedFiles.contains(item.fileName),
-                                  onChanged: (bool? checked) {
-                                    setState(() {
-                                      if (checked ?? false) {
-                                        _excludedFiles.add(item.fileName);
-                                        _downloadSelected.remove(item.fileName);
-                                      } else {
-                                        _excludedFiles.remove(item.fileName);
-                                      }
-                                    });
-                                  },
+                            );
+                          }
+
+                          final DtxManageItem managed = entry.item!;
+                          final DtxDownloadItem item = managed.item;
+                          final bool canUpdate =
+                              item.isOfficial && item.updateAvailable;
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 12),
+                            child: Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: ListTile(
+                                    dense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(item.longName),
+                                    subtitle: Text(_subtitleFor(item, context)),
+                                  ),
                                 ),
-                              ),
+                                SizedBox(
+                                  width: actionColumnWidth,
+                                  child: Center(
+                                    child: canUpdate
+                                        ? Checkbox(
+                                            value: _downloadSelected.contains(
+                                              item.fileName,
+                                            ),
+                                            onChanged: (bool? checked) {
+                                              setState(() {
+                                                if (checked ?? false) {
+                                                  _downloadSelected.add(
+                                                    item.fileName,
+                                                  );
+                                                  _excludedFiles.remove(
+                                                    item.fileName,
+                                                  );
+                                                } else {
+                                                  _downloadSelected.remove(
+                                                    item.fileName,
+                                                  );
+                                                }
+                                              });
+                                            },
+                                          )
+                                        : Tooltip(
+                                            message: l10n
+                                                .downloadManagerUpdateColumn,
+                                            child: const Icon(
+                                              Icons.remove,
+                                              size: 18,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: actionColumnWidth,
+                                  child: Center(
+                                    child: Checkbox(
+                                      value: _excludedFiles.contains(
+                                        item.fileName,
+                                      ),
+                                      onChanged: (bool? checked) {
+                                        setState(() {
+                                          if (checked ?? false) {
+                                            _excludedFiles.add(item.fileName);
+                                            _downloadSelected.remove(
+                                              item.fileName,
+                                            );
+                                          } else {
+                                            _excludedFiles.remove(
+                                              item.fileName,
+                                            );
+                                          }
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
             );
           },
     );
@@ -1893,7 +1943,19 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                 ..clear()
                 ..addAll(
                   items
-                      .where((DtzManageItem item) => item.item.isOfficial)
+                      .where(
+                        (DtzManageItem item) =>
+                            item.item.isOfficial &&
+                            item.item.updateAvailable &&
+                            !item.excluded,
+                      )
+                      .map((DtzManageItem item) => item.item.fileName),
+                );
+              _dtzExcludedFiles
+                ..clear()
+                ..addAll(
+                  items
+                      .where((DtzManageItem item) => item.excluded)
                       .map((DtzManageItem item) => item.item.fileName),
                 );
               _dtzSelectionInitialized = true;
@@ -1906,67 +1968,239 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
               );
             }
 
-            final int selectedCount = _dtzDownloadSelected.length;
-            final bool? headerValue = _dtzAllSelectedValue();
-            final bool canToggleAll = _dtzAllItems.any(
-              (DtzManageItem item) => item.item.isOfficial,
-            );
+            return LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final bool compactMode = constraints.maxWidth < 560;
+                final double actionColumnWidth = compactMode ? 56 : 92;
+                final bool canToggleUpdates = items.any(
+                  (DtzManageItem item) =>
+                      item.item.isOfficial && item.item.updateAvailable,
+                );
 
-            return Column(
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8, top: 4),
-                  child: Row(
-                    children: <Widget>[
-                      Checkbox(
-                        tristate: true,
-                        value: headerValue,
-                        onChanged: canToggleAll
-                            ? (bool? value) {
-                                _dtzToggleAll(headerValue != true);
-                              }
-                            : null,
+                return Column(
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8, top: 4),
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Text(
+                              l10n.downloadTabDtz,
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                          ),
+                          SizedBox(
+                            width: actionColumnWidth,
+                            child: compactMode
+                                ? Tooltip(
+                                    message: l10n.downloadManagerUpdateColumn,
+                                    child: const Icon(Icons.refresh, size: 18),
+                                  )
+                                : Text(
+                                    l10n.downloadManagerUpdateColumn,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                  ),
+                          ),
+                          SizedBox(
+                            width: actionColumnWidth,
+                            child: compactMode
+                                ? Tooltip(
+                                    message: l10n.downloadManagerExcludedColumn,
+                                    child: const Icon(
+                                      Icons.not_interested,
+                                      size: 18,
+                                    ),
+                                  )
+                                : Text(
+                                    l10n.downloadManagerExcludedColumn,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                  ),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: Text(
-                          l10n.downloadDtzCount(selectedCount),
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: items.length + 1,
+                        itemBuilder: (BuildContext context, int index) {
+                          if (index == 0) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                children: <Widget>[
+                                  const Expanded(child: SizedBox.shrink()),
+                                  SizedBox(
+                                    width: actionColumnWidth,
+                                    child: Center(
+                                      child: Checkbox(
+                                        tristate: true,
+                                        value: _dtzUpdateValue(),
+                                        onChanged: canToggleUpdates
+                                            ? (bool? checked) {
+                                                setState(() {
+                                                  final bool selectAll =
+                                                      checked == true;
+                                                  for (final DtzManageItem item
+                                                      in _dtzAllItems) {
+                                                    if (!item.item.isOfficial ||
+                                                        !item
+                                                            .item
+                                                            .updateAvailable) {
+                                                      continue;
+                                                    }
+                                                    if (selectAll) {
+                                                      if (_dtzExcludedFiles
+                                                          .contains(
+                                                            item.item.fileName,
+                                                          )) {
+                                                        continue;
+                                                      }
+                                                      _dtzDownloadSelected.add(
+                                                        item.item.fileName,
+                                                      );
+                                                    } else {
+                                                      _dtzDownloadSelected
+                                                          .remove(
+                                                            item.item.fileName,
+                                                          );
+                                                    }
+                                                  }
+                                                });
+                                              }
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: actionColumnWidth,
+                                    child: Center(
+                                      child: Checkbox(
+                                        tristate: true,
+                                        value: _dtzExcludedValue(),
+                                        onChanged: (bool? checked) {
+                                          setState(() {
+                                            final bool markExcluded =
+                                                checked == true;
+                                            for (final DtzManageItem item
+                                                in _dtzAllItems) {
+                                              if (markExcluded) {
+                                                _dtzExcludedFiles.add(
+                                                  item.item.fileName,
+                                                );
+                                                _dtzDownloadSelected.remove(
+                                                  item.item.fileName,
+                                                );
+                                              } else {
+                                                _dtzExcludedFiles.remove(
+                                                  item.item.fileName,
+                                                );
+                                              }
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          final DtzManageItem managed = items[index - 1];
+                          final DtzDownloadItem item = managed.item;
+                          final bool canUpdate =
+                              item.isOfficial && item.updateAvailable;
+                          final String zipInfo = item.zipNames.isEmpty
+                              ? ''
+                              : ' (${item.zipNames.join(', ')})';
+
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 12),
+                            child: Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: ListTile(
+                                    dense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(item.longName),
+                                    subtitle: Text('${item.title}$zipInfo'),
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: actionColumnWidth,
+                                  child: Center(
+                                    child: canUpdate
+                                        ? Checkbox(
+                                            value: _dtzDownloadSelected
+                                                .contains(item.fileName),
+                                            onChanged: (bool? checked) {
+                                              setState(() {
+                                                if (checked ?? false) {
+                                                  _dtzDownloadSelected.add(
+                                                    item.fileName,
+                                                  );
+                                                  _dtzExcludedFiles.remove(
+                                                    item.fileName,
+                                                  );
+                                                } else {
+                                                  _dtzDownloadSelected.remove(
+                                                    item.fileName,
+                                                  );
+                                                }
+                                              });
+                                            },
+                                          )
+                                        : Tooltip(
+                                            message: l10n
+                                                .downloadManagerUpdateColumn,
+                                            child: const Icon(
+                                              Icons.remove,
+                                              size: 18,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: actionColumnWidth,
+                                  child: Center(
+                                    child: Checkbox(
+                                      value: _dtzExcludedFiles.contains(
+                                        item.fileName,
+                                      ),
+                                      onChanged: (bool? checked) {
+                                        setState(() {
+                                          if (checked ?? false) {
+                                            _dtzExcludedFiles.add(
+                                              item.fileName,
+                                            );
+                                            _dtzDownloadSelected.remove(
+                                              item.fileName,
+                                            );
+                                          } else {
+                                            _dtzExcludedFiles.remove(
+                                              item.fileName,
+                                            );
+                                          }
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: items.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final DtzManageItem managed = items[index];
-                      final DtzDownloadItem item = managed.item;
-                      final bool canDownload = item.isOfficial;
-                      final String zipInfo = item.zipNames.isEmpty
-                          ? ''
-                          : ' (${item.zipNames.join(', ')})';
-                      return CheckboxListTile(
-                        dense: true,
-                        value: _dtzDownloadSelected.contains(item.fileName),
-                        onChanged: canDownload
-                            ? (bool? checked) {
-                                setState(() {
-                                  if (checked ?? false) {
-                                    _dtzDownloadSelected.add(item.fileName);
-                                  } else {
-                                    _dtzDownloadSelected.remove(item.fileName);
-                                  }
-                                });
-                              }
-                            : null,
-                        title: Text(item.longName),
-                        subtitle: Text('${item.title}$zipInfo'),
-                      );
-                    },
-                  ),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             );
           },
     );
