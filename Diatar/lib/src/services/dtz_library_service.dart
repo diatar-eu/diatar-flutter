@@ -22,6 +22,7 @@ class DtzLibraryService {
   Future<Map<String, DtxVerse>> loadLibrary() async {
     final Directory dtzDir = await resolveDirectory();
     final Map<String, DtxVerse> entries = <String, DtxVerse>{};
+    final String docsPath = await PathHelper.getDocumentsDirectoryPath();
 
     if (!await dtzDir.exists()) {
       return entries;
@@ -38,7 +39,7 @@ class DtzLibraryService {
       }
       try {
         final String content = await child.readAsString();
-        _parseFile(content, entries);
+        _parseFile(content, entries, docsPath);
       } catch (_) {
         // Hibas dtz fajlokat atugrunk, hogy az app hasznalhato maradjon.
       }
@@ -47,9 +48,12 @@ class DtzLibraryService {
     return entries;
   }
 
-  void _parseFile(String content, Map<String, DtxVerse> entries) async {
+  void _parseFile(
+    String content,
+    Map<String, DtxVerse> entries,
+    String docsPath,
+  ) {
     final List<String> lines = content.replaceAll('\r\n', '\n').split('\n');
-    final String docsPath = await PathHelper.getDocumentsDirectoryPath();
 
     String baseDir = '$docsPath/diatar/DTZs';
 

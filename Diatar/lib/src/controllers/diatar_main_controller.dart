@@ -661,6 +661,30 @@ class DiatarMainController extends ChangeNotifier {
     return verse?.fotoFilePath;
   }
 
+  /// True, ha a betöltött énekek bármelyik versszakához tartozik elérhető
+  /// DTZ/ZIP-ből feloldott fotó, így a vezérlőben van értelme a
+  /// "Fénykép / vetítés váltása" gombnak.
+  bool get hasAnyLoadedVersePhoto {
+    if (books.isEmpty || _dtzLibrary.isEmpty) {
+      return false;
+    }
+    for (final DtxBook book in books) {
+      for (final DtxSong song in book.songs) {
+        for (final DtxVerse verse in song.verses) {
+          final String? diaId = verse.diaId;
+          if (diaId == null || diaId.isEmpty) {
+            continue;
+          }
+          final String? photoPath = _dtzLibrary[diaId]?.fotoFilePath;
+          if (photoPath != null && photoPath.isNotEmpty) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   Map<String, String> get statusParams =>
       Map<String, String>.unmodifiable(_statusParams);
 

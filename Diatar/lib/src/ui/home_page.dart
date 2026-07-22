@@ -970,23 +970,26 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                   tooltip: l10n.hideControlWindow,
                   onPressed: () => unawaited(controller.hideControlWindow()),
                 ),
-              const SizedBox(width: 8),
-              _actionIconButton(
-                context,
-                icon: controller.showPhotoInControl
-                    ? Icons.photo
-                    : Icons.slideshow,
-                tooltip: l10n.controlPhotoView,
-                onPressed: () => controller.toggleControlPhotoView(),
-                backgroundColor: controller.showPhotoInControl
-                    ? const Color(0xFF1976D2).withValues(alpha: 0.15)
-                    : Theme.of(
-                        context,
-                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
-                foregroundColor: controller.showPhotoInControl
-                    ? const Color(0xFF1976D2)
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+              if (controller.hasAnyLoadedVersePhoto) ...<Widget>[
+                const SizedBox(width: 8),
+                _actionIconButton(
+                  context,
+                  icon: controller.showPhotoInControl
+                      ? Icons.photo
+                      : Icons.slideshow,
+                  tooltip: l10n.controlPhotoView,
+                  onPressed: () => controller.toggleControlPhotoView(),
+                  backgroundColor: controller.showPhotoInControl
+                      ? const Color(0xFF1976D2).withValues(alpha: 0.15)
+                      : Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withValues(alpha: 0.08),
+                  foregroundColor: controller.showPhotoInControl
+                      ? const Color(0xFF1976D2)
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ],
               const SizedBox(width: 8),
               _actionIconButton(
                 context,
