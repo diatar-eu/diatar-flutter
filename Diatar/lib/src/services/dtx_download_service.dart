@@ -64,14 +64,34 @@ class DtxDownloadSummary {
 }
 
 class DtxDownloadService {
-  static const String _listUrl = 'https://diatar.eu/downloads/enektarak/_list.php';
+  static const String _listUrl =
+      'https://diatar.eu/downloads/enektarak/_list.php';
   static const String _baseUrl = 'https://diatar.eu/downloads/enektarak/';
   static const String _stampPrefix = 'dtx_stamp_';
 
-  Future<List<DtxDownloadItem>> listUpdates({required Directory targetDir}) async {
+  Future<Map<String, String>> loadRemoteTitleMap() async {
+    final List<_RemoteDtx> remoteList = await _fetchRemoteList();
+    final Map<String, String> map = <String, String>{};
+    for (final _RemoteDtx item in remoteList) {
+      final String baseName = item.fileName.replaceAll(RegExp(r'\.[^.]+$'), '');
+      final String title = item.longName.trim().isNotEmpty
+          ? item.longName.trim()
+          : baseName;
+      if (baseName.isNotEmpty && title.isNotEmpty) {
+        map[baseName] = title;
+      }
+    }
+    return map;
+  }
+
+  Future<List<DtxDownloadItem>> listUpdates({
+    required Directory targetDir,
+  }) async {
     final List<DtxDownloadItem> all = await listAll(targetDir: targetDir);
     return all
-        .where((DtxDownloadItem item) => item.isOfficial && item.updateAvailable)
+        .where(
+          (DtxDownloadItem item) => item.isOfficial && item.updateAvailable,
+        )
         .toList();
   }
 
@@ -121,7 +141,9 @@ class DtxDownloadService {
 
     for (final MapEntry<String, File> entry in localByName.entries) {
       final String fileName = entry.key;
-      final int localSize = entry.value.existsSync() ? entry.value.lengthSync() : 0;
+      final int localSize = entry.value.existsSync()
+          ? entry.value.lengthSync()
+          : 0;
       items.add(
         DtxDownloadItem(
           fileName: fileName,
@@ -308,12 +330,10 @@ class DtxDownloadService {
     }
 
     final String group = cells.length > 3 ? cells[3].trim() : '';
-    final int order =
-        cells.length > 4 ? int.tryParse(cells[4].trim()) ?? 0 : 0;
-    final String longName =
-        cells.length > 5 && cells[5].trim().isNotEmpty
-            ? cells[5].trim()
-            : fileName;
+    final int order = cells.length > 4 ? int.tryParse(cells[4].trim()) ?? 0 : 0;
+    final String longName = cells.length > 5 && cells[5].trim().isNotEmpty
+        ? cells[5].trim()
+        : fileName;
     final String shortName = cells.length > 6 ? cells[6].trim() : '';
 
     return _RemoteDtx(
@@ -371,15 +391,13 @@ class DtxDownloadService {
 
     final int totalBytes =
         (response.contentLength != null && response.contentLength! > 0)
-            ? response.contentLength!
-            : item.size;
+        ? response.contentLength!
+        : item.size;
     int received = 0;
     final List<int> bytes = response.bodyBytes;
     final int chunkSize = 64 * 1024;
     for (int i = 0; i < bytes.length; i += chunkSize) {
-      received += (i + chunkSize < bytes.length
-              ? chunkSize
-              : bytes.length - i);
+      received += (i + chunkSize < bytes.length ? chunkSize : bytes.length - i);
       onProgress?.call(
         DtxDownloadProgress(
           currentFile: currentFile,

@@ -128,7 +128,7 @@ class DtzDownloadService {
       }
 
       final String baseName = dtzName.replaceAll(RegExp(r'\.[^.]+$'), '');
-      final String title = dtxTitles[baseName] ?? dtzName;
+      final String title = (dtxTitles[baseName] ?? baseName).trim();
 
       items.add(
         DtzDownloadItem(

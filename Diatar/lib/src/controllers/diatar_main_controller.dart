@@ -207,6 +207,7 @@ class DiatarMainController extends ChangeNotifier {
   int _screenHeight = 1080;
   Set<String> _disabledSongbooks = <String>{};
   Set<String> _disabledDtzFiles = <String>{};
+  bool _hasSavedDtzExclusions = false;
   List<CustomOrderEntry> _customOrder = <CustomOrderEntry>[];
   bool customOrderActive = false;
   int _customOrderCursor = -1;
@@ -893,6 +894,7 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<Set<String>> _loadDisabledDtzFiles() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    _hasSavedDtzExclusions = prefs.containsKey(_disabledDtzPrefsKey);
     return (prefs.getStringList(_disabledDtzPrefsKey) ?? const <String>[])
         .map((String name) => name.trim())
         .where((String name) => name.isNotEmpty)
@@ -909,6 +911,7 @@ class DiatarMainController extends ChangeNotifier {
             .toList()
           ..sort();
     await prefs.setStringList(_disabledDtzPrefsKey, normalized);
+    _hasSavedDtzExclusions = true;
   }
 
   void _configureSender() {
@@ -2047,6 +2050,15 @@ class DiatarMainController extends ChangeNotifier {
       final String base = book.fileName.replaceAll(RegExp(r'\.[^.]+$'), '');
       dtxTitles[base] = book.displayName;
     }
+    try {
+      final Map<String, String> remoteTitles = await _downloadService
+          .loadRemoteTitleMap();
+      for (final MapEntry<String, String> entry in remoteTitles.entries) {
+        dtxTitles.putIfAbsent(entry.key, () => entry.value);
+      }
+    } catch (_) {
+      // If remote title lookup fails, keep local titles/fallbacks.
+    }
     final List<DtzDownloadItem> all = await _dtzDownloadService.listAll(
       targetDir: dtzDir,
       dtxTitles: dtxTitles,
@@ -2055,7 +2067,9 @@ class DiatarMainController extends ChangeNotifier {
         .map(
           (DtzDownloadItem item) => DtzManageItem(
             item: item,
-            excluded: _disabledDtzFiles.contains(item.fileName),
+            excluded: _hasSavedDtzExclusions
+                ? _disabledDtzFiles.contains(item.fileName)
+                : true,
           ),
         )
         .toList();

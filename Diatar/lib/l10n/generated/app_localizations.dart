@@ -281,7 +281,7 @@ abstract class AppLocalizations {
   /// No description provided for @downloadTabDtx.
   ///
   /// In hu, this message translates to:
-  /// **'Énektárak'**
+  /// **'Kötetek'**
   String get downloadTabDtx;
 
   /// No description provided for @downloadTabDtz.

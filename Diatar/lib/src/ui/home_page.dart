@@ -1688,12 +1688,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                       padding: const EdgeInsets.only(bottom: 8, top: 4),
                       child: Row(
                         children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              l10n.downloadManagerNameColumn,
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                          ),
+                          const Expanded(child: SizedBox.shrink()),
                           SizedBox(
                             width: actionColumnWidth,
                             child: compactMode
@@ -1983,12 +1978,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                       padding: const EdgeInsets.only(bottom: 8, top: 4),
                       child: Row(
                         children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              l10n.downloadTabDtz,
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                          ),
+                          const Expanded(child: SizedBox.shrink()),
                           SizedBox(
                             width: actionColumnWidth,
                             child: compactMode
@@ -2116,9 +2106,13 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                           final DtzDownloadItem item = managed.item;
                           final bool canUpdate =
                               item.isOfficial && item.updateAvailable;
-                          final String zipInfo = item.zipNames.isEmpty
-                              ? ''
-                              : ' (${item.zipNames.join(', ')})';
+                          final String displayTitle = item.title.trim().isEmpty
+                              ? item.longName
+                              : item.title;
+                          final String debugFiles = <String>[
+                            item.fileName,
+                            ...item.zipNames,
+                          ].join(', ');
 
                           return Padding(
                             padding: const EdgeInsets.only(left: 12),
@@ -2128,8 +2122,10 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                   child: ListTile(
                                     dense: true,
                                     contentPadding: EdgeInsets.zero,
-                                    title: Text(item.longName),
-                                    subtitle: Text('${item.title}$zipInfo'),
+                                    title: Text(displayTitle),
+                                    subtitle: kDebugMode
+                                        ? Text(debugFiles)
+                                        : null,
                                   ),
                                 ),
                                 SizedBox(
