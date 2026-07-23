@@ -245,9 +245,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 ),
                 Text(
                   l10n.settingsVersionLabel(_appVersion, _buildNumber),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ),
