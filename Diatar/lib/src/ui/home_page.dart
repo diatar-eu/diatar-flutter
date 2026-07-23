@@ -1413,6 +1413,8 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
 
   final Set<String> _downloadSelected = <String>{};
   final Set<String> _excludedFiles = <String>{};
+  final Set<String> _collapsedDtxGroups = <String>{};
+  bool _dtxCollapsedGroupsInitialized = false;
   bool _dtxSelectionInitialized = false;
 
   final Set<String> _dtzDownloadSelected = <String>{};
@@ -1439,6 +1441,8 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
       _dtxSelectionInitialized = false;
       _downloadSelected.clear();
       _excludedFiles.clear();
+      _collapsedDtxGroups.clear();
+      _dtxCollapsedGroupsInitialized = false;
       _dtxItemsFuture = widget.controller.loadDtxManagerItems();
 
       _dtzSelectionInitialized = false;
@@ -1496,6 +1500,49 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
       return false;
     }
     if (selectedCount == items.length) {
+      return true;
+    }
+    return null;
+  }
+
+  bool? _dtxUpdateValue(List<DtxManageItem> items) {
+    final List<DtxManageItem> eligible = items
+        .where(
+          (DtxManageItem item) =>
+              item.item.isOfficial && item.item.updateAvailable,
+        )
+        .toList();
+    if (eligible.isEmpty) {
+      return false;
+    }
+    final int selected = eligible
+        .where(
+          (DtxManageItem item) =>
+              _downloadSelected.contains(item.item.fileName),
+        )
+        .length;
+    if (selected == 0) {
+      return false;
+    }
+    if (selected == eligible.length) {
+      return true;
+    }
+    return null;
+  }
+
+  bool? _dtxExcludedValue(List<DtxManageItem> items) {
+    if (items.isEmpty) {
+      return false;
+    }
+    final int selected = items
+        .where(
+          (DtxManageItem item) => _excludedFiles.contains(item.item.fileName),
+        )
+        .length;
+    if (selected == 0) {
+      return false;
+    }
+    if (selected == items.length) {
       return true;
     }
     return null;
@@ -1668,12 +1715,24 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
               grouped.putIfAbsent(group, () => <DtxManageItem>[]).add(managed);
             }
 
+            _collapsedDtxGroups.removeWhere(
+              (String group) => !grouped.containsKey(group),
+            );
+            if (!_dtxCollapsedGroupsInitialized) {
+              _collapsedDtxGroups
+                ..clear()
+                ..addAll(grouped.keys);
+              _dtxCollapsedGroupsInitialized = true;
+            }
+
             final List<_DtxManagerListEntry> entries = <_DtxManagerListEntry>[];
             for (final MapEntry<String, List<DtxManageItem>> entry
                 in grouped.entries) {
               entries.add(_DtxManagerListEntry.header(entry.key));
-              for (final DtxManageItem managed in entry.value) {
-                entries.add(_DtxManagerListEntry.item(managed));
+              if (!_collapsedDtxGroups.contains(entry.key)) {
+                for (final DtxManageItem managed in entry.value) {
+                  entries.add(_DtxManagerListEntry.item(managed));
+                }
               }
             }
 
@@ -1681,6 +1740,10 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
               builder: (BuildContext context, BoxConstraints constraints) {
                 final bool compactMode = constraints.maxWidth < 560;
                 final double actionColumnWidth = compactMode ? 56 : 92;
+                final bool canToggleUpdates = items.any(
+                  (DtxManageItem item) =>
+                      item.item.isOfficial && item.item.updateAvailable,
+                );
 
                 return Column(
                   children: <Widget>[
@@ -1727,12 +1790,97 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                     ),
                     Expanded(
                       child: ListView.builder(
-                        itemCount: entries.length,
+                        itemCount: entries.length + 1,
                         itemBuilder: (BuildContext context, int index) {
-                          final _DtxManagerListEntry entry = entries[index];
+                          if (index == 0) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                children: <Widget>[
+                                  const Expanded(child: SizedBox.shrink()),
+                                  SizedBox(
+                                    width: actionColumnWidth,
+                                    child: Center(
+                                      child: Checkbox(
+                                        tristate: true,
+                                        value: _dtxUpdateValue(items),
+                                        onChanged: canToggleUpdates
+                                            ? (bool? checked) {
+                                                setState(() {
+                                                  final bool selectAll =
+                                                      checked == true;
+                                                  for (final DtxManageItem item
+                                                      in items) {
+                                                    if (!item.item.isOfficial ||
+                                                        !item
+                                                            .item
+                                                            .updateAvailable) {
+                                                      continue;
+                                                    }
+                                                    if (selectAll) {
+                                                      if (_excludedFiles
+                                                          .contains(
+                                                            item.item.fileName,
+                                                          )) {
+                                                        continue;
+                                                      }
+                                                      _downloadSelected.add(
+                                                        item.item.fileName,
+                                                      );
+                                                    } else {
+                                                      _downloadSelected.remove(
+                                                        item.item.fileName,
+                                                      );
+                                                    }
+                                                  }
+                                                });
+                                              }
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: actionColumnWidth,
+                                    child: Center(
+                                      child: Checkbox(
+                                        tristate: true,
+                                        value: _dtxExcludedValue(items),
+                                        onChanged: (bool? checked) {
+                                          setState(() {
+                                            final bool markExcluded =
+                                                checked == true;
+                                            for (final DtxManageItem item
+                                                in items) {
+                                              if (markExcluded) {
+                                                _excludedFiles.add(
+                                                  item.item.fileName,
+                                                );
+                                                _downloadSelected.remove(
+                                                  item.item.fileName,
+                                                );
+                                              } else {
+                                                _excludedFiles.remove(
+                                                  item.item.fileName,
+                                                );
+                                              }
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          final _DtxManagerListEntry entry = entries[index - 1];
                           if (entry.isHeader) {
+                            final String groupName = entry.group!;
+                            final bool isCollapsed = _collapsedDtxGroups
+                                .contains(groupName);
                             final List<DtxManageItem> groupItems =
-                                grouped[entry.group!] ??
+                                grouped[groupName] ??
                                 const <DtxManageItem>[];
                             final bool hasDownloadEligible = groupItems.any(
                               (DtxManageItem item) =>
@@ -1744,17 +1892,55 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                               child: Row(
                                 children: <Widget>[
                                   Expanded(
-                                    child: Text(
-                                      '[${entry.group!}]',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.onSurfaceVariant,
-                                          ),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(6),
+                                      onTap: () {
+                                        setState(() {
+                                          if (isCollapsed) {
+                                            _collapsedDtxGroups.remove(
+                                              groupName,
+                                            );
+                                          } else {
+                                            _collapsedDtxGroups.add(groupName);
+                                          }
+                                        });
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 4,
+                                        ),
+                                        child: Row(
+                                          children: <Widget>[
+                                            Icon(
+                                              isCollapsed
+                                                  ? Icons.chevron_right
+                                                  : Icons.expand_more,
+                                              size: 20,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                '[$groupName]',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Theme.of(
+                                                        context,
+                                                      )
+                                                          .colorScheme
+                                                          .onSurfaceVariant,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ),
                                   SizedBox(
