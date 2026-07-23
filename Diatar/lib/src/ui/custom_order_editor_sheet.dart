@@ -1455,29 +1455,6 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       final bool hadUsableConfiguredDir = initialDir != null;
 
       try {
-        final XFile? file = await openFile(
-          acceptedTypeGroups: <XTypeGroup>[diaType],
-          initialDirectory: initialDir,
-        );
-        if (file != null) {
-          targetPath = file.path;
-          if (!hadUsableConfiguredDir) {
-            final String selectedDir = path.dirname(file.path).trim();
-            final String? existingSelectedDir = _existingDirectoryPathOrNull(
-              selectedDir,
-            );
-            if (existingSelectedDir != null) {
-              await controller.applySettings(
-                controller.settings.copyWith(diaExportPath: existingSelectedDir),
-              );
-            }
-          }
-        }
-      } catch (e) {
-        nativeSaveDialogAvailable = false;
-      }
-
-      if (!nativeSaveDialogAvailable) {
         if (!kIsWeb && Platform.isAndroid) {
           final String? savedPath = await _saveDiaWithAndroidSystemDialog(
             defaultFileName: defaultFileName,
@@ -1499,6 +1476,30 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           return;
         }
 
+        final FileSaveLocation? saveLocation = await getSaveLocation(
+          acceptedTypeGroups: <XTypeGroup>[diaType],
+          initialDirectory: initialDir,
+          suggestedName: defaultFileName,
+        );
+        if (saveLocation != null) {
+          targetPath = saveLocation.path;
+          if (!hadUsableConfiguredDir) {
+            final String selectedDir = path.dirname(saveLocation.path).trim();
+            final String? existingSelectedDir = _existingDirectoryPathOrNull(
+              selectedDir,
+            );
+            if (existingSelectedDir != null) {
+              await controller.applySettings(
+                controller.settings.copyWith(diaExportPath: existingSelectedDir),
+              );
+            }
+          }
+        }
+      } catch (e) {
+        nativeSaveDialogAvailable = false;
+      }
+
+      if (!nativeSaveDialogAvailable) {
         final _DiaSaveTarget? chosenTarget = await _askDiaSaveTarget(
           initialName: defaultBaseName,
           initialDirectory: initialDir ?? '',

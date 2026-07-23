@@ -249,6 +249,26 @@ class DiatarMainController extends ChangeNotifier {
     return 'set_${DateTime.now().microsecondsSinceEpoch}_$_customOrderSetIdCounter';
   }
 
+  String? _normalizeLoadedCustomOrderBaseName(
+    String? baseName,
+    String? sourceType,
+  ) {
+    final String normalizedBase = (baseName ?? '').trim();
+    if (normalizedBase.isEmpty) {
+      return null;
+    }
+    final String normalizedSource = (sourceType ?? '').trim();
+    if (normalizedSource.isNotEmpty) {
+      return normalizedBase;
+    }
+    // Legacy migration: an unsaved manual custom order could keep an internal
+    // *.bin working name. Treat it as unnamed until the user saves to DIA.
+    if (normalizedBase.toLowerCase().endsWith('.bin')) {
+      return null;
+    }
+    return normalizedBase;
+  }
+
   /// Betölti a párhuzamosan tárolt énekrendeket a perzisztenciából.
   /// Visszamenőleges kompatibilitás: ha még nincs elmentett énekrend-készlet,
   /// de létezik a régi egyetlen saját sorrend, azt átvezeti egyetlen
@@ -259,18 +279,22 @@ class DiatarMainController extends ChangeNotifier {
     if (storedSets.sets.isNotEmpty) {
       _customOrderSets = storedSets.sets
           .map(
-            (StoredCustomOrderSet s) => CustomOrderSet(
-              id: s.id,
-              name: s.name,
-              entries: s.entries
-                  .map(_customOrderEntryMapper.fromStored)
-                  .toList(),
-              enabled: s.enabled,
-              baseName: s.baseName,
-              sourceType: s.sourceType,
-              zsolozsmaLabel: s.zsolozsmaLabel,
-              batyuLabel: s.batyuLabel,
-            ),
+            (StoredCustomOrderSet s) {
+              final String? normalizedBaseName =
+                  _normalizeLoadedCustomOrderBaseName(s.baseName, s.sourceType);
+              return CustomOrderSet(
+                id: s.id,
+                name: s.name,
+                entries: s.entries
+                    .map(_customOrderEntryMapper.fromStored)
+                    .toList(),
+                enabled: s.enabled,
+                baseName: normalizedBaseName,
+                sourceType: s.sourceType,
+                zsolozsmaLabel: s.zsolozsmaLabel,
+                batyuLabel: s.batyuLabel,
+              );
+            },
           )
           .toList();
       _activeOrderSetIndex = storedSets.activeIndex;
@@ -299,7 +323,10 @@ class DiatarMainController extends ChangeNotifier {
           );
       _customOrder = customOrderState.entries;
       customOrderActive = customOrderState.active;
-      _lastImportedCustomOrderBaseName = customOrderState.baseName;
+      _lastImportedCustomOrderBaseName = _normalizeLoadedCustomOrderBaseName(
+        customOrderState.baseName,
+        customOrderState.sourceType,
+      );
       _customOrderSourceType = customOrderState.sourceType;
       _zsolozsmaVirtualBookLabel = customOrderState.zsolozsmaLabel;
       _napiLelkiBatyuVirtualBookLabel = customOrderState.batyuLabel;
@@ -308,10 +335,10 @@ class DiatarMainController extends ChangeNotifier {
         _customOrderSets = <CustomOrderSet>[
           CustomOrderSet(
             id: _nextCustomOrderSetId(),
-            name: customOrderState.baseName ?? 'Énekrend',
+            name: _lastImportedCustomOrderBaseName ?? 'Énekrend',
             entries: List<CustomOrderEntry>.from(_customOrder),
             enabled: true,
-            baseName: customOrderState.baseName,
+            baseName: _lastImportedCustomOrderBaseName,
             sourceType: customOrderState.sourceType,
             zsolozsmaLabel: customOrderState.zsolozsmaLabel,
             batyuLabel: customOrderState.batyuLabel,
