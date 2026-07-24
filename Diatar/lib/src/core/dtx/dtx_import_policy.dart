@@ -37,6 +37,14 @@ class DtxImportPolicy {
       name = 'imported_${index + 1}.dtx';
     }
     name = name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    // Some pickers expose imported .dtx files with a temporary .bin suffix.
+    name = name.replaceAll(
+      RegExp(r'\.bin(?=\.dtx$)', caseSensitive: false),
+      '',
+    );
+    if (name.toLowerCase().endsWith('.bin')) {
+      name = name.substring(0, name.length - 4);
+    }
     if (!name.toLowerCase().endsWith('.dtx')) {
       name = '$name.dtx';
     }

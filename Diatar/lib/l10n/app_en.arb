@@ -46,7 +46,7 @@
   "downloadManagerUserImportedTag": "User imported",
   "downloadManagerUpdateAvailable": "Update available",
   "downloadManagerUpToDate": "Up to date",
-  "downloadUserImportedGroup": "User imported files",
+  "downloadUserImportedGroup": "User",
   "downloadMessage": "The download dialog can be restored later.",
   "refreshTooltip": "Refresh",
   "ok": "OK",

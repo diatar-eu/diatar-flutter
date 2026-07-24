@@ -132,7 +132,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadManagerUpToDate => 'Up to date';
 
   @override
-  String get downloadUserImportedGroup => 'User imported files';
+  String get downloadUserImportedGroup => 'User';
 
   @override
   String get downloadMessage => 'The download dialog can be restored later.';

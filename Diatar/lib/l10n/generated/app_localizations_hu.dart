@@ -133,7 +133,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get downloadManagerUpToDate => 'Naprakész';
 
   @override
-  String get downloadUserImportedGroup => 'Felhasználói importált fájlok';
+  String get downloadUserImportedGroup => 'Felhasználói';
 
   @override
   String get downloadMessage =>

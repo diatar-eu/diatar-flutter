@@ -335,7 +335,7 @@ abstract class AppLocalizations {
   /// No description provided for @downloadUserImportedGroup.
   ///
   /// In hu, this message translates to:
-  /// **'Felhasználói importált fájlok'**
+  /// **'Felhasználói'**
   String get downloadUserImportedGroup;
 
   /// No description provided for @downloadMessage.

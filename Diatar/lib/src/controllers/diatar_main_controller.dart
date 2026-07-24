@@ -2060,12 +2060,36 @@ class DiatarMainController extends ChangeNotifier {
     final List<DtxDownloadItem> all = await _downloadService.listAll(
       targetDir: dtxDir,
     );
+    final Map<String, String> localTitles = <String, String>{
+      for (final DtxBook book in books) book.fileName: book.displayName,
+    };
     return all
         .map(
-          (DtxDownloadItem item) => DtxManageItem(
-            item: item,
-            excluded: _disabledSongbooks.contains(item.fileName),
-          ),
+          (DtxDownloadItem item) {
+            final String? localTitle = localTitles[item.fileName];
+            final DtxDownloadItem resolved =
+                item.isUserProvided &&
+                    localTitle != null &&
+                    localTitle.trim().isNotEmpty
+                ? DtxDownloadItem(
+                    fileName: item.fileName,
+                    timestamp: item.timestamp,
+                    size: item.size,
+                    group: item.group,
+                    order: item.order,
+                    longName: localTitle,
+                    shortName: localTitle,
+                    isInstalled: item.isInstalled,
+                    updateAvailable: item.updateAvailable,
+                    isOfficial: item.isOfficial,
+                    isUserProvided: item.isUserProvided,
+                  )
+                : item;
+            return DtxManageItem(
+              item: resolved,
+              excluded: _disabledSongbooks.contains(item.fileName),
+            );
+          },
         )
         .toList();
   }

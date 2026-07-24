@@ -1548,10 +1548,17 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
     return null;
   }
 
+  String _displayImportedFileName(String fileName) {
+    return fileName.replaceFirst(
+      RegExp(r'\.bin(?=\.dtx$)', caseSensitive: false),
+      '',
+    );
+  }
+
   String _subtitleFor(DtxDownloadItem item, BuildContext context) {
     final l10n = context.l10n;
     if (item.isUserProvided) {
-      return l10n.downloadManagerUserImportedTag;
+      return _displayImportedFileName(item.fileName);
     }
     if (item.updateAvailable) {
       return l10n.downloadManagerUpdateAvailable;
