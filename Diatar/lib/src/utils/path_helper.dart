@@ -4,11 +4,11 @@ import 'package:path_provider/path_provider.dart';
 
 class PathHelper {
   /// Returns the path to the application documents directory.
-  /// On web, it returns a dummy path to avoid crashing, 
+  /// On web, it returns a  path to avoid crashing, 
   /// as getApplicationDocumentsDirectory is not supported.
   static Future<String> getDocumentsDirectoryPath() async {
     if (kIsWeb) {
-      return 'web_dummy_docs';
+      return 'diatar';
     }
     final Directory docs = await getApplicationDocumentsDirectory();
     return docs.path;
