@@ -609,7 +609,7 @@
   "selectedVersesSubtitle": "Többet is kijelölhetsz.",
   "customOrderSelectAllVerses": "Összes",
   "customOrderClearVerseSelection": "Egyik sem",
-  "customOrderSetsSection": "Énekrendek",
+  "customOrderSetsSection": "Diasorok",
   "@customOrderSetsSection": {
     "description": "Section header for the list of loaded custom orders (énekrendek) in the volume list dialog."
   },

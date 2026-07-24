@@ -1887,8 +1887,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                             final bool isCollapsed = _collapsedDtxGroups
                                 .contains(groupName);
                             final List<DtxManageItem> groupItems =
-                                grouped[groupName] ??
-                                const <DtxManageItem>[];
+                                grouped[groupName] ?? const <DtxManageItem>[];
                             final bool hasDownloadEligible = groupItems.any(
                               (DtxManageItem item) =>
                                   item.item.isOfficial &&
@@ -1923,9 +1922,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                   ? Icons.chevron_right
                                                   : Icons.expand_more,
                                               size: 20,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
                                             ),
                                             const SizedBox(width: 4),
                                             Expanded(
@@ -1937,9 +1936,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                     ?.copyWith(
                                                       fontWeight:
                                                           FontWeight.w600,
-                                                      color: Theme.of(
-                                                        context,
-                                                      )
+                                                      color: Theme.of(context)
                                                           .colorScheme
                                                           .onSurfaceVariant,
                                                     ),
@@ -2511,17 +2508,19 @@ class _BookDropdown extends StatelessWidget {
       controller.books,
       context.l10n.ungroupedBookGroupLabel,
     );
-    final int initial = controller.diaVirtualBookSelected
-        ? (controller.activeCustomOrderSetIndex >= 0
-              ? _customOrderSetValueBase - controller.activeCustomOrderSetIndex
-              : _diaVirtualBookValue)
-        : controller.bookIndex;
-
     final List<CustomOrderSet> enabledSets = controller.customOrderSets
         .where((CustomOrderSet s) => s.enabled)
         .toList();
     final String? activeId = controller.activeCustomOrderSetId;
     final bool hasSets = enabledSets.isNotEmpty;
+    final int activeEnabledSetIndex = activeId == null
+        ? -1
+        : enabledSets.indexWhere((CustomOrderSet s) => s.id == activeId);
+    final int initial = controller.diaVirtualBookSelected
+        ? (activeEnabledSetIndex >= 0
+              ? _customOrderSetValueBase - activeEnabledSetIndex
+              : _diaVirtualBookValue)
+        : controller.bookIndex;
 
     return Row(
       children: <Widget>[
@@ -2559,26 +2558,29 @@ class _BookDropdown extends StatelessWidget {
                   final bool isActive = set.id == activeId;
                   return DropdownMenuItem<int>(
                     value: _customOrderSetValueBase - e.key,
-                    child: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            set.displayName,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                        if (isActive)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 16),
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
                             child: Text(
-                              context.l10n.customOrderSetActive,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.primary,
-                              ),
+                              set.displayName,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
-                      ],
+                          if (isActive)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Text(
+                                context.l10n.customOrderSetActive,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   );
                 }),
@@ -2671,15 +2673,15 @@ class _BookDropdown extends StatelessWidget {
                 }),
               ];
             },
-            onChanged: (int? value) {
+            onChanged: (int? value) async {
               if (value == null) {
                 return;
               }
               if (value <= _customOrderSetValueBase) {
                 final int idx = _customOrderSetValueBase - value;
                 if (idx >= 0 && idx < enabledSets.length) {
-                  unawaited(
-                    controller.setActiveCustomOrderSetById(enabledSets[idx].id),
+                  await controller.setActiveCustomOrderSetById(
+                    enabledSets[idx].id,
                   );
                 }
                 return;

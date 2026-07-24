@@ -1694,7 +1694,7 @@ abstract class AppLocalizations {
   /// Section header for the list of loaded custom orders (énekrendek) in the volume list dialog.
   ///
   /// In hu, this message translates to:
-  /// **'Énekrendek'**
+  /// **'Diasorok'**
   String get customOrderSetsSection;
 
   /// Label for the dropdown that selects the active énekrend in the Diasor (dialist) panel.

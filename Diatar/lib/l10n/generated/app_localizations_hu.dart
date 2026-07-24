@@ -936,7 +936,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderClearVerseSelection => 'Egyik sem';
 
   @override
-  String get customOrderSetsSection => 'Énekrendek';
+  String get customOrderSetsSection => 'Diasorok';
 
   @override
   String get customOrderSetSelectorLabel => 'Aktív énekrend';
