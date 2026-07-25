@@ -17,6 +17,7 @@ import '../utils/file_system_provider.dart';
 import '../utils/friendly_path.dart';
 import 'settings_sheet.dart';
 import 'custom_order_editor_sheet.dart';
+import 'merge_indicator.dart';
 import 'song_search_sheet.dart';
 
 class _BookDropdownEntry {
@@ -187,6 +188,23 @@ List<_DiaSongGroup> _buildDiaSongGroups(
 
   while (i < custom.length) {
     final CustomOrderEntry first = custom[i];
+    if (controller.isCustomOrderEntryMergeLeaderAt(i)) {
+      final String mergedLabel = controller.customOrderProjectionTitleAt(i);
+      groups.add(
+        _DiaSongGroup(
+          label: mergedLabel,
+          verses: <_DiaVerseEntry>[
+            _DiaVerseEntry(customOrderIndex: i, label: mergedLabel),
+          ],
+        ),
+      );
+      i += 2;
+      continue;
+    }
+    if (controller.isCustomOrderEntryMergeFollowerAt(i)) {
+      i++;
+      continue;
+    }
     if (!first.isSongEntry) {
       final String firstLabel = _entryShortLabel(l10n, controller, first);
       final ({String prefix, String suffix})? firstSplit = _splitSlashLabel(
@@ -1222,12 +1240,11 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     }
 
     if (projectedCustom != null && projectedCustom.isCustomText) {
-      final String title = localizedCustomEntryLabel(l10n, projectedCustom);
-      final List<String> lines = (projectedCustom.customTextBody ?? '')
-          .split(RegExp(r'\r?\n'))
-          .map((String line) => line.trimRight())
-          .where((String line) => line.trim().isNotEmpty)
-          .toList();
+      final String title = controller.currentCustomOrderProjectionTitle ??
+        localizedCustomEntryLabel(l10n, projectedCustom);
+      final List<String> lines = controller.displayLines
+        .where((String line) => line.trim().isNotEmpty)
+        .toList();
       return _CustomTextPreview(
         controller: controller,
         title: title,
@@ -1252,8 +1269,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     }
     return _VersePreview(
       controller: controller,
-      song: song,
-      verse: verse,
+      title: controller.currentCustomOrderProjectionTitle,
       panelTitle: panelTitle,
     );
   }
@@ -3273,7 +3289,10 @@ class _DialistPanelState extends State<_DialistPanel> {
                           itemBuilder: (BuildContext context, int index) {
                             final CustomOrderEntry entry = entries[index];
                             final bool isSeparator = entry.isSeparator;
-                            final bool selected = index == selectedCursor;
+                            final int normalizedIndex =
+                                controller.normalizeCustomOrderIndex(index);
+                            final bool selected =
+                                normalizedIndex == selectedCursor;
                             return ListTile(
                               dense: true,
                               visualDensity: const VisualDensity(
@@ -3281,6 +3300,16 @@ class _DialistPanelState extends State<_DialistPanel> {
                                 vertical: -2,
                               ),
                               minTileHeight: 38,
+                              leading: MergeIndicator(
+                                visual: controller
+                                        .isCustomOrderEntryMergeFollowerAt(index)
+                                    ? MergeIndicatorVisual.lowerBrace
+                                    : controller.isCustomOrderEntryMergeLeaderAt(
+                                        index,
+                                      )
+                                    ? MergeIndicatorVisual.upperBrace
+                                    : MergeIndicatorVisual.hidden,
+                              ),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 8,
                               ),
@@ -3302,10 +3331,10 @@ class _DialistPanelState extends State<_DialistPanel> {
                                   ? null
                                   : () {
                                       controller.selectCustomOrderEntryAt(
-                                        index,
+                                        normalizedIndex,
                                       );
                                       _ensureSelectedVisible(
-                                        index,
+                                        normalizedIndex,
                                         entries.length,
                                       );
                                     },
@@ -3365,14 +3394,12 @@ class _DialistPanelState extends State<_DialistPanel> {
 class _VersePreview extends StatelessWidget {
   const _VersePreview({
     required this.controller,
-    required this.song,
-    required this.verse,
+    required this.title,
     required this.panelTitle,
   });
 
   final DiatarMainController controller;
-  final DtxSong song;
-  final DtxVerse verse;
+  final String? title;
   final String panelTitle;
 
   @override
@@ -3400,7 +3427,7 @@ class _VersePreview extends StatelessWidget {
         );
       },
     );
-    final String verseTitle = _buildVerseTitle(controller, song, verse);
+    final String verseTitle = title ?? _buildVerseTitle(controller);
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -3499,23 +3526,22 @@ class _VersePreview extends StatelessWidget {
     );
   }
 
-  String _buildVerseTitle(
-    DiatarMainController controller,
-    DtxSong song,
-    DtxVerse verse,
-  ) {
+  String _buildVerseTitle(DiatarMainController controller) {
     final DtxBook? book = controller.currentBook;
-    if (book == null) return verse.name;
+    final DtxSong? song = controller.currentSong;
+    final DtxVerse? verse = controller.currentVerse;
+    if (book == null) return verse?.name ?? '';
 
     final String bookShortName = book.nick.trim().isNotEmpty
         ? book.nick
         : book.title;
-    final String songTitle = song.title.trim().isNotEmpty
-        ? song.title.trim()
+    final String songTitle = (song?.title ?? '').trim().isNotEmpty
+        ? song!.title.trim()
         : (controller.songIndex + 1).toString();
-    final String verseName = verse.name.trim();
+    final String verseName = verse?.name.trim() ?? '';
     final bool hideVersePart =
-        verseName.isEmpty || ((song.verses.length == 1) && verseName == '---');
+        verseName.isEmpty ||
+        (((song?.verses.length ?? 0) == 1) && verseName == '---');
     final String versePart = hideVersePart ? '' : '/$verseName';
 
     return '$bookShortName: $songTitle$versePart';

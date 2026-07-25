@@ -6,7 +6,8 @@ class CustomOrderNavigationPolicy {
   int? findNextProjectableIndex(List<CustomOrderEntry> source, int start) {
     int idx = start;
     while (idx >= 0 && idx < source.length) {
-      if (!source[idx].isSeparator) {
+      if (!source[idx].isSeparator &&
+          !(idx > 0 && source[idx - 1].mergeWithNext)) {
         return idx;
       }
       idx++;
@@ -17,7 +18,8 @@ class CustomOrderNavigationPolicy {
   int? findPrevProjectableIndex(List<CustomOrderEntry> source, int start) {
     int idx = start;
     while (idx >= 0 && idx < source.length) {
-      if (!source[idx].isSeparator) {
+      if (!source[idx].isSeparator &&
+          !(idx > 0 && source[idx - 1].mergeWithNext)) {
         return idx;
       }
       idx--;
@@ -59,6 +61,9 @@ class CustomOrderNavigationPolicy {
     }
     final CustomOrderEntry previous = source[previousIndex];
     final CustomOrderEntry current = source[currentIndex];
+    if (previous.mergeWithNext) {
+      return true;
+    }
     if (previous.isSongEntry && current.isSongEntry) {
       return previous.fileName == current.fileName &&
           previous.songIndex == current.songIndex &&

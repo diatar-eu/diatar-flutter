@@ -7,6 +7,7 @@ class StoredCustomOrderEntry {
     required this.songIndex,
     required this.verseIndex,
     required this.label,
+    this.mergeWithNext = false,
     this.customTextTitle,
     this.customTextBody,
     this.customImagePath,
@@ -19,6 +20,7 @@ class StoredCustomOrderEntry {
   final int songIndex;
   final int verseIndex;
   final String label;
+  final bool mergeWithNext;
   final String? customTextTitle;
   final String? customTextBody;
   final String? customImagePath;
@@ -32,6 +34,7 @@ class StoredCustomOrderEntry {
       'songIndex': songIndex,
       'verseIndex': verseIndex,
       'label': label,
+      'dbldia': mergeWithNext,
       'customTextTitle': customTextTitle,
       'customTextBody': customTextBody,
       'customImagePath': customImagePath,
@@ -54,6 +57,7 @@ class StoredCustomOrderEntry {
     final Object? s = raw['songIndex'];
     final Object? v = raw['verseIndex'];
     final Object? l = raw['label'];
+    final Object? dbldia = raw['dbldia'] ?? raw['mergeWithNext'];
     final Object? textTitle = raw['customTextTitle'];
     final Object? textBody = raw['customTextBody'];
     final Object? imagePath = raw['customImagePath'];
@@ -73,6 +77,8 @@ class StoredCustomOrderEntry {
           key == 'songIndex' ||
           key == 'verseIndex' ||
           key == 'label' ||
+          key == 'dbldia' ||
+          key == 'mergeWithNext' ||
           key == 'customTextTitle' ||
           key == 'customTextBody' ||
           key == 'customImagePath' ||
@@ -88,6 +94,7 @@ class StoredCustomOrderEntry {
       songIndex: s.toInt(),
       verseIndex: v is num ? v.toInt() : 0,
       label: l,
+      mergeWithNext: dbldia is bool ? dbldia : false,
       customTextTitle: textTitle is String ? textTitle : null,
       customTextBody: textBody is String ? textBody : null,
       customImagePath: imagePath is String ? imagePath : null,

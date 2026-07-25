@@ -7,6 +7,7 @@ class CustomOrderEntry {
     required this.songIndex,
     required this.verseIndex,
     required this.label,
+    this.mergeWithNext = false,
     this.customTextTitle,
     this.customTextBody,
     this.customImagePath,
@@ -19,6 +20,7 @@ class CustomOrderEntry {
   final int songIndex;
   final int verseIndex;
   final String label;
+  final bool mergeWithNext;
   final String? customTextTitle;
   final String? customTextBody;
   final String? customImagePath;
@@ -38,6 +40,7 @@ class CustomOrderEntry {
     int? songIndex,
     int? verseIndex,
     String? label,
+    bool? mergeWithNext,
     String? customTextTitle,
     String? customTextBody,
     String? customImagePath,
@@ -50,6 +53,7 @@ class CustomOrderEntry {
       songIndex: songIndex ?? this.songIndex,
       verseIndex: verseIndex ?? this.verseIndex,
       label: label ?? this.label,
+      mergeWithNext: mergeWithNext ?? this.mergeWithNext,
       customTextTitle: customTextTitle ?? this.customTextTitle,
       customTextBody: customTextBody ?? this.customTextBody,
       customImagePath: customImagePath ?? this.customImagePath,
