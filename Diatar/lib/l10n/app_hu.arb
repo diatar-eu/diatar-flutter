@@ -916,5 +916,46 @@
   "castConnecting": "Csatlakozás...",
   "transposeDown": "Transzpozíció le",
   "transposeUp": "Transzpozíció fel",
-  "transposeReset": "Transzpozíció alap"
+  "transposeReset": "Transzpozíció alap",
+  "diatarDataTransferTitle": "Biztonsági mentés",
+  "diatarDataTransferDescription": "A teljes belső diatar mappa mentése ZIP fájlba, illetve visszaállítása ZIP fájlból.",
+  "diatarExportButton": "Exportálás",
+  "diatarImportButton": "Importálás",
+  "diatarZipFileTypeLabel": "Diatár biztonsági mentés",
+  "diatarExportSuccess": "Az exportálás elkészült: {fileName}",
+  "@diatarExportSuccess": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "diatarImportSuccess": "{imported} fájl importálva, {skipped} fájl mellőzve.",
+  "@diatarImportSuccess": {
+    "placeholders": {
+      "imported": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "diatarImportConflictTitle": "Már létező fájlok",
+  "diatarImportConflictMessage": "{count} importálandó fájl már létezik. A teljes importálás során felülírjuk vagy mellőzzük ezeket?",
+  "@diatarImportConflictMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "diatarImportOverwriteAll": "Felülírás",
+  "diatarImportSkipAll": "Mellőzés",
+  "diatarExportSourceMissing": "A belső diatar mappa nem található.",
+  "diatarImportInvalidArchive": "A kiválasztott fájl nem érvényes Diatár biztonsági mentés.",
+  "diatarTransferError": "A művelet nem sikerült: {error}",
+  "@diatarTransferError": {
+    "placeholders": {
+      "error": {}
+    }
+  }
 }

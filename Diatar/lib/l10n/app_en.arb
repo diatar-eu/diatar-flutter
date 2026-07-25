@@ -916,5 +916,46 @@
   "castConnecting": "Connecting...",
   "transposeDown": "Transpose down",
   "transposeUp": "Transpose up",
-  "transposeReset": "Reset transpose"
+  "transposeReset": "Reset transpose",
+  "diatarDataTransferTitle": "Backup",
+  "diatarDataTransferDescription": "Export the complete internal diatar folder to a ZIP file or restore it from a ZIP file.",
+  "diatarExportButton": "Export",
+  "diatarImportButton": "Import",
+  "diatarZipFileTypeLabel": "Diatar backup",
+  "diatarExportSuccess": "Export completed: {fileName}",
+  "@diatarExportSuccess": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "diatarImportSuccess": "{imported} files imported, {skipped} files skipped.",
+  "@diatarImportSuccess": {
+    "placeholders": {
+      "imported": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "diatarImportConflictTitle": "Existing files",
+  "diatarImportConflictMessage": "{count} files to import already exist. Should they be overwritten or skipped throughout this import?",
+  "@diatarImportConflictMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "diatarImportOverwriteAll": "Overwrite",
+  "diatarImportSkipAll": "Skip",
+  "diatarExportSourceMissing": "The internal diatar folder was not found.",
+  "diatarImportInvalidArchive": "The selected file is not a valid Diatar backup.",
+  "diatarTransferError": "The operation failed: {error}",
+  "@diatarTransferError": {
+    "placeholders": {
+      "error": {}
+    }
+  }
 }

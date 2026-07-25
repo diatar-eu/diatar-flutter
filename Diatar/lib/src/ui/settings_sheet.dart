@@ -16,6 +16,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
 import '../services/mqtt_user_api_service.dart';
 import '../services/cast_service.dart';
+import '../services/export_import_service.dart';
 import '../utils/friendly_path.dart';
 
 class SongHotkeyOption {
@@ -88,9 +89,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _projHCenter;
   late bool _projVCenter;
   late bool _projUseAkkord;
-    late bool _projUseKotta;
-    late bool _projShowBackgroundImage;
-    late bool _useSound;
+  late bool _projUseKotta;
+  late bool _projShowBackgroundImage;
+  late bool _useSound;
   late bool _projUseTitle;
   late bool _projBoldText;
   late int _desktopProjectorMonitor;
@@ -119,6 +120,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late Color _hiColor;
   String _appVersion = '-';
   String _buildNumber = '-';
+  final ExportImportService _exportImportService = ExportImportService();
+  bool _fileTransferRunning = false;
 
   @override
   void initState() {
@@ -284,7 +287,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
     final bool showLan =
         !kIsWeb && _matches(query, 'helyi halozat tcp ip port');
-    final bool showCast = (_castService?.isSupported ?? false) &&
+    final bool showCast =
+        (_castService?.isSupported ?? false) &&
         _matches(query, 'cast google cast');
     final bool showColors = _matches(query, 'szinek hatter szoveg highlight');
     final bool showProjection = _matches(
@@ -293,7 +297,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
     final bool showFiles = _matches(
       query,
-      'enektar fajlok dtx hatterkep hatter kep blank',
+      'enektar fajlok dtx hatterkep hatter kep blank export import backup biztonsagi mentes zip',
     );
     final bool showGeneral = _matches(query, 'altalanos tema nyelv language');
     final bool showSystem = _matches(
@@ -390,16 +394,26 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       ),
                       onTap: _openLocalNetworkSettings,
                     ),
-                  if (showLan && (showCast || showColors || showProjection || showFiles || showGeneral))
+                  if (showLan &&
+                      (showCast ||
+                          showColors ||
+                          showProjection ||
+                          showFiles ||
+                          showGeneral))
                     const Divider(height: 1),
-          if (showCast && (_castService?.isSupported ?? false))
-            _settingsTile(
-              leading: const Icon(Icons.cast),
-              title: Text(l10n.castSettingsTitle),
-              subtitle: Text(l10n.castSettingsSummary),
-              onTap: _openCastSettings,
-            ),
-                  if (showCast && (_castService?.isSupported ?? false) && (showColors || showProjection || showFiles || showGeneral))
+                  if (showCast && (_castService?.isSupported ?? false))
+                    _settingsTile(
+                      leading: const Icon(Icons.cast),
+                      title: Text(l10n.castSettingsTitle),
+                      subtitle: Text(l10n.castSettingsSummary),
+                      onTap: _openCastSettings,
+                    ),
+                  if (showCast &&
+                      (_castService?.isSupported ?? false) &&
+                      (showColors ||
+                          showProjection ||
+                          showFiles ||
+                          showGeneral))
                     const Divider(height: 1),
                   if (showColors)
                     _settingsTile(
@@ -1236,9 +1250,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.search),
               title: Text(l10n.castSelectDeviceTitle),
-              subtitle: Text(_castDeviceId.isEmpty 
-                ? l10n.valueNotSet 
-                : 'ID: $_castDeviceId'),
+              subtitle: Text(
+                _castDeviceId.isEmpty ? l10n.valueNotSet : 'ID: $_castDeviceId',
+              ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _openCastDeviceSelector(setBoth),
             ),
@@ -1253,7 +1267,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               controller: TextEditingController(text: _castPort.toString()),
               keyboardType: TextInputType.number,
               decoration: InputDecoration(labelText: l10n.castPortLabel),
-              onChanged: (v) => setBoth(() => _castPort = int.tryParse(v) ?? 1024),
+              onChanged: (v) =>
+                  setBoth(() => _castPort = int.tryParse(v) ?? 1024),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -1267,67 +1282,71 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
-  Future<void> _openCastDeviceSelector(void Function(void Function()) setBoth) async {
+  Future<void> _openCastDeviceSelector(
+    void Function(void Function()) setBoth,
+  ) async {
     final l10n = context.l10n;
-    
+
     await _openSectionSheet(
       title: l10n.castSelectDeviceTitle,
-      builder: (BuildContext context, void Function(void Function()) setModalState) {
-        return [
-          AnimatedBuilder(
-            animation: _castService ?? ValueNotifier<bool>(false),
-            builder: (context, _) {
-              final devices = _castService?.discoveredDevices ?? <GoogleCastDevice>[];
-              if (devices.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 16),
-                      Text(l10n.castNoDevicesFound),
-                      TextButton(
-                        onPressed: () => _castService?.startDiscovery(),
-                        child: Text(l10n.refreshTooltip),
+      builder:
+          (BuildContext context, void Function(void Function()) setModalState) {
+            return [
+              AnimatedBuilder(
+                animation: _castService ?? ValueNotifier<bool>(false),
+                builder: (context, _) {
+                  final devices =
+                      _castService?.discoveredDevices ?? <GoogleCastDevice>[];
+                  if (devices.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(l10n.castNoDevicesFound),
+                          TextButton(
+                            onPressed: () => _castService?.startDiscovery(),
+                            child: Text(l10n.refreshTooltip),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              }
-              return ListView.builder(
-                shrinkWrap: true,
-                itemCount: devices.length,
-                itemBuilder: (context, index) {
-                  final device = devices[index];
-                  return ListTile(
-                    leading: const Icon(Icons.cast),
-                    title: Text(device.friendlyName),
-                    subtitle: Text(device.deviceID),
-                    onTap: () async {
-                      setBoth(() {}); // Update main sheet
-                      try {
-                        await _castService?.connectToDevice(device);
-                        setBoth(() {
-                          _castDeviceId = device.deviceID;
-                        });
-                        Navigator.of(context).pop(true);
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Connection failed: $e')),
-                        );
-                      }
+                    );
+                  }
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: devices.length,
+                    itemBuilder: (context, index) {
+                      final device = devices[index];
+                      return ListTile(
+                        leading: const Icon(Icons.cast),
+                        title: Text(device.friendlyName),
+                        subtitle: Text(device.deviceID),
+                        onTap: () async {
+                          setBoth(() {}); // Update main sheet
+                          try {
+                            await _castService?.connectToDevice(device);
+                            setBoth(() {
+                              _castDeviceId = device.deviceID;
+                            });
+                            Navigator.of(context).pop(true);
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Connection failed: $e')),
+                            );
+                          }
+                        },
+                      );
                     },
                   );
                 },
-              );
-            },
-          ),
-        ];
-      },
+              ),
+            ];
+          },
     ).then((_) {
       _castService?.stopDiscovery();
     });
-    
+
     // Start discovery when opening
     _castService?.startDiscovery();
   }
@@ -1357,6 +1376,43 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             },
           ),
           const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 16),
+          Text(
+            l10n.diatarDataTransferTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.diatarDataTransferDescription,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              OutlinedButton.icon(
+                onPressed: _fileTransferRunning
+                    ? null
+                    : () => _exportDiatarData(context, setBoth),
+                icon: const Icon(Icons.archive_outlined),
+                label: Text(l10n.diatarExportButton),
+              ),
+              OutlinedButton.icon(
+                onPressed: _fileTransferRunning
+                    ? null
+                    : () => _importDiatarData(context, setBoth),
+                icon: const Icon(Icons.unarchive_outlined),
+                label: Text(l10n.diatarImportButton),
+              ),
+            ],
+          ),
+          if (_fileTransferRunning) ...<Widget>[
+            const SizedBox(height: 12),
+            const LinearProgressIndicator(minHeight: 2),
+          ],
+          const SizedBox(height: 16),
           if (_isDesktopPlatform())
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -1368,6 +1424,214 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ];
       },
     );
+  }
+
+  XTypeGroup _diatarZipType(AppLocalizations l10n) {
+    return XTypeGroup(
+      label: l10n.diatarZipFileTypeLabel,
+      extensions: const <String>['zip'],
+      mimeTypes: const <String>['application/zip'],
+      uniformTypeIdentifiers: const <String>['public.zip-archive'],
+    );
+  }
+
+  Future<void> _exportDiatarData(
+    BuildContext sectionContext,
+    void Function(void Function()) setBoth,
+  ) async {
+    final XTypeGroup zipType = _diatarZipType(sectionContext.l10n);
+    setBoth(() => _fileTransferRunning = true);
+    try {
+      final zipData = await _exportImportService.createExportArchive();
+      final String fileName = _backupFileName(DateTime.now());
+      final XFile exportFile = XFile.fromData(
+        zipData,
+        mimeType: 'application/zip',
+        name: fileName,
+      );
+
+      if (kIsWeb) {
+        await exportFile.saveTo(fileName);
+      } else {
+        final FileSaveLocation? location = await getSaveLocation(
+          acceptedTypeGroups: <XTypeGroup>[zipType],
+          suggestedName: fileName,
+        );
+        if (location == null) {
+          return;
+        }
+        await exportFile.saveTo(location.path);
+      }
+
+      if (sectionContext.mounted) {
+        ScaffoldMessenger.of(sectionContext).showSnackBar(
+          SnackBar(
+            content: Text(sectionContext.l10n.diatarExportSuccess(fileName)),
+          ),
+        );
+      }
+    } catch (error) {
+      if (sectionContext.mounted) {
+        await _showFileTransferError(sectionContext, error);
+      }
+    } finally {
+      _finishFileTransfer(sectionContext.mounted, setBoth);
+    }
+  }
+
+  Future<void> _importDiatarData(
+    BuildContext sectionContext,
+    void Function(void Function()) setBoth,
+  ) async {
+    final XTypeGroup zipType = _diatarZipType(sectionContext.l10n);
+    setBoth(() => _fileTransferRunning = true);
+    try {
+      final XFile? selectedFile = await openFile(
+        acceptedTypeGroups: <XTypeGroup>[zipType],
+      );
+      if (selectedFile == null) {
+        return;
+      }
+
+      final zipData = await selectedFile.readAsBytes();
+      final DiatarImportPreview preview = await _exportImportService
+          .inspectImportArchive(zipData);
+      ExistingFilePolicy policy = ExistingFilePolicy.skip;
+      if (preview.conflictingFileCount > 0) {
+        if (!sectionContext.mounted) {
+          return;
+        }
+        final ExistingFilePolicy? selectedPolicy = await _askExistingFilePolicy(
+          sectionContext,
+          preview.conflictingFileCount,
+        );
+        if (selectedPolicy == null) {
+          return;
+        }
+        policy = selectedPolicy;
+      }
+
+      final DiatarImportResult result = await _exportImportService
+          .importArchive(zipData, existingFilePolicy: policy);
+      if (result.importedFileCount > 0) {
+        widget.onReloadBooksRequested();
+      }
+      if (!sectionContext.mounted) {
+        return;
+      }
+
+      if (result.isSuccess) {
+        ScaffoldMessenger.of(sectionContext).showSnackBar(
+          SnackBar(
+            content: Text(
+              sectionContext.l10n.diatarImportSuccess(
+                result.importedFileCount,
+                result.skippedFileCount,
+              ),
+            ),
+          ),
+        );
+      } else {
+        await _showFileTransferError(sectionContext, result.errors.join('\n'));
+      }
+    } catch (error) {
+      if (sectionContext.mounted) {
+        await _showFileTransferError(sectionContext, error);
+      }
+    } finally {
+      _finishFileTransfer(sectionContext.mounted, setBoth);
+    }
+  }
+
+  Future<ExistingFilePolicy?> _askExistingFilePolicy(
+    BuildContext sectionContext,
+    int conflictCount,
+  ) {
+    final AppLocalizations l10n = sectionContext.l10n;
+    return showDialog<ExistingFilePolicy>(
+      context: sectionContext,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.diatarImportConflictTitle),
+          content: Text(l10n.diatarImportConflictMessage(conflictCount)),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(ExistingFilePolicy.skip),
+              child: Text(l10n.diatarImportSkipAll),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(ExistingFilePolicy.overwrite),
+              child: Text(l10n.diatarImportOverwriteAll),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showFileTransferError(
+    BuildContext sectionContext,
+    Object error,
+  ) async {
+    if (!sectionContext.mounted) {
+      return;
+    }
+    final AppLocalizations l10n = sectionContext.l10n;
+    final String message;
+    if (error is DiatarArchiveException) {
+      message = switch (error.code) {
+        DiatarArchiveErrorCode.sourceDirectoryMissing =>
+          l10n.diatarExportSourceMissing,
+        DiatarArchiveErrorCode.invalidArchive =>
+          l10n.diatarImportInvalidArchive,
+      };
+    } else {
+      message = l10n.diatarTransferError(error.toString());
+    }
+
+    await showDialog<void>(
+      context: sectionContext,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.diatarDataTransferTitle),
+          content: SingleChildScrollView(child: Text(message)),
+          actions: <Widget>[
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.ok),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _finishFileTransfer(
+    bool sectionMounted,
+    void Function(void Function()) setBoth,
+  ) {
+    if (sectionMounted) {
+      setBoth(() => _fileTransferRunning = false);
+    } else if (mounted) {
+      setState(() => _fileTransferRunning = false);
+    } else {
+      _fileTransferRunning = false;
+    }
+  }
+
+  String _backupFileName(DateTime timestamp) {
+    String twoDigits(int value) => value.toString().padLeft(2, '0');
+    return 'diatar-backup-'
+        '${timestamp.year}${twoDigits(timestamp.month)}'
+        '${twoDigits(timestamp.day)}-'
+        '${twoDigits(timestamp.hour)}${twoDigits(timestamp.minute)}.zip';
   }
 
   Future<void> _openDtxFolder() async {
@@ -1382,7 +1646,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       return;
     }
     final String docsPath = await PathHelper.getDocumentsDirectoryPath();
-    final Directory diatarsDir = FileSystemProvider.instance.directory('$docsPath/diatar');
+    final Directory diatarsDir = FileSystemProvider.instance.directory(
+      '$docsPath/diatar',
+    );
     if (!await diatarsDir.exists()) {
       await diatarsDir.create(recursive: true);
     }
@@ -2106,8 +2372,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             ),
             _MonitorSelector(
               value: _desktopProjectorMonitor,
-              onChanged: (int v) =>
-                  setBoth(() => _desktopProjectorMonitor = v),
+              onChanged: (int v) => setBoth(() => _desktopProjectorMonitor = v),
             ),
           ],
           SwitchListTile(
@@ -2957,10 +3222,7 @@ class _MonitorSelectorState extends State<_MonitorSelector> {
   Widget build(BuildContext context) {
     final AppLocalizations l10n = context.l10n;
     final List<DropdownMenuItem<int>> items = <DropdownMenuItem<int>>[
-      DropdownMenuItem<int>(
-        value: -1,
-        child: Text(l10n.projectorMonitorAuto),
-      ),
+      DropdownMenuItem<int>(value: -1, child: Text(l10n.projectorMonitorAuto)),
     ];
     for (int i = 0; i < _displays.length; i++) {
       final Display d = _displays[i];

@@ -1425,4 +1425,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transposeReset => 'Reset transpose';
+
+  @override
+  String get diatarDataTransferTitle => 'Backup';
+
+  @override
+  String get diatarDataTransferDescription =>
+      'Export the complete internal diatar folder to a ZIP file or restore it from a ZIP file.';
+
+  @override
+  String get diatarExportButton => 'Export';
+
+  @override
+  String get diatarImportButton => 'Import';
+
+  @override
+  String get diatarZipFileTypeLabel => 'Diatar backup';
+
+  @override
+  String diatarExportSuccess(Object fileName) {
+    return 'Export completed: $fileName';
+  }
+
+  @override
+  String diatarImportSuccess(int imported, int skipped) {
+    return '$imported files imported, $skipped files skipped.';
+  }
+
+  @override
+  String get diatarImportConflictTitle => 'Existing files';
+
+  @override
+  String diatarImportConflictMessage(int count) {
+    return '$count files to import already exist. Should they be overwritten or skipped throughout this import?';
+  }
+
+  @override
+  String get diatarImportOverwriteAll => 'Overwrite';
+
+  @override
+  String get diatarImportSkipAll => 'Skip';
+
+  @override
+  String get diatarExportSourceMissing =>
+      'The internal diatar folder was not found.';
+
+  @override
+  String get diatarImportInvalidArchive =>
+      'The selected file is not a valid Diatar backup.';
+
+  @override
+  String diatarTransferError(Object error) {
+    return 'The operation failed: $error';
+  }
 }

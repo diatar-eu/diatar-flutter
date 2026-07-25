@@ -2572,6 +2572,90 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Transzpozíció alap'**
   String get transposeReset;
+
+  /// No description provided for @diatarDataTransferTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Biztonsági mentés'**
+  String get diatarDataTransferTitle;
+
+  /// No description provided for @diatarDataTransferDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'A teljes belső diatar mappa mentése ZIP fájlba, illetve visszaállítása ZIP fájlból.'**
+  String get diatarDataTransferDescription;
+
+  /// No description provided for @diatarExportButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Exportálás'**
+  String get diatarExportButton;
+
+  /// No description provided for @diatarImportButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Importálás'**
+  String get diatarImportButton;
+
+  /// No description provided for @diatarZipFileTypeLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Diatár biztonsági mentés'**
+  String get diatarZipFileTypeLabel;
+
+  /// No description provided for @diatarExportSuccess.
+  ///
+  /// In hu, this message translates to:
+  /// **'Az exportálás elkészült: {fileName}'**
+  String diatarExportSuccess(Object fileName);
+
+  /// No description provided for @diatarImportSuccess.
+  ///
+  /// In hu, this message translates to:
+  /// **'{imported} fájl importálva, {skipped} fájl mellőzve.'**
+  String diatarImportSuccess(int imported, int skipped);
+
+  /// No description provided for @diatarImportConflictTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Már létező fájlok'**
+  String get diatarImportConflictTitle;
+
+  /// No description provided for @diatarImportConflictMessage.
+  ///
+  /// In hu, this message translates to:
+  /// **'{count} importálandó fájl már létezik. A teljes importálás során felülírjuk vagy mellőzzük ezeket?'**
+  String diatarImportConflictMessage(int count);
+
+  /// No description provided for @diatarImportOverwriteAll.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felülírás'**
+  String get diatarImportOverwriteAll;
+
+  /// No description provided for @diatarImportSkipAll.
+  ///
+  /// In hu, this message translates to:
+  /// **'Mellőzés'**
+  String get diatarImportSkipAll;
+
+  /// No description provided for @diatarExportSourceMissing.
+  ///
+  /// In hu, this message translates to:
+  /// **'A belső diatar mappa nem található.'**
+  String get diatarExportSourceMissing;
+
+  /// No description provided for @diatarImportInvalidArchive.
+  ///
+  /// In hu, this message translates to:
+  /// **'A kiválasztott fájl nem érvényes Diatár biztonsági mentés.'**
+  String get diatarImportInvalidArchive;
+
+  /// No description provided for @diatarTransferError.
+  ///
+  /// In hu, this message translates to:
+  /// **'A művelet nem sikerült: {error}'**
+  String diatarTransferError(Object error);
 }
 
 class _AppLocalizationsDelegate

@@ -1429,4 +1429,56 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get transposeReset => 'Transzpozíció alap';
+
+  @override
+  String get diatarDataTransferTitle => 'Biztonsági mentés';
+
+  @override
+  String get diatarDataTransferDescription =>
+      'A teljes belső diatar mappa mentése ZIP fájlba, illetve visszaállítása ZIP fájlból.';
+
+  @override
+  String get diatarExportButton => 'Exportálás';
+
+  @override
+  String get diatarImportButton => 'Importálás';
+
+  @override
+  String get diatarZipFileTypeLabel => 'Diatár biztonsági mentés';
+
+  @override
+  String diatarExportSuccess(Object fileName) {
+    return 'Az exportálás elkészült: $fileName';
+  }
+
+  @override
+  String diatarImportSuccess(int imported, int skipped) {
+    return '$imported fájl importálva, $skipped fájl mellőzve.';
+  }
+
+  @override
+  String get diatarImportConflictTitle => 'Már létező fájlok';
+
+  @override
+  String diatarImportConflictMessage(int count) {
+    return '$count importálandó fájl már létezik. A teljes importálás során felülírjuk vagy mellőzzük ezeket?';
+  }
+
+  @override
+  String get diatarImportOverwriteAll => 'Felülírás';
+
+  @override
+  String get diatarImportSkipAll => 'Mellőzés';
+
+  @override
+  String get diatarExportSourceMissing => 'A belső diatar mappa nem található.';
+
+  @override
+  String get diatarImportInvalidArchive =>
+      'A kiválasztott fájl nem érvényes Diatár biztonsági mentés.';
+
+  @override
+  String diatarTransferError(Object error) {
+    return 'A művelet nem sikerült: $error';
+  }
 }
