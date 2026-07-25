@@ -20,7 +20,6 @@ import '../utils/friendly_path.dart';
 import '../services/song_search_service.dart';
 import '../services/zsolozsma_service.dart';
 import '../services/napi_lelki_batyu_service.dart';
-import 'merge_indicator.dart';
 import 'song_search_sheet.dart';
 
 class CustomOrderEditorPanel extends StatefulWidget {
@@ -210,51 +209,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   DiatarMainController get controller => widget.controller;
 
   String _entrySignature(CustomOrderEntry entry) {
-    return '${entry.fileName}|${entry.songIndex}|${entry.verseIndex}|${entry.mergeWithNext}|${entry.customTextTitle ?? ''}|${entry.customTextBody ?? ''}|${entry.customImagePath ?? ''}|${entry.customType ?? ''}|${jsonEncode(entry.customData)}|${entry.label}';
-  }
-
-  bool _isTextualEntry(CustomOrderEntry entry) {
-    return !entry.isSeparator && !entry.isCustomImage;
-  }
-
-  bool _isMergeLeader(int index) {
-    return index >= 0 &&
-        index + 1 < _entries.length &&
-        _entries[index].mergeWithNext &&
-        _isTextualEntry(_entries[index]) &&
-        _isTextualEntry(_entries[index + 1]);
-  }
-
-  bool _isMergeFollower(int index) {
-    return index > 0 && _isMergeLeader(index - 1);
-  }
-
-  bool _canMergeAt(int index) {
-    if (index < 0 || index >= _entries.length) {
-      return false;
-    }
-    if (_isMergeFollower(index) || _isMergeLeader(index)) {
-      return true;
-    }
-    if (index + 1 >= _entries.length) {
-      return false;
-    }
-    return !_entries[index + 1].mergeWithNext &&
-        _isTextualEntry(_entries[index]) &&
-        _isTextualEntry(_entries[index + 1]);
-  }
-
-  Future<void> _toggleMergeAt(int index) async {
-    if (!_canMergeAt(index)) {
-      return;
-    }
-    final int leaderIndex = _isMergeFollower(index) ? index - 1 : index;
-    setState(() {
-      _entries[leaderIndex] = _entries[leaderIndex].copyWith(
-        mergeWithNext: !_isMergeLeader(leaderIndex),
-      );
-    });
-    await _commitEntries();
+    return '${entry.fileName}|${entry.songIndex}|${entry.verseIndex}|${entry.customTextTitle ?? ''}|${entry.customTextBody ?? ''}|${entry.customImagePath ?? ''}|${entry.customType ?? ''}|${jsonEncode(entry.customData)}|${entry.label}';
   }
 
   bool _sameEntries(List<CustomOrderEntry> left, List<CustomOrderEntry> right) {
@@ -1856,29 +1811,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           selected: controller.isCustomOrderIndexCurrent(index),
           selectedTileColor: Colors.blue.withValues(alpha: 0.12),
           onTap: () => controller.selectCustomOrderEntryForEditing(index),
-          leading: SizedBox(
-            width: 42,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                MergeIndicator(
-                  visual: _isMergeFollower(index)
-                      ? MergeIndicatorVisual.lowerBrace
-                      : _isMergeLeader(index)
-                      ? MergeIndicatorVisual.upperBrace
-                      : _canMergeAt(index)
-                      ? MergeIndicatorVisual.circle
-                      : MergeIndicatorVisual.hidden,
-                  onTap: _canMergeAt(index)
-                      ? () => unawaited(_toggleMergeAt(index))
-                      : null,
-                ),
-                ReorderableDragStartListener(
-                  index: index,
-                  child: const Icon(Icons.drag_handle),
-                ),
-              ],
-            ),
+          leading: ReorderableDragStartListener(
+            index: index,
+            child: const Icon(Icons.drag_handle),
           ),
           contentPadding: EdgeInsets.only(
             left: isContinuation ? 70 : 16,
@@ -2032,16 +1967,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   ({int start, int end}) _contiguousGroupRange(int index) {
     final CustomOrderEntry center = _entries[index];
     if (controller.isSongOrderEntry(center)) {
-      final ({int start, int end}) songGroup = _contiguousSongGroup(index);
-      int start = songGroup.start;
-      int end = songGroup.end;
-      if (_isMergeFollower(start)) {
-        start--;
-      }
-      if (_isMergeLeader(end)) {
-        end++;
-      }
-      return (start: start, end: end);
+      return _contiguousSongGroup(index);
     }
     if (center.isCustomText) {
       int start = index;
@@ -2056,23 +1982,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           _isCustomTextContinuation(context.l10n, end + 1, _entries[end + 1])) {
         end++;
       }
-      while (start > 0 && _isMergeLeader(start - 1)) {
-        start--;
-      }
-      while (end < _entries.length - 1 && _isMergeLeader(end)) {
-        end++;
-      }
       return (start: start, end: end);
     }
-    int start = index;
-    int end = index;
-    if (_isMergeFollower(start)) {
-      start--;
-    }
-    if (_isMergeLeader(end)) {
-      end++;
-    }
-    return (start: start, end: end);
+    return (start: index, end: index);
   }
 }
 

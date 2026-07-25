@@ -12,6 +12,7 @@ import '../l10n/l10n.dart';
 import '../models/custom_order_set.dart';
 import '../services/dtx_download_service.dart';
 import '../services/dtz_download_service.dart';
+import '../services/dtz_user_import_service.dart';
 import '../utils/custom_entry_labels.dart';
 import '../utils/file_system_provider.dart';
 import '../utils/friendly_path.dart';
@@ -1442,6 +1443,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) setState(() {});
+    });
     _dtxItemsFuture = widget.controller.loadDtxManagerItems();
     _dtzItemsFuture = widget.controller.loadDtzManagerItems();
   }
@@ -1667,8 +1671,14 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
           child: Text(l10n.close),
         ),
         OutlinedButton(
-          onPressed: () => _importDtxFiles(context),
-          child: Text(l10n.importDtxFilesButton),
+          onPressed: _tabController.index == 0
+              ? () => _importDtxFiles(context)
+              : () => _importDtzFiles(context),
+          child: Text(
+            _tabController.index == 0
+                ? l10n.importDtxFilesButton
+                : l10n.importDtzFilesButton,
+          ),
         ),
         FilledButton(
           onPressed: widget.controller.downloadInProgress
@@ -2419,6 +2429,17 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
     );
   }
 
+  Future<void> _importDtzFiles(BuildContext context) async {
+    final bool? didImport = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _ImportDtzDialog(controller: widget.controller),
+    );
+    if ((didImport ?? false) && context.mounted) {
+      _reload();
+    }
+  }
+
   Future<void> _importDtxFiles(BuildContext context) async {
     const XTypeGroup dtxType = XTypeGroup(
       label: 'DTX',
@@ -2483,6 +2504,376 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
         ),
       );
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// DTZ user-import preview dialog
+// ---------------------------------------------------------------------------
+
+class _ImportDtzDialog extends StatefulWidget {
+  const _ImportDtzDialog({required this.controller});
+
+  final DiatarMainController controller;
+
+  @override
+  State<_ImportDtzDialog> createState() => _ImportDtzDialogState();
+}
+
+class _ImportDtzDialogState extends State<_ImportDtzDialog> {
+  XFile? _dtzFile;
+  final List<XFile> _zipFiles = <XFile>[];
+  DtzUserImportAnalysis? _analysis;
+  Set<String> _selectedPkgs = <String>{};
+  bool _analysing = false;
+  bool _importing = false;
+
+  bool get _canValidate => _dtzFile != null && !_analysing && !_importing;
+  bool get _canImport =>
+      _analysis != null && _selectedPkgs.isNotEmpty && !_importing;
+
+  void _resetAnalysis() {
+    _analysis = null;
+    _selectedPkgs = <String>{};
+  }
+
+  Future<void> _pickDtz() async {
+    if (_importing) return;
+    const XTypeGroup type = XTypeGroup(
+      label: 'DTZ',
+      extensions: <String>['dtz'],
+    );
+    final List<XFile> files = (kIsWeb || Platform.isAndroid)
+        ? await openFiles()
+        : await openFiles(acceptedTypeGroups: <XTypeGroup>[type]);
+    if (!mounted || files.isEmpty) return;
+    setState(() {
+      _dtzFile = files.first;
+      _resetAnalysis();
+    });
+  }
+
+  Future<void> _addZips() async {
+    if (_importing) return;
+    const XTypeGroup type = XTypeGroup(
+      label: 'ZIP',
+      extensions: <String>['zip'],
+    );
+    final List<XFile> files = (kIsWeb || Platform.isAndroid)
+        ? await openFiles()
+        : await openFiles(acceptedTypeGroups: <XTypeGroup>[type]);
+    if (!mounted || files.isEmpty) return;
+    setState(() {
+      _zipFiles.addAll(files);
+      _resetAnalysis();
+    });
+  }
+
+  void _removeZip(int index) {
+    setState(() {
+      _zipFiles.removeAt(index);
+      _resetAnalysis();
+    });
+  }
+
+  Future<void> _validate() async {
+    if (_dtzFile == null || _analysing) return;
+    setState(() {
+      _analysing = true;
+      _analysis = null;
+    });
+    try {
+      final DtzUserImportAnalysis analysis =
+          await widget.controller.analyzeDtzUserImport(
+            <XFile>[_dtzFile!, ..._zipFiles],
+          );
+      if (!mounted) return;
+      setState(() {
+        _analysing = false;
+        _analysis = analysis;
+        _selectedPkgs = analysis.packages
+            .where(
+              (DtzImportPackageAnalysis p) =>
+                  p.status == DtzImportStatus.ok ||
+                  p.status == DtzImportStatus.warning,
+            )
+            .map((DtzImportPackageAnalysis p) => p.dtzFileName)
+            .toSet();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _analysing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.importDtzError(e.toString()))),
+      );
+    }
+  }
+
+  Future<void> _import() async {
+    final DtzUserImportAnalysis? analysis = _analysis;
+    if (analysis == null || _dtzFile == null || _importing) return;
+    final List<DtzImportPackageAnalysis> toImport = analysis.packages
+        .where(
+          (DtzImportPackageAnalysis p) =>
+              _selectedPkgs.contains(p.dtzFileName),
+        )
+        .toList();
+    if (toImport.isEmpty) return;
+
+    setState(() => _importing = true);
+    try {
+      final DtzUserImportCommitResult result =
+          await widget.controller.commitDtzUserImport(
+            toImport: toImport,
+            files: <XFile>[_dtzFile!, ..._zipFiles],
+          );
+      if (!mounted) return;
+      final String msg = result.extractedFileCount > 0
+          ? context.l10n.importDtzSuccess(
+              result.importedDtzCount,
+              result.extractedFileCount,
+            )
+          : context.l10n.importDtzSuccessNoMedia(result.importedDtzCount);
+      final ScaffoldMessengerState? messenger =
+          ScaffoldMessenger.maybeOf(context);
+      Navigator.of(context).pop(true);
+      messenger?.showSnackBar(SnackBar(content: Text(msg)));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _importing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.importDtzError(e.toString()))),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = context.l10n;
+    final ThemeData theme = Theme.of(context);
+    final DtzUserImportAnalysis? analysis = _analysis;
+
+    return AlertDialog(
+      title: Text(l10n.importDtzPreviewTitle),
+      content: SizedBox(
+        width: 560,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              // --- DTZ section ---
+              Text(l10n.importDtzDtzSection, style: theme.textTheme.titleSmall),
+              const SizedBox(height: 6),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      _dtzFile == null
+                          ? l10n.importDtzNoDtzSelected
+                          : _dtzFile!.name,
+                      style: _dtzFile == null
+                          ? TextStyle(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            )
+                          : null,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton(
+                    onPressed: _importing ? null : _pickDtz,
+                    child: Text(l10n.importDtzSelectDtz),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // --- ZIP section ---
+              Text(l10n.importDtzZipSection, style: theme.textTheme.titleSmall),
+              const SizedBox(height: 6),
+              OutlinedButton.icon(
+                onPressed: _importing ? null : _addZips,
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(l10n.importDtzAddZip),
+              ),
+              if (_zipFiles.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 4),
+                for (int i = 0; i < _zipFiles.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(
+                      children: <Widget>[
+                        const Icon(Icons.folder_zip_outlined, size: 16),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _zipFiles[i].name,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          visualDensity: VisualDensity.compact,
+                          onPressed:
+                              _importing ? null : () => _removeZip(i),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+
+              // --- Analysis result ---
+              if (_analysing) ...<Widget>[
+                const SizedBox(height: 16),
+                const LinearProgressIndicator(),
+              ],
+              if (analysis != null && !_analysing) ...<Widget>[
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 4),
+                for (final DtzImportPackageAnalysis pkg in analysis.packages)
+                  _PackageRow(
+                    pkg: pkg,
+                    selected: _selectedPkgs.contains(pkg.dtzFileName),
+                    onChanged:
+                        pkg.status == DtzImportStatus.error || _importing
+                            ? null
+                            : (bool? v) {
+                                setState(() {
+                                  if (v ?? false) {
+                                    _selectedPkgs.add(pkg.dtzFileName);
+                                  } else {
+                                    _selectedPkgs.remove(pkg.dtzFileName);
+                                  }
+                                });
+                              },
+                    l10n: l10n,
+                  ),
+                if (analysis.orphanZipNames.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      l10n.importDtzPreviewOrphanZips(
+                        analysis.orphanZipNames.length,
+                      ),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _importing ? null : () => Navigator.of(context).pop(false),
+          child: Text(l10n.close),
+        ),
+        OutlinedButton(
+          onPressed: _canValidate ? _validate : null,
+          child: Text(l10n.importDtzValidateButton),
+        ),
+        FilledButton(
+          onPressed: _canImport ? _import : null,
+          child: Text(l10n.importDtzImportButton),
+        ),
+      ],
+    );
+  }
+}
+
+class _PackageRow extends StatelessWidget {
+  const _PackageRow({
+    required this.pkg,
+    required this.selected,
+    required this.onChanged,
+    required this.l10n,
+  });
+
+  final DtzImportPackageAnalysis pkg;
+  final bool selected;
+  final ValueChanged<bool?>? onChanged;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color statusColor;
+    final IconData statusIcon;
+    final String statusText;
+
+    switch (pkg.status) {
+      case DtzImportStatus.ok:
+        statusColor = Colors.green.shade700;
+        statusIcon = Icons.check_circle_outline;
+        statusText = pkg.referencedFiles.isEmpty
+            ? l10n.importDtzStatusNoRefs
+            : l10n.importDtzStatusOk(pkg.matchedFiles.length);
+      case DtzImportStatus.warning:
+        statusColor = Colors.orange.shade700;
+        statusIcon = Icons.warning_amber_outlined;
+        if (pkg.errorReason != null &&
+            pkg.errorReason!.contains('Missing dia-IDs')) {
+          statusText = l10n.importDtzStatusMissingDiaIds(pkg.errorReason ?? '');
+        } else {
+          statusText = l10n.importDtzStatusWarning(
+            pkg.missingFiles.length,
+            pkg.referencedFiles.length,
+          );
+        }
+      case DtzImportStatus.error:
+        statusColor = Theme.of(context).colorScheme.error;
+        statusIcon = Icons.cancel_outlined;
+        if (pkg.errorReason != null &&
+            pkg.errorReason!.contains('Missing dia-IDs')) {
+          statusText = l10n.importDtzStatusMissingDiaIds(pkg.errorReason ?? '');
+        } else if (pkg.errorReason != null &&
+            pkg.errorReason!.contains('invalid')) {
+          statusText = l10n.importDtzStatusParseError;
+        } else {
+          statusText = l10n.importDtzStatusError(
+            pkg.missingFiles.length,
+            pkg.referencedFiles.length,
+          );
+        }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          Checkbox(
+            value: selected,
+            onChanged: onChanged,
+          ),
+          const SizedBox(width: 4),
+          Icon(statusIcon, size: 18, color: statusColor),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  pkg.dtzFileName,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  statusText,
+                  style: TextStyle(fontSize: 12, color: statusColor),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -36,6 +36,7 @@ import '../services/dtz_download_service.dart';
 import '../services/dtx_library_service.dart';
 import '../services/dtx_order_store.dart';
 import '../services/dtz_library_service.dart';
+import '../services/dtz_user_import_service.dart';
 import '../services/sender_callback_coordinator.dart';
 import '../services/sender_transport_coordinator.dart';
 import '../services/song_search_service.dart';
@@ -46,7 +47,6 @@ import '../services/tcp_sender_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
 import '../services/zsolozsma_service.dart';
 import '../services/napi_lelki_batyu_service.dart';
-import '../utils/custom_entry_labels.dart';
 
 export '../models/custom_order_entry.dart';
 
@@ -157,6 +157,7 @@ class DiatarMainController extends ChangeNotifier {
     parser: _parser,
   );
   final DtzLibraryService _dtzLibraryService = const DtzLibraryService();
+  final DtzUserImportService _dtzUserImportService = const DtzUserImportService();
   final DtxOrderStore _orderStore = DtxOrderStore();
   final ZsolozsmaService _zsolozsmaService = ZsolozsmaService();
   final ZsolozsmaBreviarDecoder _zsolozsmaDecoder = ZsolozsmaBreviarDecoder();
@@ -1077,6 +1078,120 @@ class DiatarMainController extends ChangeNotifier {
     return FileSystemProvider.instance.directory('$docsPath/zsolozsma');
   }
 
+  // ---------------------------------------------------------------------------
+  // User DTZ import
+  // ---------------------------------------------------------------------------
+
+  /// Reads [files] (DTZ + ZIP) into memory and returns a validation analysis
+  /// without touching the file system.
+  /// Returns true when [bytes] begin with the ZIP magic signature (PK).
+  static bool _bytesLookLikeZip(List<int> bytes) {
+    return bytes.length >= 4 &&
+        bytes[0] == 0x50 && // P
+        bytes[1] == 0x4B && // K
+        (bytes[2] == 0x03 || bytes[2] == 0x05 || bytes[2] == 0x07);
+  }
+
+  /// Resolves a display name for an imported DTZ/ZIP [file].
+  ///
+  /// On Android the content resolver sometimes strips the extension from
+  /// [XFile.name], so we fall back to extracting the last path segment from
+  /// [XFile.path] (which always preserves the original name on Android).
+  static String _resolveDtzImportName(XFile file, int index) {
+    final String direct = file.name.trim();
+    if (direct.isNotEmpty) {
+      final String lower = direct.toLowerCase();
+      if (lower.endsWith('.dtz') || lower.endsWith('.zip')) {
+        return direct;
+      }
+    }
+    // Fall back to path-based extraction (same strategy as DtxImportPolicy).
+    final Uri? parsed = Uri.tryParse(file.path);
+    if (parsed != null && parsed.pathSegments.isNotEmpty) {
+      final String last =
+          Uri.decodeComponent(parsed.pathSegments.last).trim();
+      if (last.isNotEmpty) return last;
+    }
+    final String normalized = file.path.replaceAll('\\', '/').trim();
+    if (normalized.isNotEmpty) {
+      final List<String> segments = normalized.split('/');
+      final String last = segments.isNotEmpty ? segments.last.trim() : '';
+      if (last.isNotEmpty) return last;
+    }
+    return direct.isNotEmpty ? direct : 'file_${index + 1}';
+  }
+
+  /// Reads [files] and categorises them into DTZ and ZIP buckets.
+  /// ZIP detection is content-based (magic bytes) so that files without a
+  /// recognisable extension (common on Android content URIs) are handled
+  /// correctly.
+  Future<(Map<String, List<int>> dtz, Map<String, List<int>> zip)>
+      _categoriseDtzFiles(List<XFile> files) async {
+    final Map<String, List<int>> dtzFiles = <String, List<int>>{};
+    final Map<String, List<int>> zipFiles = <String, List<int>>{};
+    for (int i = 0; i < files.length; i++) {
+      final XFile file = files[i];
+      final List<int> bytes = await file.readAsBytes();
+      if (bytes.isEmpty) continue;
+      final String name = _resolveDtzImportName(file, i);
+      // Use magic bytes as primary classifier; fall back to extension.
+      if (_bytesLookLikeZip(bytes) || name.toLowerCase().endsWith('.zip')) {
+        zipFiles[name] = bytes;
+      } else {
+        // Treat everything else as a candidate DTZ (text format).
+        // Normalise the name: strip legacy .bin suffix and ensure .dtz extension.
+        String dtzName = name;
+        if (dtzName.toLowerCase().endsWith('.bin.dtz')) {
+          dtzName = '${dtzName.substring(0, dtzName.length - 8)}.dtz';
+        } else if (dtzName.toLowerCase().endsWith('.bin')) {
+          dtzName = '${dtzName.substring(0, dtzName.length - 4)}.dtz';
+        } else if (!dtzName.toLowerCase().endsWith('.dtz')) {
+          dtzName = '$dtzName.dtz';
+        }
+        dtzFiles[dtzName] = bytes;
+      }
+    }
+    return (dtzFiles, zipFiles);
+  }
+
+  Future<DtzUserImportAnalysis> analyzeDtzUserImport(List<XFile> files) async {
+    final (
+      Map<String, List<int>> dtzFiles,
+      Map<String, List<int>> zipFiles,
+    ) = await _categoriseDtzFiles(files);
+    return _dtzUserImportService.analyze(
+      dtzFiles: dtzFiles,
+      zipFiles: zipFiles,
+      availableDiaIds: _dtzLibrary.keys.toSet(),
+    );
+  }
+
+  /// Commits previously analysed packages to the DTZ directory.
+  Future<DtzUserImportCommitResult> commitDtzUserImport({
+    required List<DtzImportPackageAnalysis> toImport,
+    required List<XFile> files,
+  }) async {
+    final (
+      Map<String, List<int>> dtzFiles,
+      Map<String, List<int>> zipFiles,
+    ) = await _categoriseDtzFiles(files);
+    final Directory dtzDir = await _dtzDownloadService.resolveDirectory();
+    final DtzUserImportCommitResult result = await _dtzUserImportService.commit(
+      toImport: toImport,
+      dtzFiles: dtzFiles,
+      zipFiles: zipFiles,
+      targetDir: dtzDir,
+    );
+    if (result.importedDtzCount > 0) {
+      await reloadBooks();
+    }
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------
+  // User DTX import
+  // ---------------------------------------------------------------------------
+
   /// Copies the given [files] (picked via file picker) into the internal DTX
   /// directory, then reloads books.
   Future<DtxImportResult> importDtxFiles(List<XFile> files) async {
@@ -1557,10 +1672,10 @@ class DiatarMainController extends ChangeNotifier {
   int get selectedCustomOrderCursor {
     if (_projectedCustomCursor >= 0 &&
         _projectedCustomCursor < _customOrder.length) {
-      return normalizeCustomOrderIndex(_projectedCustomCursor);
+      return _projectedCustomCursor;
     }
     if (_customOrderCursor >= 0 && _customOrderCursor < _customOrder.length) {
-      return normalizeCustomOrderIndex(_customOrderCursor);
+      return _customOrderCursor;
     }
     return _customOrder.isEmpty ? -1 : 0;
   }
@@ -1570,77 +1685,53 @@ class DiatarMainController extends ChangeNotifier {
         _projectedCustomCursor >= _customOrder.length) {
       return null;
     }
-    return _customOrder[normalizeCustomOrderIndex(_projectedCustomCursor)];
+    return _customOrder[_projectedCustomCursor];
   }
 
   bool isCustomOrderIndexCurrent(int index) {
     if (index < 0 || index >= _customOrder.length) {
       return false;
     }
-    return customOrderActive &&
-        normalizeCustomOrderIndex(_customOrderCursor) ==
-            normalizeCustomOrderIndex(index);
+    return customOrderActive && _customOrderCursor == index;
   }
 
-  int normalizeCustomOrderIndex(int index) {
-    if (_customOrder.isEmpty) {
-      return -1;
-    }
-    final int clamped = index.clamp(0, _customOrder.length - 1);
-    if (clamped > 0 && _customOrder[clamped - 1].mergeWithNext) {
-      return clamped - 1;
-    }
-    return clamped;
-  }
-
-  bool isCustomOrderEntryTextual(CustomOrderEntry entry) {
-    return !entry.isSeparator && !entry.isCustomImage;
-  }
-
+  /// Returns true when the entry at [index] is a merge leader
+  /// (its [CustomOrderEntry.mergeWithNext] flag is set).
   bool isCustomOrderEntryMergeLeaderAt(int index) {
-    if (index < 0 || index + 1 >= _customOrder.length) {
-      return false;
-    }
-    return _customOrder[index].mergeWithNext &&
-        _canMergeEntries(_customOrder[index], _customOrder[index + 1]);
+    if (index < 0 || index >= _customOrder.length) return false;
+    return _customOrder[index].mergeWithNext;
   }
 
+  /// Returns true when the entry at [index] immediately follows a merge leader.
   bool isCustomOrderEntryMergeFollowerAt(int index) {
-    return index > 0 && isCustomOrderEntryMergeLeaderAt(index - 1);
+    if (index <= 0 || index >= _customOrder.length) return false;
+    return _customOrder[index - 1].mergeWithNext;
   }
 
+  /// Returns the combined display label for the merge-pair starting at [index].
   String customOrderProjectionTitleAt(int index) {
-    final int normalized = normalizeCustomOrderIndex(index);
-    final CustomOrderEntry first = _customOrder[normalized];
-    if (!isCustomOrderEntryMergeLeaderAt(normalized)) {
-      return _singleProjectionTitleForEntry(first);
+    if (!isCustomOrderEntryMergeLeaderAt(index)) {
+      return _customOrder[index].label;
     }
-    return _mergedProjectionTitle(first, _customOrder[normalized + 1]);
+    final String leader = _customOrder[index].label;
+    if (index + 1 < _customOrder.length) {
+      return '$leader / ${_customOrder[index + 1].label}';
+    }
+    return leader;
   }
 
-  int? get _activeTextualCustomOrderIndex {
-    if (_projectedCustomCursor >= 0 && _projectedCustomCursor < _customOrder.length) {
-      final int normalized = normalizeCustomOrderIndex(_projectedCustomCursor);
-      return isCustomOrderEntryTextual(_customOrder[normalized])
-          ? normalized
-          : null;
-    }
-    final int exact = _currentCustomOrderIndex();
-    if (exact >= 0 && exact < _customOrder.length) {
-      final int normalized = normalizeCustomOrderIndex(exact);
-      return isCustomOrderEntryTextual(_customOrder[normalized])
-          ? normalized
-          : null;
-    }
-    return null;
-  }
-
+  /// The combined title for the currently projected custom-order entry, or
+  /// null when there is no active merge-leader at the cursor.
   String? get currentCustomOrderProjectionTitle {
-    final int? index = _activeTextualCustomOrderIndex;
-    if (index == null) {
-      return null;
-    }
-    return customOrderProjectionTitleAt(index);
+    final int cursor = selectedCustomOrderCursor;
+    if (!isCustomOrderEntryMergeLeaderAt(cursor)) return null;
+    return customOrderProjectionTitleAt(cursor);
+  }
+
+  /// Maps a raw list index to the effective selection-cursor index.
+  /// For a follower entry this returns the leader's index.
+  int normalizeCustomOrderIndex(int index) {
+    return isCustomOrderEntryMergeFollowerAt(index) ? index - 1 : index;
   }
 
   void projectCustomOrderAt(int index) {
@@ -1890,7 +1981,7 @@ class DiatarMainController extends ChangeNotifier {
         ? _customOrder[previousCursor]
         : null;
 
-    _customOrder = _normalizeMergedEntries(entries.map(normalizeEntry).toList());
+    _customOrder = entries.map(normalizeEntry).toList();
     if (_customOrder.isEmpty) {
       _diaVirtualBookSelected = false;
       _lastImportedCustomOrderBaseName = null;
@@ -1907,11 +1998,9 @@ class DiatarMainController extends ChangeNotifier {
               preferredCursor: previousCursor,
             );
       if (preservedCursor >= 0) {
-        _customOrderCursor = normalizeCustomOrderIndex(preservedCursor);
+        _customOrderCursor = preservedCursor;
       } else if (_customOrder.isNotEmpty) {
-        _customOrderCursor = normalizeCustomOrderIndex(
-          previousCursor.clamp(0, _customOrder.length - 1),
-        );
+        _customOrderCursor = previousCursor.clamp(0, _customOrder.length - 1);
       } else {
         _customOrderCursor = -1;
       }
@@ -2059,9 +2148,7 @@ class DiatarMainController extends ChangeNotifier {
     if (_customOrder.isEmpty) {
       return;
     }
-    final int safe = normalizeCustomOrderIndex(
-      cursor.clamp(0, _customOrder.length - 1),
-    );
+    final int safe = cursor.clamp(0, _customOrder.length - 1);
     final CustomOrderEntry entry = _customOrder[safe];
 
     if (entry.isSeparator && sync) {
@@ -2128,36 +2215,12 @@ class DiatarMainController extends ChangeNotifier {
     final List<DtxDownloadItem> all = await _downloadService.listAll(
       targetDir: dtxDir,
     );
-    final Map<String, String> localTitles = <String, String>{
-      for (final DtxBook book in books) book.fileName: book.displayName,
-    };
     return all
         .map(
-          (DtxDownloadItem item) {
-            final String? localTitle = localTitles[item.fileName];
-            final DtxDownloadItem resolved =
-                item.isUserProvided &&
-                    localTitle != null &&
-                    localTitle.trim().isNotEmpty
-                ? DtxDownloadItem(
-                    fileName: item.fileName,
-                    timestamp: item.timestamp,
-                    size: item.size,
-                    group: item.group,
-                    order: item.order,
-                    longName: localTitle,
-                    shortName: localTitle,
-                    isInstalled: item.isInstalled,
-                    updateAvailable: item.updateAvailable,
-                    isOfficial: item.isOfficial,
-                    isUserProvided: item.isUserProvided,
-                  )
-                : item;
-            return DtxManageItem(
-              item: resolved,
-              excluded: _disabledSongbooks.contains(item.fileName),
-            );
-          },
+          (DtxDownloadItem item) => DtxManageItem(
+            item: item,
+            excluded: _disabledSongbooks.contains(item.fileName),
+          ),
         )
         .toList();
   }
@@ -2321,9 +2384,6 @@ class DiatarMainController extends ChangeNotifier {
             ? entry.label.trim()
             : (entry.customTextTitle ?? '').trim();
         out.writeln('separator=$separatorName');
-        if (entry.mergeWithNext) {
-          out.writeln('dbldia=1');
-        }
         continue;
       }
 
@@ -2333,9 +2393,6 @@ class DiatarMainController extends ChangeNotifier {
           diaDir,
         );
         out.writeln('kep=$rel');
-        if (entry.mergeWithNext) {
-          out.writeln('dbldia=1');
-        }
         continue;
       }
 
@@ -2353,9 +2410,6 @@ class DiatarMainController extends ChangeNotifier {
         for (int li = 0; li < lines.length; li++) {
           out.writeln('line$li=${lines[li]}');
         }
-        if (entry.mergeWithNext) {
-          out.writeln('dbldia=1');
-        }
         continue;
       }
 
@@ -2372,9 +2426,6 @@ class DiatarMainController extends ChangeNotifier {
       out.writeln('kotet=${book?.title ?? entry.fileName}');
       out.writeln('enek=${song?.title ?? entry.label}');
       out.writeln('versszak=$verseName');
-      if (entry.mergeWithNext) {
-        out.writeln('dbldia=1');
-      }
     }
 
     await diaFile.writeAsString(out.toString(), encoding: utf8);
@@ -2453,7 +2504,6 @@ class DiatarMainController extends ChangeNotifier {
       if (sec == null) {
         continue;
       }
-      final bool mergeWithNext = (sec['dbldia'] ?? '').trim() == '1';
 
       final String separatorName = (sec['separator'] ?? '').trim();
       if (separatorName.isNotEmpty) {
@@ -2463,7 +2513,6 @@ class DiatarMainController extends ChangeNotifier {
             songIndex: CustomOrderEntry.separatorSongIndex,
             verseIndex: 0,
             label: '--- $separatorName ---',
-            mergeWithNext: mergeWithNext,
             customTextTitle: separatorName,
           ),
         );
@@ -2479,7 +2528,6 @@ class DiatarMainController extends ChangeNotifier {
             songIndex: -2,
             verseIndex: 0,
             label: '[Kep] ${_fileNameFromPath(kep)}',
-            mergeWithNext: mergeWithNext,
             customImagePath: resolved,
             customType: 'image',
           ),
@@ -2498,7 +2546,6 @@ class DiatarMainController extends ChangeNotifier {
             songIndex: -1,
             verseIndex: 0,
             label: '[Szoveg] $effectiveTitle',
-            mergeWithNext: mergeWithNext,
             customTextTitle: effectiveTitle,
             customTextBody: textLines.join('\n'),
             customType: 'text',
@@ -2518,7 +2565,6 @@ class DiatarMainController extends ChangeNotifier {
             songIndex: songIndex,
             verseIndex: verseIndex,
             label: buildEntryLabel(book.fileName, songIndex, verseIndex),
-            mergeWithNext: mergeWithNext,
           ),
         );
         continue;
@@ -2549,7 +2595,6 @@ class DiatarMainController extends ChangeNotifier {
           songIndex: sIx,
           verseIndex: vIx,
           label: buildEntryLabel(b.fileName, sIx, vIx),
-          mergeWithNext: mergeWithNext,
         ),
       );
     }
@@ -2833,10 +2878,6 @@ class DiatarMainController extends ChangeNotifier {
       _transpositions[_currentSongKey] ?? currentSong?.transposition ?? 0;
 
   List<String> get displayLines {
-    final int? customIndex = _activeTextualCustomOrderIndex;
-    if (customIndex != null) {
-      return _displayLinesForCustomOrderIndex(customIndex);
-    }
     final DtxVerse? v = currentVerse;
     if (v == null || v.lines.isEmpty) {
       return const <String>[''];
@@ -3395,9 +3436,22 @@ class DiatarMainController extends ChangeNotifier {
       showing: showing,
       wordToHighlight: highPos,
     );
+    final DtxSong? song = currentSong;
+    final DtxBook? book = currentBook;
+    final DtxVerse? verse = currentVerse;
     final List<String> lines = displayLines;
-    final String title =
-      currentCustomOrderProjectionTitle ?? _singleProjectionTitleForCurrentSong();
+
+    final String bookNick = book?.displayName ?? '';
+    final String songTitle = song?.title ?? '';
+    final String verseTitle = (verse?.name ?? '').trim();
+    final bool hasOnlyDefaultVerse =
+        (song?.verses.length ?? 0) == 1 && verseTitle == '---';
+    final bool hideVerseInTitle = verseTitle.isEmpty || hasOnlyDefaultVerse;
+    final String title = bookNick.isEmpty
+        ? songTitle
+        : hideVerseInTitle
+        ? '$bookNick: $songTitle'
+        : '$bookNick: $songTitle/$verseTitle';
 
     if (mqttActive) {
       await _mqttSender.sendState(
@@ -3508,17 +3562,21 @@ class DiatarMainController extends ChangeNotifier {
     if (customOrderActive &&
         _projectedCustomCursor >= 0 &&
         _projectedCustomCursor < _customOrder.length) {
-      final CustomOrderEntry entry =
-          _customOrder[normalizeCustomOrderIndex(_projectedCustomCursor)];
+      final CustomOrderEntry entry = _customOrder[_projectedCustomCursor];
       if (entry.isCustomImage) {
         // For custom images, we would need to load the image as an ImageFrame
         // For now, we'll fall back to text rendering or handle it elsewhere
         return null;
       } else if (entry.isCustomText) {
         // Create a TextFrame for custom text entries
-        final String title = currentCustomOrderProjectionTitle ??
-            _singleProjectionTitleForEntry(entry);
-        final List<String> lines = displayLines;
+        final String title = (entry.customTextTitle ?? '').trim().isEmpty
+            ? 'Dia'
+            : (entry.customTextTitle ?? '').trim();
+        final List<String> lines = (entry.customTextBody ?? '')
+            .split(RegExp(r'\r?\n'))
+            .map((String line) => line.trimRight())
+            .where((String line) => line.trim().isNotEmpty)
+            .toList();
         final RecTextRecord record = RecTextRecord(
           scholaLine: '',
           title: title,
@@ -3538,8 +3596,8 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     // Create a TextFrame with the current book, song, and verse information
-    final String title = currentCustomOrderProjectionTitle ??
-      '${book.displayName}: ${song.title}/${verse.name}'.trim();
+    final String title =
+        '${book.displayName}: ${song.title}/${verse.name ?? ''}'.trim();
     final List<String> lines = displayLines;
     final RecTextRecord record = RecTextRecord(
       scholaLine: '',
@@ -3553,23 +3611,25 @@ class DiatarMainController extends ChangeNotifier {
     CustomOrderEntry entry, {
     required int cursor,
   }) async {
-    _projectedCustomCursor = normalizeCustomOrderIndex(cursor);
-    final CustomOrderEntry effectiveEntry = _customOrder[_projectedCustomCursor];
+    _projectedCustomCursor = cursor;
 
-    if (effectiveEntry.isSeparator) {
+    if (entry.isSeparator) {
       _setStatus('statusCustomOrderSelected', <String, String>{
-        'label': effectiveEntry.label,
+        'label': entry.label,
       });
       notifyListeners();
       return;
     }
 
-    if (effectiveEntry.isCustomText) {
+    if (entry.isCustomText) {
       highPos = 0;
       _resetHighlightRenderState();
-      final String title = currentCustomOrderProjectionTitle ??
-          _singleProjectionTitleForEntry(effectiveEntry);
-      final List<String> lines = displayLines
+      final String title = (entry.customTextTitle ?? '').trim().isEmpty
+          ? 'Dia'
+          : (entry.customTextTitle ?? '').trim();
+      final List<String> lines = (entry.customTextBody ?? '')
+          .split(RegExp(r'\r?\n'))
+          .map((String line) => line.trimRight())
           .where((String line) => line.trim().isNotEmpty)
           .toList();
       final List<String> payloadLines = lines.isEmpty
@@ -3611,15 +3671,15 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
-    if (effectiveEntry.isCustomImage) {
-      await sendPicFromPath(effectiveEntry.customImagePath ?? '');
+    if (entry.isCustomImage) {
+      await sendPicFromPath(entry.customImagePath ?? '');
     }
     if (settings.castEnabled && !kIsWeb) {
       _castService ??= CastService();
       await _castService!.initialize();
     }
     if (settings.castEnabled) {
-      await _castCurrentImage(effectiveEntry.customImagePath ?? '');
+      await _castCurrentImage(entry.customImagePath ?? '');
     }
   }
 
@@ -3665,168 +3725,6 @@ class DiatarMainController extends ChangeNotifier {
     } catch (e) {
       debugPrint('Cast blank error: $e');
     }
-  }
-
-  bool _canMergeEntries(CustomOrderEntry first, CustomOrderEntry second) {
-    return isCustomOrderEntryTextual(first) && isCustomOrderEntryTextual(second);
-  }
-
-  List<CustomOrderEntry> _normalizeMergedEntries(List<CustomOrderEntry> entries) {
-    if (entries.isEmpty) {
-      return entries;
-    }
-    final List<CustomOrderEntry> normalized = <CustomOrderEntry>[];
-    for (int i = 0; i < entries.length; i++) {
-      final CustomOrderEntry entry = entries[i];
-      final bool canMerge = i + 1 < entries.length &&
-          _canMergeEntries(entry, entries[i + 1]) &&
-          (i == 0 || !normalized[i - 1].mergeWithNext);
-      normalized.add(
-        entry.copyWith(mergeWithNext: entry.mergeWithNext && canMerge),
-      );
-    }
-    return normalized;
-  }
-
-  List<String> _entryDisplayLines(CustomOrderEntry entry) {
-    if (entry.isCustomText) {
-      return (entry.customTextBody ?? '')
-          .split(RegExp(r'\r?\n'))
-          .map((String line) => line.trimRight())
-          .where((String line) => line.trim().isNotEmpty)
-          .toList();
-    }
-    if (!entry.isSongEntry) {
-      return const <String>[];
-    }
-    final DtxBook? book = bookForEntry(entry);
-    final DtxSong? song = songForEntry(entry);
-    final List<DtxVerse> verses = versesForEntry(entry);
-    if (book == null || song == null || verses.isEmpty) {
-      return const <String>[];
-    }
-    final int safeVerse = _safeVerseIndex(entry).clamp(0, verses.length - 1);
-    final int offset =
-        _transpositions['${book.fileName}|${entry.songIndex}'] ?? song.transposition;
-    if (offset == 0) {
-      return verses[safeVerse].lines;
-    }
-    return verses[safeVerse].lines
-        .map((String line) => TranspositionUtils.transposeLine(line, offset))
-        .toList();
-  }
-
-  List<String> _displayLinesForCustomOrderIndex(int index) {
-    final List<String> first = _entryDisplayLines(_customOrder[index]);
-    if (!isCustomOrderEntryMergeLeaderAt(index)) {
-      return first.isEmpty ? const <String>[''] : first;
-    }
-    final List<String> second = _entryDisplayLines(_customOrder[index + 1]);
-    final List<String> combined = <String>[...first];
-    if (first.isNotEmpty && second.isNotEmpty) {
-      combined.add('');
-    }
-    combined.addAll(second);
-    return combined.isEmpty ? const <String>[''] : combined;
-  }
-
-  ({String bookShort, String songTitle, String verseName})? _songProjectionParts(
-    CustomOrderEntry entry,
-  ) {
-    if (!entry.isSongEntry) {
-      return null;
-    }
-    final DtxBook? book = bookForEntry(entry);
-    final DtxSong? song = songForEntry(entry);
-    final List<DtxVerse> verses = versesForEntry(entry);
-    if (book == null || song == null || verses.isEmpty) {
-      return null;
-    }
-    final int safeVerse = _safeVerseIndex(entry).clamp(0, verses.length - 1);
-    return (
-      bookShort: book.nick.trim().isNotEmpty ? book.nick.trim() : book.title.trim(),
-      songTitle: song.title.trim().isNotEmpty
-          ? song.title.trim()
-          : '${entry.songIndex + 1}',
-      verseName: verses[safeVerse].name.trim(),
-    );
-  }
-
-  String _songProjectionFragment(
-    ({String bookShort, String songTitle, String verseName}) parts,
-    DtxSong song,
-  ) {
-    final bool hideVersePart =
-        parts.verseName.isEmpty ||
-        (song.verses.length == 1 && parts.verseName == '---');
-    return hideVersePart
-        ? parts.songTitle
-        : '${parts.songTitle}/${parts.verseName}';
-  }
-
-  String _singleProjectionTitleForEntry(CustomOrderEntry entry) {
-    if (entry.isCustomText) {
-      return customTextEntryTitle(entry);
-    }
-    if (!entry.isSongEntry) {
-      return entry.label.trim();
-    }
-    final ({String bookShort, String songTitle, String verseName})? parts =
-        _songProjectionParts(entry);
-    final DtxSong? song = songForEntry(entry);
-    if (parts == null || song == null) {
-      return entry.label.trim();
-    }
-    return '${parts.bookShort}: ${_songProjectionFragment(parts, song)}';
-  }
-
-  String _mergedProjectionTitle(CustomOrderEntry first, CustomOrderEntry second) {
-    final ({String bookShort, String songTitle, String verseName})? firstParts =
-        _songProjectionParts(first);
-    final ({String bookShort, String songTitle, String verseName})? secondParts =
-        _songProjectionParts(second);
-    final DtxSong? firstSong = songForEntry(first);
-    final DtxSong? secondSong = songForEntry(second);
-    if (firstParts != null &&
-        secondParts != null &&
-        firstSong != null &&
-        secondSong != null) {
-      final String firstFragment = _songProjectionFragment(firstParts, firstSong);
-      final String secondFragment = _songProjectionFragment(secondParts, secondSong);
-      if (first.fileName == second.fileName && first.songIndex == second.songIndex) {
-        final String verses = <String>[firstParts.verseName, secondParts.verseName]
-            .where((String value) => value.isNotEmpty && value != '---')
-            .join(', ');
-        return verses.isEmpty
-            ? '${firstParts.bookShort}: ${firstParts.songTitle}'
-            : '${firstParts.bookShort}: ${firstParts.songTitle}/$verses';
-      }
-      if (first.fileName == second.fileName) {
-        return '${firstParts.bookShort}: $firstFragment, $secondFragment';
-      }
-      return '${firstParts.bookShort}: $firstFragment, ${secondParts.bookShort}: $secondFragment';
-    }
-
-    final String firstTitle = _singleProjectionTitleForEntry(first);
-    final String secondTitle = _singleProjectionTitleForEntry(second);
-    return firstTitle == secondTitle ? firstTitle : '$firstTitle, $secondTitle';
-  }
-
-  String _singleProjectionTitleForCurrentSong() {
-    final DtxSong? song = currentSong;
-    final DtxBook? book = currentBook;
-    final DtxVerse? verse = currentVerse;
-    final String bookNick = book?.displayName ?? '';
-    final String songTitle = song?.title ?? '';
-    final String verseTitle = (verse?.name ?? '').trim();
-    final bool hasOnlyDefaultVerse =
-        (song?.verses.length ?? 0) == 1 && verseTitle == '---';
-    final bool hideVerseInTitle = verseTitle.isEmpty || hasOnlyDefaultVerse;
-    return bookNick.isEmpty
-        ? songTitle
-        : hideVerseInTitle
-        ? '$bookNick: $songTitle'
-        : '$bookNick: $songTitle/$verseTitle';
   }
 
   Future<void> _appendCustomOrderEntry(CustomOrderEntry entry) async {

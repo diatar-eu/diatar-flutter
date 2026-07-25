@@ -1069,6 +1069,85 @@ class AppLocalizationsHu extends AppLocalizations {
   String get importDtxFilesButton => 'Importálás fájlból';
 
   @override
+  String get importDtzFilesButton => 'Kotta importálás';
+
+  @override
+  String get importDtzPreviewTitle => 'Kotta importálás';
+
+  @override
+  String get importDtzDtzSection => 'DTZ fájl';
+
+  @override
+  String get importDtzZipSection => 'ZIP fájlok (képek, hangok)';
+
+  @override
+  String get importDtzNoDtzSelected => 'Nincs DTZ fájl kiválasztva';
+
+  @override
+  String get importDtzSelectDtz => 'DTZ kiválasztása';
+
+  @override
+  String get importDtzAddZip => 'ZIP hozzáadása';
+
+  @override
+  String get importDtzValidateButton => 'Ellenőrzés';
+
+  @override
+  String get importDtzPreviewNoDtz =>
+      'Nem adtál meg .dtz fájlt. Válassz legalább egy DTZ fájlt!';
+
+  @override
+  String importDtzPreviewOrphanZips(int count) {
+    return '$count ZIP fájl nem párosítható DTZ fájlhoz.';
+  }
+
+  @override
+  String importDtzStatusOk(int matched) {
+    return 'Importálható – $matched médiafájl rendben';
+  }
+
+  @override
+  String get importDtzStatusNoRefs =>
+      'Importálható – nincs hivatkozott médiafájl';
+
+  @override
+  String importDtzStatusWarning(int missing, int total) {
+    return 'Importálható (figyelmeztetéssel) – $missing/$total médiafájl hiányzik';
+  }
+
+  @override
+  String importDtzStatusError(int missing, int total) {
+    return 'Nem importálható – $missing/$total médiafájl hiányzik';
+  }
+
+  @override
+  String get importDtzStatusParseError =>
+      'Nem importálható – érvénytelen DTZ fájl';
+
+  @override
+  String importDtzStatusMissingDiaIds(Object reason) {
+    return 'Nem importálható – ismeretlen dia-ID a DTZ-ben: $reason';
+  }
+
+  @override
+  String get importDtzImportButton => 'Importálás';
+
+  @override
+  String importDtzSuccess(int dtz, int files) {
+    return '$dtz DTZ fájl importálva, $files médiafájl kibontva';
+  }
+
+  @override
+  String importDtzSuccessNoMedia(int dtz) {
+    return '$dtz DTZ fájl importálva';
+  }
+
+  @override
+  String importDtzError(Object reason) {
+    return 'Hiba a kotta importálás során: $reason';
+  }
+
+  @override
   String importDtxFilesSuccess(int count) {
     return '$count .dtx fájl beimportálva';
   }

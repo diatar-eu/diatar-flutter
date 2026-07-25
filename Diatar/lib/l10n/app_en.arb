@@ -749,6 +749,69 @@
     }
   },
   "importDtxFilesButton": "Import from file",
+  "importDtzFilesButton": "Import scores",
+  "importDtzPreviewTitle": "Import scores",
+  "importDtzDtzSection": "DTZ file",
+  "importDtzZipSection": "ZIP files (images, sounds)",
+  "importDtzNoDtzSelected": "No DTZ file selected",
+  "importDtzSelectDtz": "Select DTZ",
+  "importDtzAddZip": "Add ZIP files",
+  "importDtzValidateButton": "Validate",
+  "importDtzPreviewNoDtz": "No .dtz file selected. Please select at least one DTZ file!",
+  "importDtzPreviewOrphanZips": "{count} ZIP file(s) cannot be paired with a DTZ.",
+  "@importDtzPreviewOrphanZips": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "importDtzStatusOk": "Importable – {matched} media file(s) OK",
+  "@importDtzStatusOk": {
+    "placeholders": {
+      "matched": { "type": "int" }
+    }
+  },
+  "importDtzStatusNoRefs": "Importable – no media files referenced",
+  "importDtzStatusWarning": "Importable (with warning) – {missing}/{total} media file(s) missing",
+  "@importDtzStatusWarning": {
+    "placeholders": {
+      "missing": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "importDtzStatusError": "Not importable – {missing}/{total} media file(s) missing",
+  "@importDtzStatusError": {
+    "placeholders": {
+      "missing": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "importDtzStatusParseError": "Not importable – invalid DTZ file",
+  "importDtzStatusMissingDiaIds": "Not importable – unknown dia-IDs in DTZ: {reason}",
+  "@importDtzStatusMissingDiaIds": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "importDtzImportButton": "Import",
+  "importDtzSuccess": "{dtz} DTZ file(s) imported, {files} media file(s) extracted",
+  "@importDtzSuccess": {
+    "placeholders": {
+      "dtz": { "type": "int" },
+      "files": { "type": "int" }
+    }
+  },
+  "importDtzSuccessNoMedia": "{dtz} DTZ file(s) imported",
+  "@importDtzSuccessNoMedia": {
+    "placeholders": {
+      "dtz": { "type": "int" }
+    }
+  },
+  "importDtzError": "Error importing score(s): {reason}",
+  "@importDtzError": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
   "importDtxFilesSuccess": "{count} .dtx file(s) imported",
   "@importDtxFilesSuccess": {
     "placeholders": {

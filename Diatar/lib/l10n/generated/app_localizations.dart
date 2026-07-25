@@ -1919,6 +1919,126 @@ abstract class AppLocalizations {
   /// **'Importálás fájlból'**
   String get importDtxFilesButton;
 
+  /// No description provided for @importDtzFilesButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kotta importálás'**
+  String get importDtzFilesButton;
+
+  /// No description provided for @importDtzPreviewTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kotta importálás'**
+  String get importDtzPreviewTitle;
+
+  /// No description provided for @importDtzDtzSection.
+  ///
+  /// In hu, this message translates to:
+  /// **'DTZ fájl'**
+  String get importDtzDtzSection;
+
+  /// No description provided for @importDtzZipSection.
+  ///
+  /// In hu, this message translates to:
+  /// **'ZIP fájlok (képek, hangok)'**
+  String get importDtzZipSection;
+
+  /// No description provided for @importDtzNoDtzSelected.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nincs DTZ fájl kiválasztva'**
+  String get importDtzNoDtzSelected;
+
+  /// No description provided for @importDtzSelectDtz.
+  ///
+  /// In hu, this message translates to:
+  /// **'DTZ kiválasztása'**
+  String get importDtzSelectDtz;
+
+  /// No description provided for @importDtzAddZip.
+  ///
+  /// In hu, this message translates to:
+  /// **'ZIP hozzáadása'**
+  String get importDtzAddZip;
+
+  /// No description provided for @importDtzValidateButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ellenőrzés'**
+  String get importDtzValidateButton;
+
+  /// No description provided for @importDtzPreviewNoDtz.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nem adtál meg .dtz fájlt. Válassz legalább egy DTZ fájlt!'**
+  String get importDtzPreviewNoDtz;
+
+  /// No description provided for @importDtzPreviewOrphanZips.
+  ///
+  /// In hu, this message translates to:
+  /// **'{count} ZIP fájl nem párosítható DTZ fájlhoz.'**
+  String importDtzPreviewOrphanZips(int count);
+
+  /// No description provided for @importDtzStatusOk.
+  ///
+  /// In hu, this message translates to:
+  /// **'Importálható – {matched} médiafájl rendben'**
+  String importDtzStatusOk(int matched);
+
+  /// No description provided for @importDtzStatusNoRefs.
+  ///
+  /// In hu, this message translates to:
+  /// **'Importálható – nincs hivatkozott médiafájl'**
+  String get importDtzStatusNoRefs;
+
+  /// No description provided for @importDtzStatusWarning.
+  ///
+  /// In hu, this message translates to:
+  /// **'Importálható (figyelmeztetéssel) – {missing}/{total} médiafájl hiányzik'**
+  String importDtzStatusWarning(int missing, int total);
+
+  /// No description provided for @importDtzStatusError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nem importálható – {missing}/{total} médiafájl hiányzik'**
+  String importDtzStatusError(int missing, int total);
+
+  /// No description provided for @importDtzStatusParseError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nem importálható – érvénytelen DTZ fájl'**
+  String get importDtzStatusParseError;
+
+  /// No description provided for @importDtzStatusMissingDiaIds.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nem importálható – ismeretlen dia-ID a DTZ-ben: {reason}'**
+  String importDtzStatusMissingDiaIds(Object reason);
+
+  /// No description provided for @importDtzImportButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Importálás'**
+  String get importDtzImportButton;
+
+  /// No description provided for @importDtzSuccess.
+  ///
+  /// In hu, this message translates to:
+  /// **'{dtz} DTZ fájl importálva, {files} médiafájl kibontva'**
+  String importDtzSuccess(int dtz, int files);
+
+  /// No description provided for @importDtzSuccessNoMedia.
+  ///
+  /// In hu, this message translates to:
+  /// **'{dtz} DTZ fájl importálva'**
+  String importDtzSuccessNoMedia(int dtz);
+
+  /// No description provided for @importDtzError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hiba a kotta importálás során: {reason}'**
+  String importDtzError(Object reason);
+
   /// No description provided for @importDtxFilesSuccess.
   ///
   /// In hu, this message translates to:

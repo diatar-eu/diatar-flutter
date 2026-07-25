@@ -749,6 +749,69 @@
     }
   },
   "importDtxFilesButton": "Importálás fájlból",
+  "importDtzFilesButton": "Kotta importálás",
+  "importDtzPreviewTitle": "Kotta importálás",
+  "importDtzDtzSection": "DTZ fájl",
+  "importDtzZipSection": "ZIP fájlok (képek, hangok)",
+  "importDtzNoDtzSelected": "Nincs DTZ fájl kiválasztva",
+  "importDtzSelectDtz": "DTZ kiválasztása",
+  "importDtzAddZip": "ZIP hozzáadása",
+  "importDtzValidateButton": "Ellenőrzés",
+  "importDtzPreviewNoDtz": "Nem adtál meg .dtz fájlt. Válassz legalább egy DTZ fájlt!",
+  "importDtzPreviewOrphanZips": "{count} ZIP fájl nem párosítható DTZ fájlhoz.",
+  "@importDtzPreviewOrphanZips": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "importDtzStatusOk": "Importálható – {matched} médiafájl rendben",
+  "@importDtzStatusOk": {
+    "placeholders": {
+      "matched": { "type": "int" }
+    }
+  },
+  "importDtzStatusNoRefs": "Importálható – nincs hivatkozott médiafájl",
+  "importDtzStatusWarning": "Importálható (figyelmeztetéssel) – {missing}/{total} médiafájl hiányzik",
+  "@importDtzStatusWarning": {
+    "placeholders": {
+      "missing": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "importDtzStatusError": "Nem importálható – {missing}/{total} médiafájl hiányzik",
+  "@importDtzStatusError": {
+    "placeholders": {
+      "missing": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "importDtzStatusParseError": "Nem importálható – érvénytelen DTZ fájl",
+  "importDtzStatusMissingDiaIds": "Nem importálható – ismeretlen dia-ID a DTZ-ben: {reason}",
+  "@importDtzStatusMissingDiaIds": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "importDtzImportButton": "Importálás",
+  "importDtzSuccess": "{dtz} DTZ fájl importálva, {files} médiafájl kibontva",
+  "@importDtzSuccess": {
+    "placeholders": {
+      "dtz": { "type": "int" },
+      "files": { "type": "int" }
+    }
+  },
+  "importDtzSuccessNoMedia": "{dtz} DTZ fájl importálva",
+  "@importDtzSuccessNoMedia": {
+    "placeholders": {
+      "dtz": { "type": "int" }
+    }
+  },
+  "importDtzError": "Hiba a kotta importálás során: {reason}",
+  "@importDtzError": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
   "importDtxFilesSuccess": "{count} .dtx fájl beimportálva",
   "@importDtxFilesSuccess": {
     "placeholders": {

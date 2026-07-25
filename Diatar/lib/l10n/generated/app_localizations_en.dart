@@ -1065,6 +1065,83 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importDtxFilesButton => 'Import from file';
 
   @override
+  String get importDtzFilesButton => 'Import scores';
+
+  @override
+  String get importDtzPreviewTitle => 'Import scores';
+
+  @override
+  String get importDtzDtzSection => 'DTZ file';
+
+  @override
+  String get importDtzZipSection => 'ZIP files (images, sounds)';
+
+  @override
+  String get importDtzNoDtzSelected => 'No DTZ file selected';
+
+  @override
+  String get importDtzSelectDtz => 'Select DTZ';
+
+  @override
+  String get importDtzAddZip => 'Add ZIP files';
+
+  @override
+  String get importDtzValidateButton => 'Validate';
+
+  @override
+  String get importDtzPreviewNoDtz =>
+      'No .dtz file selected. Please select at least one DTZ file!';
+
+  @override
+  String importDtzPreviewOrphanZips(int count) {
+    return '$count ZIP file(s) cannot be paired with a DTZ.';
+  }
+
+  @override
+  String importDtzStatusOk(int matched) {
+    return 'Importable – $matched media file(s) OK';
+  }
+
+  @override
+  String get importDtzStatusNoRefs => 'Importable – no media files referenced';
+
+  @override
+  String importDtzStatusWarning(int missing, int total) {
+    return 'Importable (with warning) – $missing/$total media file(s) missing';
+  }
+
+  @override
+  String importDtzStatusError(int missing, int total) {
+    return 'Not importable – $missing/$total media file(s) missing';
+  }
+
+  @override
+  String get importDtzStatusParseError => 'Not importable – invalid DTZ file';
+
+  @override
+  String importDtzStatusMissingDiaIds(Object reason) {
+    return 'Not importable – unknown dia-IDs in DTZ: $reason';
+  }
+
+  @override
+  String get importDtzImportButton => 'Import';
+
+  @override
+  String importDtzSuccess(int dtz, int files) {
+    return '$dtz DTZ file(s) imported, $files media file(s) extracted';
+  }
+
+  @override
+  String importDtzSuccessNoMedia(int dtz) {
+    return '$dtz DTZ file(s) imported';
+  }
+
+  @override
+  String importDtzError(Object reason) {
+    return 'Error importing score(s): $reason';
+  }
+
+  @override
   String importDtxFilesSuccess(int count) {
     return '$count .dtx file(s) imported';
   }
