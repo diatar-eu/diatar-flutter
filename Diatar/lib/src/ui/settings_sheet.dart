@@ -59,6 +59,9 @@ class DiatarSettingsSheet extends StatefulWidget {
 }
 
 class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
+  static const MethodChannel _androidBackupSaveChannel = MethodChannel(
+    'diatar.eu/dia_save',
+  );
   static final RegExp _simpleEmailPattern = RegExp(
     r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
   );
@@ -1452,6 +1455,21 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
       if (kIsWeb) {
         await exportFile.saveTo(fileName);
+      } else if (defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          final String? savedPath = await _saveDiatarBackupWithAndroidSystemDialog(
+            fileName: fileName,
+            bytes: zipData,
+          );
+          if (savedPath == null) {
+            return;
+          }
+        } on MissingPluginException {
+          await _saveDiatarBackupToDocumentsDirectory(
+            fileName: fileName,
+            bytes: zipData,
+          );
+        }
       } else {
         final FileSaveLocation? location = await getSaveLocation(
           acceptedTypeGroups: <XTypeGroup>[zipType],
@@ -1477,6 +1495,30 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     } finally {
       _finishFileTransfer(sectionContext.mounted, setBoth);
     }
+  }
+
+  Future<String?> _saveDiatarBackupWithAndroidSystemDialog({
+    required String fileName,
+    required Uint8List bytes,
+  }) {
+    return _androidBackupSaveChannel.invokeMethod<String>(
+      'saveBackupFile',
+      <String, Object?>{
+        'fileName': fileName,
+        'bytes': bytes,
+      },
+    );
+  }
+
+  Future<void> _saveDiatarBackupToDocumentsDirectory({
+    required String fileName,
+    required Uint8List bytes,
+  }) async {
+    final String documentsPath = await PathHelper.getDocumentsDirectoryPath();
+    final String exportPath = '$documentsPath/diatar/$fileName';
+    final File exportFile = FileSystemProvider.instance.file(exportPath);
+    await exportFile.parent.create(recursive: true);
+    await exportFile.writeAsBytes(bytes, flush: true);
   }
 
   Future<void> _importDiatarData(

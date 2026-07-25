@@ -23,6 +23,7 @@ class MainActivity : FlutterActivity() {
 			.setMethodCallHandler { call, result ->
 				when (call.method) {
 					"saveDiaFile" -> startSaveDiaFlow(call, result)
+					"saveBackupFile" -> startSaveBackupFlow(call, result)
 					else -> result.notImplemented()
 				}
 			}
@@ -49,6 +50,38 @@ class MainActivity : FlutterActivity() {
 		val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
 			addCategory(Intent.CATEGORY_OPENABLE)
 			type = "application/octet-stream"
+			putExtra(Intent.EXTRA_TITLE, fileName)
+		}
+
+		try {
+			startActivityForResult(intent, REQUEST_SAVE_DIA)
+		} catch (e: Exception) {
+			clearPendingSave()
+			result.error("save_dialog_failed", e.localizedMessage ?: e.toString(), null)
+		}
+	}
+
+	private fun startSaveBackupFlow(call: MethodCall, result: MethodChannel.Result) {
+		if (pendingSaveResult != null) {
+			result.error("busy", "Another save dialog is already in progress.", null)
+			return
+		}
+
+		val fileName = (call.argument<String>("fileName") ?: "diatar-backup.zip").trim().ifEmpty {
+			"diatar-backup.zip"
+		}
+		val bytes = call.argument<ByteArray>("bytes")
+		if (bytes == null || bytes.isEmpty()) {
+			result.error("invalid_args", "Missing or empty file bytes.", null)
+			return
+		}
+
+		pendingSaveResult = result
+		pendingSaveBytes = bytes
+
+		val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+			addCategory(Intent.CATEGORY_OPENABLE)
+			type = "application/zip"
 			putExtra(Intent.EXTRA_TITLE, fileName)
 		}
 
