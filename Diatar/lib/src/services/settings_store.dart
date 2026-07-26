@@ -49,6 +49,7 @@ class SettingsStore {
   static const String _kDesktopActionHotkeys = 'DesktopActionHotkeys';
   static const String _kDesktopSongHotkeys = 'DesktopSongHotkeys';
   static const String _kUseSound = 'UseSound';
+  static const String _kSzentirasApiKey = 'SzentirasApiKey';
   static const String _kTranspositions = 'Transpositions';
 
   static const Map<String, String> _defaultDesktopActionHotkeys =
@@ -162,6 +163,7 @@ class SettingsStore {
         prefs.getStringList(_kDesktopSongHotkeys),
       ),
       useSound: prefs.getBool(_kUseSound) ?? false,
+      szentirasApiKey: prefs.getString(_kSzentirasApiKey) ?? '',
       bkColor: Color(prefs.getInt(_kBkColor) ?? 0xFF000000),
       txtColor: Color(prefs.getInt(_kTxColor) ?? 0xFFFFFFFF),
       blankColor: Color(prefs.getInt(_kBlankColor) ?? 0xFF000000),
@@ -239,6 +241,7 @@ class SettingsStore {
       _encodeStringMap(settings.desktopSongHotkeys),
     );
     await prefs.setBool(_kUseSound, settings.useSound);
+    await prefs.setString(_kSzentirasApiKey, settings.szentirasApiKey);
     await prefs.setInt(_kBkColor, settings.bkColor.toARGB32());
     await prefs.setInt(_kTxColor, settings.txtColor.toARGB32());
     await prefs.setInt(_kBlankColor, settings.blankColor.toARGB32());

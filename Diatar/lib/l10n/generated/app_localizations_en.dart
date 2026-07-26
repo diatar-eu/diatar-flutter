@@ -1587,4 +1587,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String diatarTransferError(Object error) {
     return 'The operation failed: $error';
   }
+
+  @override
+  String get szentirasTooltip => 'Bible';
+
+  @override
+  String get szentirasTitle => 'Insert Bible verse';
+
+  @override
+  String get szentirasReferenceLabel => 'Reference';
+
+  @override
+  String get szentirasReferenceHint => 'e.g. 1Cor13,10-13';
+
+  @override
+  String get szentirasTranslationLabel => 'Translation';
+
+  @override
+  String get szentirasTranslationDefault => 'Default';
+
+  @override
+  String get szentirasFetchButton => 'Fetch';
+
+  @override
+  String get szentirasImportButton => 'Import';
+
+  @override
+  String szentirasInsertAll(int count) {
+    return 'Insert all ($count verses)';
+  }
+
+  @override
+  String get szentirasLoading => 'Loading…';
+
+  @override
+  String szentirasError(Object error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String get szentirasNoVerses => 'No verses found.';
+
+  @override
+  String get settingsSzentirasApiKeyLabel => 'szentiras.eu API key';
+
+  @override
+  String get settingsSzentirasApiKeyHint => 'Key from szentiras.eu';
+
+  @override
+  String get szentirasApiKeyPrompt =>
+      'Enter your szentiras.eu API key to use the Bible feature.';
+
+  @override
+  String get statusSzentirasApiKeyMissing => 'szentiras.eu API key is not set.';
 }

@@ -2830,6 +2830,102 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'A művelet nem sikerült: {error}'**
   String diatarTransferError(Object error);
+
+  /// No description provided for @szentirasTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szentírás'**
+  String get szentirasTooltip;
+
+  /// No description provided for @szentirasTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szentírás beillesztése'**
+  String get szentirasTitle;
+
+  /// No description provided for @szentirasReferenceLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hivatkozás'**
+  String get szentirasReferenceLabel;
+
+  /// No description provided for @szentirasReferenceHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'pl. 1Kor13,10-13'**
+  String get szentirasReferenceHint;
+
+  /// No description provided for @szentirasTranslationLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Fordítás'**
+  String get szentirasTranslationLabel;
+
+  /// No description provided for @szentirasTranslationDefault.
+  ///
+  /// In hu, this message translates to:
+  /// **'Alapértelmezett'**
+  String get szentirasTranslationDefault;
+
+  /// No description provided for @szentirasFetchButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Betöltés'**
+  String get szentirasFetchButton;
+
+  /// No description provided for @szentirasImportButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beillesztés'**
+  String get szentirasImportButton;
+
+  /// No description provided for @szentirasInsertAll.
+  ///
+  /// In hu, this message translates to:
+  /// **'Összes beszúrása ({count} vers)'**
+  String szentirasInsertAll(int count);
+
+  /// No description provided for @szentirasLoading.
+  ///
+  /// In hu, this message translates to:
+  /// **'Betöltés…'**
+  String get szentirasLoading;
+
+  /// No description provided for @szentirasError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hiba: {error}'**
+  String szentirasError(Object error);
+
+  /// No description provided for @szentirasNoVerses.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nem található vers.'**
+  String get szentirasNoVerses;
+
+  /// No description provided for @settingsSzentirasApiKeyLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'szentiras.eu API kulcs'**
+  String get settingsSzentirasApiKeyLabel;
+
+  /// No description provided for @settingsSzentirasApiKeyHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kulcs a szentiras.eu oldalról'**
+  String get settingsSzentirasApiKeyHint;
+
+  /// No description provided for @szentirasApiKeyPrompt.
+  ///
+  /// In hu, this message translates to:
+  /// **'Add meg a szentiras.eu API kulcsot a Szentírás funkció használatához.'**
+  String get szentirasApiKeyPrompt;
+
+  /// No description provided for @statusSzentirasApiKeyMissing.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nincs beállítva a szentiras.eu API kulcs.'**
+  String get statusSzentirasApiKeyMissing;
 }
 
 class _AppLocalizationsDelegate

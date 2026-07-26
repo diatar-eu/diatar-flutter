@@ -1039,5 +1039,33 @@
     "placeholders": {
       "error": {}
     }
-  }
+  },
+  "szentirasTooltip": "Szentírás",
+  "szentirasTitle": "Szentírás beillesztése",
+  "szentirasReferenceLabel": "Hivatkozás",
+  "szentirasReferenceHint": "pl. 1Kor13,10-13",
+  "szentirasTranslationLabel": "Fordítás",
+  "szentirasTranslationDefault": "Alapértelmezett",
+  "szentirasFetchButton": "Betöltés",
+  "szentirasImportButton": "Beillesztés",
+  "szentirasInsertAll": "Összes beszúrása ({count} vers)",
+  "@szentirasInsertAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "szentirasLoading": "Betöltés…",
+  "szentirasError": "Hiba: {error}",
+  "@szentirasError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "szentirasNoVerses": "Nem található vers.",
+  "settingsSzentirasApiKeyLabel": "szentiras.eu API kulcs",
+  "settingsSzentirasApiKeyHint": "Kulcs a szentiras.eu oldalról",
+  "szentirasApiKeyPrompt": "Add meg a szentiras.eu API kulcsot a Szentírás funkció használatához.",
+  "statusSzentirasApiKeyMissing": "Nincs beállítva a szentiras.eu API kulcs."
 }

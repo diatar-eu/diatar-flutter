@@ -118,6 +118,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   String _capturedSongHotkey = '';
   bool _showInternetPassword = false;
   bool _internetActionRunning = false;
+  late final TextEditingController _szentirasApiKey;
   void Function(void Function())? _setInternetSectionState;
   late final MqttUserApiService _userApi;
   CastService? _castService;
@@ -151,6 +152,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _tcpTargets = TextEditingController(text: s.tcpTargets.join('\n'));
     _mqttUser = TextEditingController(text: s.mqttUser);
     _mqttPassword = TextEditingController(text: s.mqttPassword);
+    _szentirasApiKey = TextEditingController(text: s.szentirasApiKey);
     _focusNodeForHotkey = FocusNode(debugLabel: 'hotkey-capture');
     _blankPicPath = TextEditingController(text: s.blankPicPath);
     _diaExportPath = TextEditingController(text: s.diaExportPath);
@@ -545,6 +547,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final String originalMqttUser = _mqttUser.text;
     final String originalMqttPassword = _mqttPassword.text;
     final bool originalShowInternetPassword = _showInternetPassword;
+    final String originalSzentirasApiKey = _szentirasApiKey.text;
 
     return _openSectionSheet(
       title: context.l10n.settingsInternetTitle,
@@ -559,6 +562,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           _mqttUser.text = originalMqttUser;
           _mqttPassword.text = originalMqttPassword;
           _showInternetPassword = originalShowInternetPassword;
+          _szentirasApiKey.text = originalSzentirasApiKey;
         });
       },
       builder: (BuildContext context, void Function(void Function()) setBoth) {
@@ -617,6 +621,22 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       : Icons.visibility,
                 ),
               ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1),
+          const SizedBox(height: 10),
+          Text(
+            l10n.settingsSzentirasApiKeyLabel,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 4),
+          TextField(
+            controller: _szentirasApiKey,
+            onChanged: (_) => setBoth(() {}),
+            decoration: InputDecoration(
+              labelText: l10n.settingsSzentirasApiKeyLabel,
+              hintText: l10n.settingsSzentirasApiKeyHint,
             ),
           ),
           const SizedBox(height: 10),
@@ -1400,6 +1420,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       mqttUser: mqttUser,
       mqttPassword: mqttPassword,
       mqttChannel: '1',
+      szentirasApiKey: _szentirasApiKey.text.trim(),
     );
 
     unawaited(widget.onApply(updated));

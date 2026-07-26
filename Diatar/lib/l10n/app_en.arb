@@ -1039,5 +1039,33 @@
     "placeholders": {
       "error": {}
     }
-  }
+  },
+  "szentirasTooltip": "Bible",
+  "szentirasTitle": "Insert Bible verse",
+  "szentirasReferenceLabel": "Reference",
+  "szentirasReferenceHint": "e.g. 1Cor13,10-13",
+  "szentirasTranslationLabel": "Translation",
+  "szentirasTranslationDefault": "Default",
+  "szentirasFetchButton": "Fetch",
+  "szentirasImportButton": "Import",
+  "szentirasInsertAll": "Insert all ({count} verses)",
+  "@szentirasInsertAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "szentirasLoading": "Loading…",
+  "szentirasError": "Error: {error}",
+  "@szentirasError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "szentirasNoVerses": "No verses found.",
+  "settingsSzentirasApiKeyLabel": "szentiras.eu API key",
+  "settingsSzentirasApiKeyHint": "Key from szentiras.eu",
+  "szentirasApiKeyPrompt": "Enter your szentiras.eu API key to use the Bible feature.",
+  "statusSzentirasApiKeyMissing": "szentiras.eu API key is not set."
 }

@@ -1592,4 +1592,58 @@ class AppLocalizationsHu extends AppLocalizations {
   String diatarTransferError(Object error) {
     return 'A művelet nem sikerült: $error';
   }
+
+  @override
+  String get szentirasTooltip => 'Szentírás';
+
+  @override
+  String get szentirasTitle => 'Szentírás beillesztése';
+
+  @override
+  String get szentirasReferenceLabel => 'Hivatkozás';
+
+  @override
+  String get szentirasReferenceHint => 'pl. 1Kor13,10-13';
+
+  @override
+  String get szentirasTranslationLabel => 'Fordítás';
+
+  @override
+  String get szentirasTranslationDefault => 'Alapértelmezett';
+
+  @override
+  String get szentirasFetchButton => 'Betöltés';
+
+  @override
+  String get szentirasImportButton => 'Beillesztés';
+
+  @override
+  String szentirasInsertAll(int count) {
+    return 'Összes beszúrása ($count vers)';
+  }
+
+  @override
+  String get szentirasLoading => 'Betöltés…';
+
+  @override
+  String szentirasError(Object error) {
+    return 'Hiba: $error';
+  }
+
+  @override
+  String get szentirasNoVerses => 'Nem található vers.';
+
+  @override
+  String get settingsSzentirasApiKeyLabel => 'szentiras.eu API kulcs';
+
+  @override
+  String get settingsSzentirasApiKeyHint => 'Kulcs a szentiras.eu oldalról';
+
+  @override
+  String get szentirasApiKeyPrompt =>
+      'Add meg a szentiras.eu API kulcsot a Szentírás funkció használatához.';
+
+  @override
+  String get statusSzentirasApiKeyMissing =>
+      'Nincs beállítva a szentiras.eu API kulcs.';
 }

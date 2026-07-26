@@ -62,6 +62,7 @@ class AppSettings {
     this.castDeviceId = '',
     this.castPort = 1024,
     this.castAutoConnect = false,
+    this.szentirasApiKey = '',
     Color? bkColor,
     Color? txtColor,
     Color? blankColor,
@@ -131,6 +132,7 @@ class AppSettings {
   final String castDeviceId;
   final int castPort;
   final bool castAutoConnect;
+  final String szentirasApiKey;
   final Color? _bkColor;
   final Color? _txtColor;
   final Color? _blankColor;
@@ -207,6 +209,7 @@ class AppSettings {
     String? castDeviceId,
     int? castPort,
     bool? castAutoConnect,
+    String? szentirasApiKey,
     Color? bkColor,
     Color? txtColor,
     Color? blankColor,
@@ -281,6 +284,7 @@ class AppSettings {
        castDeviceId: castDeviceId ?? this.castDeviceId,
        castPort: castPort ?? this.castPort,
        castAutoConnect: castAutoConnect ?? this.castAutoConnect,
+       szentirasApiKey: szentirasApiKey ?? this.szentirasApiKey,
        bkColor: bkColor ?? this.bkColor,
       txtColor: txtColor ?? this.txtColor,
       blankColor: blankColor ?? this.blankColor,
@@ -333,6 +337,7 @@ class AppSettings {
        'castDeviceId': castDeviceId,
        'castPort': castPort,
        'castAutoConnect': castAutoConnect,
+       'szentirasApiKey': szentirasApiKey,
      };
   }
 
@@ -411,6 +416,7 @@ class AppSettings {
        castDeviceId: map['castDeviceId'] as String? ?? '',
        castPort: intValue('castPort', 1024),
        castAutoConnect: boolValue('castAutoConnect', false),
+       szentirasApiKey: map['szentirasApiKey'] as String? ?? '',
      );
   }
 }

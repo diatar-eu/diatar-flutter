@@ -47,6 +47,7 @@ import '../services/tcp_sender_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
 import '../services/zsolozsma_service.dart';
 import '../services/napi_lelki_batyu_service.dart';
+import '../services/szentiras_api_service.dart';
 
 export '../models/custom_order_entry.dart';
 
@@ -3800,6 +3801,33 @@ class DiatarMainController extends ChangeNotifier {
 
     await _appendCustomOrderEntry(entry);
     await _projectCustomOrderEntry(entry, cursor: _customOrderCursor);
+  }
+
+  Future<void> importSzentirasVerses({
+    required String translationName,
+    required List<SzentirasVerse> verses,
+  }) async {
+    if (verses.isEmpty) {
+      _setStatus('statusCustomTextEmpty');
+      notifyListeners();
+      return;
+    }
+    final String refLabel = verses.first.reference;
+    for (int i = 0; i < verses.length; i++) {
+      final SzentirasVerse v = verses[i];
+      final String label = '$refLabel/${i + 1}.';
+      final CustomOrderEntry entry = CustomOrderEntry(
+        fileName: '__custom_text__',
+        songIndex: -1,
+        verseIndex: 0,
+        label: '[Szentírás] $label',
+        customTextTitle: '',
+        customTextBody: v.text.trim(),
+        customType: 'text',
+      );
+      await _appendCustomOrderEntry(entry);
+    }
+    await _projectCustomOrderEntry(_customOrder.last, cursor: _customOrderCursor);
   }
 
   Future<void> sendCustomTextSlide({

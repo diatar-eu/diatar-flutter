@@ -20,6 +20,7 @@ import '../utils/friendly_path.dart';
 import '../services/song_search_service.dart';
 import '../services/zsolozsma_service.dart';
 import '../services/napi_lelki_batyu_service.dart';
+import '../services/szentiras_api_service.dart';
 import 'merge_indicator.dart';
 import 'song_search_sheet.dart';
 
@@ -463,6 +464,13 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                                           onPressed: _openBatyuDialog,
                                           icon: const Icon(
                                             Icons.auto_stories_outlined,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: l10n.szentirasTooltip,
+                                          onPressed: _openSzentirasDialog,
+                                          icon: const Icon(
+                                            Icons.menu_book,
                                           ),
                                         ),
                                         IconButton(
@@ -1029,6 +1037,15 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       context: context,
       builder: (BuildContext context) {
         return _BatyuDialog(controller: controller);
+      },
+    );
+  }
+
+  Future<void> _openSzentirasDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return _SzentirasDialog(controller: controller);
       },
     );
   }
@@ -2710,6 +2727,205 @@ class _BatyuDialogState extends State<_BatyuDialog> {
                   },
                 ),
               ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.close),
+        ),
+      ],
+    );
+  }
+}
+
+class _SzentirasDialog extends StatefulWidget {
+  const _SzentirasDialog({required this.controller});
+
+  final DiatarMainController controller;
+
+  @override
+  State<_SzentirasDialog> createState() => _SzentirasDialogState();
+}
+
+class _SzentirasDialogState extends State<_SzentirasDialog> {
+  final TextEditingController _referenceController = TextEditingController();
+  final SzentirasApiService _apiService = SzentirasApiService();
+  List<SzentirasTranslation> _translations = <SzentirasTranslation>[];
+  String? _selectedTranslation;
+  bool _loadingTranslations = false;
+  bool _loadingVerses = false;
+  String? _error;
+
+  String get _apiKey => widget.controller.settings.szentirasApiKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTranslations();
+  }
+
+  @override
+  void dispose() {
+    _referenceController.dispose();
+    _apiService.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadTranslations() async {
+    if (_apiKey.isEmpty) return;
+    setState(() {
+      _loadingTranslations = true;
+      _error = null;
+    });
+    try {
+      final List<SzentirasTranslation> translations =
+          await _apiService.getTranslations(_apiKey);
+      if (mounted) {
+        setState(() {
+          _translations = translations;
+          _loadingTranslations = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loadingTranslations = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchAndInsert() async {
+    final String reference = _referenceController.text.trim();
+    if (reference.isEmpty) return;
+    if (_apiKey.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _error = context.l10n.szentirasApiKeyPrompt;
+        });
+      }
+      return;
+    }
+    setState(() {
+      _loadingVerses = true;
+      _error = null;
+    });
+    try {
+      final SzentirasQuoteResult result = await _apiService.getQuote(
+        _apiKey,
+        reference,
+        translation: _selectedTranslation,
+      );
+      if (result.verses.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _error = context.l10n.szentirasNoVerses;
+            _loadingVerses = false;
+          });
+        }
+        return;
+      }
+      await widget.controller.importSzentirasVerses(
+        translationName: _selectedTranslation ?? '',
+        verses: result.verses,
+      );
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loadingVerses = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    if (_apiKey.isEmpty) {
+      return AlertDialog(
+        title: Text(l10n.szentirasTitle),
+        content: Text(l10n.szentirasApiKeyPrompt),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.close),
+          ),
+        ],
+      );
+    }
+    return AlertDialog(
+      title: Text(l10n.szentirasTitle),
+      content: SizedBox(
+        width: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            TextField(
+              controller: _referenceController,
+              decoration: InputDecoration(
+                labelText: l10n.szentirasReferenceLabel,
+                hintText: l10n.szentirasReferenceHint,
+              ),
+              onSubmitted: (_) => _fetchAndInsert(),
+            ),
+            const SizedBox(height: 12),
+            if (_loadingTranslations)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_translations.isNotEmpty)
+              DropdownButtonFormField<String>(
+                isExpanded: true,
+                initialValue: _selectedTranslation,
+                decoration: InputDecoration(
+                  labelText: l10n.szentirasTranslationLabel,
+                ),
+                items: <DropdownMenuItem<String>>[
+                  DropdownMenuItem<String>(
+                    value: null,
+                    child: Text(l10n.szentirasTranslationDefault),
+                  ),
+                  ..._translations.map((SzentirasTranslation t) {
+                    return DropdownMenuItem<String>(
+                      value: t.abbrev,
+                      child: Text('${t.name} (${t.abbrev})'),
+                    );
+                  }),
+                ],
+                onChanged: (String? v) {
+                  setState(() {
+                    _selectedTranslation = v;
+                  });
+                },
+              ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _loadingVerses ? null : _fetchAndInsert,
+              icon: _loadingVerses
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.search),
+              label: Text(l10n.szentirasFetchButton),
+            ),
+            if (_error != null) ...<Widget>[
+              const SizedBox(height: 12),
+              Text(
+                l10n.szentirasError(_error!),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
           ],
         ),
       ),
