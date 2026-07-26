@@ -488,6 +488,90 @@ abstract class AppLocalizations {
   /// **'Ha megszakad az internet vagy a helyi hálózati kapcsolat, jelenjen meg újra a logo, amíg nincs kapcsolat.'**
   String get keepStartupLogoHint;
 
+  /// No description provided for @qrScanButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'QR beolvasás'**
+  String get qrScanButton;
+
+  /// No description provided for @qrScanTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'QR-kód beolvasása'**
+  String get qrScanTitle;
+
+  /// No description provided for @qrScanHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Irányítsd a kamerát a QR-kódra.'**
+  String get qrScanHint;
+
+  /// No description provided for @qrScanUnsupportedTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'QR beolvasás nem elérhető'**
+  String get qrScanUnsupportedTitle;
+
+  /// No description provided for @qrScanUnsupportedMessage.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ezen az eszközön a kamerás QR beolvasás nem támogatott.'**
+  String get qrScanUnsupportedMessage;
+
+  /// No description provided for @qrScanUnknownLinkTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ismeretlen link'**
+  String get qrScanUnknownLinkTitle;
+
+  /// No description provided for @qrScanUnknownLinkMessage.
+  ///
+  /// In hu, this message translates to:
+  /// **'A beolvasott QR-kód nem a támogatott DiaVetítő hivatkozás.'**
+  String get qrScanUnknownLinkMessage;
+
+  /// No description provided for @qrScanConnectSuccessTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kapcsolódás sikeres'**
+  String get qrScanConnectSuccessTitle;
+
+  /// No description provided for @qrScanConnectFailedTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kapcsolódás sikertelen'**
+  String get qrScanConnectFailedTitle;
+
+  /// No description provided for @qrScanConnectResultPrefix.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felismert felhasználó: '**
+  String get qrScanConnectResultPrefix;
+
+  /// No description provided for @qrScanConnectSuccessSuffix.
+  ///
+  /// In hu, this message translates to:
+  /// **'\nInternetes kapcsolat elindítva. A TCP kapcsolat kikapcsolt állapotba került.'**
+  String get qrScanConnectSuccessSuffix;
+
+  /// No description provided for @qrScanConnectFailedSuffix.
+  ///
+  /// In hu, this message translates to:
+  /// **'\nNem sikerült internetes kapcsolódást létrehozni.'**
+  String get qrScanConnectFailedSuffix;
+
+  /// No description provided for @qrScanSenderSetTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Küldő beállítva'**
+  String get qrScanSenderSetTitle;
+
+  /// No description provided for @qrScanSenderSetMessage.
+  ///
+  /// In hu, this message translates to:
+  /// **'A küldő mezőbe beírva: {user}'**
+  String qrScanSenderSetMessage(Object user);
+
   /// No description provided for @localColorsTitle.
   ///
   /// In hu, this message translates to:

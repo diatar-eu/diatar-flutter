@@ -494,6 +494,19 @@
   "internetRelayLinkLabel": "Megnyitási link",
   "internetRelayCopyLink": "Link másolása",
   "internetRelayLinkCopied": "A link a vágólapra került",
+  "internetRelaySaveQrImage": "QR mentése PNG-ként",
+  "internetRelayQrSaved": "QR kép mentve: {fileName}",
+  "@internetRelayQrSaved": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "internetRelayQrSaveFailed": "A QR kép mentése sikertelen: {error}",
+  "@internetRelayQrSaveFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "uiTheme": "Felhasználói felület témája",
   "themeDark": "Sötét",
   "themeLight": "Világos",

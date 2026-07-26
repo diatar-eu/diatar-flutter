@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../controllers/projection_controller.dart';
@@ -18,6 +20,10 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static final RegExp _supportedReceiverLinkPattern = RegExp(
+    r'^https://web\.diatar\.eu/diavetito/\?mqtt=([^&?#]+)$',
+  );
+
   double? _canvasHeight;
   Size? _lastViewport;
   int _lastFrameSignature = 0;
@@ -138,37 +144,10 @@ class _HomePageState extends State<HomePage> {
                     Positioned(
                       right: 12,
                       bottom: 12,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white24),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              Text(
-                                context.l10n.keepStartupLogo,
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                              const SizedBox(width: 8),
-                              Switch.adaptive(
-                                value:
-                                    controller.settings.receiverKeepStartupLogo,
-                                onChanged: (bool value) {
-                                  unawaited(
-                                    controller.setKeepStartupLogo(value),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
+                      child: FilledButton.icon(
+                        onPressed: _scanQrAndConnect,
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: Text(context.l10n.qrScanButton),
                       ),
                     ),
                 ],
@@ -234,6 +213,7 @@ class _HomePageState extends State<HomePage> {
           onApply: (settings) {
             controller.applySettings(settings);
           },
+          onConnectInternetFromQr: controller.connectInternetFromQrUsername,
           onRefreshUsers: controller.refreshMqttUsers,
           onSenderFilterChanged: controller.updateSenderFilter,
           onExitRequested: controller.requestExit,
@@ -263,6 +243,195 @@ class _HomePageState extends State<HomePage> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(l10n.ok),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _scanQrAndConnect() async {
+    if (kIsWeb ||
+        (defaultTargetPlatform != TargetPlatform.android &&
+            defaultTargetPlatform != TargetPlatform.iOS)) {
+      await _showSimpleDialog(
+        title: context.l10n.qrScanUnsupportedTitle,
+        message: context.l10n.qrScanUnsupportedMessage,
+      );
+      return;
+    }
+
+    final String? scannedValue = await _scanQrCodeValue();
+    if (!mounted || scannedValue == null) {
+      return;
+    }
+    final String? mqttUser = _extractMqttUserFromReceiverLink(scannedValue);
+    if (mqttUser == null) {
+      await _showSimpleDialog(
+        title: context.l10n.qrScanUnknownLinkTitle,
+        message: context.l10n.qrScanUnknownLinkMessage,
+      );
+      return;
+    }
+
+    final bool connected = await controller.connectInternetFromQrUsername(
+      mqttUser,
+    );
+    if (!mounted) {
+      return;
+    }
+    await _showQrConnectionDialog(mqttUser: mqttUser, connected: connected);
+  }
+
+  String? _extractMqttUserFromReceiverLink(String value) {
+    final String raw = value.trim();
+    final RegExpMatch? match = _supportedReceiverLinkPattern.firstMatch(raw);
+    if (match == null) {
+      return null;
+    }
+    final Uri? uri = Uri.tryParse(raw);
+    if (uri == null || uri.hasPort || uri.fragment.isNotEmpty) {
+      return null;
+    }
+    if (uri.queryParameters.length != 1 || !uri.queryParameters.containsKey('mqtt')) {
+      return null;
+    }
+    final String user = uri.queryParameters['mqtt']?.trim() ?? '';
+    return user.isEmpty ? null : user;
+  }
+
+  Future<String?> _scanQrCodeValue() async {
+    final MobileScannerController scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      formats: const <BarcodeFormat>[BarcodeFormat.qrCode],
+    );
+    bool handled = false;
+
+    try {
+      return await showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        useRootNavigator: true,
+        builder: (BuildContext context) {
+          final l10n = context.l10n;
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    l10n.qrScanTitle,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(l10n.qrScanHint),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      height: 320,
+                      width: double.infinity,
+                      child: MobileScanner(
+                        controller: scannerController,
+                        onDetect: (BarcodeCapture capture) {
+                          if (handled) {
+                            return;
+                          }
+                          final String code = capture.barcodes
+                              .map((Barcode b) => b.rawValue?.trim())
+                              .whereType<String>()
+                              .firstWhere(
+                                (String s) => s.isNotEmpty,
+                                orElse: () => '',
+                              );
+                          if (code.isEmpty) {
+                            return;
+                          }
+                          handled = true;
+                          Navigator.of(context).pop(code);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(l10n.cancel),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } finally {
+      unawaited(scannerController.dispose());
+    }
+  }
+
+  Future<void> _showSimpleDialog({
+    required String title,
+    required String message,
+  }) {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: <Widget>[
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(dialogContext.l10n.ok),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showQrConnectionDialog({
+    required String mqttUser,
+    required bool connected,
+  }) {
+    final l10n = context.l10n;
+    final TextStyle? baseStyle = Theme.of(context).textTheme.bodyMedium;
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(
+            connected ? l10n.qrScanConnectSuccessTitle : l10n.qrScanConnectFailedTitle,
+          ),
+          content: RichText(
+            text: TextSpan(
+              style: baseStyle,
+              children: <InlineSpan>[
+                TextSpan(text: l10n.qrScanConnectResultPrefix),
+                TextSpan(
+                  text: mqttUser,
+                  style: baseStyle?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                TextSpan(
+                  text: connected
+                      ? l10n.qrScanConnectSuccessSuffix
+                      : l10n.qrScanConnectFailedSuffix,
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(dialogContext.l10n.ok),
             ),
           ],
         );

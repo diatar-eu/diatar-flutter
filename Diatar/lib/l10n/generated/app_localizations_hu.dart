@@ -631,6 +631,19 @@ class AppLocalizationsHu extends AppLocalizations {
   String get internetRelayLinkCopied => 'A link a vágólapra került';
 
   @override
+  String get internetRelaySaveQrImage => 'QR mentése PNG-ként';
+
+  @override
+  String internetRelayQrSaved(Object fileName) {
+    return 'QR kép mentve: $fileName';
+  }
+
+  @override
+  String internetRelayQrSaveFailed(Object error) {
+    return 'A QR kép mentése sikertelen: $error';
+  }
+
+  @override
   String get uiTheme => 'Felhasználói felület témája';
 
   @override

@@ -628,6 +628,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get internetRelayLinkCopied => 'Link copied to clipboard';
 
   @override
+  String get internetRelaySaveQrImage => 'Save QR as PNG';
+
+  @override
+  String internetRelayQrSaved(Object fileName) {
+    return 'QR image saved: $fileName';
+  }
+
+  @override
+  String internetRelayQrSaveFailed(Object error) {
+    return 'Failed to save QR image: $error';
+  }
+
+  @override
   String get uiTheme => 'User interface theme';
 
   @override

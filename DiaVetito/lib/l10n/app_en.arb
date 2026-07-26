@@ -123,6 +123,25 @@
   "scrollableProjectionHint": "If turned off, text is auto-sized to fit the projection area.",
   "keepStartupLogo": "Startup logo when disconnected",
   "keepStartupLogoHint": "If internet or local network connection is lost, show the logo screen again until connection is restored.",
+  "qrScanButton": "Scan QR",
+  "qrScanTitle": "Scan QR code",
+  "qrScanHint": "Point the camera at the QR code.",
+  "qrScanUnsupportedTitle": "QR scanning unavailable",
+  "qrScanUnsupportedMessage": "Camera QR scanning is not supported on this device.",
+  "qrScanUnknownLinkTitle": "Unknown link",
+  "qrScanUnknownLinkMessage": "The scanned QR code is not a supported DiaVetito link.",
+  "qrScanConnectSuccessTitle": "Connection successful",
+  "qrScanConnectFailedTitle": "Connection failed",
+  "qrScanConnectResultPrefix": "Detected user: ",
+  "qrScanConnectSuccessSuffix": "\nInternet connection started. TCP connection has been turned off.",
+  "qrScanConnectFailedSuffix": "\nCould not establish internet connection.",
+  "qrScanSenderSetTitle": "Sender set",
+  "qrScanSenderSetMessage": "Sender field updated to: {user}",
+  "@qrScanSenderSetMessage": {
+    "placeholders": {
+      "user": {}
+    }
+  },
   "localColorsTitle": "Local colors",
   "backgroundColorLabel": "Background color",
   "textColorLabel": "Text color",

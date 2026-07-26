@@ -1103,6 +1103,24 @@ abstract class AppLocalizations {
   /// **'A link a vágólapra került'**
   String get internetRelayLinkCopied;
 
+  /// No description provided for @internetRelaySaveQrImage.
+  ///
+  /// In hu, this message translates to:
+  /// **'QR mentése PNG-ként'**
+  String get internetRelaySaveQrImage;
+
+  /// No description provided for @internetRelayQrSaved.
+  ///
+  /// In hu, this message translates to:
+  /// **'QR kép mentve: {fileName}'**
+  String internetRelayQrSaved(Object fileName);
+
+  /// No description provided for @internetRelayQrSaveFailed.
+  ///
+  /// In hu, this message translates to:
+  /// **'A QR kép mentése sikertelen: {error}'**
+  String internetRelayQrSaveFailed(Object error);
+
   /// No description provided for @uiTheme.
   ///
   /// In hu, this message translates to:

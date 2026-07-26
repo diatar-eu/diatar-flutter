@@ -231,6 +231,54 @@ class AppLocalizationsHu extends AppLocalizations {
       'Ha megszakad az internet vagy a helyi hálózati kapcsolat, jelenjen meg újra a logo, amíg nincs kapcsolat.';
 
   @override
+  String get qrScanButton => 'QR beolvasás';
+
+  @override
+  String get qrScanTitle => 'QR-kód beolvasása';
+
+  @override
+  String get qrScanHint => 'Irányítsd a kamerát a QR-kódra.';
+
+  @override
+  String get qrScanUnsupportedTitle => 'QR beolvasás nem elérhető';
+
+  @override
+  String get qrScanUnsupportedMessage =>
+      'Ezen az eszközön a kamerás QR beolvasás nem támogatott.';
+
+  @override
+  String get qrScanUnknownLinkTitle => 'Ismeretlen link';
+
+  @override
+  String get qrScanUnknownLinkMessage =>
+      'A beolvasott QR-kód nem a támogatott DiaVetítő hivatkozás.';
+
+  @override
+  String get qrScanConnectSuccessTitle => 'Kapcsolódás sikeres';
+
+  @override
+  String get qrScanConnectFailedTitle => 'Kapcsolódás sikertelen';
+
+  @override
+  String get qrScanConnectResultPrefix => 'Felismert felhasználó: ';
+
+  @override
+  String get qrScanConnectSuccessSuffix =>
+      '\nInternetes kapcsolat elindítva. A TCP kapcsolat kikapcsolt állapotba került.';
+
+  @override
+  String get qrScanConnectFailedSuffix =>
+      '\nNem sikerült internetes kapcsolódást létrehozni.';
+
+  @override
+  String get qrScanSenderSetTitle => 'Küldő beállítva';
+
+  @override
+  String qrScanSenderSetMessage(Object user) {
+    return 'A küldő mezőbe beírva: $user';
+  }
+
+  @override
   String get localColorsTitle => 'Helyi színek';
 
   @override

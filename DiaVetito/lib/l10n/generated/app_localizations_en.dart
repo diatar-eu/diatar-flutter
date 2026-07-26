@@ -231,6 +231,54 @@ class AppLocalizationsEn extends AppLocalizations {
       'If internet or local network connection is lost, show the logo screen again until connection is restored.';
 
   @override
+  String get qrScanButton => 'Scan QR';
+
+  @override
+  String get qrScanTitle => 'Scan QR code';
+
+  @override
+  String get qrScanHint => 'Point the camera at the QR code.';
+
+  @override
+  String get qrScanUnsupportedTitle => 'QR scanning unavailable';
+
+  @override
+  String get qrScanUnsupportedMessage =>
+      'Camera QR scanning is not supported on this device.';
+
+  @override
+  String get qrScanUnknownLinkTitle => 'Unknown link';
+
+  @override
+  String get qrScanUnknownLinkMessage =>
+      'The scanned QR code is not a supported DiaVetito link.';
+
+  @override
+  String get qrScanConnectSuccessTitle => 'Connection successful';
+
+  @override
+  String get qrScanConnectFailedTitle => 'Connection failed';
+
+  @override
+  String get qrScanConnectResultPrefix => 'Detected user: ';
+
+  @override
+  String get qrScanConnectSuccessSuffix =>
+      '\nInternet connection started. TCP connection has been turned off.';
+
+  @override
+  String get qrScanConnectFailedSuffix =>
+      '\nCould not establish internet connection.';
+
+  @override
+  String get qrScanSenderSetTitle => 'Sender set';
+
+  @override
+  String qrScanSenderSetMessage(Object user) {
+    return 'Sender field updated to: $user';
+  }
+
+  @override
   String get localColorsTitle => 'Local colors';
 
   @override

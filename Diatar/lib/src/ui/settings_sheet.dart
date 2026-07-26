@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
@@ -1029,75 +1030,228 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   Future<void> _openInternetQrDialog(BuildContext sectionContext) {
     final String url = _internetRelayUrl;
-    final AppLocalizations l10n = context.l10n;
-    return showDialog<void>(
-      context: context,
+    final AppLocalizations l10n = sectionContext.l10n;
+    return showModalBottomSheet<void>(
+      context: sectionContext,
+      isScrollControlled: true,
+      useRootNavigator: false,
+      enableDrag: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(sectionContext).colorScheme.surface,
       builder: (BuildContext context) {
         final Size size = MediaQuery.sizeOf(context);
-        final double maxSide = math.min(size.width, size.height);
-        final double qrSize = maxSide.clamp(220.0, 520.0);
-        return AlertDialog(
-          title: Text(l10n.internetRelayQrTitle),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Center(
-                  child: Container(
-                    color: Colors.white,
-                    padding: const EdgeInsets.all(12),
-                    child: QrImageView(
-                      data: url,
-                      version: QrVersions.auto,
-                      size: qrSize,
-                      backgroundColor: Colors.white,
+        final double maxQrWidth = (size.width - 56).clamp(140.0, 520.0);
+        final double maxQrHeight = (size.height - 360).clamp(140.0, 520.0);
+        final double qrSize = math.min(maxQrWidth, maxQrHeight);
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 8,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Text(
+                    l10n.internetRelayQrTitle,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.internetRelayQrHint,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.internetRelayLinkLabel,
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                const SizedBox(height: 4),
-                SelectableText(
-                  url,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.all(12),
+                      child: QrImageView(
+                        data: url,
+                        version: QrVersions.auto,
+                        size: qrSize,
+                        backgroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.internetRelayQrHint,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.internetRelayLinkLabel,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  SelectableText(
+                    url,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 12),
+                  OverflowBar(
+                    alignment: MainAxisAlignment.end,
+                    spacing: 8,
+                    overflowSpacing: 8,
+                    children: <Widget>[
+                      TextButton.icon(
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: url));
+                          if (!mounted) {
+                            return;
+                          }
+                          await _showInternetResultDialog(
+                            l10n.internetRelayLinkCopied,
+                          );
+                        },
+                        icon: const Icon(Icons.copy_all),
+                        label: Text(l10n.internetRelayCopyLink),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _saveInternetQrImage(sectionContext),
+                        icon: const Icon(Icons.image_outlined),
+                        label: Text(l10n.internetRelaySaveQrImage),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(l10n.close),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: <Widget>[
-            TextButton.icon(
-              onPressed: () async {
-                final ScaffoldMessengerState messenger = ScaffoldMessenger.of(
-                  sectionContext,
-                );
-                await Clipboard.setData(ClipboardData(text: url));
-                if (!mounted) {
-                  return;
-                }
-                messenger.showSnackBar(
-                  SnackBar(content: Text(l10n.internetRelayLinkCopied)),
-                );
-              },
-              icon: const Icon(Icons.copy_all),
-              label: Text(l10n.internetRelayCopyLink),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(l10n.close),
-            ),
-          ],
         );
       },
     );
+  }
+
+  Future<Uint8List?> _buildInternetQrPng(String url, {double size = 1200}) {
+    final QrPainter painter = QrPainter(
+      data: url,
+      version: QrVersions.auto,
+      gapless: true,
+    );
+    return painter
+        .toImageData(size, format: ui.ImageByteFormat.png)
+        .then((ByteData? data) => data?.buffer.asUint8List());
+  }
+
+  String _internetQrFileName() {
+    final String user = _mqttUser.text.trim();
+    final String safeUser = user
+        .replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+    if (safeUser.isEmpty) {
+      return 'diavetito-qr.png';
+    }
+    return 'diavetito-$safeUser-qr.png';
+  }
+
+  XTypeGroup _qrPngType(AppLocalizations l10n) {
+    return XTypeGroup(
+      label: l10n.imagesFileTypeLabel,
+      extensions: const <String>['png'],
+      mimeTypes: const <String>['image/png'],
+      uniformTypeIdentifiers: const <String>['public.png'],
+    );
+  }
+
+  Future<void> _saveInternetQrImage(BuildContext sectionContext) async {
+    final AppLocalizations l10n = sectionContext.l10n;
+    final String url = _internetRelayUrl;
+    try {
+      final Uint8List? png = await _buildInternetQrPng(url);
+      if (png == null || png.isEmpty) {
+        throw Exception('QR generation failed');
+      }
+      final String fileName = _internetQrFileName();
+      final XFile imageFile = XFile.fromData(
+        png,
+        mimeType: 'image/png',
+        name: fileName,
+      );
+      String savedPath = fileName;
+
+      if (kIsWeb) {
+        await imageFile.saveTo(fileName);
+      } else if (defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          final String? exported = await _saveInternetQrWithAndroidSystemDialog(
+            fileName: fileName,
+            bytes: png,
+          );
+          if (exported == null) {
+            return;
+          }
+          savedPath = exported;
+        } on MissingPluginException {
+          savedPath = await _saveInternetQrToDocumentsDirectory(
+            fileName: fileName,
+            bytes: png,
+          );
+        }
+      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+        savedPath = await _saveInternetQrToDocumentsDirectory(
+          fileName: fileName,
+          bytes: png,
+        );
+      } else {
+        final FileSaveLocation? location = await getSaveLocation(
+          acceptedTypeGroups: <XTypeGroup>[_qrPngType(l10n)],
+          suggestedName: fileName,
+        );
+        if (location == null) {
+          return;
+        }
+        await imageFile.saveTo(location.path);
+        savedPath = location.path;
+      }
+
+      if (!sectionContext.mounted) {
+        return;
+      }
+      await _showInternetResultDialog(
+        l10n.savedPath(formatFriendlyPathLabel(savedPath, l10n)),
+      );
+    } catch (error) {
+      if (!sectionContext.mounted) {
+        return;
+      }
+      await _showInternetResultDialog(
+        l10n.internetRelayQrSaveFailed(error.toString()),
+      );
+    }
+  }
+
+  Future<String?> _saveInternetQrWithAndroidSystemDialog({
+    required String fileName,
+    required Uint8List bytes,
+  }) {
+    return _androidBackupSaveChannel.invokeMethod<String>(
+      'saveDiaFile',
+      <String, Object?>{
+        'fileName': fileName,
+        'bytes': bytes,
+      },
+    );
+  }
+
+  Future<String> _saveInternetQrToDocumentsDirectory({
+    required String fileName,
+    required Uint8List bytes,
+  }) async {
+    final String documentsPath = await PathHelper.getDocumentsDirectoryPath();
+    final String exportPath = '$documentsPath/diatar/$fileName';
+    final File exportFile = FileSystemProvider.instance.file(exportPath);
+    await exportFile.parent.create(recursive: true);
+    await exportFile.writeAsBytes(bytes, flush: true);
+    return exportPath;
   }
 
   Future<void> _runUserApiAction({

@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../l10n/generated/app_localizations.dart';
@@ -14,6 +16,7 @@ class SettingsSheet extends StatefulWidget {
     required this.initialSettings,
     required this.senderSuggestions,
     required this.onApply,
+    required this.onConnectInternetFromQr,
     required this.onRefreshUsers,
     required this.onSenderFilterChanged,
     required this.onExitRequested,
@@ -23,6 +26,7 @@ class SettingsSheet extends StatefulWidget {
   final AppSettings initialSettings;
   final List<String> senderSuggestions;
   final ValueChanged<AppSettings> onApply;
+  final Future<bool> Function(String username) onConnectInternetFromQr;
   final VoidCallback onRefreshUsers;
   final ValueChanged<String> onSenderFilterChanged;
   final VoidCallback onExitRequested;
@@ -33,6 +37,10 @@ class SettingsSheet extends StatefulWidget {
 }
 
 class _SettingsSheetState extends State<SettingsSheet> {
+  static final RegExp _supportedReceiverLinkPattern = RegExp(
+    r'^https://web\.diatar\.eu/diavetito/\?mqtt=([^&?#]+)$',
+  );
+
   static const List<Color> _palette = <Color>[
     Color(0xFF000000),
     Color(0xFF1E1E1E),
@@ -277,6 +285,14 @@ class _SettingsSheetState extends State<SettingsSheet> {
                       ),
                       onTap: _openInternetSettings,
                     ),
+                  if (showInternet) const Divider(height: 1),
+                  if (showInternet)
+                    _settingsTile(
+                      leading: const Icon(Icons.qr_code_scanner),
+                      title: Text(l10n.qrScanButton),
+                      subtitle: Text(l10n.qrScanHint),
+                      onTap: _scanAndConnectFromMainSettings,
+                    ),
                   if (showInternet &&
                       (showLan ||
                           showProjectionImage ||
@@ -505,6 +521,169 @@ class _SettingsSheetState extends State<SettingsSheet> {
             decoration: InputDecoration(labelText: l10n.tcpPortRange),
           ),
         ];
+      },
+    );
+  }
+
+  Future<void> _scanAndConnectFromMainSettings() async {
+    final l10n = context.l10n;
+    if (kIsWeb ||
+        (defaultTargetPlatform != TargetPlatform.android &&
+            defaultTargetPlatform != TargetPlatform.iOS)) {
+      await _showSectionOkDialog(
+        context,
+        title: l10n.qrScanUnsupportedTitle,
+        message: l10n.qrScanUnsupportedMessage,
+      );
+      return;
+    }
+
+    final String? scannedValue = await _scanQrCodeValue(context);
+    if (!mounted || scannedValue == null) {
+      return;
+    }
+    final String? mqttUser = _extractMqttUserFromReceiverLink(scannedValue);
+    if (mqttUser == null) {
+      await _showSectionOkDialog(
+        context,
+        title: l10n.qrScanUnknownLinkTitle,
+        message: l10n.qrScanUnknownLinkMessage,
+      );
+      return;
+    }
+
+    setState(() {
+      _ipMode = false;
+      _mqttUser.text = mqttUser;
+    });
+
+    final bool connected = await widget.onConnectInternetFromQr(mqttUser);
+    if (!mounted) {
+      return;
+    }
+    await _showSectionOkDialog(
+      context,
+      title: connected
+          ? l10n.qrScanConnectSuccessTitle
+          : l10n.qrScanConnectFailedTitle,
+      message:
+          '${l10n.qrScanConnectResultPrefix}$mqttUser${connected ? l10n.qrScanConnectSuccessSuffix : l10n.qrScanConnectFailedSuffix}',
+    );
+  }
+
+  String? _extractMqttUserFromReceiverLink(String value) {
+    final String raw = value.trim();
+    final RegExpMatch? match = _supportedReceiverLinkPattern.firstMatch(raw);
+    if (match == null) {
+      return null;
+    }
+    final Uri? uri = Uri.tryParse(raw);
+    if (uri == null || uri.hasPort || uri.fragment.isNotEmpty) {
+      return null;
+    }
+    if (uri.queryParameters.length != 1 ||
+        !uri.queryParameters.containsKey('mqtt')) {
+      return null;
+    }
+    final String user = uri.queryParameters['mqtt']?.trim() ?? '';
+    return user.isEmpty ? null : user;
+  }
+
+  Future<String?> _scanQrCodeValue(BuildContext sectionContext) async {
+    final MobileScannerController scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      formats: const <BarcodeFormat>[BarcodeFormat.qrCode],
+    );
+    bool handled = false;
+    try {
+      return await showModalBottomSheet<String>(
+        context: sectionContext,
+        isScrollControlled: true,
+        useRootNavigator: false,
+        builder: (BuildContext context) {
+          final l10n = context.l10n;
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    l10n.qrScanTitle,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(l10n.qrScanHint),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      height: 320,
+                      width: double.infinity,
+                      child: MobileScanner(
+                        controller: scannerController,
+                        onDetect: (BarcodeCapture capture) {
+                          if (handled) {
+                            return;
+                          }
+                          final String code = capture.barcodes
+                              .map((Barcode b) => b.rawValue?.trim())
+                              .whereType<String>()
+                              .firstWhere(
+                                (String s) => s.isNotEmpty,
+                                orElse: () => '',
+                              );
+                          if (code.isEmpty) {
+                            return;
+                          }
+                          handled = true;
+                          Navigator.of(context).pop(code);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(l10n.cancel),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } finally {
+      unawaited(scannerController.dispose());
+    }
+  }
+
+  Future<void> _showSectionOkDialog(
+    BuildContext sectionContext, {
+    required String title,
+    required String message,
+  }) {
+    return showDialog<void>(
+      context: sectionContext,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: <Widget>[
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(context.l10n.ok),
+            ),
+          ],
+        );
       },
     );
   }

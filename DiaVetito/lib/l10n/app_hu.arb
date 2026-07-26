@@ -123,6 +123,25 @@
   "scrollableProjectionHint": "Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.",
   "keepStartupLogo": "Induló logo, ha nincs kapcsolat",
   "keepStartupLogoHint": "Ha megszakad az internet vagy a helyi hálózati kapcsolat, jelenjen meg újra a logo, amíg nincs kapcsolat.",
+  "qrScanButton": "QR beolvasás",
+  "qrScanTitle": "QR-kód beolvasása",
+  "qrScanHint": "Irányítsd a kamerát a QR-kódra.",
+  "qrScanUnsupportedTitle": "QR beolvasás nem elérhető",
+  "qrScanUnsupportedMessage": "Ezen az eszközön a kamerás QR beolvasás nem támogatott.",
+  "qrScanUnknownLinkTitle": "Ismeretlen link",
+  "qrScanUnknownLinkMessage": "A beolvasott QR-kód nem a támogatott DiaVetítő hivatkozás.",
+  "qrScanConnectSuccessTitle": "Kapcsolódás sikeres",
+  "qrScanConnectFailedTitle": "Kapcsolódás sikertelen",
+  "qrScanConnectResultPrefix": "Felismert felhasználó: ",
+  "qrScanConnectSuccessSuffix": "\nInternetes kapcsolat elindítva. A TCP kapcsolat kikapcsolt állapotba került.",
+  "qrScanConnectFailedSuffix": "\nNem sikerült internetes kapcsolódást létrehozni.",
+  "qrScanSenderSetTitle": "Küldő beállítva",
+  "qrScanSenderSetMessage": "A küldő mezőbe beírva: {user}",
+  "@qrScanSenderSetMessage": {
+    "placeholders": {
+      "user": {}
+    }
+  },
   "localColorsTitle": "Helyi színek",
   "backgroundColorLabel": "Háttérszín",
   "textColorLabel": "Szövegszín",

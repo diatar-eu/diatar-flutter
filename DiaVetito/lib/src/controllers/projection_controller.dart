@@ -146,6 +146,36 @@ class ProjectionController extends ChangeNotifier {
     }
   }
 
+  Future<bool> connectInternetFromQrUsername(
+    String username, {
+    Duration timeout = const Duration(seconds: 6),
+  }) async {
+    if (_disposed) {
+      return false;
+    }
+    final String user = username.trim();
+    if (user.isEmpty) {
+      return false;
+    }
+
+    settings = settings.copyWith(mqttUser: user, mqttChannel: '1');
+    await _settingsStore.save(settings);
+    globals = _applyReceiverDisplayFilters(globals);
+    await _applyTransport();
+    if (!_disposed) {
+      notifyListeners();
+    }
+
+    final DateTime deadline = DateTime.now().add(timeout);
+    while (!_disposed && DateTime.now().isBefore(deadline)) {
+      if (mqttConnected) {
+        return true;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    return mqttConnected;
+  }
+
   bool get _transportConnected => mqttActive ? mqttConnected : connected;
 
   bool get _transportConfigured =>

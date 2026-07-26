@@ -494,6 +494,19 @@
   "internetRelayLinkLabel": "Open link",
   "internetRelayCopyLink": "Copy link",
   "internetRelayLinkCopied": "Link copied to clipboard",
+  "internetRelaySaveQrImage": "Save QR as PNG",
+  "internetRelayQrSaved": "QR image saved: {fileName}",
+  "@internetRelayQrSaved": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "internetRelayQrSaveFailed": "Failed to save QR image: {error}",
+  "@internetRelayQrSaveFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "uiTheme": "User interface theme",
   "themeDark": "Dark",
   "themeLight": "Light",
