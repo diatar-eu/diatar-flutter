@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
@@ -6,6 +7,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../utils/path_helper.dart';
@@ -126,6 +128,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   String _buildNumber = '-';
   final ExportImportService _exportImportService = ExportImportService();
   bool _fileTransferRunning = false;
+
+  String get _internetRelayUrl => webDiaVetitoUrl(_mqttUser.text);
+
+  bool get _canShowInternetQr =>
+      _internetRelayEnabled && _mqttUser.text.trim().isNotEmpty;
 
   @override
   void initState() {
@@ -571,8 +578,22 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           ),
           const SizedBox(height: 8),
           SelectableText(
-            webDiaVetitoUrl(_mqttUser.text),
+            _internetRelayUrl,
             style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              OutlinedButton.icon(
+                onPressed: _canShowInternetQr
+                    ? () => _openInternetQrDialog(context)
+                    : null,
+                icon: const Icon(Icons.qr_code_2),
+                label: Text(l10n.internetRelayQrButton),
+              ),
+            ],
           ),
           TextField(
             controller: _mqttPassword,
@@ -999,6 +1020,79 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(context.l10n.ok),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _openInternetQrDialog(BuildContext sectionContext) {
+    final String url = _internetRelayUrl;
+    final AppLocalizations l10n = context.l10n;
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        final Size size = MediaQuery.sizeOf(context);
+        final double maxSide = math.min(size.width, size.height);
+        final double qrSize = maxSide.clamp(220.0, 520.0);
+        return AlertDialog(
+          title: Text(l10n.internetRelayQrTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Center(
+                  child: Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.all(12),
+                    child: QrImageView(
+                      data: url,
+                      version: QrVersions.auto,
+                      size: qrSize,
+                      backgroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.internetRelayQrHint,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.internetRelayLinkLabel,
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                const SizedBox(height: 4),
+                SelectableText(
+                  url,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton.icon(
+              onPressed: () async {
+                final ScaffoldMessengerState messenger = ScaffoldMessenger.of(
+                  sectionContext,
+                );
+                await Clipboard.setData(ClipboardData(text: url));
+                if (!mounted) {
+                  return;
+                }
+                messenger.showSnackBar(
+                  SnackBar(content: Text(l10n.internetRelayLinkCopied)),
+                );
+              },
+              icon: const Icon(Icons.copy_all),
+              label: Text(l10n.internetRelayCopyLink),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.close),
             ),
           ],
         );

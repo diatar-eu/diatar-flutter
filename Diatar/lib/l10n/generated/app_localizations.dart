@@ -1067,6 +1067,42 @@ abstract class AppLocalizations {
   /// **'MQTT csatorna'**
   String get mqttChannel;
 
+  /// No description provided for @internetRelayQrButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'QR-kód'**
+  String get internetRelayQrButton;
+
+  /// No description provided for @internetRelayQrTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'DiaVetítő QR-kód'**
+  String get internetRelayQrTitle;
+
+  /// No description provided for @internetRelayQrHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Olvasd be a QR-kódot a webes DiaVetítő gyors megnyitásához.'**
+  String get internetRelayQrHint;
+
+  /// No description provided for @internetRelayLinkLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Megnyitási link'**
+  String get internetRelayLinkLabel;
+
+  /// No description provided for @internetRelayCopyLink.
+  ///
+  /// In hu, this message translates to:
+  /// **'Link másolása'**
+  String get internetRelayCopyLink;
+
+  /// No description provided for @internetRelayLinkCopied.
+  ///
+  /// In hu, this message translates to:
+  /// **'A link a vágólapra került'**
+  String get internetRelayLinkCopied;
+
   /// No description provided for @uiTheme.
   ///
   /// In hu, this message translates to:

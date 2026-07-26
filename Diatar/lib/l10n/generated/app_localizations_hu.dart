@@ -612,6 +612,25 @@ class AppLocalizationsHu extends AppLocalizations {
   String get mqttChannel => 'MQTT csatorna';
 
   @override
+  String get internetRelayQrButton => 'QR-kód';
+
+  @override
+  String get internetRelayQrTitle => 'DiaVetítő QR-kód';
+
+  @override
+  String get internetRelayQrHint =>
+      'Olvasd be a QR-kódot a webes DiaVetítő gyors megnyitásához.';
+
+  @override
+  String get internetRelayLinkLabel => 'Megnyitási link';
+
+  @override
+  String get internetRelayCopyLink => 'Link másolása';
+
+  @override
+  String get internetRelayLinkCopied => 'A link a vágólapra került';
+
+  @override
   String get uiTheme => 'Felhasználói felület témája';
 
   @override

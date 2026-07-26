@@ -609,6 +609,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mqttChannel => 'MQTT channel';
 
   @override
+  String get internetRelayQrButton => 'QR code';
+
+  @override
+  String get internetRelayQrTitle => 'DiaVetito QR code';
+
+  @override
+  String get internetRelayQrHint =>
+      'Scan this QR code to quickly open the web DiaVetito receiver.';
+
+  @override
+  String get internetRelayLinkLabel => 'Open link';
+
+  @override
+  String get internetRelayCopyLink => 'Copy link';
+
+  @override
+  String get internetRelayLinkCopied => 'Link copied to clipboard';
+
+  @override
   String get uiTheme => 'User interface theme';
 
   @override
