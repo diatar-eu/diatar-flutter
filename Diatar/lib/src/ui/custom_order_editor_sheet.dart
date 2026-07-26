@@ -2829,7 +2829,7 @@ class _SzentirasDialogState extends State<_SzentirasDialog> {
         return;
       }
       await widget.controller.importSzentirasVerses(
-        translationName: _selectedTranslation ?? '',
+        translationName: result.translationName,
         verses: result.verses,
       );
       if (mounted) {

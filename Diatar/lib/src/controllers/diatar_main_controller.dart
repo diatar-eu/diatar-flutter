@@ -3426,6 +3426,14 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> _syncCurrentDia({bool playSound = true}) async {
+    if (_projectedCustomCursor >= 0 &&
+        _projectedCustomCursor < _customOrder.length) {
+      final CustomOrderEntry entry = _customOrder[_projectedCustomCursor];
+      if (!entry.isSongEntry) {
+        await _projectCustomOrderEntry(entry, cursor: _projectedCustomCursor);
+        return;
+      }
+    }
     _projectedCustomCursor = -1;
     globals = globals.copyWith(projecting: showing, wordToHighlight: highPos);
     if (_projectionOutputLocked) {
@@ -3813,21 +3821,35 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
     final String refLabel = verses.first.reference;
+    final List<CustomOrderEntry> newEntries = <CustomOrderEntry>[];
     for (int i = 0; i < verses.length; i++) {
       final SzentirasVerse v = verses[i];
-      final String label = '$refLabel/${i + 1}.';
-      final CustomOrderEntry entry = CustomOrderEntry(
+      final String verseRef = verses.length == 1
+          ? refLabel
+          : '$refLabel/${i + 1}';
+      final String label = '[Szentírás] $verseRef';
+      newEntries.add(CustomOrderEntry(
         fileName: '__custom_text__',
         songIndex: -1,
         verseIndex: 0,
-        label: '[Szentírás] $label',
-        customTextTitle: '',
+        label: label,
+        customTextTitle: verseRef,
         customTextBody: v.text.trim(),
         customType: 'text',
-      );
-      await _appendCustomOrderEntry(entry);
+      ));
     }
-    await _projectCustomOrderEntry(_customOrder.last, cursor: _customOrderCursor);
+    final List<CustomOrderEntry> combined =
+        _insertEntriesIntoOrder(newEntries, _customOrder.length);
+    await applyCustomOrder(combined, activate: true, syncProjection: false);
+    _diaVirtualBookSelected = combined.isNotEmpty;
+    if (combined.isNotEmpty) {
+      final int target = combined.length - newEntries.length;
+      _selectByCustomOrderCursor(target.clamp(0, combined.length - 1), sync: true);
+    }
+    _setStatus('statusCustomTextSent', <String, String>{
+      'title': refLabel,
+    });
+    notifyListeners();
   }
 
   Future<void> sendCustomTextSlide({

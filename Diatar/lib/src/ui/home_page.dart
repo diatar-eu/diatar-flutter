@@ -1243,7 +1243,9 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     if (projectedCustom != null && projectedCustom.isCustomText) {
       final String title = controller.currentCustomOrderProjectionTitle ??
         localizedCustomEntryLabel(l10n, projectedCustom);
-      final List<String> lines = controller.displayLines
+      final List<String> lines = (projectedCustom.customTextBody ?? '')
+        .split(RegExp(r'\r?\n'))
+        .map((String line) => line.trimRight())
         .where((String line) => line.trim().isNotEmpty)
         .toList();
       return _CustomTextPreview(

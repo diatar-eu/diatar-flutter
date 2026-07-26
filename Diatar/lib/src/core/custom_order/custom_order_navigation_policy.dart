@@ -31,7 +31,11 @@ class CustomOrderNavigationPolicy {
     if (entry.isSongEntry || entry.isSeparator) {
       return null;
     }
-    final String source = (entry.customTextTitle ?? entry.label).trim();
+    final String source = ((entry.customTextTitle?.isNotEmpty == true
+            ? entry.customTextTitle
+            : entry.label) ??
+        '')
+        .trim();
     if (source.isEmpty) {
       return null;
     }
