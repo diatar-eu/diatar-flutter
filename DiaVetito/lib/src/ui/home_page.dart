@@ -78,7 +78,7 @@ class _HomePageState extends State<HomePage> {
                 children: <Widget>[
                   Positioned.fill(
                     child: GestureDetector(
-                      onTap: () => _openSettings(context),
+                      onLongPress: () => _openSettings(context),
                       child: Semantics(
                         label: isLogoFrame
                             ? context.l10n.startupLogoSemanticLabel
