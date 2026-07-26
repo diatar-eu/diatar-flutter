@@ -1853,6 +1853,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
           minVerticalPadding: 0,
           minTileHeight: 30,
+          horizontalTitleGap: 0,
+          contentPadding: EdgeInsets.zero,
           selected: controller.isCustomOrderIndexCurrent(index),
           selectedTileColor: Colors.blue.withValues(alpha: 0.12),
           onTap: () => controller.selectCustomOrderEntryForEditing(index),
@@ -1880,11 +1882,13 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
               ],
             ),
           ),
-          contentPadding: EdgeInsets.only(
-            left: isContinuation ? 70 : 16,
-            right: 8,
+          title: Padding(
+            padding: EdgeInsets.only(
+              left: isContinuation ? 70 : 16,
+              right: 8,
+            ),
+            child: titleWidget,
           ),
-          title: titleWidget,
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
