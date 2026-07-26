@@ -17,6 +17,7 @@ import '../l10n/l10n.dart';
 import '../services/mqtt_user_api_service.dart';
 import '../services/cast_service.dart';
 import '../services/export_import_service.dart';
+import '../services/web_diavetito_url.dart';
 import '../utils/friendly_path.dart';
 
 class SongHotkeyOption {
@@ -565,7 +566,13 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           TextField(
             controller: _mqttUser,
             enabled: _internetRelayEnabled,
+            onChanged: (_) => setBoth(() {}),
             decoration: InputDecoration(labelText: l10n.userFieldUsername),
+          ),
+          const SizedBox(height: 8),
+          SelectableText(
+            webDiaVetitoUrl(_mqttUser.text),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
           TextField(
             controller: _mqttPassword,
