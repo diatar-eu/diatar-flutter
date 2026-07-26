@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 
 import '../services/settings_store.dart';
 import '../services/tcp_server_service.dart';
+import '../services/web_mqtt_settings.dart';
 
 class ProjectionController extends ChangeNotifier {
   static const MethodChannel _systemChannel = MethodChannel(
@@ -87,6 +88,13 @@ class ProjectionController extends ChangeNotifier {
       return;
     }
     settings = (await _settingsStore.load()).copyWith(mqttChannel: '1');
+    if (kIsWeb) {
+      final String? mqttUser = mqttUsernameFromWebUri(Uri.base);
+      if (mqttUser != null && mqttUser != settings.mqttUser) {
+        settings = settings.copyWith(mqttUser: mqttUser);
+        await _settingsStore.save(settings);
+      }
+    }
     globals = _applyReceiverDisplayFilters(globals);
     await _applyTransport();
     await refreshMqttUsers();
