@@ -397,7 +397,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                         ),
                       ),
                     ),
-                    Flexible(
+                    Expanded(
+                      flex: 2,
                       child: SizedBox(
                         height: 40,
                         child: Row(
