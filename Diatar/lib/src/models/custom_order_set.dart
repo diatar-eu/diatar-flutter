@@ -1,8 +1,8 @@
 import 'custom_order_entry.dart';
 
-/// Egy betöltött énekrend (saját diasor) állapota.
+/// Egy betöltött diasor (saját diasor) állapota.
 ///
-/// Több énekrend is tartható meg párhuzamosan: mindegyik saját névvel,
+/// Több diasor is tartható meg párhuzamosan: mindegyik saját névvel,
 /// bejegyzéslistával és engedélyezési állapottal rendelkezik. A vezérlő
 /// egyszerre mindig egyet tart aktívnak (ezt navigálja/vetíti), de a
 /// betöltöttek közül bármelyik kiválasztható vagy letiltható.
@@ -28,8 +28,8 @@ class CustomOrderSet {
   final String? zsolozsmaLabel;
   final String? batyuLabel;
 
-  /// Az énekrend utoljára ismert kurzorpozíciója (a bejegyzéslistában).
-  /// Énekrendek közötti váltáskor ezt tároljuk el, hogy visszaváltáskor
+  /// A diasor utoljára ismert kurzorpozíciója (a bejegyzéslistában).
+  /// Diasorok közötti váltáskor ezt tároljuk el, hogy visszaváltáskor
   /// ugyanoda kerüljön a kurzor. Érvénytelen (üres lista) esetén -1.
   final int cursor;
 
@@ -47,7 +47,7 @@ class CustomOrderSet {
     if (named.isNotEmpty) {
       return named;
     }
-    return 'Énekrend';
+    return 'Diasor';
   }
 
   CustomOrderSet copyWith({

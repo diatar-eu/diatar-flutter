@@ -111,8 +111,8 @@ class DtxManageItem {
   final bool excluded;
 }
 
-/// Egy énekrend betöltésekor választható viselkedés:
-/// felülírja az aktuálisan aktív énekrendet, vagy új, párhuzamos énekrendként
+/// Egy diasor betöltésekor választható viselkedés:
+/// felülírja az aktuálisan aktív diasort, vagy új, párhuzamos diasorként
 /// töltődik be a már betöltöttek mellé.
 enum CustomOrderImportMode { overwriteActive, addNew }
 
@@ -226,14 +226,14 @@ class DiatarMainController extends ChangeNotifier {
   String? _napiLelkiBatyuVirtualBookLabel;
   static const String _disabledDtzPrefsKey = 'disabled_dtz_files';
 
-  /// A párhuzamosan betöltött énekrendek (saját diasorok) listája.
+  /// A párhuzamosan betöltött diasorok (saját diasorok) listája.
   List<CustomOrderSet> _customOrderSets = <CustomOrderSet>[];
 
-  /// Az éppen aktív (navigált/vetített) énekrend indexe a [_customOrderSets]
+  /// Az éppen aktív (navigált/vetített) diasor indexe a [_customOrderSets]
   /// listában, vagy -1 ha nincs betöltve egy sem.
   int _activeOrderSetIndex = -1;
 
-  /// Egyedi azonosító-generálás új énekrendekhez.
+  /// Egyedi azonosító-generálás új diasorokhez.
   int _customOrderSetIdCounter = 0;
 
   CustomOrderSet? get _activeOrderSet {
@@ -244,7 +244,7 @@ class DiatarMainController extends ChangeNotifier {
     return _customOrderSets[_activeOrderSetIndex];
   }
 
-  /// Az aktív énekrend egyedi azonosítója, vagy null ha nincs betöltve.
+  /// Az aktív diasor egyedi azonosítója, vagy null ha nincs betöltve.
   String? get activeCustomOrderSetId => _activeOrderSet?.id;
 
   String _nextCustomOrderSetId() {
@@ -272,10 +272,10 @@ class DiatarMainController extends ChangeNotifier {
     return normalizedBase;
   }
 
-  /// Betölti a párhuzamosan tárolt énekrendeket a perzisztenciából.
-  /// Visszamenőleges kompatibilitás: ha még nincs elmentett énekrend-készlet,
+  /// Betölti a párhuzamosan tárolt diasoroket a perzisztenciából.
+  /// Visszamenőleges kompatibilitás: ha még nincs elmentett diasor-készlet,
   /// de létezik a régi egyetlen saját sorrend, azt átvezeti egyetlen
-  /// énekrendként.
+  /// diasorként.
   Future<void> _loadCustomOrderSets() async {
     final ({List<StoredCustomOrderSet> sets, int activeIndex}) storedSets =
         await _orderStore.loadCustomOrderSets();
@@ -338,7 +338,7 @@ class DiatarMainController extends ChangeNotifier {
         _customOrderSets = <CustomOrderSet>[
           CustomOrderSet(
             id: _nextCustomOrderSetId(),
-            name: _lastImportedCustomOrderBaseName ?? 'Énekrend',
+            name: _lastImportedCustomOrderBaseName ?? 'Diasor',
             entries: List<CustomOrderEntry>.from(_customOrder),
             enabled: true,
             baseName: _lastImportedCustomOrderBaseName,
@@ -353,8 +353,8 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
-  /// A jelenleg aktív énekrend munkapéldányának (_customOrder) és a hozzá
-  /// tartozó metaadatoknak a visszaírása az énekrend-készletbe.
+  /// A jelenleg aktív diasor munkapéldányának (_customOrder) és a hozzá
+  /// tartozó metaadatoknak a visszaírása a diasor-készletbe.
   void _persistActiveSetToSets() {
     if (_activeOrderSetIndex < 0 ||
         _activeOrderSetIndex >= _customOrderSets.length) {
@@ -374,7 +374,7 @@ class DiatarMainController extends ChangeNotifier {
         );
   }
 
-  /// Az összes énekrend perzisztens mentése (azonnali írás a tárolóba).
+  /// Az összes diasor perzisztens mentése (azonnali írás a tárolóba).
   Future<void> _persistAllSets() async {
     final List<StoredCustomOrderSet> stored = _customOrderSets
         .map(
@@ -403,8 +403,8 @@ class DiatarMainController extends ChangeNotifier {
     );
   }
 
-  /// Átvált a megadott indexű énekrendre: először menti az aktuális munkapéldányt,
-  /// majd betölti az új énekrend bejegyzéseit és metaadatait a munkapéldányba.
+  /// Átvált a megadott indexű diasorra: először menti az aktuális munkapéldányt,
+  /// majd betölti az új diasor bejegyzéseit és metaadatait a munkapéldányba.
   Future<void> _switchActiveSet(int index) async {
     if (index < 0 || index >= _customOrderSets.length) {
       return;
@@ -444,19 +444,19 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
-  /// A betöltött énekrendek (saját diasorok) listája, csak olvashatóan.
+  /// A betöltött diasorok (saját diasorok) listája, csak olvashatóan.
   List<CustomOrderSet> get customOrderSets =>
       List<CustomOrderSet>.unmodifiable(_customOrderSets);
 
-  /// Az éppen aktív énekrend indexe a [customOrderSets] listában (-1 ha nincs).
+  /// Az éppen aktív diasor indexe a [customOrderSets] listában (-1 ha nincs).
   int get activeCustomOrderSetIndex => _activeOrderSetIndex;
 
-  /// Kiválasztja az aktív énekrendet a megadott index alapján.
+  /// Kiválasztja az aktív diasort a megadott index alapján.
   Future<void> setActiveCustomOrderSet(int index) async {
     await _switchActiveSet(index);
   }
 
-  /// Kiválasztja az aktív énekrendet a megadott egyedi azonosító alapján.
+  /// Kiválasztja az aktív diasort a megadott egyedi azonosító alapján.
   Future<void> setActiveCustomOrderSetById(String id) async {
     final int index = _customOrderSets.indexWhere(
       (CustomOrderSet s) => s.id == id,
@@ -467,8 +467,8 @@ class DiatarMainController extends ChangeNotifier {
     await _switchActiveSet(index);
   }
 
-  /// A következő engedélyezett énekrendre vált (körkörösen).
-  /// Ha nincs betöltött énekrend, nem csinál semmit.
+  /// A következő engedélyezett diasorra vált (körkörösen).
+  /// Ha nincs betöltött diasor, nem csinál semmit.
   Future<void> nextCustomOrderSet() async {
     if (_customOrderSets.isEmpty) {
       return;
@@ -489,8 +489,8 @@ class DiatarMainController extends ChangeNotifier {
     await _switchActiveSet(enabledIndexes[nextPos]);
   }
 
-  /// Az előző engedélyezett énekrendre vált (körkörösen).
-  /// Ha nincs betöltött énekrend, nem csinál semmit.
+  /// Az előző engedélyezett diasorra vált (körkörösen).
+  /// Ha nincs betöltött diasor, nem csinál semmit.
   Future<void> prevCustomOrderSet() async {
     if (_customOrderSets.isEmpty) {
       return;
@@ -511,11 +511,11 @@ class DiatarMainController extends ChangeNotifier {
     await _switchActiveSet(enabledIndexes[prevPos]);
   }
 
-  /// Be-/kikapcsolja a megadott énekrendet a betöltöttek közül.
-  /// A kikapcsolt énekrend nem lesz elérhető a nézetekben, de megmarad.
-  /// Az utolsó engedélyezett énekrend nem kapcsolható ki, és ha az aktív
-  /// énekrendet kapcsoljuk ki, az aktív kiválasztás átvált egy másik
-  /// engedélyezett énekrendre.
+  /// Be-/kikapcsolja a megadott diasort a betöltöttek közül.
+  /// A kikapcsolt diasor nem lesz elérhető a nézetekben, de megmarad.
+  /// Az utolsó engedélyezett diasor nem kapcsolható ki, és ha az aktív
+  /// diasort kapcsoljuk ki, az aktív kiválasztás átvált egy másik
+  /// engedélyezett diasorra.
   Future<void> toggleCustomOrderSetEnabled(int index) async {
     if (index < 0 || index >= _customOrderSets.length) {
       return;
@@ -545,7 +545,7 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Eltávolítja a megadott énekrendet a betöltöttek közül.
+  /// Eltávolítja a megadott diasort a betöltöttek közül.
   Future<void> removeCustomOrderSet(int index) async {
     if (index < 0 || index >= _customOrderSets.length) {
       return;
@@ -603,7 +603,7 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
-  /// Átnevezi a megadott énekrendet.
+  /// Átnevezi a megadott diasort.
   Future<void> renameCustomOrderSet(int index, String name) async {
     if (index < 0 || index >= _customOrderSets.length) {
       return;
@@ -617,8 +617,8 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Létrehoz egy új, üres énekrendet a megadott névvel, hozzáadja a
-  /// betöltöttekhez, és aktívvá teszi (az előző énekrend szerkesztett
+  /// Létrehoz egy új, üres diasort a megadott névvel, hozzáadja a
+  /// betöltöttekhez, és aktívvá teszi (az előző diasor szerkesztett
   /// állapota előbb elmentésre kerül).
   Future<void> createCustomOrderSet(String name) async {
     final String trimmed = name.trim();
@@ -1791,8 +1791,8 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
-    // Ha beállított énekrend van aktív, a kötetek nézetben is maradjon
-    // kiválasztva (ne ugorjon vissza egy kötetre), így az énekrend
+    // Ha beállított diasor van aktív, a kötetek nézetben is maradjon
+    // kiválasztva (ne ugorjon vissza egy kötetre), így a diasor
     // váltása minden nézetben nyomon követhető.
     if (_activeOrderSetIndex >= 0 && _customOrder.isNotEmpty) {
       _diaVirtualBookSelected = true;
@@ -2607,7 +2607,7 @@ class DiatarMainController extends ChangeNotifier {
 
     if (mode == CustomOrderImportMode.overwriteActive &&
         _activeOrderSetIndex >= 0) {
-      // Felülírjuk az éppen aktív énekrendet a betöltöttel.
+      // Felülírjuk az éppen aktív diasort a betöltöttel.
       await applyCustomOrder(imported, activate: activate);
       _lastImportedCustomOrderBaseName = baseName;
       _customOrderSourceType = null;
@@ -2627,13 +2627,13 @@ class DiatarMainController extends ChangeNotifier {
       await _persistCurrentCustomOrder();
       await _persistAllSets();
     } else {
-      // Új, párhuzamos énekrendként töltjük be a már betöltöttek mellé.
-      // Előbb elmentjük az eddigi aktív énekrend kurzorát, mielőtt
+      // Új, párhuzamos diasorként töltjük be a már betöltöttek mellé.
+      // Előbb elmentjük az eddigi aktív diasor kurzorát, mielőtt
       // átváltunk az újonnan betöltöttre.
       _persistActiveSetToSets();
       final CustomOrderSet newSet = CustomOrderSet(
         id: _nextCustomOrderSetId(),
-        name: baseName ?? 'Énekrend',
+        name: baseName ?? 'Diasor',
         entries: imported.map(normalizeEntry).toList(),
         enabled: true,
         baseName: baseName,

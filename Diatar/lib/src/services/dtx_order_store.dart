@@ -119,7 +119,7 @@ class StoredCustomOrderEntry {
   }
 }
 
-/// Egy betöltött énekrend (saját diasor) perzisztált állapota.
+/// Egy betöltött diasor (saját diasor) perzisztált állapota.
 class StoredCustomOrderSet {
   const StoredCustomOrderSet({
     required this.id,
@@ -142,7 +142,7 @@ class StoredCustomOrderSet {
   final String? zsolozsmaLabel;
   final String? batyuLabel;
 
-  /// Az énekrend utoljára ismert kurzorpozíciója. Visszamenőleges
+  /// A diasor utoljára ismert kurzorpozíciója. Visszamenőleges
   /// kompatibilitás: ha a tárolt JSON nem tartalmazza, -1 a default.
   final int cursor;
 

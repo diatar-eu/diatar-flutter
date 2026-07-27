@@ -630,11 +630,11 @@
   "customOrderClearVerseSelection": "Clear",
   "customOrderSetsSection": "Custom orders",
   "@customOrderSetsSection": {
-    "description": "Section header for the list of loaded custom orders (énekrendek) in the volume list dialog."
+    "description": "Section header for the list of loaded custom orders (diasorok) in the volume list dialog."
   },
   "customOrderSetSelectorLabel": "Active custom order",
   "@customOrderSetSelectorLabel": {
-    "description": "Label for the dropdown that selects the active énekrend in the Diasor (dialist) panel."
+    "description": "Label for the dropdown that selects the active diasor in the Diasor (dialist) panel."
   },
   "customOrderSetActive": "Active",
   "@customOrderSetActive": {

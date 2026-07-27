@@ -113,13 +113,13 @@ abstract class AppLocalizations {
   /// No description provided for @playlistsTooltip.
   ///
   /// In hu, this message translates to:
-  /// **'Énekrendek'**
+  /// **'Diasorok'**
   String get playlistsTooltip;
 
   /// No description provided for @playlistsTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Énekrendek'**
+  /// **'Diasorok'**
   String get playlistsTitle;
 
   /// No description provided for @customOrderTooltip.
@@ -479,7 +479,7 @@ abstract class AppLocalizations {
   /// No description provided for @statusAllSongbooksDisabled.
   ///
   /// In hu, this message translates to:
-  /// **'Minden énektár le van tiltva az énekrendben.'**
+  /// **'Minden énektár le van tiltva a diasorban.'**
   String get statusAllSongbooksDisabled;
 
   /// No description provided for @statusSongbooksLoaded.
@@ -1634,7 +1634,7 @@ abstract class AppLocalizations {
   /// No description provided for @customOrderInsertVersesSubtitle.
   ///
   /// In hu, this message translates to:
-  /// **'Jelöld ki, mely versszakok kerüljenek az énekrendbe.'**
+  /// **'Jelöld ki, mely versszakok kerüljenek a diasorba.'**
   String get customOrderInsertVersesSubtitle;
 
   /// No description provided for @textSlideDialogTitle.
@@ -1745,16 +1745,16 @@ abstract class AppLocalizations {
   /// **'Egyik sem'**
   String get customOrderClearVerseSelection;
 
-  /// Section header for the list of loaded custom orders (énekrendek) in the volume list dialog.
+  /// Section header for the list of loaded custom orders (diasorok) in the volume list dialog.
   ///
   /// In hu, this message translates to:
   /// **'Diasorok'**
   String get customOrderSetsSection;
 
-  /// Label for the dropdown that selects the active énekrend in the Diasor (dialist) panel.
+  /// Label for the dropdown that selects the active diasor in the Diasor (dialist) panel.
   ///
   /// In hu, this message translates to:
-  /// **'Aktív énekrend'**
+  /// **'Aktív diasor'**
   String get customOrderSetSelectorLabel;
 
   /// Badge shown next to the currently active custom order
@@ -1766,7 +1766,7 @@ abstract class AppLocalizations {
   /// Shown when a loaded custom order has no entries
   ///
   /// In hu, this message translates to:
-  /// **'Üres énekrend'**
+  /// **'Üres diasor'**
   String get customOrderSetEmpty;
 
   /// Shows the number of entries in a loaded custom order
@@ -1790,43 +1790,43 @@ abstract class AppLocalizations {
   /// Title of the rename custom order dialog
   ///
   /// In hu, this message translates to:
-  /// **'Énekrend átnevezése'**
+  /// **'Diasor átnevezése'**
   String get customOrderSetRenameTitle;
 
   /// Confirmation message before removing a loaded custom order
   ///
   /// In hu, this message translates to:
-  /// **'Biztosan eltávolítod ezt az énekrendet?'**
+  /// **'Biztosan eltávolítod ezt a diasort?'**
   String get customOrderSetRemoveConfirm;
 
   /// Tooltip to enable or disable a custom order in the editor
   ///
   /// In hu, this message translates to:
-  /// **'Énekrend be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)'**
+  /// **'Diasor be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)'**
   String get customOrderSetToggleEnabledTooltip;
 
   /// Button to create a new custom order
   ///
   /// In hu, this message translates to:
-  /// **'Új énekrend'**
+  /// **'Új diasor'**
   String get customOrderSetCreate;
 
   /// Title of the create new custom order dialog
   ///
   /// In hu, this message translates to:
-  /// **'Új énekrend létrehozása'**
+  /// **'Új diasor létrehozása'**
   String get customOrderSetCreateTitle;
 
   /// Label for the name field when creating a new custom order
   ///
   /// In hu, this message translates to:
-  /// **'Énekrend neve'**
+  /// **'Diasor neve'**
   String get customOrderSetCreateNameLabel;
 
   /// Title of the dialog asking how to load an imported custom order
   ///
   /// In hu, this message translates to:
-  /// **'Énekrend betöltése'**
+  /// **'Diasor betöltése'**
   String get customOrderLoadModeTitle;
 
   /// Option to overwrite the currently active custom order with the imported one
@@ -1844,7 +1844,7 @@ abstract class AppLocalizations {
   /// Question shown in the load mode dialog
   ///
   /// In hu, this message translates to:
-  /// **'Hogyan töltsük be a kiválasztott énekrendet?'**
+  /// **'Hogyan töltsük be a kiválasztott diasort?'**
   String get customOrderLoadModeMessage;
 
   /// Title of the volume list dialog
@@ -2264,13 +2264,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsHotkeyActionPrevOrderSet.
   ///
   /// In hu, this message translates to:
-  /// **'Előző énekrend'**
+  /// **'Előző diasor'**
   String get settingsHotkeyActionPrevOrderSet;
 
   /// No description provided for @settingsHotkeyActionNextOrderSet.
   ///
   /// In hu, this message translates to:
-  /// **'Következő énekrend'**
+  /// **'Következő diasor'**
   String get settingsHotkeyActionNextOrderSet;
 
   /// No description provided for @settingsHotkeyActionHighlightPrev.
@@ -2936,7 +2936,7 @@ class _AppLocalizationsDelegate
   Future<AppLocalizations> load(Locale locale) {
     return SynchronousFuture<AppLocalizations>(lookupAppLocalizations(locale));
   }
-
+diasort
   @override
   bool isSupported(Locale locale) =>
       <String>['en', 'hu'].contains(locale.languageCode);

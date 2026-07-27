@@ -1330,7 +1330,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
   }
 
-  /// Az éppen aktív (szerkesztett) énekrend engedélyezve van-e.
+  /// Az éppen aktív (szerkesztett) diasor engedélyezve van-e.
   bool get _currentSetEnabled {
     final int index = controller.activeCustomOrderSetIndex;
     if (index < 0 || index >= controller.customOrderSets.length) {
@@ -1339,9 +1339,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     return controller.customOrderSets[index].enabled;
   }
 
-  /// Elmenti az éppen szerkesztett énekrendet, majd átvált a megadott
-  /// azonosítójú énekrendre, hogy azt lehessen szerkeszteni. Ha a cél
-  /// énekrend le van tiltva, előbb engedélyezi, hogy szerkeszthető legyen.
+  /// Elmenti az éppen szerkesztett diasort, majd átvált a megadott
+  /// azonosítójú diasorra, hogy azt lehessen szerkeszteni. Ha a cél
+  /// diasor le van tiltva, előbb engedélyezi, hogy szerkeszthető legyen.
   Future<void> _switchEditingSet(String id) async {
     await _commitEntries();
     if (!mounted) {
@@ -1365,7 +1365,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
   }
 
-  /// Be-/kikapcsolja az éppen aktív énekrendet. A kikapcsolt énekrend nem
+  /// Be-/kikapcsolja az éppen aktív diasort. A kikapcsolt diasor nem
   /// jelenik meg a nézetekben, de megmarad (újra kiválasztható a listából).
   Future<void> _toggleCurrentSetEnabled() async {
     final int index = controller.activeCustomOrderSetIndex;
@@ -1381,7 +1381,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
   }
 
-  /// Megerősítés után eltávolítja az éppen aktív énekrendet a betöltöttek közül.
+  /// Megerősítés után eltávolítja az éppen aktív diasort a betöltöttek közül.
   Future<void> _confirmRemoveCurrentSet() async {
     final int index = controller.activeCustomOrderSetIndex;
     if (index < 0) {
@@ -1419,7 +1419,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
   }
 
-  /// Átnevezi az éppen aktív énekrendet a megadott névre.
+  /// Átnevezi az éppen aktív diasort a megadott névre.
   Future<void> _renameCurrentSet() async {
     final int index = controller.activeCustomOrderSetIndex;
     if (index < 0 || index >= controller.customOrderSets.length) {
@@ -1472,7 +1472,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
   }
 
-  /// Létrehoz egy új, üres énekrendet a megadott névvel, és aktívvá teszi.
+  /// Létrehoz egy új, üres diasort a megadott névvel, és aktívvá teszi.
   Future<void> _createNewSet() async {
     final TextEditingController nameController = TextEditingController();
     final String? enteredName = await showDialog<String>(

@@ -15,10 +15,10 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsTooltip => 'Beállítások';
 
   @override
-  String get playlistsTooltip => 'Énekrendek';
+  String get playlistsTooltip => 'Diasorok';
 
   @override
-  String get playlistsTitle => 'Énekrendek';
+  String get playlistsTitle => 'Diasorok';
 
   @override
   String get customOrderTooltip => 'Diasor';
@@ -226,7 +226,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get statusAllSongbooksDisabled =>
-      'Minden énektár le van tiltva az énekrendben.';
+      'Minden énektár le van tiltva a diasorban.';
 
   @override
   String statusSongbooksLoaded(int count) {
@@ -903,7 +903,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get customOrderInsertVersesSubtitle =>
-      'Jelöld ki, mely versszakok kerüljenek az énekrendbe.';
+      'Jelöld ki, mely versszakok kerüljenek a diasorba.';
 
   @override
   String get textSlideDialogTitle => 'Szöveges dia hozzáadása';
@@ -971,13 +971,13 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderSetsSection => 'Diasorok';
 
   @override
-  String get customOrderSetSelectorLabel => 'Aktív énekrend';
+  String get customOrderSetSelectorLabel => 'Aktív diasor';
 
   @override
   String get customOrderSetActive => 'Aktív';
 
   @override
-  String get customOrderSetEmpty => 'Üres énekrend';
+  String get customOrderSetEmpty => 'Üres diasor';
 
   @override
   String customOrderSetEntryCount(int count) {
@@ -991,27 +991,27 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderSetRemove => 'Eltávolítás';
 
   @override
-  String get customOrderSetRenameTitle => 'Énekrend átnevezése';
+  String get customOrderSetRenameTitle => 'Diasor átnevezése';
 
   @override
   String get customOrderSetRemoveConfirm =>
-      'Biztosan eltávolítod ezt az énekrendet?';
+      'Biztosan eltávolítod ezt a diasort?';
 
   @override
   String get customOrderSetToggleEnabledTooltip =>
-      'Énekrend be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)';
+      'Diasor be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)';
 
   @override
-  String get customOrderSetCreate => 'Új énekrend';
+  String get customOrderSetCreate => 'Új diasor';
 
   @override
-  String get customOrderSetCreateTitle => 'Új énekrend létrehozása';
+  String get customOrderSetCreateTitle => 'Új diasor létrehozása';
 
   @override
-  String get customOrderSetCreateNameLabel => 'Énekrend neve';
+  String get customOrderSetCreateNameLabel => 'Diasor neve';
 
   @override
-  String get customOrderLoadModeTitle => 'Énekrend betöltése';
+  String get customOrderLoadModeTitle => 'Diasor betöltése';
 
   @override
   String get customOrderLoadModeOverwrite => 'Felülírja az aktuálist';
@@ -1021,7 +1021,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get customOrderLoadModeMessage =>
-      'Hogyan töltsük be a kiválasztott énekrendet?';
+      'Hogyan töltsük be a kiválasztott diasort?';
 
   @override
   String get volumeListTitle => 'Kötetlista';
@@ -1275,10 +1275,10 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsHotkeyActionNextSong => 'Következő ének';
 
   @override
-  String get settingsHotkeyActionPrevOrderSet => 'Előző énekrend';
+  String get settingsHotkeyActionPrevOrderSet => 'Előző diasor';
 
   @override
-  String get settingsHotkeyActionNextOrderSet => 'Következő énekrend';
+  String get settingsHotkeyActionNextOrderSet => 'Következő diasor';
 
   @override
   String get settingsHotkeyActionHighlightPrev => 'Kiemelés előző szó';
@@ -1647,3 +1647,4 @@ class AppLocalizationsHu extends AppLocalizations {
   String get statusSzentirasApiKeyMissing =>
       'Nincs beállítva a szentiras.eu API kulcs.';
 }
+diasort

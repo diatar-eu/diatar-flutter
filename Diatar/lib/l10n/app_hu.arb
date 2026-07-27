@@ -2,8 +2,8 @@
   "@@locale": "hu",
   "appTitle": "Diatár",
   "settingsTooltip": "Beállítások",
-  "playlistsTooltip": "Énekrendek",
-  "playlistsTitle": "Énekrendek",
+  "playlistsTooltip": "Diasorok",
+  "playlistsTitle": "Diasorok",
   "customOrderTooltip": "Diasor",
   "zsolozsmaTooltip": "Zsolozsma",
   "zsolozsmaTitle": "Zsolozsma kiválasztása",
@@ -126,7 +126,7 @@
       "path": {}
     }
   },
-  "statusAllSongbooksDisabled": "Minden énektár le van tiltva az énekrendben.",
+  "statusAllSongbooksDisabled": "Minden énektár le van tiltva a diasorban.",
   "statusSongbooksLoaded": "{count} kötet betöltve",
   "@statusSongbooksLoaded": {
     "placeholders": {
@@ -592,7 +592,7 @@
   "customOrderSeparatorNameLabel": "Elválasztó neve",
   "customOrderSeparatorDefaultName": "elválasztó",
   "customOrderInsertVersesTitle": "Beszúrandó versszakok",
-  "customOrderInsertVersesSubtitle": "Jelöld ki, mely versszakok kerüljenek az énekrendbe.",
+  "customOrderInsertVersesSubtitle": "Jelöld ki, mely versszakok kerüljenek a diasorba.",
   "textSlideDialogTitle": "Szöveges dia hozzáadása",
   "textSlideTitleLabel": "Cím",
   "textSlideBodyLabel": "Szöveg (soronként)",
@@ -630,17 +630,17 @@
   "customOrderClearVerseSelection": "Egyik sem",
   "customOrderSetsSection": "Diasorok",
   "@customOrderSetsSection": {
-    "description": "Section header for the list of loaded custom orders (énekrendek) in the volume list dialog."
+    "description": "Section header for the list of loaded custom orders (diasorok) in the volume list dialog."
   },
-  "customOrderSetSelectorLabel": "Aktív énekrend",
+  "customOrderSetSelectorLabel": "Aktív diasor",
   "@customOrderSetSelectorLabel": {
-    "description": "Label for the dropdown that selects the active énekrend in the Diasor (dialist) panel."
+    "description": "Label for the dropdown that selects the active diasor in the Diasor (dialist) panel."
   },
   "customOrderSetActive": "Aktív",
   "@customOrderSetActive": {
     "description": "Badge shown next to the currently active custom order"
   },
-  "customOrderSetEmpty": "Üres énekrend",
+  "customOrderSetEmpty": "Üres diasor",
   "@customOrderSetEmpty": {
     "description": "Shown when a loaded custom order has no entries"
   },
@@ -662,31 +662,31 @@
   "@customOrderSetRemove": {
     "description": "Menu item to remove a loaded custom order"
   },
-  "customOrderSetRenameTitle": "Énekrend átnevezése",
+  "customOrderSetRenameTitle": "Diasor átnevezése",
   "@customOrderSetRenameTitle": {
     "description": "Title of the rename custom order dialog"
   },
-  "customOrderSetRemoveConfirm": "Biztosan eltávolítod ezt az énekrendet?",
+  "customOrderSetRemoveConfirm": "Biztosan eltávolítod ezt a diasort?",
   "@customOrderSetRemoveConfirm": {
     "description": "Confirmation message before removing a loaded custom order"
   },
-  "customOrderSetToggleEnabledTooltip": "Énekrend be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)",
+  "customOrderSetToggleEnabledTooltip": "Diasor be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)",
   "@customOrderSetToggleEnabledTooltip": {
     "description": "Tooltip to enable or disable a custom order in the editor"
   },
-  "customOrderSetCreate": "Új énekrend",
+  "customOrderSetCreate": "Új diasor",
   "@customOrderSetCreate": {
     "description": "Button to create a new custom order"
   },
-  "customOrderSetCreateTitle": "Új énekrend létrehozása",
+  "customOrderSetCreateTitle": "Új diasor létrehozása",
   "@customOrderSetCreateTitle": {
     "description": "Title of the create new custom order dialog"
   },
-  "customOrderSetCreateNameLabel": "Énekrend neve",
+  "customOrderSetCreateNameLabel": "Diasor neve",
   "@customOrderSetCreateNameLabel": {
     "description": "Label for the name field when creating a new custom order"
   },
-  "customOrderLoadModeTitle": "Énekrend betöltése",
+  "customOrderLoadModeTitle": "Diasor betöltése",
   "@customOrderLoadModeTitle": {
     "description": "Title of the dialog asking how to load an imported custom order"
   },
@@ -698,7 +698,7 @@
   "@customOrderLoadModeAdd": {
     "description": "Option to load the imported custom order alongside the already loaded ones"
   },
-  "customOrderLoadModeMessage": "Hogyan töltsük be a kiválasztott énekrendet?",
+  "customOrderLoadModeMessage": "Hogyan töltsük be a kiválasztott diasort?",
   "@customOrderLoadModeMessage": {
     "description": "Question shown in the load mode dialog"
   },
@@ -888,8 +888,8 @@
   "settingsHotkeyActionToggleProjection": "Vetítés ki/be",
   "settingsHotkeyActionNextVerse": "Következő versszak",
   "settingsHotkeyActionNextSong": "Következő ének",
-  "settingsHotkeyActionPrevOrderSet": "Előző énekrend",
-  "settingsHotkeyActionNextOrderSet": "Következő énekrend",
+  "settingsHotkeyActionPrevOrderSet": "Előző diasor",
+  "settingsHotkeyActionNextOrderSet": "Következő diasor",
   "settingsHotkeyActionHighlightPrev": "Kiemelés előző szó",
   "settingsHotkeyActionHighlightNext": "Kiemelés következő szó",
   "settingsHotkeyConflict": "Ütköző gyorsbillentyű: {hotkey}",
