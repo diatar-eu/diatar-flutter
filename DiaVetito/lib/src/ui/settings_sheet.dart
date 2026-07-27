@@ -76,6 +76,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   late final TextEditingController _clipB;
   late final TextEditingController _mqttUser;
   late bool _ipMode;
+  bool _mqttTextWasNonEmpty = false;
 
   late bool _borderToClip;
   late bool _mirror;
@@ -111,6 +112,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
     _clipB = TextEditingController(text: s.clipB.toString());
     _mqttUser = TextEditingController(text: s.mqttUser);
     _ipMode = s.mqttUser.trim().isEmpty;
+    _mqttTextWasNonEmpty = !_ipMode;
     _borderToClip = s.borderToClip;
     _mirror = s.mirror;
     _boot = s.boot;
@@ -130,9 +132,13 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
     _mqttUser.addListener(() {
       widget.onSenderFilterChanged(_mqttUser.text);
-      setState(() {
-        _ipMode = _mqttUser.text.trim().isEmpty;
-      });
+      final bool isEmpty = _mqttUser.text.trim().isEmpty;
+      if (_mqttTextWasNonEmpty && isEmpty) {
+        setState(() => _ipMode = true);
+      } else if (!isEmpty && !_mqttTextWasNonEmpty) {
+        setState(() => _ipMode = false);
+      }
+      _mqttTextWasNonEmpty = !isEmpty;
     });
   }
 
