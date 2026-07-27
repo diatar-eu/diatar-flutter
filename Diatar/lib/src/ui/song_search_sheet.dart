@@ -92,7 +92,7 @@ class _SongSearchSheetState extends State<SongSearchSheet> {
                           final result = _results[index];
                           return ListTile(
                             title: Text(
-                              '${result.songIndex + 1}. ${result.songTitle}',
+                              result.songTitle,
                               style: const TextStyle(fontWeight: FontWeight.w600),
                             ),
                             subtitle: Text(
