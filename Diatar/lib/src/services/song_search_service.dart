@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
 
+import '../utils/escape_sequences.dart';
+
 class SongSearchVerse {
   const SongSearchVerse({
     required this.verseIndex,
@@ -79,7 +81,8 @@ List<SongSearchSong> buildSearchIndex(List<DtxBook> books) {
       for (int vIdx = 0; vIdx < song.verses.length; vIdx++) {
         final DtxVerse verse = song.verses[vIdx];
         final String verseNameLower = verse.name.toLowerCase();
-        final String linesJoinedLower = verse.lines.join(' ').toLowerCase();
+        final String linesJoinedLower =
+            removeEscapeSequences(verse.lines.join(' ')).toLowerCase();
         final String verseHaystack = '$verseNameLower $linesJoinedLower';
 
         verses.add(SongSearchVerse(
