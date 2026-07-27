@@ -36,7 +36,7 @@ class DtxParser {
       }
       currentVerses.add(
         DtxVerse(
-          name: currentVerseName.isEmpty ? '---' : currentVerseName,
+          name: currentVerseName,
           lines: List<String>.from(currentVerseLines),
           diaId: pendingDiaId,
         ),
@@ -51,7 +51,7 @@ class DtxParser {
       }
       flushVerseIfNeeded();
       if (currentVerses.isEmpty) {
-        currentVerses.add(const DtxVerse(name: '---', lines: <String>['']));
+        currentVerses.add(const DtxVerse(name: '', lines: <String>['']));
       }
       songs.add(
         DtxSong(

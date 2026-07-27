@@ -3481,9 +3481,7 @@ class DiatarMainController extends ChangeNotifier {
     final String bookNick = book?.displayName ?? '';
     final String songTitle = song?.title ?? '';
     final String verseTitle = (verse?.name ?? '').trim();
-    final bool hasOnlyDefaultVerse =
-        (song?.verses.length ?? 0) == 1 && verseTitle == '---';
-    final bool hideVerseInTitle = verseTitle.isEmpty || hasOnlyDefaultVerse;
+    final bool hideVerseInTitle = verseTitle.isEmpty;
     final String title = bookNick.isEmpty
         ? songTitle
         : hideVerseInTitle

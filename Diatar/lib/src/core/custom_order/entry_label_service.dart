@@ -60,8 +60,7 @@ class EntryLabelService {
         .verses[verseIndex.clamp(0, song.verses.length - 1)]
         .name
         .trim();
-    final bool hideVersePart =
-        verseName.isEmpty || ((song.verses.length == 1) && verseName == '---');
+    final bool hideVersePart = verseName.isEmpty;
     return hideVersePart
         ? '${book.displayName}: ${song.title}'
         : '${book.displayName}: ${song.title} / $verseName';

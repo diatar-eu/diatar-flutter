@@ -141,7 +141,7 @@ Widget _buildTitleWithFirstLine({
 
 String _songVerseToken(DtxVerse verse) {
   final String raw = verse.name.trim();
-  if (raw.isEmpty || raw == '---') {
+  if (raw.isEmpty) {
     return '';
   }
   final RegExpMatch? match = RegExp(r'^(\d+)').firstMatch(raw);
@@ -3994,9 +3994,7 @@ class _VersePreview extends StatelessWidget {
         ? song!.title.trim()
         : (controller.songIndex + 1).toString();
     final String verseName = verse?.name.trim() ?? '';
-    final bool hideVersePart =
-        verseName.isEmpty ||
-        (((song?.verses.length ?? 0) == 1) && verseName == '---');
+    final bool hideVersePart = verseName.isEmpty;
     final String versePart = hideVersePart ? '' : '/$verseName';
 
     return '$bookShortName: $songTitle$versePart';
