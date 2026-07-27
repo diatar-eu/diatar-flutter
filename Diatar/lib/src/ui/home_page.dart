@@ -1194,55 +1194,10 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     );
   }
 
-  Widget _buildActivePreview(
-    BuildContext context, {
-    required String panelTitle,
-  }) {
+  Widget _buildNormalPreview(BuildContext context) {
     final AppLocalizations l10n = context.l10n;
     final CustomOrderEntry? projectedCustom =
         controller.projectedCustomOrderEntry;
-
-    if (controller.showPhotoInControl) {
-      final String? photoPath = controller.currentPhotoPath;
-      if (photoPath != null && photoPath.isNotEmpty) {
-        final Widget image = ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: _FileImageWidget(path: photoPath, notFoundLabel: photoPath),
-        );
-        return LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final bool bounded = constraints.maxHeight.isFinite;
-            return _SwipePagingPreview(
-              controller: controller,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    l10n.controlPhotoViewPhoto,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: controller.globals.txtColor.withValues(
-                        alpha: 0.75,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  if (bounded)
-                    Expanded(child: SizedBox.expand(child: image))
-                  else
-                    SizedBox(
-                      width: constraints.maxWidth,
-                      height: constraints.maxWidth * 0.7,
-                      child: image,
-                    ),
-                ],
-              ),
-            );
-          },
-        );
-      }
-    }
 
     if (projectedCustom != null && projectedCustom.isCustomText) {
       final String title = controller.currentCustomOrderProjectionTitle ??
@@ -1270,15 +1225,37 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     final DtxVerse? verse = controller.currentVerse;
     if (song == null || verse == null) {
       return Text(
-        context.l10n.noLoadedSlide,
+        l10n.noLoadedSlide,
         style: TextStyle(color: controller.globals.txtColor),
       );
     }
     return _VersePreview(
       controller: controller,
       title: controller.currentCustomOrderProjectionTitle,
-      panelTitle: panelTitle,
+      panelTitle: context.l10n.previewTitle,
     );
+  }
+
+  Widget _buildActivePreview(
+    BuildContext context, {
+    required String panelTitle,
+  }) {
+    final AppLocalizations l10n = context.l10n;
+
+    if (controller.showPhotoInControl) {
+      final String? photoPath = controller.currentPhotoPath;
+      if (photoPath != null && photoPath.isNotEmpty) {
+        return _PhotoPreviewWithFallback(
+          photoPath: photoPath,
+          notFoundLabel: photoPath,
+          fallback: _buildNormalPreview(context),
+          controller: controller,
+          l10n: l10n,
+        );
+      }
+    }
+
+    return _buildNormalPreview(context);
   }
 
   Future<void> _openSettings(
@@ -4143,6 +4120,134 @@ class _FileImageWidgetState extends State<_FileImageWidget> {
           );
         }
         return Image.memory(bytes, fit: BoxFit.contain);
+      },
+    );
+  }
+}
+
+class _PhotoPreviewWithFallback extends StatefulWidget {
+  const _PhotoPreviewWithFallback({
+    required this.photoPath,
+    required this.notFoundLabel,
+    required this.fallback,
+    required this.controller,
+    required this.l10n,
+  });
+
+  final String photoPath;
+  final String notFoundLabel;
+  final Widget fallback;
+  final DiatarMainController controller;
+  final AppLocalizations l10n;
+
+  @override
+  State<_PhotoPreviewWithFallback> createState() =>
+      _PhotoPreviewWithFallbackState();
+}
+
+class _PhotoPreviewWithFallbackState
+    extends State<_PhotoPreviewWithFallback> {
+  late Future<Uint8List?> _bytesFuture;
+  bool _snackbarShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bytesFuture = _loadBytes();
+  }
+
+  @override
+  void didUpdateWidget(_PhotoPreviewWithFallback oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.photoPath != widget.photoPath) {
+      _bytesFuture = _loadBytes();
+      _snackbarShown = false;
+    }
+  }
+
+  Future<Uint8List?> _loadBytes() async {
+    final String path = widget.photoPath.trim();
+    if (path.isEmpty) {
+      return null;
+    }
+    try {
+      final file = FileSystemProvider.instance.file(path);
+      if (!await file.exists()) {
+        return null;
+      }
+      final List<int> data = await file.readAsBytes();
+      if (data.isEmpty) {
+        return null;
+      }
+      return Uint8List.fromList(data);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List?>(
+      future: _bytesFuture,
+      builder: (BuildContext context, AsyncSnapshot<Uint8List?> snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final Uint8List? bytes = snapshot.data;
+        if (bytes != null) {
+          _snackbarShown = false;
+          final Widget image = ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.memory(bytes, fit: BoxFit.contain),
+          );
+          return LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final bool bounded = constraints.maxHeight.isFinite;
+              return _SwipePagingPreview(
+                controller: widget.controller,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      widget.l10n.controlPhotoViewPhoto,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: widget.controller.globals.txtColor.withValues(
+                          alpha: 0.75,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (bounded)
+                      Expanded(child: SizedBox.expand(child: image))
+                    else
+                      SizedBox(
+                        width: constraints.maxWidth,
+                        height: constraints.maxWidth * 0.7,
+                        child: image,
+                      ),
+                  ],
+                ),
+              );
+            },
+          );
+        }
+        if (!_snackbarShown) {
+          _snackbarShown = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+              SnackBar(
+                content: Text(
+                  widget.l10n.statusImageNotFound(widget.notFoundLabel),
+                ),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          });
+        }
+        return widget.fallback;
       },
     );
   }
