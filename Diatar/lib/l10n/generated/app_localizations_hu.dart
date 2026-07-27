@@ -1299,6 +1299,22 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsHotkeyActionToggleSheetMusic => 'Kotta ki/be';
 
   @override
+  String get settingsDesktopOrderSetHotkeysTitle => 'Diasor gyorsbillentyűk';
+
+  @override
+  String get settingsOrderSetLabel => 'Diasor';
+
+  @override
+  String get settingsHotkeysNoOrderSets =>
+      'Nincs betöltött diasor, így nincs mit hozzárendelni.';
+
+  @override
+  String get settingsHotkeysOrderSetExistingTitle => 'Meglévő hozzárendelések';
+
+  @override
+  String get settingsOrderSetPickerTitle => 'Diasor kiválasztása';
+
+  @override
   String settingsHotkeyConflict(Object hotkey) {
     return 'Ütköző gyorsbillentyű: $hotkey';
   }

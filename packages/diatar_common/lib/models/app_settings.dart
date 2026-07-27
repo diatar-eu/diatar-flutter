@@ -52,6 +52,7 @@ class AppSettings {
     this.desktopProjectorMonitor = -1,
     this.desktopActionHotkeys = const <String, String>{},
     this.desktopSongHotkeys = const <String, String>{},
+    this.desktopOrderSetHotkeys = const <String, String>{},
     this.receiverUseServerColors = true,
     this.receiverShowHighlight = true,
     this.receiverUseAkkord = true,
@@ -122,6 +123,7 @@ class AppSettings {
   final int desktopProjectorMonitor;
   final Map<String, String> desktopActionHotkeys;
   final Map<String, String> desktopSongHotkeys;
+  final Map<String, String> desktopOrderSetHotkeys;
   final bool receiverUseServerColors;
   final bool receiverShowHighlight;
   final bool receiverUseAkkord;
@@ -199,6 +201,7 @@ class AppSettings {
     int? desktopProjectorMonitor,
     Map<String, String>? desktopActionHotkeys,
     Map<String, String>? desktopSongHotkeys,
+    Map<String, String>? desktopOrderSetHotkeys,
     bool? receiverUseServerColors,
     bool? receiverShowHighlight,
     bool? receiverUseAkkord,
@@ -271,6 +274,8 @@ class AppSettings {
             desktopProjectorMonitor ?? this.desktopProjectorMonitor,
       desktopActionHotkeys: desktopActionHotkeys ?? this.desktopActionHotkeys,
       desktopSongHotkeys: desktopSongHotkeys ?? this.desktopSongHotkeys,
+      desktopOrderSetHotkeys:
+          desktopOrderSetHotkeys ?? this.desktopOrderSetHotkeys,
       receiverUseServerColors:
           receiverUseServerColors ?? this.receiverUseServerColors,
       receiverShowHighlight:

@@ -31,6 +31,13 @@ class SongHotkeyOption {
   final String label;
 }
 
+class CustomOrderSetOption {
+  const CustomOrderSetOption({required this.id, required this.name});
+
+  final String id;
+  final String name;
+}
+
 enum DiatarSettingsInitialSection { internet, localNetwork }
 
 class DiatarSettingsSheet extends StatefulWidget {
@@ -44,6 +51,8 @@ class DiatarSettingsSheet extends StatefulWidget {
     required this.onRemoteShutdownRequested,
     this.availableSongs = const <SongHotkeyOption>[],
     this.availableSongsLoader,
+    this.availableOrderSets = const <CustomOrderSetOption>[],
+    this.availableOrderSetsLoader,
     this.initialSection,
     this.closeAfterInitialSectionClose = false,
   });
@@ -56,6 +65,8 @@ class DiatarSettingsSheet extends StatefulWidget {
   final VoidCallback onRemoteShutdownRequested;
   final List<SongHotkeyOption> availableSongs;
   final List<SongHotkeyOption> Function()? availableSongsLoader;
+  final List<CustomOrderSetOption> availableOrderSets;
+  final List<CustomOrderSetOption> Function()? availableOrderSetsLoader;
   final DiatarSettingsInitialSection? initialSection;
   final bool closeAfterInitialSectionClose;
 
@@ -112,11 +123,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _castAutoConnect;
   late Map<String, String> _desktopActionHotkeys;
   late Map<String, String> _desktopSongHotkeys;
+  late Map<String, String> _desktopOrderSetHotkeys;
   late List<SongHotkeyOption> _availableSongs;
+  late List<CustomOrderSetOption> _availableOrderSets;
   bool _availableSongsResolved = false;
   String _selectedSongHotkeyOptionId = '';
+  bool _availableOrderSetsResolved = false;
+  String _selectedOrderSetOptionId = '';
   late final FocusNode _focusNodeForHotkey;
   String _capturedSongHotkey = '';
+  String _capturedOrderSetHotkey = '';
   bool _showInternetPassword = false;
   bool _internetActionRunning = false;
   late final TextEditingController _szentirasApiKey;
@@ -192,10 +208,18 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _castAutoConnect = s.castAutoConnect;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
     _desktopSongHotkeys = Map<String, String>.from(s.desktopSongHotkeys);
+    _desktopOrderSetHotkeys =
+        Map<String, String>.from(s.desktopOrderSetHotkeys);
     _availableSongs = List<SongHotkeyOption>.from(widget.availableSongs);
     _availableSongsResolved = widget.availableSongs.isNotEmpty;
     if (_availableSongs.isNotEmpty) {
       _selectedSongHotkeyOptionId = _availableSongs.first.id;
+    }
+    _availableOrderSets =
+        List<CustomOrderSetOption>.from(widget.availableOrderSets);
+    _availableOrderSetsResolved = widget.availableOrderSets.isNotEmpty;
+    if (_selectedOrderSetOptionId.isEmpty && _availableOrderSets.isNotEmpty) {
+      _selectedOrderSetOptionId = _availableOrderSets.first.id;
     }
     _bkColor = s.bkColor;
     _txtColor = s.txtColor;
@@ -1606,9 +1630,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             ),
           ],
         ];
-      },
-    );
-  }
+        },
+      );
+    }
 
   Future<void> _openCastDeviceSelector(
     void Function(void Function()) setBoth,
@@ -2381,6 +2405,170 @@ void showOnboardingSheet(BuildContext context) {
               );
             }),
           ],
+          const Divider(height: 20),
+          Text(
+            l10n.settingsDesktopOrderSetHotkeysTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 8),
+          if (_availableOrderSetsResolved && _availableOrderSets.isEmpty)
+            Text(l10n.settingsHotkeysNoOrderSets),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.list),
+            title: Text(l10n.settingsOrderSetLabel),
+            subtitle: Text(
+              _selectedOrderSetOptionId.isEmpty
+                  ? l10n.valueNotSet
+                  : _orderSetLabelForId(_selectedOrderSetOptionId),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: FilledButton.tonalIcon(
+              onPressed: () async {
+                final CustomOrderSetOption? selected =
+                    await _pickOrderSetOption(context);
+                if (selected == null) {
+                  return;
+                }
+                setBoth(() {
+                  _selectedOrderSetOptionId = selected.id;
+                });
+              },
+              icon: const Icon(Icons.search),
+              label: Text(l10n.fileChoose),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_capturedOrderSetHotkey.isEmpty) ...<Widget>[
+            Focus(
+              focusNode: _focusNodeForHotkey,
+              autofocus: true,
+              onKeyEvent: (FocusNode node, KeyEvent event) {
+                if (event is KeyDownEvent) {
+                  final String combo = _eventToCombo(event);
+                  if (combo.isNotEmpty) {
+                    setBoth(() {
+                      _capturedOrderSetHotkey = combo;
+                    });
+                  }
+                }
+                return KeyEventResult.handled;
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Theme.of(context).primaryColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Text(
+                      l10n.settingsHotkeyPressAnyKey,
+                      style: const TextStyle(fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (_capturedOrderSetHotkey.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Text(
+                        _capturedOrderSetHotkey,
+                        style: Theme.of(context).textTheme.displaySmall
+                            ?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ] else ...<Widget>[
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.green),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Text(
+                    _capturedOrderSetHotkey,
+                    style: Theme.of(context).textTheme.displayMedium
+                        ?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setBoth(() {
+                            _capturedOrderSetHotkey = '';
+                            _focusNodeForHotkey.requestFocus();
+                          });
+                        },
+                        child: Text(l10n.cancel),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: () {
+                          if (_selectedOrderSetOptionId.isNotEmpty) {
+                            setBoth(() {
+                              _desktopOrderSetHotkeys[
+                                  _capturedOrderSetHotkey] =
+                                  _selectedOrderSetOptionId;
+                              _capturedOrderSetHotkey = '';
+                            });
+                          }
+                        },
+                        child: Text(l10n.settingsHotkeyAssign),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.tonalIcon(
+              onPressed: () {
+                setBoth(() {
+                  _capturedOrderSetHotkey = '';
+                });
+                _focusNodeForHotkey.requestFocus();
+              },
+              icon: const Icon(Icons.clear),
+              label: Text(l10n.settingsHotkeyClearCapture),
+            ),
+          ),
+          if (_desktopOrderSetHotkeys.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            ..._desktopOrderSetHotkeys.entries.map((
+              MapEntry<String, String> entry,
+            ) {
+              final String label = _orderSetLabelForId(entry.value);
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(entry.key),
+                subtitle: Text(label),
+                trailing: IconButton(
+                  tooltip: l10n.settingsHotkeyDelete,
+                  onPressed: () {
+                    setBoth(() {
+                      _desktopOrderSetHotkeys.remove(entry.key);
+                    });
+                  },
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              );
+            }),
+          ],
         ];
       },
     );
@@ -3044,6 +3232,15 @@ void showOnboardingSheet(BuildContext context) {
       }
       usedHotkeys.add(hotkey);
     }
+    for (final String hotkey in _desktopOrderSetHotkeys.keys) {
+      if (usedHotkeys.contains(hotkey)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.settingsHotkeyConflict(hotkey))),
+        );
+        return;
+      }
+      usedHotkeys.add(hotkey);
+    }
 
     final AppSettings updated = widget.initialSettings.copyWith(
       port: firstPort,
@@ -3118,6 +3315,8 @@ void showOnboardingSheet(BuildContext context) {
       desktopProjectorMonitor: _desktopProjectorMonitor,
       desktopActionHotkeys: Map<String, String>.from(_desktopActionHotkeys),
       desktopSongHotkeys: Map<String, String>.from(_desktopSongHotkeys),
+      desktopOrderSetHotkeys:
+          Map<String, String>.from(_desktopOrderSetHotkeys),
       projBoldText: _projBoldText,
       useSound: _useSound,
       castEnabled: _castEnabled,
@@ -3416,6 +3615,122 @@ void showOnboardingSheet(BuildContext context) {
       }
     }
     return id;
+  }
+
+  String _orderSetLabelForId(String id) {
+    for (final CustomOrderSetOption option in _availableOrderSets) {
+      if (option.id == id) {
+        return option.name;
+      }
+    }
+    for (final CustomOrderSetOption option in widget.availableOrderSets) {
+      if (option.id == id) {
+        return option.name;
+      }
+    }
+    return id;
+  }
+
+  void _ensureAvailableOrderSetsLoaded() {
+    if (_availableOrderSetsResolved) {
+      return;
+    }
+    _availableOrderSetsResolved = true;
+    final List<CustomOrderSetOption> loaded =
+        widget.availableOrderSetsLoader?.call() ??
+            const <CustomOrderSetOption>[];
+    _availableOrderSets = loaded;
+    if (_selectedOrderSetOptionId.isEmpty && _availableOrderSets.isNotEmpty) {
+      _selectedOrderSetOptionId = _availableOrderSets.first.id;
+    }
+  }
+
+  Future<CustomOrderSetOption?> _pickOrderSetOption(
+    BuildContext context,
+  ) async {
+    _ensureAvailableOrderSetsLoaded();
+    if (_availableOrderSets.isEmpty) {
+      return null;
+    }
+
+    final AppLocalizations l10n = context.l10n;
+    final TextEditingController search = TextEditingController();
+    final List<String> lowerLabels = _availableOrderSets
+        .map((CustomOrderSetOption option) => option.name.toLowerCase())
+        .toList(growable: false);
+    List<int> filteredIndexes = List<int>.generate(
+      _availableOrderSets.length,
+      (int i) => i,
+      growable: true,
+    );
+
+    final CustomOrderSetOption? selected = await showDialog<
+        CustomOrderSetOption>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: Text(l10n.settingsOrderSetPickerTitle),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 300,
+                child: Column(
+                  children: <Widget>[
+                    TextField(
+                      controller: search,
+                      onChanged: (String value) {
+                        setState(() {
+                          final String lowerValue = value.toLowerCase();
+                          filteredIndexes = List<int>.generate(
+                            _availableOrderSets.length,
+                            (int i) => i,
+                            growable: true,
+                          ).where((int i) {
+                            return lowerLabels[i].contains(lowerValue);
+                          }).toList(growable: false);
+                        });
+                      },
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        labelText: l10n.settingsSearchLabel,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Flexible(
+                      child: ListView.builder(
+                        itemCount: filteredIndexes.length,
+                        itemBuilder:
+                            (BuildContext context, int index) {
+                          final CustomOrderSetOption option =
+                              _availableOrderSets[filteredIndexes[index]];
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(option.name),
+                            selected: option.id == _selectedOrderSetOptionId,
+                            onTap: () {
+                              Navigator.of(context).pop(option);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () =>
+                      Navigator.of(context).pop<CustomOrderSetOption>(),
+                  child: Text(l10n.cancel),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    return selected;
   }
 }
 

@@ -48,6 +48,7 @@ class SettingsStore {
   static const String _kDesktopProjectorMonitor = 'DesktopProjectorMonitor';
   static const String _kDesktopActionHotkeys = 'DesktopActionHotkeys';
   static const String _kDesktopSongHotkeys = 'DesktopSongHotkeys';
+  static const String _kDesktopOrderSetHotkeys = 'DesktopOrderSetHotkeys';
   static const String _kUseSound = 'UseSound';
   static const String _kSzentirasApiKey = 'SzentirasApiKey';
   static const String _kTranspositions = 'Transpositions';
@@ -170,10 +171,13 @@ class SettingsStore {
       desktopActionHotkeys: hasDesktopActionHotkeys
           ? desktopActionHotkeys
           : _defaultDesktopActionHotkeys,
-      desktopSongHotkeys: _decodeStringMap(
-        prefs.getStringList(_kDesktopSongHotkeys),
-      ),
-      useSound: prefs.getBool(_kUseSound) ?? false,
+desktopSongHotkeys: _decodeStringMap(
+         prefs.getStringList(_kDesktopSongHotkeys),
+       ),
+       desktopOrderSetHotkeys: _decodeStringMap(
+         prefs.getStringList(_kDesktopOrderSetHotkeys),
+       ),
+       useSound: prefs.getBool(_kUseSound) ?? false,
       szentirasApiKey: prefs.getString(_kSzentirasApiKey) ?? '',
       bkColor: Color(prefs.getInt(_kBkColor) ?? 0xFF000000),
       txtColor: Color(prefs.getInt(_kTxColor) ?? 0xFFFFFFFF),
@@ -247,11 +251,15 @@ class SettingsStore {
       _kDesktopActionHotkeys,
       _encodeStringMap(settings.desktopActionHotkeys),
     );
-    await prefs.setStringList(
-      _kDesktopSongHotkeys,
-      _encodeStringMap(settings.desktopSongHotkeys),
-    );
-    await prefs.setBool(_kUseSound, settings.useSound);
+await prefs.setStringList(
+       _kDesktopSongHotkeys,
+       _encodeStringMap(settings.desktopSongHotkeys),
+     );
+     await prefs.setStringList(
+       _kDesktopOrderSetHotkeys,
+       _encodeStringMap(settings.desktopOrderSetHotkeys),
+     );
+     await prefs.setBool(_kUseSound, settings.useSound);
     await prefs.setString(_kSzentirasApiKey, settings.szentirasApiKey);
     await prefs.setInt(_kBkColor, settings.bkColor.toARGB32());
     await prefs.setInt(_kTxColor, settings.txtColor.toARGB32());

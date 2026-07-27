@@ -2309,6 +2309,36 @@ abstract class AppLocalizations {
   /// **'Kotta ki/be'**
   String get settingsHotkeyActionToggleSheetMusic;
 
+  /// No description provided for @settingsDesktopOrderSetHotkeysTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Diasor gyorsbillentyűk'**
+  String get settingsDesktopOrderSetHotkeysTitle;
+
+  /// No description provided for @settingsOrderSetLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Diasor'**
+  String get settingsOrderSetLabel;
+
+  /// No description provided for @settingsHotkeysNoOrderSets.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nincs betöltött diasor, így nincs mit hozzárendelni.'**
+  String get settingsHotkeysNoOrderSets;
+
+  /// No description provided for @settingsHotkeysOrderSetExistingTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Meglévő hozzárendelések'**
+  String get settingsHotkeysOrderSetExistingTitle;
+
+  /// No description provided for @settingsOrderSetPickerTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Diasor kiválasztása'**
+  String get settingsOrderSetPickerTitle;
+
   /// No description provided for @settingsHotkeyConflict.
   ///
   /// In hu, this message translates to:

@@ -913,6 +913,12 @@
   "settingsHotkeyActionToggleChords": "Akkordok ki/be",
   "settingsHotkeyActionToggleBackground": "Háttér ki/be",
   "settingsHotkeyActionToggleSheetMusic": "Kotta ki/be",
+  "settingsDesktopOrderSetHotkeysTitle": "Diasor gyorsbillentyűk",
+  "settingsOrderSetLabel": "Diasor",
+  "settingsHotkeysNoOrderSets":
+      "Nincs betöltött diasor, így nincs mit hozzárendelni.",
+  "settingsHotkeysOrderSetExistingTitle": "Meglévő hozzárendelések",
+  "settingsOrderSetPickerTitle": "Diasor kiválasztása",
   "settingsHotkeyConflict": "Ütköző gyorsbillentyű: {hotkey}",
   "@settingsHotkeyConflict": {
     "placeholders": {

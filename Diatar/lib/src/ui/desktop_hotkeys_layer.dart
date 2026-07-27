@@ -69,15 +69,25 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
       return KeyEventResult.handled;
     }
 
-    final Map<String, String> songHotkeys =
+final Map<String, String> songHotkeys =
         widget.controller.settings.desktopSongHotkeys;
-    final String? songBinding = songHotkeys[combo];
-    if (songBinding != null) {
-      widget.controller.activateSongHotkeyBinding(songBinding);
-      return KeyEventResult.handled;
-    }
+     final String? songBinding = songHotkeys[combo];
+     if (songBinding != null) {
+       widget.controller.activateSongHotkeyBinding(songBinding);
+       return KeyEventResult.handled;
+     }
 
-    return KeyEventResult.ignored;
+     final Map<String, String> orderSetHotkeys =
+         widget.controller.settings.desktopOrderSetHotkeys;
+     final String? orderSetId = orderSetHotkeys[combo];
+     if (orderSetId != null) {
+       unawaited(
+         widget.controller.setActiveCustomOrderSetById(orderSetId),
+       );
+       return KeyEventResult.handled;
+     }
+
+     return KeyEventResult.ignored;
   }
 
   bool _isTypingIntoTextField() {

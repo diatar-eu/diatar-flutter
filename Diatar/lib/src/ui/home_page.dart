@@ -1295,6 +1295,12 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             }
             return songOptions;
           },
+          availableOrderSetsLoader: () {
+            return controller.customOrderSets
+                .map((CustomOrderSet set) {
+              return CustomOrderSetOption(id: set.id, name: set.name);
+            }).toList();
+          },
           onApply: controller.applySettings,
           onExitRequested: controller.requestExit,
           onReloadBooksRequested: () => unawaited(controller.reloadBooks()),

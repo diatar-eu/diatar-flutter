@@ -1293,6 +1293,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHotkeyActionToggleSheetMusic => 'Toggle sheet music';
 
   @override
+  String get settingsDesktopOrderSetHotkeysTitle => 'Order set hotkeys';
+
+  @override
+  String get settingsOrderSetLabel => 'Order set';
+
+  @override
+  String get settingsHotkeysNoOrderSets =>
+      'No order sets loaded, so assignment is not available.';
+
+  @override
+  String get settingsHotkeysOrderSetExistingTitle => 'Existing bindings';
+
+  @override
+  String get settingsOrderSetPickerTitle => 'Select order set';
+
+  @override
   String settingsHotkeyConflict(Object hotkey) {
     return 'Conflicting hotkey: $hotkey';
   }

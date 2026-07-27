@@ -913,6 +913,11 @@
   "settingsHotkeyActionToggleChords": "Toggle chords",
   "settingsHotkeyActionToggleBackground": "Toggle background",
   "settingsHotkeyActionToggleSheetMusic": "Toggle sheet music",
+  "settingsDesktopOrderSetHotkeysTitle": "Order set hotkeys",
+  "settingsOrderSetLabel": "Order set",
+  "settingsHotkeysNoOrderSets": "No order sets loaded, so assignment is not available.",
+  "settingsHotkeysOrderSetExistingTitle": "Existing bindings",
+  "settingsOrderSetPickerTitle": "Select order set",
   "settingsHotkeyConflict": "Conflicting hotkey: {hotkey}",
   "@settingsHotkeyConflict": {
     "placeholders": {
