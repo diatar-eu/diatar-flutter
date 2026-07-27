@@ -2926,6 +2926,138 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Nincs beállítva a szentiras.eu API kulcs.'**
   String get statusSzentirasApiKeyMissing;
+
+  /// No description provided for @onboardingWelcomeTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Üdvözöl a Diatár!'**
+  String get onboardingWelcomeTitle;
+
+  /// No description provided for @onboardingWelcomeBody.
+  ///
+  /// In hu, this message translates to:
+  /// **'Templomi énekkivetítő alkalmazás.\n\nVálassz énekeskönyvet, állíts össze énekrendet, majd küldd ki a kivetítőre.'**
+  String get onboardingWelcomeBody;
+
+  /// No description provided for @onboardingPage2Title.
+  ///
+  /// In hu, this message translates to:
+  /// **'Főképernyő'**
+  String get onboardingPage2Title;
+
+  /// No description provided for @onboardingPage2Body.
+  ///
+  /// In hu, this message translates to:
+  /// **'Három mód közül választhatsz:\n\n• Kötetek: énekeskönyv böngészése, ének és versszak kiválasztása\n• Diasor: diasor megtekintése a vetítés mellett\n• Vetítés: teljes képernyős előnézet'**
+  String get onboardingPage2Body;
+
+  /// No description provided for @onboardingPage3Title.
+  ///
+  /// In hu, this message translates to:
+  /// **'Énekrend készítése'**
+  String get onboardingPage3Title;
+
+  /// No description provided for @onboardingPage3Body.
+  ///
+  /// In hu, this message translates to:
+  /// **'1. Keresd ki az énekeket a Kötetek módban\n2. Nyisd meg a Diasor szerkesztőt\n3. Add hozzá a versszakokat, szöveges diákat, elválasztókat\n4. Mentsd el .dia fájlként későbbi használatra'**
+  String get onboardingPage3Body;
+
+  /// No description provided for @onboardingPage4Title.
+  ///
+  /// In hu, this message translates to:
+  /// **'Speciális funkciók'**
+  String get onboardingPage4Title;
+
+  /// No description provided for @onboardingPage4Body.
+  ///
+  /// In hu, this message translates to:
+  /// **'• Zsolozsma: napi zsolozsma betöltése\n• Napi lelki batyu: napi olvasmányok\n• Szentírás: bibliaversek beillesztése\n• Keresés: teljes szöveges keresés\n• Gyorsbillentyűk: asztali billentyűparancsok'**
+  String get onboardingPage4Body;
+
+  /// No description provided for @onboardingGotIt.
+  ///
+  /// In hu, this message translates to:
+  /// **'Értem, kezdjük!'**
+  String get onboardingGotIt;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kihagyás'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In hu, this message translates to:
+  /// **'Tovább'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingDone.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kész'**
+  String get onboardingDone;
+
+  /// No description provided for @settingsInternetDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'Internetes közvetítés MQTT protokollal. Hozz létre felhasználót, majd oszd meg a QR-kódot a távoli DiaVetítővel.'**
+  String get settingsInternetDescription;
+
+  /// No description provided for @settingsLocalNetworkDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'TCP/IP kapcsolat helyi hálózaton. Add meg a vetítő IP-címét és portját.'**
+  String get settingsLocalNetworkDescription;
+
+  /// No description provided for @castSettingsDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'Google Cast eszközre (Chromecast) küldheted a diákat.'**
+  String get castSettingsDescription;
+
+  /// No description provided for @colorsDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'A vetített diák színeinek testreszabása: háttér, szöveg, üres dia és kiemelés.'**
+  String get colorsDescription;
+
+  /// No description provided for @projectionSettingsDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'Betűméret, margók, háttérkép és egyéb vetítési paraméterek beállítása.'**
+  String get projectionSettingsDescription;
+
+  /// No description provided for @settingsFilesDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'Énektárak importálása, DTZ kották, biztonsági mentés készítése és visszaállítása.'**
+  String get settingsFilesDescription;
+
+  /// No description provided for @settingsGeneralDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'Alkalmazás téma (sötét/világos) és nyelv beállítása.'**
+  String get settingsGeneralDescription;
+
+  /// No description provided for @systemActionsDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kilépés, énektárak újratöltése, távoli vetítő leállítása.'**
+  String get systemActionsDescription;
+
+  /// No description provided for @settingsHotkeysDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'Billentyűparancsok a gyors vezérléshez asztali környezetben.'**
+  String get settingsHotkeysDescription;
+
+  /// No description provided for @settingsOnboardingButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kezdő lépések'**
+  String get settingsOnboardingButton;
 }
 
 class _AppLocalizationsDelegate
@@ -2936,7 +3068,7 @@ class _AppLocalizationsDelegate
   Future<AppLocalizations> load(Locale locale) {
     return SynchronousFuture<AppLocalizations>(lookupAppLocalizations(locale));
   }
-diasort
+
   @override
   bool isSupported(Locale locale) =>
       <String>['en', 'hu'].contains(locale.languageCode);

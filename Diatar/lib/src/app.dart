@@ -10,6 +10,7 @@ import '../l10n/generated/app_localizations.dart';
 import 'controllers/diatar_main_controller.dart';
 import 'ui/desktop_hotkeys_layer.dart';
 import 'ui/home_page.dart';
+import 'ui/onboarding_sheet.dart';
 
 class DiatarApp extends StatefulWidget {
   const DiatarApp({super.key});
@@ -126,7 +127,13 @@ class _DiatarAppState extends State<DiatarApp>
                     cursor: SystemMouseCursors.none,
                     child: const SizedBox.expand(),
                   )
-                : DiatarHomePage(controller: _controller),
+                : _controller.pendingOnboarding
+                    ? OnboardingSheet(
+                        onComplete: () {
+                          unawaited(_controller.markOnboardingSeen());
+                        },
+                      )
+                    : DiatarHomePage(controller: _controller),
           ),
         );
       },

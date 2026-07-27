@@ -114,6 +114,11 @@ jobs:
       - name: Copy static landing page
         run: cp -r static/* deploy/
 
+      - name: Build and Deploy Documentation
+        run: |
+          pip install mkdocs
+          mkdocs build -d deploy/docs
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 

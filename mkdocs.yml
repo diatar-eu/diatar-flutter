@@ -1,0 +1,15 @@
+site_name: Diatár
+site_url: https://web.diatar.eu
+
+nav:
+  - Kezdő lépések: index.md
+  - Felület: ui.md
+  - Énekrend: custom-order.md
+  - Vetítés: projection.md
+  - Speciális funkciók:
+    - Zsolozsma: zsolozsma.md
+    - Napi lelki batyu: batyu.md
+    - Szentírás: szentiras.md
+  - Beállítások: settings.md
+  - Gyorsbillentyűk: hotkeys.md
+  - Letöltések: downloads.md

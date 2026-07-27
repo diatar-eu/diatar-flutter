@@ -420,7 +420,6 @@
       "name": {}
     }
   },
-  "batyuBookLabel": "Napi lelki batyu ({name})",
   "@batyuBookLabel": {
     "placeholders": {
       "name": {}
@@ -780,28 +779,40 @@
   "importDtzPreviewOrphanZips": "{count} ZIP fájl nem párosítható DTZ fájlhoz.",
   "@importDtzPreviewOrphanZips": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "importDtzStatusOk": "Importálható – {matched} médiafájl rendben",
   "@importDtzStatusOk": {
     "placeholders": {
-      "matched": { "type": "int" }
+      "matched": {
+        "type": "int"
+      }
     }
   },
   "importDtzStatusNoRefs": "Importálható – nincs hivatkozott médiafájl",
   "importDtzStatusWarning": "Importálható (figyelmeztetéssel) – {missing}/{total} médiafájl hiányzik",
   "@importDtzStatusWarning": {
     "placeholders": {
-      "missing": { "type": "int" },
-      "total": { "type": "int" }
+      "missing": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "importDtzStatusError": "Nem importálható – {missing}/{total} médiafájl hiányzik",
   "@importDtzStatusError": {
     "placeholders": {
-      "missing": { "type": "int" },
-      "total": { "type": "int" }
+      "missing": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "importDtzStatusParseError": "Nem importálható – érvénytelen DTZ fájl",
@@ -815,14 +826,20 @@
   "importDtzSuccess": "{dtz} DTZ fájl importálva, {files} médiafájl kibontva",
   "@importDtzSuccess": {
     "placeholders": {
-      "dtz": { "type": "int" },
-      "files": { "type": "int" }
+      "dtz": {
+        "type": "int"
+      },
+      "files": {
+        "type": "int"
+      }
     }
   },
   "importDtzSuccessNoMedia": "{dtz} DTZ fájl importálva",
   "@importDtzSuccessNoMedia": {
     "placeholders": {
-      "dtz": { "type": "int" }
+      "dtz": {
+        "type": "int"
+      }
     }
   },
   "importDtzError": "Hiba a kotta importálás során: {reason}",
@@ -1067,5 +1084,27 @@
   "settingsSzentirasApiKeyLabel": "szentiras.eu API kulcs",
   "settingsSzentirasApiKeyHint": "Kulcs a szentiras.eu oldalról",
   "szentirasApiKeyPrompt": "Add meg a szentiras.eu API kulcsot a Szentírás funkció használatához.",
-  "statusSzentirasApiKeyMissing": "Nincs beállítva a szentiras.eu API kulcs."
+  "statusSzentirasApiKeyMissing": "Nincs beállítva a szentiras.eu API kulcs.",
+  "onboardingWelcomeTitle": "Üdvözöl a Diatár!",
+  "onboardingWelcomeBody": "Templomi énekkivetítő alkalmazás.\n\nVálassz énekeskönyvet, állíts össze énekrendet, majd küldd ki a kivetítőre.",
+  "onboardingPage2Title": "Főképernyő",
+  "onboardingPage2Body": "Három mód közül választhatsz:\n\n• Kötetek: énekeskönyv böngészése, ének és versszak kiválasztása\n• Diasor: diasor megtekintése a vetítés mellett\n• Vetítés: teljes képernyős előnézet",
+  "onboardingPage3Title": "Énekrend készítése",
+  "onboardingPage3Body": "1. Keresd ki az énekeket a Kötetek módban\n2. Nyisd meg a Diasor szerkesztőt\n3. Add hozzá a versszakokat, szöveges diákat, elválasztókat\n4. Mentsd el .dia fájlként későbbi használatra",
+  "onboardingPage4Title": "Speciális funkciók",
+  "onboardingPage4Body": "• Zsolozsma: napi zsolozsma betöltése\n• Napi lelki batyu: napi olvasmányok\n• Szentírás: bibliaversek beillesztése\n• Keresés: teljes szöveges keresés\n• Gyorsbillentyűk: asztali billentyűparancsok",
+  "onboardingGotIt": "Értem, kezdjük!",
+  "onboardingSkip": "Kihagyás",
+  "onboardingNext": "Tovább",
+  "onboardingDone": "Kész",
+  "settingsInternetDescription": "Internetes közvetítés MQTT protokollal. Hozz létre felhasználót, majd oszd meg a QR-kódot a távoli DiaVetítővel.",
+  "settingsLocalNetworkDescription": "TCP/IP kapcsolat helyi hálózaton. Add meg a vetítő IP-címét és portját.",
+  "castSettingsDescription": "Google Cast eszközre (Chromecast) küldheted a diákat.",
+  "colorsDescription": "A vetített diák színeinek testreszabása: háttér, szöveg, üres dia és kiemelés.",
+  "projectionSettingsDescription": "Betűméret, margók, háttérkép és egyéb vetítési paraméterek beállítása.",
+  "settingsFilesDescription": "Énektárak importálása, DTZ kották, biztonsági mentés készítése és visszaállítása.",
+  "settingsGeneralDescription": "Alkalmazás téma (sötét/világos) és nyelv beállítása.",
+  "systemActionsDescription": "Kilépés, énektárak újratöltése, távoli vetítő leállítása.",
+  "settingsHotkeysDescription": "Billentyűparancsok a gyors vezérléshez asztali környezetben.",
+  "settingsOnboardingButton": "Kezdő lépések"
 }

@@ -1640,4 +1640,83 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statusSzentirasApiKeyMissing => 'szentiras.eu API key is not set.';
+
+  @override
+  String get onboardingWelcomeTitle => 'Welcome to Diatar!';
+
+  @override
+  String get onboardingWelcomeBody =>
+      'A church slide projector app.\n\nChoose a songbook, build a custom order, then send it to the projector.';
+
+  @override
+  String get onboardingPage2Title => 'Main Screen';
+
+  @override
+  String get onboardingPage2Body =>
+      'Choose from three modes:\n\n• Books: browse songbooks, select song and verse\n• Slide list: build a custom slide order\n• Presentation: full-screen preview for projecting';
+
+  @override
+  String get onboardingPage3Title => 'Building a Slide List';
+
+  @override
+  String get onboardingPage3Body =>
+      '1. Find songs in the Books mode\n2. Open the Slide List editor\n3. Add verses, text slides, separators\n4. Save as .dia file for later use';
+
+  @override
+  String get onboardingPage4Title => 'Special Features';
+
+  @override
+  String get onboardingPage4Body =>
+      '• Liturgy of the Hours (Zsolozsma): daily liturgy slides\n• Daily Readings (Batyu): import daily readings\n• Bible Verses (Szentiras): insert scripture\n• Search: full-text search across songbooks\n• Hotkeys: keyboard shortcuts for desktop';
+
+  @override
+  String get onboardingGotIt => 'Got it, let\'s go!';
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String get onboardingDone => 'Done';
+
+  @override
+  String get settingsInternetDescription =>
+      'Internet relay via MQTT. Create a user, then share the QR code with the remote DiaVetito receiver.';
+
+  @override
+  String get settingsLocalNetworkDescription =>
+      'TCP/IP connection over your local network. Enter the projector\'s IP address and port.';
+
+  @override
+  String get castSettingsDescription =>
+      'Send slides to a Google Cast device (Chromecast).';
+
+  @override
+  String get colorsDescription =>
+      'Customize projection colors: background, text, empty slide, and highlight.';
+
+  @override
+  String get projectionSettingsDescription =>
+      'Font size, margins, background image, alignment, and other projection parameters.';
+
+  @override
+  String get settingsFilesDescription =>
+      'Import songbooks, DTZ scores, create and restore backups.';
+
+  @override
+  String get settingsGeneralDescription =>
+      'Switch app theme (dark/light) and user interface language.';
+
+  @override
+  String get systemActionsDescription =>
+      'Exit the app, reload songbooks, or stop/shutdown the remote projector.';
+
+  @override
+  String get settingsHotkeysDescription =>
+      'Keyboard shortcuts for quick control on desktop.';
+
+  @override
+  String get settingsOnboardingButton => 'Getting started';
 }

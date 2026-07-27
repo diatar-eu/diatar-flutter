@@ -22,6 +22,7 @@ import '../services/cast_service.dart';
 import '../services/export_import_service.dart';
 import '../services/web_diavetito_url.dart';
 import '../utils/friendly_path.dart';
+import 'onboarding_sheet.dart';
 
 class SongHotkeyOption {
   const SongHotkeyOption({required this.id, required this.label});
@@ -388,6 +389,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                         l10n.settingsInternetSubtitle(internetStatus, mqttUser),
                       ),
                       onTap: _openInternetSettings,
+                      description: l10n.settingsInternetDescription,
                     ),
                   if (showInternet &&
                       (showLan ||
@@ -407,6 +409,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                         ),
                       ),
                       onTap: _openLocalNetworkSettings,
+                      description: l10n.settingsLocalNetworkDescription,
                     ),
                   if (showLan &&
                       (showCast ||
@@ -421,6 +424,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       title: Text(l10n.castSettingsTitle),
                       subtitle: Text(l10n.castSettingsSummary),
                       onTap: _openCastSettings,
+                      description: l10n.castSettingsDescription,
                     ),
                   if (showCast &&
                       (_castService?.isSupported ?? false) &&
@@ -440,6 +444,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                         ),
                       ),
                       onTap: _openColorSettings,
+                      description: l10n.colorsDescription,
                     ),
                   if (showColors &&
                       (showProjection || showFiles || showGeneral))
@@ -455,6 +460,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                         ),
                       ),
                       onTap: _openProjectionSettings,
+                      description: l10n.projectionSettingsDescription,
                     ),
                   if (showProjection &&
                       (showFiles || showGeneral || showHotkeys))
@@ -465,6 +471,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       title: Text(l10n.settingsFilesTitle),
                       subtitle: Text(l10n.settingsFilesSummary(blankSummary)),
                       onTap: _openFileSettings,
+                      description: l10n.settingsFilesDescription,
                     ),
                   if (showFiles && (showGeneral || showHotkeys))
                     const Divider(height: 1),
@@ -476,6 +483,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                         l10n.settingsGeneralSummary(themeLabel, languageLabel),
                       ),
                       onTap: _openGeneralSettings,
+                      description: l10n.settingsGeneralDescription,
                     ),
                   if (showGeneral && (showSystem || showHotkeys))
                     const Divider(height: 1),
@@ -485,6 +493,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       title: Text(l10n.systemActionsTitle),
                       subtitle: Text(l10n.systemActionsSummary),
                       onTap: _openSystemActions,
+                      description: l10n.systemActionsDescription,
                     ),
                   if (showSystem && showHotkeys) const Divider(height: 1),
                   if (showHotkeys)
@@ -493,6 +502,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       title: Text(l10n.settingsHotkeysTitle),
                       subtitle: Text(l10n.settingsHotkeysSummary),
                       onTap: _openDesktopHotkeySettings,
+                      description: l10n.settingsHotkeysDescription,
                     ),
                   if (!anyVisible)
                     Padding(
@@ -513,6 +523,29 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 FilledButton(onPressed: _save, child: Text(l10n.save)),
               ],
             ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              icon: const Icon(Icons.auto_stories, size: 18),
+              label: Text(l10n.settingsOnboardingButton),
+              onPressed: () {
+                Navigator.of(context).pop();
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  builder: (BuildContext bc) {
+                    return OnboardingSheet(
+                      onComplete: () {
+                        Navigator.of(bc).pop();
+                      },
+                    );
+                  },
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -531,13 +564,29 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     required Widget title,
     required Widget subtitle,
     required VoidCallback onTap,
+    String? description,
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
       leading: leading,
       title: title,
       subtitle: subtitle,
-      trailing: const Icon(Icons.chevron_right),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (description != null)
+            Tooltip(
+              message: description,
+              child: IconButton(
+                icon: const Icon(Icons.info_outline, size: 18),
+                onPressed: () {},
+                padding: EdgeInsets.zero,
+                splashRadius: 16,
+              ),
+            ),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
       onTap: onTap,
     );
   }
@@ -2180,8 +2229,26 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       setBoth(() {
                         _capturedSongHotkey = combo;
                       });
-                    }
-                  }
+}
+}
+
+void showOnboardingSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (BuildContext bc) {
+      return OnboardingSheet(
+        onComplete: () {
+          Navigator.of(bc).pop();
+        },
+      );
+    },
+  );
+}
                   return KeyEventResult.handled;
                 },
                 child: Container(

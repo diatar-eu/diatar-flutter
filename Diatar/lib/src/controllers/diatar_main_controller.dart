@@ -186,6 +186,7 @@ class DiatarMainController extends ChangeNotifier {
   bool _highlightFullyRendered = false;
   bool showing = false;
   bool loading = false;
+  bool pendingOnboarding = false;
   AppSettings settings = const AppSettings();
   ProjectionGlobals globals = const ProjectionGlobals();
   bool senderRunning = false;
@@ -872,6 +873,17 @@ class DiatarMainController extends ChangeNotifier {
     } else {
       await _syncCurrentDia(playSound: false);
     }
+    final bool hasSeen = await _settingsStore.hasSeenOnboarding();
+    if (!hasSeen) {
+      pendingOnboarding = true;
+      notifyListeners();
+    }
+  }
+
+  Future<void> markOnboardingSeen() async {
+    await _settingsStore.markOnboardingSeen();
+    pendingOnboarding = false;
+    notifyListeners();
   }
 
   Future<void> _tryAutoLoadTodayDia() async {

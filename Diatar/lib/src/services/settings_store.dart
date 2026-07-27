@@ -51,6 +51,7 @@ class SettingsStore {
   static const String _kUseSound = 'UseSound';
   static const String _kSzentirasApiKey = 'SzentirasApiKey';
   static const String _kTranspositions = 'Transpositions';
+  static const String _kHasSeenOnboarding = 'HasSeenOnboarding';
 
   static const Map<String, String> _defaultDesktopActionHotkeys =
       <String, String>{
@@ -78,6 +79,16 @@ class SettingsStore {
   Future<void> saveTranspositions(Map<String, int> transpositions) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kTranspositions, jsonEncode(transpositions));
+  }
+
+  Future<bool> hasSeenOnboarding() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kHasSeenOnboarding) ?? false;
+  }
+
+  Future<void> markOnboardingSeen() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kHasSeenOnboarding, true);
   }
 
   Future<AppSettings> load() async {

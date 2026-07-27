@@ -1646,5 +1646,83 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get statusSzentirasApiKeyMissing =>
       'Nincs beállítva a szentiras.eu API kulcs.';
+
+  @override
+  String get onboardingWelcomeTitle => 'Üdvözöl a Diatár!';
+
+  @override
+  String get onboardingWelcomeBody =>
+      'Templomi énekkivetítő alkalmazás.\n\nVálassz énekeskönyvet, állíts össze énekrendet, majd küldd ki a kivetítőre.';
+
+  @override
+  String get onboardingPage2Title => 'Főképernyő';
+
+  @override
+  String get onboardingPage2Body =>
+      'Három mód közül választhatsz:\n\n• Kötetek: énekeskönyv böngészése, ének és versszak kiválasztása\n• Diasor: diasor megtekintése a vetítés mellett\n• Vetítés: teljes képernyős előnézet';
+
+  @override
+  String get onboardingPage3Title => 'Énekrend készítése';
+
+  @override
+  String get onboardingPage3Body =>
+      '1. Keresd ki az énekeket a Kötetek módban\n2. Nyisd meg a Diasor szerkesztőt\n3. Add hozzá a versszakokat, szöveges diákat, elválasztókat\n4. Mentsd el .dia fájlként későbbi használatra';
+
+  @override
+  String get onboardingPage4Title => 'Speciális funkciók';
+
+  @override
+  String get onboardingPage4Body =>
+      '• Zsolozsma: napi zsolozsma betöltése\n• Napi lelki batyu: napi olvasmányok\n• Szentírás: bibliaversek beillesztése\n• Keresés: teljes szöveges keresés\n• Gyorsbillentyűk: asztali billentyűparancsok';
+
+  @override
+  String get onboardingGotIt => 'Értem, kezdjük!';
+
+  @override
+  String get onboardingSkip => 'Kihagyás';
+
+  @override
+  String get onboardingNext => 'Tovább';
+
+  @override
+  String get onboardingDone => 'Kész';
+
+  @override
+  String get settingsInternetDescription =>
+      'Internetes közvetítés MQTT protokollal. Hozz létre felhasználót, majd oszd meg a QR-kódot a távoli DiaVetítővel.';
+
+  @override
+  String get settingsLocalNetworkDescription =>
+      'TCP/IP kapcsolat helyi hálózaton. Add meg a vetítő IP-címét és portját.';
+
+  @override
+  String get castSettingsDescription =>
+      'Google Cast eszközre (Chromecast) küldheted a diákat.';
+
+  @override
+  String get colorsDescription =>
+      'A vetített diák színeinek testreszabása: háttér, szöveg, üres dia és kiemelés.';
+
+  @override
+  String get projectionSettingsDescription =>
+      'Betűméret, margók, háttérkép és egyéb vetítési paraméterek beállítása.';
+
+  @override
+  String get settingsFilesDescription =>
+      'Énektárak importálása, DTZ kották, biztonsági mentés készítése és visszaállítása.';
+
+  @override
+  String get settingsGeneralDescription =>
+      'Alkalmazás téma (sötét/világos) és nyelv beállítása.';
+
+  @override
+  String get systemActionsDescription =>
+      'Kilépés, énektárak újratöltése, távoli vetítő leállítása.';
+
+  @override
+  String get settingsHotkeysDescription =>
+      'Billentyűparancsok a gyors vezérléshez asztali környezetben.';
+
+  @override
+  String get settingsOnboardingButton => 'Kezdő lépések';
 }
-diasort

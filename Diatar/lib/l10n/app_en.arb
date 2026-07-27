@@ -18,7 +18,7 @@
   "batyuDateLabel": "Date",
   "batyuWordsPerSlide": "Words per slide",
   "batyuNoItems": "No readings are available for this date.",
-  "batyuBookLabel": "Daily readings (in Hungarian) ({name})",
+  "batyuBookLabel": "Daily reading ({name})",
   "addSlideTooltip": "Add slide",
   "addTextSlide": "Text slide",
   "addImageSlide": "Image slide",
@@ -420,7 +420,6 @@
       "name": {}
     }
   },
-  "batyuBookLabel": "Daily reading ({name})",
   "@batyuBookLabel": {
     "placeholders": {
       "name": {}
@@ -780,28 +779,40 @@
   "importDtzPreviewOrphanZips": "{count} ZIP file(s) cannot be paired with a DTZ.",
   "@importDtzPreviewOrphanZips": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "importDtzStatusOk": "Importable – {matched} media file(s) OK",
   "@importDtzStatusOk": {
     "placeholders": {
-      "matched": { "type": "int" }
+      "matched": {
+        "type": "int"
+      }
     }
   },
   "importDtzStatusNoRefs": "Importable – no media files referenced",
   "importDtzStatusWarning": "Importable (with warning) – {missing}/{total} media file(s) missing",
   "@importDtzStatusWarning": {
     "placeholders": {
-      "missing": { "type": "int" },
-      "total": { "type": "int" }
+      "missing": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "importDtzStatusError": "Not importable – {missing}/{total} media file(s) missing",
   "@importDtzStatusError": {
     "placeholders": {
-      "missing": { "type": "int" },
-      "total": { "type": "int" }
+      "missing": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "importDtzStatusParseError": "Not importable – invalid DTZ file",
@@ -815,14 +826,20 @@
   "importDtzSuccess": "{dtz} DTZ file(s) imported, {files} media file(s) extracted",
   "@importDtzSuccess": {
     "placeholders": {
-      "dtz": { "type": "int" },
-      "files": { "type": "int" }
+      "dtz": {
+        "type": "int"
+      },
+      "files": {
+        "type": "int"
+      }
     }
   },
   "importDtzSuccessNoMedia": "{dtz} DTZ file(s) imported",
   "@importDtzSuccessNoMedia": {
     "placeholders": {
-      "dtz": { "type": "int" }
+      "dtz": {
+        "type": "int"
+      }
     }
   },
   "importDtzError": "Error importing score(s): {reason}",
@@ -1067,5 +1084,27 @@
   "settingsSzentirasApiKeyLabel": "szentiras.eu API key",
   "settingsSzentirasApiKeyHint": "Key from szentiras.eu",
   "szentirasApiKeyPrompt": "Enter your szentiras.eu API key to use the Bible feature.",
-  "statusSzentirasApiKeyMissing": "szentiras.eu API key is not set."
+  "statusSzentirasApiKeyMissing": "szentiras.eu API key is not set.",
+  "onboardingWelcomeTitle": "Welcome to Diatar!",
+  "onboardingWelcomeBody": "A church slide projector app.\n\nChoose a songbook, build a custom order, then send it to the projector.",
+  "onboardingPage2Title": "Main Screen",
+  "onboardingPage2Body": "Choose from three modes:\n\n• Books: browse songbooks, select song and verse\n• Slide list: build a custom slide order\n• Presentation: full-screen preview for projecting",
+  "onboardingPage3Title": "Building a Slide List",
+  "onboardingPage3Body": "1. Find songs in the Books mode\n2. Open the Slide List editor\n3. Add verses, text slides, separators\n4. Save as .dia file for later use",
+  "onboardingPage4Title": "Special Features",
+  "onboardingPage4Body": "• Liturgy of the Hours (Zsolozsma): daily liturgy slides\n• Daily Readings (Batyu): import daily readings\n• Bible Verses (Szentiras): insert scripture\n• Search: full-text search across songbooks\n• Hotkeys: keyboard shortcuts for desktop",
+  "onboardingGotIt": "Got it, let's go!",
+  "onboardingSkip": "Skip",
+  "onboardingNext": "Next",
+  "onboardingDone": "Done",
+  "settingsInternetDescription": "Internet relay via MQTT. Create a user, then share the QR code with the remote DiaVetito receiver.",
+  "settingsLocalNetworkDescription": "TCP/IP connection over your local network. Enter the projector's IP address and port.",
+  "castSettingsDescription": "Send slides to a Google Cast device (Chromecast).",
+  "colorsDescription": "Customize projection colors: background, text, empty slide, and highlight.",
+  "projectionSettingsDescription": "Font size, margins, background image, alignment, and other projection parameters.",
+  "settingsFilesDescription": "Import songbooks, DTZ scores, create and restore backups.",
+  "settingsGeneralDescription": "Switch app theme (dark/light) and user interface language.",
+  "systemActionsDescription": "Exit the app, reload songbooks, or stop/shutdown the remote projector.",
+  "settingsHotkeysDescription": "Keyboard shortcuts for quick control on desktop.",
+  "settingsOnboardingButton": "Getting started"
 }
