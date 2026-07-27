@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform, exit;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -4196,7 +4197,11 @@ class DiatarMainController extends ChangeNotifier {
     await _sender.stop();
     await _mqttSender.close();
     await _desktopProjectorBridge.dispose();
-    await SystemNavigator.pop();
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      exit(0);
+    } else {
+      await SystemNavigator.pop();
+    }
   }
 
   String _fileExtension(String path) {
