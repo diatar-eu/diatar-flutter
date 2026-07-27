@@ -818,6 +818,8 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                               DiatarSettingsInitialSection.localNetwork,
                           sectionOnly: true,
                         ),
+                        projectionDisplayButton:
+                            _buildProjectionDisplayButton(context),
                       ),
                     ),
                   ] else ...<Widget>[
@@ -861,6 +863,8 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                       initialSection: DiatarSettingsInitialSection.localNetwork,
                       sectionOnly: true,
                     ),
+                    projectionDisplayButton:
+                        _buildProjectionDisplayButton(context),
                   ),
                 ),
               ] else ...<Widget>[_buildKotetekSelectors(context)],
@@ -3457,11 +3461,13 @@ class _DialistPanel extends StatefulWidget {
     required this.controller,
     required this.onInternetSettingsTap,
     required this.onLocalNetworkSettingsTap,
+    required this.projectionDisplayButton,
   });
 
   final DiatarMainController controller;
   final VoidCallback onInternetSettingsTap;
   final VoidCallback onLocalNetworkSettingsTap;
+  final Widget projectionDisplayButton;
 
   @override
   State<_DialistPanel> createState() => _DialistPanelState();
@@ -3774,6 +3780,8 @@ class _DialistPanelState extends State<_DialistPanel> {
                         ),
                       ),
                     ),
+                  const SizedBox(height: 8),
+                  widget.projectionDisplayButton,
                 ],
               ),
             ],
@@ -3807,6 +3815,9 @@ class _VersePreview extends StatelessWidget {
     final ProjectionGlobals globals = controller.globals.copyWith(
       projecting: true,
       wordToHighlight: controller.highPos,
+      useKotta: controller.diaVirtualBookSelected
+          ? false
+          : controller.globals.useKotta,
     );
     final ProjectorPainter painter = ProjectorPainter(
       frame: frame,
