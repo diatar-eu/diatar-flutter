@@ -3207,11 +3207,15 @@ class _SongDropdown extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final ThemeData theme = Theme.of(context);
+    final TextEditingController textController = TextEditingController(
+      text: controller.currentSong?.title ?? '',
+    );
     return Row(
       children: <Widget>[
         Expanded(
-          child: DropdownButtonFormField<int>(
-            initialValue: controller.songIndex.clamp(0, songs.length - 1),
+          child: TextFormField(
+            readOnly: true,
+            controller: textController,
             decoration: InputDecoration(
               labelText: context.l10n.songLabel,
               border: const OutlineInputBorder(),
@@ -3220,28 +3224,15 @@ class _SongDropdown extends StatelessWidget {
                 horizontal: 12,
                 vertical: 8,
               ),
+              suffixIcon: const Icon(Icons.search, size: 20),
             ),
-            isExpanded: true,
-            items: songs.asMap().entries.map((MapEntry<int, DtxSong> e) {
-              final String title = e.value.separator
-                  ? '-- ${e.value.title} --'
-                  : e.value.title;
-              return DropdownMenuItem<int>(
-                value: e.key,
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Text(
-                    title,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                ),
+            onTap: () {
+              _showQuickSongSearch(
+                context,
+                controller,
+                songs,
+                textController,
               );
-            }).toList(),
-            onChanged: (int? value) {
-              if (value != null) {
-                controller.setSongIndex(value);
-              }
             },
           ),
         ),
@@ -3268,6 +3259,77 @@ class _SongDropdown extends StatelessWidget {
       ],
     );
   }
+}
+
+void _showQuickSongSearch(
+  BuildContext context,
+  DiatarMainController controller,
+  List<DtxSong> songs,
+  TextEditingController textController,
+) {
+  final TextEditingController searchController = TextEditingController();
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (BuildContext sheetContext) {
+      return StatefulBuilder(
+        builder: (BuildContext context, StateSetter setSheetState) {
+          final String query = searchController.text.trim().toLowerCase();
+          final List<MapEntry<int, DtxSong>> filtered =
+              songs.asMap().entries.where((MapEntry<int, DtxSong> e) {
+            if (query.isEmpty) return true;
+            return e.value.title.toLowerCase().contains(query);
+          }).toList();
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: TextField(
+                    controller: searchController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: context.l10n.searchHint,
+                      prefixIcon: const Icon(Icons.search),
+                      border: const OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    onChanged: (_) => setSheetState(() {}),
+                  ),
+                ),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: filtered.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final MapEntry<int, DtxSong> e = filtered[index];
+                      final String title = e.value.separator
+                          ? '-- ${e.value.title} --'
+                          : e.value.title;
+                      return ListTile(
+                        title: Text(title),
+                        selected: e.key == controller.songIndex,
+                        onTap: () {
+                          controller.setSongIndex(e.key);
+                          textController.text = e.value.title;
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
 }
 
 class _VerseDropdown extends StatelessWidget {

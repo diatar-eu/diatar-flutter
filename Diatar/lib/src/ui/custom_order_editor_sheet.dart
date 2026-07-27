@@ -655,6 +655,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       builder: (BuildContext dialogContext) {
         final l10n = dialogContext.l10n;
         final NavigatorState dialogNavigator = Navigator.of(dialogContext);
+        String songSearchQuery = '';
         return StatefulBuilder(
           builder:
               (
@@ -673,6 +674,15 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                       ? null
                       : songs.first.songIndex;
                 }
+
+                final List<_SongOption> filteredSongs =
+                    songSearchQuery.isEmpty
+                        ? songs
+                        : songs.where((_SongOption option) {
+                            return option.songTitle
+                                .toLowerCase()
+                                .contains(songSearchQuery.toLowerCase());
+                          }).toList();
 
                 return AlertDialog(
                   title: Text(l10n.customOrderInsertVersesAction),
@@ -753,31 +763,48 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                               selectedSongIndex = options.isEmpty
                                   ? null
                                   : options.first.songIndex;
+                              songSearchQuery = '';
                             });
                           },
                         ),
                         const SizedBox(height: 12),
-                        DropdownButtonFormField<int>(
-                          isExpanded: true,
-                          initialValue: selectedSongIndex,
+                        TextField(
                           decoration: InputDecoration(
-                            labelText: l10n.customOrderInsertSongLabel,
+                            hintText: l10n.searchHint,
+                            prefixIcon: const Icon(Icons.search, size: 20),
                             border: const OutlineInputBorder(),
+                            isDense: true,
                           ),
-                          items: songs
-                              .map(
-                                (_SongOption option) => DropdownMenuItem<int>(
-                                  value: option.songIndex,
-                                  child: Text(
-                                    option.songTitle,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (int? value) {
-                            setDialogState(() => selectedSongIndex = value);
+                          onChanged: (String value) {
+                            setDialogState(() {
+                              songSearchQuery = value;
+                            });
                           },
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 200,
+                          child: ListView(
+                            children: filteredSongs
+                                .map((_SongOption option) {
+                                  final bool isSelected =
+                                      option.songIndex == selectedSongIndex;
+                                  return ListTile(
+                                    dense: true,
+                                    title: Text(
+                                      option.songTitle,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    selected: isSelected,
+                                    onTap: () {
+                                      setDialogState(() {
+                                        selectedSongIndex = option.songIndex;
+                                      });
+                                    },
+                                  );
+                                })
+                                .toList(),
+                          ),
                         ),
                       ],
                     ),
