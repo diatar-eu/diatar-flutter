@@ -1281,6 +1281,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHotkeyActionHighlightNext => 'Highlight next word';
 
   @override
+  String get settingsHotkeyActionTogglePhoto => 'Toggle photo';
+
+  @override
+  String get settingsHotkeyActionToggleChords => 'Toggle chords';
+
+  @override
+  String get settingsHotkeyActionToggleBackground => 'Toggle background';
+
+  @override
+  String get settingsHotkeyActionToggleSheetMusic => 'Toggle sheet music';
+
+  @override
   String settingsHotkeyConflict(Object hotkey) {
     return 'Conflicting hotkey: $hotkey';
   }

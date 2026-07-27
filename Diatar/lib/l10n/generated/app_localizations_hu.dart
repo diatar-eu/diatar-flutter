@@ -1287,6 +1287,18 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsHotkeyActionHighlightNext => 'Kiemelés következő szó';
 
   @override
+  String get settingsHotkeyActionTogglePhoto => 'Fénykép ki/be';
+
+  @override
+  String get settingsHotkeyActionToggleChords => 'Akkordok ki/be';
+
+  @override
+  String get settingsHotkeyActionToggleBackground => 'Háttér ki/be';
+
+  @override
+  String get settingsHotkeyActionToggleSheetMusic => 'Kotta ki/be';
+
+  @override
   String settingsHotkeyConflict(Object hotkey) {
     return 'Ütköző gyorsbillentyű: $hotkey';
   }

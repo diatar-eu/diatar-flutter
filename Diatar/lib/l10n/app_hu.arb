@@ -909,6 +909,10 @@
   "settingsHotkeyActionNextOrderSet": "Következő diasor",
   "settingsHotkeyActionHighlightPrev": "Kiemelés előző szó",
   "settingsHotkeyActionHighlightNext": "Kiemelés következő szó",
+  "settingsHotkeyActionTogglePhoto": "Fénykép ki/be",
+  "settingsHotkeyActionToggleChords": "Akkordok ki/be",
+  "settingsHotkeyActionToggleBackground": "Háttér ki/be",
+  "settingsHotkeyActionToggleSheetMusic": "Kotta ki/be",
   "settingsHotkeyConflict": "Ütköző gyorsbillentyű: {hotkey}",
   "@settingsHotkeyConflict": {
     "placeholders": {

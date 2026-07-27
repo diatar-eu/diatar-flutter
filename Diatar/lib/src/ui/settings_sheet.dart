@@ -2108,6 +2108,22 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 'highlightNext',
                 l10n.settingsHotkeyActionHighlightNext,
               ),
+              MapEntry<String, String>(
+                'togglePhoto',
+                l10n.settingsHotkeyActionTogglePhoto,
+              ),
+              MapEntry<String, String>(
+                'toggleChords',
+                l10n.settingsHotkeyActionToggleChords,
+              ),
+              MapEntry<String, String>(
+                'toggleBackground',
+                l10n.settingsHotkeyActionToggleBackground,
+              ),
+              MapEntry<String, String>(
+                'toggleSheetMusic',
+                l10n.settingsHotkeyActionToggleSheetMusic,
+              ),
             ];
 
         return <Widget>[

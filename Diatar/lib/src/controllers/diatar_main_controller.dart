@@ -667,6 +667,22 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Toggle whether chords (akkord) are shown on projection outputs.
+  Future<void> toggleChordsVisible() async {
+    final AppSettings newSettings = settings.copyWith(
+      projUseAkkord: !settings.projUseAkkord,
+    );
+    await applySettings(newSettings);
+  }
+
+  /// Toggle whether sheet music (kotta) is shown on projection outputs.
+  Future<void> toggleSheetMusicVisible() async {
+    final AppSettings newSettings = settings.copyWith(
+      projUseKotta: !settings.projUseKotta,
+    );
+    await applySettings(newSettings);
+  }
+
   /// Az aktualis versszak dia-id-jehez tartozo foto utvonala, vagy null ha
   /// nincs hozzarendelve foto.
   String? get currentPhotoPath {

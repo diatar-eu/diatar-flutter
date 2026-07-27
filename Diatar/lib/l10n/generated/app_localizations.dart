@@ -2285,6 +2285,30 @@ abstract class AppLocalizations {
   /// **'Kiemelés következő szó'**
   String get settingsHotkeyActionHighlightNext;
 
+  /// No description provided for @settingsHotkeyActionTogglePhoto.
+  ///
+  /// In hu, this message translates to:
+  /// **'Fénykép ki/be'**
+  String get settingsHotkeyActionTogglePhoto;
+
+  /// No description provided for @settingsHotkeyActionToggleChords.
+  ///
+  /// In hu, this message translates to:
+  /// **'Akkordok ki/be'**
+  String get settingsHotkeyActionToggleChords;
+
+  /// No description provided for @settingsHotkeyActionToggleBackground.
+  ///
+  /// In hu, this message translates to:
+  /// **'Háttér ki/be'**
+  String get settingsHotkeyActionToggleBackground;
+
+  /// No description provided for @settingsHotkeyActionToggleSheetMusic.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kotta ki/be'**
+  String get settingsHotkeyActionToggleSheetMusic;
+
   /// No description provided for @settingsHotkeyConflict.
   ///
   /// In hu, this message translates to:

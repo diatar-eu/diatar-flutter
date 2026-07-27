@@ -132,6 +132,18 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
         }
         widget.controller.highlightNext();
         break;
+      case 'togglePhoto':
+        widget.controller.toggleControlPhotoView();
+        break;
+      case 'toggleChords':
+        unawaited(widget.controller.toggleChordsVisible());
+        break;
+      case 'toggleBackground':
+        unawaited(widget.controller.toggleBackgroundImageVisible());
+        break;
+      case 'toggleSheetMusic':
+        unawaited(widget.controller.toggleSheetMusicVisible());
+        break;
     }
   }
 
