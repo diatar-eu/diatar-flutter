@@ -1243,15 +1243,21 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     final AppLocalizations l10n = context.l10n;
 
     if (controller.showPhotoInControl) {
-      final String? photoPath = controller.currentPhotoPath;
-      if (photoPath != null && photoPath.isNotEmpty) {
-        return _PhotoPreviewWithFallback(
-          photoPath: photoPath,
-          notFoundLabel: photoPath,
-          fallback: _buildNormalPreview(context),
-          controller: controller,
-          l10n: l10n,
-        );
+      final CustomOrderEntry? projectedCustom =
+          controller.projectedCustomOrderEntry;
+      final bool isCustomEntry = projectedCustom != null &&
+          (projectedCustom.isCustomText || projectedCustom.isCustomImage);
+      if (!isCustomEntry) {
+        final String? photoPath = controller.currentPhotoPath;
+        if (photoPath != null && photoPath.isNotEmpty) {
+          return _PhotoPreviewWithFallback(
+            photoPath: photoPath,
+            notFoundLabel: photoPath,
+            fallback: _buildNormalPreview(context),
+            controller: controller,
+            l10n: l10n,
+          );
+        }
       }
     }
 
