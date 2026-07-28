@@ -45,7 +45,7 @@ class TcpServerService {
       return;
     }
     try {
-      _server = await ServerSocket.bind(InternetAddress.anyIPv4, _port, shared: true);
+      _server = await ServerSocket.bind(InternetAddress.anyIPv4, _port);
       _server!.listen(_onClient, onError: (Object e) {
         onError('tcpServerError:$e');
       });
@@ -78,7 +78,7 @@ class TcpServerService {
 
   void _onClient(Socket socket) {
     _clientSub?.cancel();
-    _client?.destroy();
+    _clientSub = null;
     _client = socket;
     onConnection(true);
     _clientSub = socket.listen(

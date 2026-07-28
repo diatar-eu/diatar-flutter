@@ -13,15 +13,16 @@ class TcpSenderService {
   ValueChanged<bool> onStatusChanged;
   SenderErrorCallback onError;
 
-  final Map<String, Socket> _clients = <String, Socket>{};
-  final Map<String, StreamSubscription<List<int>>> _subs =
-      <String, StreamSubscription<List<int>>>{};
+  final Map<String, RawSocket> _clients = <String, RawSocket>{};
+  final Map<String, StreamSubscription<RawSocketEvent>> _subs =
+      <String, StreamSubscription<RawSocketEvent>>{};
   final Map<String, DateTime> _lastConnectError = <String, DateTime>{};
   final Set<String> _targetKeys = <String>{};
   bool _running = false;
   int _session = 0;
   Timer? _idleTimer;
   DateTime _lastSentAt = DateTime.fromMillisecondsSinceEpoch(0);
+  Future<void> _sendQueue = Future<void>.value();
   Uint8List? _cachedState;
   Uint8List? _cachedText;
   Uint8List? _cachedBlank;
@@ -34,6 +35,18 @@ class TcpSenderService {
   bool get hasClients => _clients.isNotEmpty;
   bool get allTargetsConnected =>
       _targetKeys.isNotEmpty && _clients.length == _targetKeys.length;
+
+  Future<void> _enqueue(Future<void> Function() task) async {
+    final Future<void> previous = _sendQueue;
+    final Completer<void> current = Completer<void>();
+    _sendQueue = current.future;
+    await previous;
+    try {
+      await task();
+    } finally {
+      current.complete();
+    }
+  }
 
   Future<void> start(List<String> targets) async {
     await stop();
@@ -66,17 +79,18 @@ class TcpSenderService {
     _session++;
     _targetKeys.clear();
     _lastConnectError.clear();
+    _sendQueue = Future<void>.value();
 
-    for (final StreamSubscription<List<int>> sub in _subs.values) {
+    for (final StreamSubscription<RawSocketEvent> sub in _subs.values) {
       try {
         await sub.cancel();
       } catch (_) {}
     }
     _subs.clear();
 
-    for (final Socket socket in _clients.values) {
+    for (final RawSocket socket in _clients.values) {
       try {
-        socket.destroy();
+        socket.close();
       } catch (_) {}
     }
     _clients.clear();
@@ -90,32 +104,24 @@ class TcpSenderService {
     while (_running &&
         session == _session &&
         _targetKeys.contains(target.key)) {
-      Socket? socket;
-      StreamSubscription<List<int>>? sub;
+      RawSocket? socket;
+      StreamSubscription<RawSocketEvent>? sub;
       try {
-        socket = await Socket.connect(
-          target.host,
-          target.port,
-          timeout: const Duration(seconds: 3),
-        );
+        socket = await _connectTarget(target.host, target.port);
 
         _clients[target.key] = socket;
         _emitStatus();
         await _replayCache(socket);
 
-        final ProjectionPacketParser parser = ProjectionPacketParser();
         final Completer<void> done = Completer<void>();
         sub = socket.listen(
-          (List<int> chunk) {
-            final List<ProjectionPacket> packets = parser.addChunk(
-              Uint8List.fromList(chunk),
-            );
-            for (final ProjectionPacket packet in packets) {
-              if (packet.type == RecTypes.askSize && _cachedScrSize != null) {
-                unawaited(
-                  _sendToSocket(socket!, RecTypes.scrSize, _cachedScrSize),
-                );
+          (RawSocketEvent event) {
+            if (event == RawSocketEvent.closed) {
+              if (!done.isCompleted) {
+                done.complete();
               }
+            } else if (event == RawSocketEvent.read) {
+              socket?.read();
             }
           },
           onError: (Object e) {
@@ -143,9 +149,9 @@ class TcpSenderService {
         }
         _subs.remove(target.key);
 
-        final Socket? old = _clients.remove(target.key);
+        final RawSocket? old = _clients.remove(target.key);
         try {
-          old?.destroy();
+          old?.close();
         } catch (_) {}
         _emitStatus();
       }
@@ -153,6 +159,15 @@ class TcpSenderService {
       if (_running && session == _session && _targetKeys.contains(target.key)) {
         await Future<void>.delayed(const Duration(milliseconds: 400));
       }
+    }
+  }
+
+  Future<RawSocket> _connectTarget(String host, int port) async {
+    try {
+      final RawSocket s = await RawSocket.connect(host, port);
+      return s;
+    } catch (e) {
+      rethrow;
     }
   }
 
@@ -178,7 +193,7 @@ class TcpSenderService {
       projecting: showing,
       wordToHighlight: wordToHighlight,
     );
-    await _sendPacket(RecTypes.state, _cachedState!);
+    await _enqueue(() => _sendPacket(RecTypes.state, _cachedState!));
   }
 
   Future<void> sendText({
@@ -187,21 +202,23 @@ class TcpSenderService {
     required int wordToHighlight,
   }) async {
     _cachedText = encodeTextRecord(title: title, lines: lines);
-    await _sendPacket(RecTypes.text, _cachedText!);
+    await _enqueue(() => _sendPacket(RecTypes.text, _cachedText!));
   }
 
   Future<void> sendBlank(Uint8List bytes, {String ext = ''}) async {
     _cachedBlank = encodeImageRecord(bytes: bytes, ext: ext);
-    await _sendPacket(RecTypes.blank, _cachedBlank!);
+    await _enqueue(() => _sendPacket(RecTypes.blank, _cachedBlank!));
   }
 
   Future<void> sendPic(Uint8List bytes, {String ext = ''}) async {
     _cachedPic = encodeImageRecord(bytes: bytes, ext: ext);
-    await _sendPacket(RecTypes.pic, _cachedPic!);
+    await _enqueue(() => _sendPacket(RecTypes.pic, _cachedPic!));
   }
 
   Future<void> sendIdle() async {
-    await _sendPacket(RecTypes.idle, Uint8List(0));
+    await _enqueue(
+      () => _sendPacket(RecTypes.idle, Uint8List(0)),
+    );
   }
 
   Future<void> sendScreenSize({required int width, required int height}) async {
@@ -210,10 +227,10 @@ class TcpSenderService {
       height: height,
       korusMode: false,
     );
-    await _sendPacket(RecTypes.scrSize, _cachedScrSize!);
+    await _enqueue(() => _sendPacket(RecTypes.scrSize, _cachedScrSize!));
   }
 
-  Future<void> _replayCache(Socket socket) async {
+  Future<void> _replayCache(RawSocket socket) async {
     await _sendToSocket(socket, RecTypes.scrSize, _cachedScrSize);
     await _sendToSocket(socket, RecTypes.state, _cachedState);
     await _sendToSocket(socket, RecTypes.text, _cachedText);
@@ -227,35 +244,41 @@ class TcpSenderService {
     }
     final Uint8List packet = encodeProjectionPacket(type, body);
     final List<String> dead = <String>[];
-    for (final MapEntry<String, Socket> entry in _clients.entries) {
+    for (final MapEntry<String, RawSocket> entry in _clients.entries.toList()) {
       final String key = entry.key;
-      final Socket socket = entry.value;
+      final RawSocket socket = entry.value;
       try {
-        socket.add(packet);
-        await socket.flush();
+        socket.write(packet, 0, packet.length);
         _lastSentAt = DateTime.now();
-      } catch (_) {
+      } catch (e) {
+        onError('senderTcpSendError', <String, String>{
+          'error': '$key - $e',
+        });
         dead.add(key);
       }
     }
     for (final String key in dead) {
-      final Socket? deadSocket = _clients.remove(key);
+      final RawSocket? deadSocket = _clients.remove(key);
       try {
-        deadSocket?.destroy();
+        deadSocket?.close();
       } catch (_) {}
     }
     _emitStatus();
   }
 
-  Future<void> _sendToSocket(Socket socket, int type, Uint8List? body) async {
+  Future<void> _sendToSocket(RawSocket socket, int type, Uint8List? body) async {
     if (body == null) {
       return;
     }
     try {
-      socket.add(encodeProjectionPacket(type, body));
-      await socket.flush();
+      final Uint8List packet = encodeProjectionPacket(type, body);
+      socket.write(packet, 0, packet.length);
       _lastSentAt = DateTime.now();
-    } catch (_) {}
+    } catch (e) {
+      onError('senderTcpSendError', <String, String>{
+        'error': '$type - $e',
+      });
+    }
   }
 
   void _startIdleKeepAlive() {

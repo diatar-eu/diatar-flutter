@@ -472,7 +472,7 @@ class ProjectionController extends ChangeNotifier {
           notify: false,
           params: <String, Object>{'port': settings.port},
         );
-      } else if (settings.tcpEnabled) {
+      } else if (_transportConfigured) {
         _setStatus(
           'statusWaitingForClient',
           notify: false,
@@ -555,11 +555,13 @@ class ProjectionController extends ChangeNotifier {
       _ignoreNextMqttEndProgram = false;
       await _mqtt.closeReceiver();
       await _server.restart(settings.port);
-      _setStatus(
-        'statusTcpListening',
-        notify: false,
-        params: <String, Object>{'port': settings.port},
-      );
+      if (_server.running) {
+        _setStatus(
+          'statusTcpListening',
+          notify: false,
+          params: <String, Object>{'port': settings.port},
+        );
+      }
     } else if (user.isEmpty && kIsWeb) {
       mqttActive = false;
       mqttConnected = false;
