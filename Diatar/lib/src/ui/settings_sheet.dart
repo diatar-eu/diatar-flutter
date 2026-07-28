@@ -3418,6 +3418,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 
   String _orderSetLabelForId(String id) {
+    _ensureAvailableOrderSetsLoaded();
     for (final CustomOrderSetOption option in _availableOrderSets) {
       if (option.id == id) {
         return option.name;
