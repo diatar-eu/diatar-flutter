@@ -3077,11 +3077,6 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void nextVerse() {
-    final DtxSong? s = currentSong;
-    if (s == null || s.verses.isEmpty) {
-      return;
-    }
-
     if (diaVirtualBookSelected) {
       final int exactIdx = _currentCustomOrderIndex();
       if (exactIdx >= 0) {
@@ -3093,9 +3088,8 @@ class DiatarMainController extends ChangeNotifier {
         return;
       }
 
-      // Ha sorrenden kivuli dian allunk, eloszor azon lepdelunk vegig,
-      // es csak a vege utan ugrunk vissza a sorrend kovetkezo elemere.
-      if (verseIndex + 1 < s.verses.length) {
+      final DtxSong? s = currentSong;
+      if (s != null && verseIndex + 1 < s.verses.length) {
         setVerseIndex(verseIndex + 1);
         return;
       }
@@ -3115,6 +3109,11 @@ class DiatarMainController extends ChangeNotifier {
           _selectByCustomOrderCursor(nextIdx, sync: true);
         }
       }
+      return;
+    }
+
+    final DtxSong? s = currentSong;
+    if (s == null || s.verses.isEmpty) {
       return;
     }
 
@@ -3145,11 +3144,6 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void prevVerse() {
-    final DtxSong? s = currentSong;
-    if (s == null || s.verses.isEmpty) {
-      return;
-    }
-
     if (diaVirtualBookSelected) {
       final int exactIdx = _currentCustomOrderIndex();
       if (exactIdx >= 0) {
@@ -3176,6 +3170,11 @@ class DiatarMainController extends ChangeNotifier {
           _selectByCustomOrderCursor(prevIdx, sync: true);
         }
       }
+      return;
+    }
+
+    final DtxSong? s = currentSong;
+    if (s == null || s.verses.isEmpty) {
       return;
     }
 
