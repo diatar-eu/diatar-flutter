@@ -994,6 +994,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderSetRemoveConfirm => 'Remove this custom order?';
 
   @override
+  String customOrderSetRemoveHotkeyWarning(Object hotkey) {
+    return 'This order set has a hotkey assigned ($hotkey). Remove the hotkey in Settings first.';
+  }
+
+  @override
   String get customOrderSetToggleEnabledTooltip =>
       'Enable or disable the custom order (a disabled one is hidden from the views)';
 

@@ -552,14 +552,14 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                             ? Icons.visibility
                             : Icons.visibility_off,
                       ),
-                      onPressed: controller.customOrderSets.length > 1
+                      onPressed: controller.customOrderSets.isNotEmpty
                           ? _toggleCurrentSetEnabled
                           : null,
                     ),
                     IconButton(
                       tooltip: l10n.customOrderSetRemove,
                       icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: controller.customOrderSets.length > 1
+                      onPressed: controller.customOrderSets.isNotEmpty
                           ? _confirmRemoveCurrentSet
                           : null,
                     ),
@@ -1386,6 +1386,35 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   Future<void> _confirmRemoveCurrentSet() async {
     final int index = controller.activeCustomOrderSetIndex;
     if (index < 0) {
+      return;
+    }
+    final String setId = controller.customOrderSets[index].id;
+    final Map<String, String> hotkeys =
+        controller.settings.desktopOrderSetHotkeys;
+    final String? boundHotkey = hotkeys.entries
+        .where((MapEntry<String, String> e) => e.value == setId)
+        .map((MapEntry<String, String> e) => e.key)
+        .firstOrNull;
+    if (boundHotkey != null) {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          final AppLocalizations l10n = dialogContext.l10n;
+          return AlertDialog(
+            title: Text(l10n.customOrderSetRemove),
+            content: Text(
+              l10n.customOrderSetRemoveHotkeyWarning(boundHotkey),
+            ),
+            actions: <Widget>[
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.ok),
+              ),
+            ],
+          );
+        },
+      );
       return;
     }
     final bool? confirmed = await showDialog<bool>(

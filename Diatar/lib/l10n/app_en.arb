@@ -669,6 +669,13 @@
   "@customOrderSetRemoveConfirm": {
     "description": "Confirmation message before removing a loaded custom order"
   },
+  "customOrderSetRemoveHotkeyWarning": "This order set has a hotkey assigned ({hotkey}). Remove the hotkey in Settings first.",
+  "@customOrderSetRemoveHotkeyWarning": {
+    "description": "Warning when trying to remove a custom order that has a hotkey assigned",
+    "hotkey": {
+      "type": "String"
+    }
+  },
   "customOrderSetToggleEnabledTooltip": "Enable or disable the custom order (a disabled one is hidden from the views)",
   "@customOrderSetToggleEnabledTooltip": {
     "description": "Tooltip to enable or disable a custom order in the editor"

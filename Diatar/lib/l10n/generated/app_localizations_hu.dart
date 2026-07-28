@@ -998,6 +998,11 @@ class AppLocalizationsHu extends AppLocalizations {
       'Biztosan eltávolítod ezt a diasort?';
 
   @override
+  String customOrderSetRemoveHotkeyWarning(Object hotkey) {
+    return 'Ez a diasor gyorsbillentyűhöz van rendelve ($hotkey). Előbb távolítsd el a gyorsbillentyűt a Beállításokban.';
+  }
+
+  @override
   String get customOrderSetToggleEnabledTooltip =>
       'Diasor be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)';
 

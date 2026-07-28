@@ -669,6 +669,13 @@
   "@customOrderSetRemoveConfirm": {
     "description": "Confirmation message before removing a loaded custom order"
   },
+  "customOrderSetRemoveHotkeyWarning": "Ez a diasor gyorsbillentyűhöz van rendelve ({hotkey}). Előbb távolítsd el a gyorsbillentyűt a Beállításokban.",
+  "@customOrderSetRemoveHotkeyWarning": {
+    "description": "Warning when trying to remove a custom order that has a hotkey assigned",
+    "hotkey": {
+      "type": "String"
+    }
+  },
   "customOrderSetToggleEnabledTooltip": "Diasor be- és kikapcsolása (a kikapcsolt nem jelenik meg a nézetekben)",
   "@customOrderSetToggleEnabledTooltip": {
     "description": "Tooltip to enable or disable a custom order in the editor"

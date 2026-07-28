@@ -1799,6 +1799,12 @@ abstract class AppLocalizations {
   /// **'Biztosan eltávolítod ezt a diasort?'**
   String get customOrderSetRemoveConfirm;
 
+  /// Warning when trying to remove a custom order that has a hotkey assigned
+  ///
+  /// In hu, this message translates to:
+  /// **'Ez a diasor gyorsbillentyűhöz van rendelve ({hotkey}). Előbb távolítsd el a gyorsbillentyűt a Beállításokban.'**
+  String customOrderSetRemoveHotkeyWarning(Object hotkey);
+
   /// Tooltip to enable or disable a custom order in the editor
   ///
   /// In hu, this message translates to:
