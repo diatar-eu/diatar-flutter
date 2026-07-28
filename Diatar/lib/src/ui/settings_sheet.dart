@@ -130,9 +130,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   String _selectedSongHotkeyOptionId = '';
   bool _availableOrderSetsResolved = false;
   String _selectedOrderSetOptionId = '';
-  late final FocusNode _focusNodeForHotkey;
-  String _capturedSongHotkey = '';
-  String _capturedOrderSetHotkey = '';
   bool _showInternetPassword = false;
   bool _internetActionRunning = false;
   late final TextEditingController _szentirasApiKey;
@@ -170,7 +167,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _mqttUser = TextEditingController(text: s.mqttUser);
     _mqttPassword = TextEditingController(text: s.mqttPassword);
     _szentirasApiKey = TextEditingController(text: s.szentirasApiKey);
-    _focusNodeForHotkey = FocusNode(debugLabel: 'hotkey-capture');
     _blankPicPath = TextEditingController(text: s.blankPicPath);
     _diaExportPath = TextEditingController(text: s.diaExportPath);
     _projFontSize = TextEditingController(text: s.projFontSize.toString());
@@ -280,7 +276,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _tcpTargets.dispose();
     _mqttUser.dispose();
     _mqttPassword.dispose();
-    _focusNodeForHotkey.dispose();
     _blankPicPath.dispose();
     _diaExportPath.dispose();
     _projFontSize.dispose();
@@ -2257,132 +2252,25 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             ),
           ),
           const SizedBox(height: 8),
-          ...<Widget>[
-            if (_capturedSongHotkey.isEmpty) ...<Widget>[
-              Focus(
-                focusNode: _focusNodeForHotkey,
-                autofocus: true,
-                onKeyEvent: (FocusNode node, KeyEvent event) {
-                  if (event is KeyDownEvent) {
-                    final String combo = _eventToCombo(event);
-                    if (combo.isNotEmpty) {
-                      setBoth(() {
-                        _capturedSongHotkey = combo;
-                      });
-}
-}
-
-void showOnboardingSheet(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (BuildContext bc) {
-      return OnboardingSheet(
-        onComplete: () {
-          Navigator.of(bc).pop();
-        },
-      );
-    },
-  );
-}
-                  return KeyEventResult.handled;
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).primaryColor),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Text(
-                        l10n.settingsHotkeyPressAnyKey,
-                        style: const TextStyle(fontSize: 14),
-                        textAlign: TextAlign.center,
-                      ),
-                      if (_capturedSongHotkey.isNotEmpty) ...<Widget>[
-                        const SizedBox(height: 12),
-                        Text(
-                          _capturedSongHotkey,
-                          style: Theme.of(context).textTheme.displaySmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ] else ...<Widget>[
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.green),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Text(
-                      _capturedSongHotkey,
-                      style: Theme.of(context).textTheme.displayMedium
-                          ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            setBoth(() {
-                              _capturedSongHotkey = '';
-                              _focusNodeForHotkey.requestFocus();
-                            });
-                          },
-                          child: Text(l10n.cancel),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: () {
-                            if (_selectedSongHotkeyOptionId.isNotEmpty) {
-                              setBoth(() {
-                                _desktopSongHotkeys[_capturedSongHotkey] =
-                                    _selectedSongHotkeyOptionId;
-                                _capturedSongHotkey = '';
-                              });
-                            }
-                          },
-                          child: Text(l10n.settingsHotkeyAssign),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.tonalIcon(
-                onPressed: () {
-                  setBoth(() {
-                    _capturedSongHotkey = '';
-                  });
-                  _focusNodeForHotkey.requestFocus();
-                },
-                icon: const Icon(Icons.clear),
-                label: Text(l10n.settingsHotkeyClearCapture),
-              ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.tonalIcon(
+              onPressed: _selectedSongHotkeyOptionId.isEmpty
+                  ? null
+                  : () async {
+                      final String? captured =
+                          await _showHotkeyCaptureDialog(context);
+                      if (captured != null) {
+                        setBoth(() {
+                          _desktopSongHotkeys[captured] =
+                              _selectedSongHotkeyOptionId;
+                        });
+                      }
+                    },
+              icon: const Icon(Icons.keyboard),
+              label: Text(l10n.settingsHotkeyCapture),
             ),
-          ],
+          ),
           if (_desktopSongHotkeys.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
             ..._desktopSongHotkeys.entries.map((
@@ -2440,111 +2328,23 @@ void showOnboardingSheet(BuildContext context) {
             ),
           ),
           const SizedBox(height: 8),
-          if (_capturedOrderSetHotkey.isEmpty) ...<Widget>[
-            Focus(
-              focusNode: _focusNodeForHotkey,
-              autofocus: true,
-              onKeyEvent: (FocusNode node, KeyEvent event) {
-                if (event is KeyDownEvent) {
-                  final String combo = _eventToCombo(event);
-                  if (combo.isNotEmpty) {
-                    setBoth(() {
-                      _capturedOrderSetHotkey = combo;
-                    });
-                  }
-                }
-                return KeyEventResult.handled;
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).primaryColor),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Text(
-                      l10n.settingsHotkeyPressAnyKey,
-                      style: const TextStyle(fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
-                    if (_capturedOrderSetHotkey.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 12),
-                      Text(
-                        _capturedOrderSetHotkey,
-                        style: Theme.of(context).textTheme.displaySmall
-                            ?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ] else ...<Widget>[
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.green),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Text(
-                    _capturedOrderSetHotkey,
-                    style: Theme.of(context).textTheme.displayMedium
-                        ?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          setBoth(() {
-                            _capturedOrderSetHotkey = '';
-                            _focusNodeForHotkey.requestFocus();
-                          });
-                        },
-                        child: Text(l10n.cancel),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () {
-                          if (_selectedOrderSetOptionId.isNotEmpty) {
-                            setBoth(() {
-                              _desktopOrderSetHotkeys[
-                                  _capturedOrderSetHotkey] =
-                                  _selectedOrderSetOptionId;
-                              _capturedOrderSetHotkey = '';
-                            });
-                          }
-                        },
-                        child: Text(l10n.settingsHotkeyAssign),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton.tonalIcon(
-              onPressed: () {
-                setBoth(() {
-                  _capturedOrderSetHotkey = '';
-                });
-                _focusNodeForHotkey.requestFocus();
-              },
-              icon: const Icon(Icons.clear),
-              label: Text(l10n.settingsHotkeyClearCapture),
+              onPressed: _selectedOrderSetOptionId.isEmpty
+                  ? null
+                  : () async {
+                      final String? captured =
+                          await _showHotkeyCaptureDialog(context);
+                      if (captured != null) {
+                        setBoth(() {
+                          _desktopOrderSetHotkeys[captured] =
+                              _selectedOrderSetOptionId;
+                        });
+                      }
+                    },
+              icon: const Icon(Icons.keyboard),
+              label: Text(l10n.settingsHotkeyCapture),
             ),
           ),
           if (_desktopOrderSetHotkeys.isNotEmpty) ...<Widget>[
