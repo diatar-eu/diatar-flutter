@@ -74,8 +74,7 @@ List<SongSearchSong> buildSearchIndex(List<DtxBook> books) {
       }
 
       final String songTitleLower = song.title.toLowerCase();
-      final String songNumStr = (sIdx + 1).toString();
-      final String metaHaystack = '$songNumStr $bookTitleLower $songTitleLower';
+      final String metaHaystack = '$bookTitleLower $songTitleLower';
 
       final List<SongSearchVerse> verses = <SongSearchVerse>[];
       for (int vIdx = 0; vIdx < song.verses.length; vIdx++) {
@@ -160,10 +159,7 @@ List<SongSearchResult> _runSongSearch(
       for (final verse in song.verses) {
         if (verse.haystack.contains(query)) {
           // Find a snippet: the matching line or the verse name
-          String snippet = verse.lines.firstWhere(
-            (line) => line.toLowerCase().contains(query),
-            orElse: () => verse.verseName,
-          );
+          String snippet = removeEscapeSequences(verse.lines.join(' '));
 
           results.add(SongSearchResult(
             bookIndex: song.bookIndex,

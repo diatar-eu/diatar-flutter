@@ -97,17 +97,11 @@ class _SongSearchSheetState extends State<SongSearchSheet> {
                             ),
                             subtitle: Text(
                               result.isLyricsMatch
-                                  ? result.snippet
+                                  ? '${result.bookTitle} \u2014 ${result.verseName} ${result.snippet}'
                                   : result.bookTitle,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            trailing: result.isLyricsMatch
-                                ? Text(
-                                    result.verseName,
-                                    style: theme.textTheme.bodySmall,
-                                  )
-                                : null,
                             onTap: () {
                               widget.onSelected(result);
                               Navigator.pop(context);
