@@ -1681,6 +1681,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusSzentirasApiKeyMissing => 'szentiras.eu API key is not set.';
 
   @override
+  String get settingsApiKeysTitle => 'API Keys';
+
+  @override
+  String settingsApiKeysSubtitle(Object status) {
+    return 'Szentiras: $status';
+  }
+
+  @override
+  String get settingsApiKeysStatusSet => 'Set';
+
+  @override
+  String get settingsApiKeysStatusMissing => 'Not set';
+
+  @override
+  String get szentirasApiKeyHelp =>
+      'Get your key:\nszentiras.eu → Login → Profile → API keys';
+
+  @override
+  String get szentirasApiKeySave => 'Save';
+
+  @override
   String get onboardingWelcomeTitle => 'Welcome to Diatar!';
 
   @override

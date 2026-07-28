@@ -276,6 +276,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _tcpTargets.dispose();
     _mqttUser.dispose();
     _mqttPassword.dispose();
+    _szentirasApiKey.dispose();
     _blankPicPath.dispose();
     _diaExportPath.dispose();
     _projFontSize.dispose();
@@ -344,6 +345,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           query,
           'gyorsbillentyu hotkey billentyu shortcut vezerles enek',
         );
+    final bool showApiKeys = _matches(
+      query,
+      'api kulcs key szentiras',
+    );
     final bool anyVisible =
         showInternet ||
         showLan ||
@@ -353,7 +358,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         showFiles ||
         showGeneral ||
         showSystem ||
-        showHotkeys;
+        showHotkeys ||
+        showApiKeys;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -411,6 +417,27 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       description: l10n.settingsInternetDescription,
                     ),
                   if (showInternet &&
+                      (showLan ||
+                          showColors ||
+                          showProjection ||
+                          showFiles ||
+                          showGeneral ||
+                          showApiKeys))
+                    const Divider(height: 1),
+                  if (showApiKeys)
+                    _settingsTile(
+                      leading: const Icon(Icons.vpn_key),
+                      title: Text(l10n.settingsApiKeysTitle),
+                      subtitle: Text(
+                        l10n.settingsApiKeysSubtitle(
+                          _szentirasApiKey.text.trim().isEmpty
+                              ? l10n.settingsApiKeysStatusMissing
+                              : l10n.settingsApiKeysStatusSet,
+                        ),
+                      ),
+                      onTap: _openApiKeysSettings,
+                    ),
+                  if (showApiKeys &&
                       (showLan ||
                           showColors ||
                           showProjection ||
@@ -615,7 +642,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final String originalMqttUser = _mqttUser.text;
     final String originalMqttPassword = _mqttPassword.text;
     final bool originalShowInternetPassword = _showInternetPassword;
-    final String originalSzentirasApiKey = _szentirasApiKey.text;
 
     return _openSectionSheet(
       title: context.l10n.settingsInternetTitle,
@@ -630,7 +656,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           _mqttUser.text = originalMqttUser;
           _mqttPassword.text = originalMqttPassword;
           _showInternetPassword = originalShowInternetPassword;
-          _szentirasApiKey.text = originalSzentirasApiKey;
         });
       },
       builder: (BuildContext context, void Function(void Function()) setBoth) {
@@ -689,22 +714,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       : Icons.visibility,
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Divider(height: 1),
-          const SizedBox(height: 10),
-          Text(
-            l10n.settingsSzentirasApiKeyLabel,
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(height: 4),
-          TextField(
-            controller: _szentirasApiKey,
-            onChanged: (_) => setBoth(() {}),
-            decoration: InputDecoration(
-              labelText: l10n.settingsSzentirasApiKeyLabel,
-              hintText: l10n.settingsSzentirasApiKeyHint,
             ),
           ),
           const SizedBox(height: 10),
@@ -1488,6 +1497,50 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       mqttUser: mqttUser,
       mqttPassword: mqttPassword,
       mqttChannel: '1',
+    );
+
+    unawaited(widget.onApply(updated));
+    return true;
+  }
+
+  Future<void> _openApiKeysSettings() {
+    final String originalSzentirasApiKey = _szentirasApiKey.text;
+
+    return _openSectionSheet(
+      title: context.l10n.settingsApiKeysTitle,
+      showCancelButton: true,
+      onConfirmClose: _applyApiKeysSettings,
+      onCancel: () {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _szentirasApiKey.text = originalSzentirasApiKey;
+        });
+      },
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          TextField(
+            controller: _szentirasApiKey,
+            onChanged: (_) => setBoth(() {}),
+            decoration: InputDecoration(
+              labelText: l10n.settingsSzentirasApiKeyLabel,
+              hintText: l10n.settingsSzentirasApiKeyHint,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.szentirasApiKeyHelp,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ];
+      },
+    );
+  }
+
+  bool _applyApiKeysSettings() {
+    final AppSettings updated = widget.initialSettings.copyWith(
       szentirasApiKey: _szentirasApiKey.text.trim(),
     );
 

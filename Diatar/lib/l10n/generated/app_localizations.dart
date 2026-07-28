@@ -2999,6 +2999,42 @@ abstract class AppLocalizations {
   /// **'Nincs beállítva a szentiras.eu API kulcs.'**
   String get statusSzentirasApiKeyMissing;
 
+  /// No description provided for @settingsApiKeysTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'API kulcsok'**
+  String get settingsApiKeysTitle;
+
+  /// No description provided for @settingsApiKeysSubtitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szentírás: {status}'**
+  String settingsApiKeysSubtitle(Object status);
+
+  /// No description provided for @settingsApiKeysStatusSet.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beállítva'**
+  String get settingsApiKeysStatusSet;
+
+  /// No description provided for @settingsApiKeysStatusMissing.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nincs beállítva'**
+  String get settingsApiKeysStatusMissing;
+
+  /// No description provided for @szentirasApiKeyHelp.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szerezd be a kulcsot:\nszentiras.eu → Belépés → Profil → API kulcsok'**
+  String get szentirasApiKeyHelp;
+
+  /// No description provided for @szentirasApiKeySave.
+  ///
+  /// In hu, this message translates to:
+  /// **'Mentés'**
+  String get szentirasApiKeySave;
+
   /// No description provided for @onboardingWelcomeTitle.
   ///
   /// In hu, this message translates to:

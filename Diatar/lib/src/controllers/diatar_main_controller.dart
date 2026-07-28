@@ -1054,6 +1054,14 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> saveSzentirasApiKey(String key) async {
+    final String trimmed = key.trim();
+    if (settings.szentirasApiKey == trimmed) return;
+    settings = settings.copyWith(szentirasApiKey: trimmed);
+    await _settingsStore.save(settings);
+    notifyListeners();
+  }
+
   Future<void> _sendProjectionState() async {
     if (mqttActive) {
       await _mqttSender.sendState(

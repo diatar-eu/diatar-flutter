@@ -1073,7 +1073,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
-        return _SzentirasDialog(controller: controller);
+        return _SzentirasDialog(
+          controller: controller,
+          onApiKeySaved: (String key) =>
+              controller.saveSzentirasApiKey(key),
+        );
       },
     );
   }
@@ -2798,9 +2802,13 @@ class _BatyuDialogState extends State<_BatyuDialog> {
 }
 
 class _SzentirasDialog extends StatefulWidget {
-  const _SzentirasDialog({required this.controller});
+  const _SzentirasDialog({
+    required this.controller,
+    required this.onApiKeySaved,
+  });
 
   final DiatarMainController controller;
+  final ValueChanged<String> onApiKeySaved;
 
   @override
   State<_SzentirasDialog> createState() => _SzentirasDialogState();
@@ -2810,11 +2818,14 @@ class _SzentirasDialogState extends State<_SzentirasDialog> {
   final TextEditingController _referenceController = TextEditingController();
   final TextEditingController _chunkSizeController =
       TextEditingController(text: '30');
+  final TextEditingController _apiKeyEditingController =
+      TextEditingController();
   final SzentirasApiService _apiService = SzentirasApiService();
   List<SzentirasTranslation> _translations = <SzentirasTranslation>[];
   String? _selectedTranslation;
   bool _loadingTranslations = false;
   bool _loadingVerses = false;
+  bool _editingApiKey = false;
   String? _error;
 
   String get _apiKey => widget.controller.settings.szentirasApiKey;
@@ -2822,13 +2833,18 @@ class _SzentirasDialogState extends State<_SzentirasDialog> {
   @override
   void initState() {
     super.initState();
-    _loadTranslations();
+    _editingApiKey = _apiKey.isEmpty;
+    _apiKeyEditingController.text = _apiKey;
+    if (_apiKey.isNotEmpty) {
+      _loadTranslations();
+    }
   }
 
   @override
   void dispose() {
     _referenceController.dispose();
     _chunkSizeController.dispose();
+    _apiKeyEditingController.dispose();
     _apiService.dispose();
     super.dispose();
   }
@@ -2864,7 +2880,7 @@ class _SzentirasDialogState extends State<_SzentirasDialog> {
     if (_apiKey.isEmpty) {
       if (mounted) {
         setState(() {
-          _error = context.l10n.szentirasApiKeyPrompt;
+          _editingApiKey = true;
         });
       }
       return;
@@ -2906,17 +2922,59 @@ class _SzentirasDialogState extends State<_SzentirasDialog> {
     }
   }
 
+  Future<void> _saveApiKey() async {
+    final String key = _apiKeyEditingController.text.trim();
+    if (key.isEmpty) return;
+    widget.onApiKeySaved(key);
+    setState(() {
+      _editingApiKey = false;
+    });
+    _loadTranslations();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    if (_apiKey.isEmpty) {
+    if (_editingApiKey) {
       return AlertDialog(
         title: Text(l10n.szentirasTitle),
-        content: Text(l10n.szentirasApiKeyPrompt),
+        content: SizedBox(
+          width: 480,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              TextField(
+                controller: _apiKeyEditingController,
+                decoration: InputDecoration(
+                  labelText: l10n.settingsSzentirasApiKeyLabel,
+                  hintText: l10n.settingsSzentirasApiKeyHint,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.szentirasApiKeyHelp,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              if (_error != null) ...<Widget>[
+                const SizedBox(height: 8),
+                Text(
+                  l10n.szentirasError(_error!),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+            ],
+          ),
+        ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n.close),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton.icon(
+            onPressed: _saveApiKey,
+            icon: const Icon(Icons.check),
+            label: Text(l10n.szentirasApiKeySave),
           ),
         ],
       );

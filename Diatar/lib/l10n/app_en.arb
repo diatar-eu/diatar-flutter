@@ -1103,6 +1103,17 @@
   "settingsSzentirasApiKeyHint": "Key from szentiras.eu",
   "szentirasApiKeyPrompt": "Enter your szentiras.eu API key to use the Bible feature.",
   "statusSzentirasApiKeyMissing": "szentiras.eu API key is not set.",
+  "settingsApiKeysTitle": "API Keys",
+  "settingsApiKeysSubtitle": "Szentiras: {status}",
+  "@settingsApiKeysSubtitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "settingsApiKeysStatusSet": "Set",
+  "settingsApiKeysStatusMissing": "Not set",
+  "szentirasApiKeyHelp": "Get your key:\nszentiras.eu → Login → Profile → API keys",
+  "szentirasApiKeySave": "Save",
   "onboardingWelcomeTitle": "Welcome to Diatar!",
   "onboardingWelcomeBody": "A church slide projector app.\n\nChoose a songbook, build a custom order, then send it to the projector.",
   "onboardingPage2Title": "Main Screen",

@@ -1104,6 +1104,17 @@
   "settingsSzentirasApiKeyHint": "Kulcs a szentiras.eu oldalról",
   "szentirasApiKeyPrompt": "Add meg a szentiras.eu API kulcsot a Szentírás funkció használatához.",
   "statusSzentirasApiKeyMissing": "Nincs beállítva a szentiras.eu API kulcs.",
+  "settingsApiKeysTitle": "API kulcsok",
+  "settingsApiKeysSubtitle": "Szentírás: {status}",
+  "@settingsApiKeysSubtitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "settingsApiKeysStatusSet": "Beállítva",
+  "settingsApiKeysStatusMissing": "Nincs beállítva",
+  "szentirasApiKeyHelp": "Szerezd be a kulcsot:\nszentiras.eu → Belépés → Profil → API kulcsok",
+  "szentirasApiKeySave": "Mentés",
   "onboardingWelcomeTitle": "Üdvözöl a Diatár!",
   "onboardingWelcomeBody": "Templomi énekkivetítő alkalmazás.\n\nVálassz énekeskönyvet, állíts össze énekrendet, majd küldd ki a kivetítőre.",
   "onboardingPage2Title": "Főképernyő",

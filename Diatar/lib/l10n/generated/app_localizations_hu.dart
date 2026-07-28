@@ -1687,6 +1687,27 @@ class AppLocalizationsHu extends AppLocalizations {
       'Nincs beállítva a szentiras.eu API kulcs.';
 
   @override
+  String get settingsApiKeysTitle => 'API kulcsok';
+
+  @override
+  String settingsApiKeysSubtitle(Object status) {
+    return 'Szentírás: $status';
+  }
+
+  @override
+  String get settingsApiKeysStatusSet => 'Beállítva';
+
+  @override
+  String get settingsApiKeysStatusMissing => 'Nincs beállítva';
+
+  @override
+  String get szentirasApiKeyHelp =>
+      'Szerezd be a kulcsot:\nszentiras.eu → Belépés → Profil → API kulcsok';
+
+  @override
+  String get szentirasApiKeySave => 'Mentés';
+
+  @override
   String get onboardingWelcomeTitle => 'Üdvözöl a Diatár!';
 
   @override
