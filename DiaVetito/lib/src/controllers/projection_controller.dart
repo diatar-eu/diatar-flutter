@@ -36,9 +36,13 @@ class ProjectionController extends ChangeNotifier {
         onConnection: _onMqttConnectionStatic,
       ) {
     _instance = this;
+    _lifecycleListener = AppLifecycleListener(
+      onResume: _onAppResumed,
+    );
   }
 
   static ProjectionController? _instance;
+  AppLifecycleListener? _lifecycleListener;
 
   static void _onStateStatic(RecStateRecord record) =>
       _instance?._onState(record);
@@ -545,6 +549,10 @@ class ProjectionController extends ChangeNotifier {
     }
   }
 
+  void _onAppResumed() {
+    _applyTransport();
+  }
+
   Future<void> _applyTransport() async {
     final String user = settings.mqttUser.trim();
     if (user.isEmpty && !kIsWeb) {
@@ -636,6 +644,7 @@ class ProjectionController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _instance = null;
+    _lifecycleListener?.dispose();
     _logoTimer?.cancel();
     _server.stop(emitConnection: false);
     _mqtt.dispose();
