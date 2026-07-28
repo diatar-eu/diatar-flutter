@@ -49,6 +49,7 @@ import '../services/zsolozsma_decode_breviar.dart';
 import '../services/zsolozsma_service.dart';
 import '../services/napi_lelki_batyu_service.dart';
 import '../services/szentiras_api_service.dart';
+import '../utils/text_chunking.dart';
 
 export '../models/custom_order_entry.dart';
 
@@ -3841,6 +3842,7 @@ class DiatarMainController extends ChangeNotifier {
   Future<void> importSzentirasVerses({
     required String translationName,
     required List<SzentirasVerse> verses,
+    int maxWords = 30,
   }) async {
     if (verses.isEmpty) {
       _setStatus('statusCustomTextEmpty');
@@ -3848,20 +3850,30 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
     final String refLabel = verses.first.reference;
-    final List<CustomOrderEntry> newEntries = <CustomOrderEntry>[];
+    final List<String> allLines = <String>[];
     for (int i = 0; i < verses.length; i++) {
       final SzentirasVerse v = verses[i];
-      final String verseRef = verses.length == 1
-          ? refLabel
-          : '$refLabel/${i + 1}';
-      final String label = '[Szentírás] $verseRef';
+      if (i > 0) {
+        allLines.add('');
+      }
+      allLines.addAll(v.text.trim()
+          .split(RegExp(r'\r?\n'))
+          .where((String line) => line.trim().isNotEmpty));
+    }
+    final List<List<String>> chunks =
+        chunkLinesByBoundary(allLines, maxWords);
+    final List<CustomOrderEntry> newEntries = <CustomOrderEntry>[];
+    for (int j = 0; j < chunks.length; j++) {
+      final String chunkTitle = chunks.length > 1
+          ? '$refLabel/${j + 1}'
+          : refLabel;
       newEntries.add(CustomOrderEntry(
         fileName: '__custom_text__',
         songIndex: -1,
-        verseIndex: 0,
-        label: label,
-        customTextTitle: verseRef,
-        customTextBody: v.text.trim(),
+        verseIndex: j,
+        label: '[Szentírás] $chunkTitle',
+        customTextTitle: chunkTitle,
+        customTextBody: tokensToText(chunks[j]),
         customType: 'text',
       ));
     }

@@ -1667,6 +1667,12 @@ class AppLocalizationsHu extends AppLocalizations {
   String get szentirasNoVerses => 'Nem található vers.';
 
   @override
+  String get szentirasChunkSizeLabel => 'Dia szóhatár';
+
+  @override
+  String get szentirasChunkSizeHint => 'max. szavak diánként';
+
+  @override
   String get settingsSzentirasApiKeyLabel => 'szentiras.eu API kulcs';
 
   @override

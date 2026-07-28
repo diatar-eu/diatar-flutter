@@ -1097,6 +1097,8 @@
     }
   },
   "szentirasNoVerses": "No verses found.",
+  "szentirasChunkSizeLabel": "Slide word limit",
+  "szentirasChunkSizeHint": "max. words per slide",
   "settingsSzentirasApiKeyLabel": "szentiras.eu API key",
   "settingsSzentirasApiKeyHint": "Key from szentiras.eu",
   "szentirasApiKeyPrompt": "Enter your szentiras.eu API key to use the Bible feature.",

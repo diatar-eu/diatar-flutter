@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import '../models/custom_order_entry.dart';
+import '../utils/text_chunking.dart';
 
 /// A single liturgical celebration (ünnep) of a day in the Napi Lelki Batyu data.
 class NapiLelkiBatyuCelebration {
@@ -324,7 +325,7 @@ class NapiLelkiBatyuService {
     // can be paged through like a song's verses. The title uses a "Title/N"
     // format so the order list groups them as one item with multiple verses
     // (not as separate songs). Original line breaks are kept inside a verse.
-    final List<List<String>> chunks = _chunkLinesByBoundary(
+    final List<List<String>> chunks = chunkLinesByBoundary(
       bodyLines,
       wordsPerSlide,
     );
@@ -340,7 +341,7 @@ class NapiLelkiBatyuService {
           verseIndex: i,
           label: '[Batyu] $verseTitle',
           customTextTitle: verseTitle,
-          customTextBody: _tokensToText(chunks[i]),
+          customTextBody: tokensToText(chunks[i]),
           customType: 'text',
         ),
       );
@@ -417,10 +418,10 @@ class NapiLelkiBatyuService {
       ];
     }
 
-    final List<List<String>> chunks = _chunkLinesByBoundary(lines, wordsPerSlide);
+    final List<List<String>> chunks = chunkLinesByBoundary(lines, wordsPerSlide);
     final List<CustomOrderEntry> entries = <CustomOrderEntry>[];
     for (int i = 0; i < chunks.length; i++) {
-      final String body = _tokensToText(chunks[i]);
+      final String body = tokensToText(chunks[i]);
       final List<String> wrapped = <String>['Alleluja', body, 'Alleluja'];
       entries.add(
         CustomOrderEntry(
@@ -574,180 +575,6 @@ class NapiLelkiBatyuService {
   ///
   /// Once the word count reaches [maxWords], the chunk breaks at the *first*
   /// available boundary (so a slide ends at a sentence or clause rather than
-  /// mid-thought). Original line breaks are preserved inside each chunk.
-  List<List<String>> _chunkLinesByBoundary(List<String> lines, int maxWords) {
-    final int limit = maxWords < 1 ? 1 : maxWords;
-    if (lines.isEmpty) {
-      return const <List<String>>[];
-    }
-
-    bool isSentenceEnd(String w) =>
-        w.endsWith('.') ||
-        w.endsWith('!') ||
-        w.endsWith('?') ||
-        w.endsWith('."') ||
-        w.endsWith('!"') ||
-        w.endsWith('?"') ||
-        w.endsWith('.”') ||
-        w.endsWith('!”') ||
-        w.endsWith('?”') ||
-        w.endsWith('.»') ||
-        w.endsWith('!”') ||
-        w.endsWith('?»');
-
-    bool isClauseBoundary(String w) =>
-        w.endsWith(',') ||
-        w.endsWith(';') ||
-        w.endsWith(':') ||
-        w.endsWith('–') ||
-        w.endsWith('—') ||
-        w.endsWith('”,') ||
-        w.endsWith('”.') ||
-        w.endsWith('»,') ||
-        w.endsWith('».');
-
-    bool isQuoteEdge(String w) =>
-        w.startsWith('„') ||
-        w.startsWith('»') ||
-        w.startsWith('“') ||
-        w.startsWith('"') ||
-        w.endsWith('”') ||
-        w.endsWith('«') ||
-        w.endsWith('”') ||
-        w.endsWith('"');
-
-    // Flatten lines into a word stream, remembering line breaks.
-    // Each entry is either a word or the sentinel '\n' for a line break.
-    final List<String> tokens = <String>[];
-    for (int li = 0; li < lines.length; li++) {
-      if (li > 0) {
-        tokens.add('\n');
-      }
-      final List<String> words = lines[li]
-          .split(RegExp(r'\s+'))
-          .where((String w) => w.trim().isNotEmpty)
-          .toList();
-      tokens.addAll(words);
-    }
-
-    bool isBoundary(String w) =>
-        isSentenceEnd(w) || isClauseBoundary(w) || isQuoteEdge(w);
-
-    // Index in [toks] right after the [n]-th word (line-break sentinels are
-    // skipped). Returns [toks.length] when there are fewer than [n] words.
-    int indexAfterNthWord(List<String> toks, int n) {
-      int c = 0;
-      for (int k = 0; k < toks.length; k++) {
-        if (toks[k] != '\n') {
-          c++;
-          if (c == n) {
-            return k + 1;
-          }
-        }
-      }
-      return toks.length;
-    }
-
-    // Recomputes the word count and the index of the last boundary within the
-    // first [limit] words of [toks].
-    (int, int) scanOverflow(List<String> toks) {
-      int c = 0;
-      int lb = -1;
-      for (int k = 0; k < toks.length; k++) {
-        final String t = toks[k];
-        if (t == '\n') {
-          continue;
-        }
-        c++;
-        if (c <= limit && isBoundary(t)) {
-          lb = k;
-        }
-      }
-      return (c, lb);
-    }
-
-    final List<List<String>> chunks = <List<String>>[];
-    List<String> current = <String>[];
-    int count = 0;
-    int lastBoundaryIndex = -1;
-
-    for (int i = 0; i < tokens.length; i++) {
-      final String tok = tokens[i];
-      if (tok == '\n') {
-        // Preserve line break inside the current chunk.
-        current.add('\n');
-        continue;
-      }
-
-      current.add(tok);
-      count++;
-      // Remember the most recent semantic boundary that lies at or before the
-      // word limit, so we can fall back to it when the limit is exceeded.
-      if (count <= limit && isBoundary(tok)) {
-        lastBoundaryIndex = current.length - 1;
-      }
-
-      final bool atEnd = i == tokens.length - 1;
-
-      // Close the chunk as soon as we pass the limit. We break at the last
-      // semantic boundary at or before the limit so a slide ends on a
-      // sentence/clause/quote and never contains more than [limit] words. If a
-      // run has no boundary at all we hard-cut at exactly [limit] words. The
-      // overflow (words after the cut) starts the next chunk.
-      if (atEnd || count > limit) {
-        if (count > limit && lastBoundaryIndex >= 0) {
-          final List<String> overflow = current.sublist(lastBoundaryIndex + 1);
-          current = current.sublist(0, lastBoundaryIndex + 1);
-          chunks.add(current);
-          current = overflow;
-        } else if (count > limit) {
-          final int cut = indexAfterNthWord(current, limit);
-          final List<String> overflow = current.sublist(cut);
-          current = current.sublist(0, cut);
-          chunks.add(current);
-          current = overflow;
-        } else {
-          // Reached the end within the limit: final chunk.
-          chunks.add(current);
-          current = <String>[];
-        }
-        final (int nc, int nlb) = scanOverflow(current);
-        count = nc;
-        lastBoundaryIndex = nlb;
-      }
-    }
-
-    if (current.isNotEmpty) {
-      chunks.add(current);
-    }
-    return chunks;
-  }
-
-  /// Joins a token list (words and '\n' line-break sentinels) into a single
-  /// string where words on the same source line are space-joined and '\n'
-  /// tokens become real line breaks. This keeps the original line structure
-  /// without putting every word on its own line.
-  String _tokensToText(List<String> tokens) {
-    final StringBuffer buffer = StringBuffer();
-    for (int i = 0; i < tokens.length; i++) {
-      final String tok = tokens[i];
-      if (tok == '\n') {
-        // Avoid leading/trailing/double newlines.
-        final String text = buffer.toString();
-        if (text.endsWith('\n') || text.isEmpty) {
-          continue;
-        }
-        buffer.write('\n');
-      } else {
-        if (buffer.isNotEmpty && !buffer.toString().endsWith('\n')) {
-          buffer.write(' ');
-        }
-        buffer.write(tok);
-      }
-    }
-    return buffer.toString().trim();
-  }
-
   String _stringOrEmpty(dynamic value) {
     if (value == null) {
       return '';

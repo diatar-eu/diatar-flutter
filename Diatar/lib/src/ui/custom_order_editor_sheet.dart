@@ -2808,6 +2808,8 @@ class _SzentirasDialog extends StatefulWidget {
 
 class _SzentirasDialogState extends State<_SzentirasDialog> {
   final TextEditingController _referenceController = TextEditingController();
+  final TextEditingController _chunkSizeController =
+      TextEditingController(text: '30');
   final SzentirasApiService _apiService = SzentirasApiService();
   List<SzentirasTranslation> _translations = <SzentirasTranslation>[];
   String? _selectedTranslation;
@@ -2826,6 +2828,7 @@ class _SzentirasDialogState extends State<_SzentirasDialog> {
   @override
   void dispose() {
     _referenceController.dispose();
+    _chunkSizeController.dispose();
     _apiService.dispose();
     super.dispose();
   }
@@ -2888,6 +2891,7 @@ class _SzentirasDialogState extends State<_SzentirasDialog> {
       await widget.controller.importSzentirasVerses(
         translationName: result.translationName,
         verses: result.verses,
+        maxWords: int.tryParse(_chunkSizeController.text.trim()) ?? 30,
       );
       if (mounted) {
         Navigator.of(context).pop();
@@ -2964,6 +2968,15 @@ class _SzentirasDialogState extends State<_SzentirasDialog> {
                   });
                 },
               ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _chunkSizeController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: l10n.szentirasChunkSizeLabel,
+                hintText: l10n.szentirasChunkSizeHint,
+              ),
+            ),
             const SizedBox(height: 12),
             FilledButton.icon(
               onPressed: _loadingVerses ? null : _fetchAndInsert,

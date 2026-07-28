@@ -1098,6 +1098,8 @@
     }
   },
   "szentirasNoVerses": "Nem található vers.",
+  "szentirasChunkSizeLabel": "Dia szóhatár",
+  "szentirasChunkSizeHint": "max. szavak diánként",
   "settingsSzentirasApiKeyLabel": "szentiras.eu API kulcs",
   "settingsSzentirasApiKeyHint": "Kulcs a szentiras.eu oldalról",
   "szentirasApiKeyPrompt": "Add meg a szentiras.eu API kulcsot a Szentírás funkció használatához.",

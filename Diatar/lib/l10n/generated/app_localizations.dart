@@ -2963,6 +2963,18 @@ abstract class AppLocalizations {
   /// **'Nem található vers.'**
   String get szentirasNoVerses;
 
+  /// No description provided for @szentirasChunkSizeLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dia szóhatár'**
+  String get szentirasChunkSizeLabel;
+
+  /// No description provided for @szentirasChunkSizeHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'max. szavak diánként'**
+  String get szentirasChunkSizeHint;
+
   /// No description provided for @settingsSzentirasApiKeyLabel.
   ///
   /// In hu, this message translates to:

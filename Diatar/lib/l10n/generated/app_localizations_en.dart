@@ -1662,6 +1662,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get szentirasNoVerses => 'No verses found.';
 
   @override
+  String get szentirasChunkSizeLabel => 'Slide word limit';
+
+  @override
+  String get szentirasChunkSizeHint => 'max. words per slide';
+
+  @override
   String get settingsSzentirasApiKeyLabel => 'szentiras.eu API key';
 
   @override
