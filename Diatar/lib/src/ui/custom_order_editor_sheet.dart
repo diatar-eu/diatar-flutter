@@ -464,14 +464,14 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                                           tooltip: l10n.batyuTooltip,
                                           onPressed: _openBatyuDialog,
                                           icon: const Icon(
-                                            Icons.auto_stories_outlined,
+                                            Icons.calendar_today,
                                           ),
                                         ),
                                         IconButton(
                                           tooltip: l10n.szentirasTooltip,
                                           onPressed: _openSzentirasDialog,
                                           icon: const Icon(
-                                            Icons.menu_book,
+                                            Icons.auto_stories,
                                           ),
                                         ),
                                         IconButton(
