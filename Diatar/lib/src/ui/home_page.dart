@@ -527,6 +527,10 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       setState(() {
         _homeControlMode = stored;
         _homeLayoutMode = storedLayout;
+        if (storedLayout == 1) {
+          _presentationControlsVisible =
+              controller.settings.presentationControlsVisible;
+        }
       });
       if (stored == _HomeControlMode.dialist) {
         controller.selectDiaVirtualBook();
@@ -562,20 +566,25 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     }
     setState(() {
       _homeLayoutMode = mode;
-      if (mode != 1) {
+      if (mode == 1) {
+        _presentationControlsVisible =
+            controller.settings.presentationControlsVisible;
+      } else {
         _presentationControlsVisible = false;
       }
     });
     unawaited(controller.setHomeLayoutMode(mode));
   }
 
-  void _showPresentationControls() {
-    if (_homeLayoutMode != 1 || _presentationControlsVisible) {
+  void _togglePresentationControls() {
+    if (_homeLayoutMode != 1) {
       return;
     }
+    final bool newValue = !_presentationControlsVisible;
     setState(() {
-      _presentationControlsVisible = true;
+      _presentationControlsVisible = newValue;
     });
+    unawaited(controller.setPresentationControlsVisible(newValue));
   }
 
   void _handlePresentationPreviewTap() {
@@ -717,75 +726,16 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
 
     if (_homeLayoutMode == 1) {
       final ThemeData theme = Theme.of(context);
-      final Color overlayColor = theme.colorScheme.surface.withValues(
-        alpha: 0.72,
-      );
+      final AppLocalizations l10n = context.l10n;
       final Color revealHintColor = theme.colorScheme.surface.withValues(
         alpha: 0.42,
       );
-      final Widget controlsOverlay = IgnorePointer(
-        ignoring: !_presentationControlsVisible,
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          opacity: _presentationControlsVisible ? 1.0 : 0.0,
-          child: Stack(
-            children: <Widget>[
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: SafeArea(
-                  bottom: false,
-                  child: Container(
-                    color: overlayColor,
-                    child: Row(
-                      children: <Widget>[
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            context.l10n.appTitle,
-                            style: theme.textTheme.titleMedium,
-                          ),
-                        ),
-                        const Spacer(),
-                        ..._buildAppBarActions(
-                          context,
-                          context.l10n,
-                          _currentScreenMode == _HomeScreenMode.presentation
-                              ? Icons.fit_screen
-                              : (_homeControlMode == _HomeControlMode.books
-                                    ? Icons.library_books_outlined
-                                    : Icons.view_list_outlined),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: SafeArea(
-                  top: false,
-                  child: Container(
-                    color: overlayColor,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: _buildActionButtons(context),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
       final Widget revealControlsHint = IgnorePointer(
-        ignoring: _presentationControlsVisible,
+        ignoring: false,
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
-          opacity: _presentationControlsVisible ? 0.0 : 1.0,
+          opacity: _presentationControlsVisible ? 0.6 : 1.0,
           child: SafeArea(
             child: Align(
               alignment: Alignment.topRight,
@@ -793,7 +743,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                 padding: const EdgeInsets.only(top: 10, right: 10),
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: _showPresentationControls,
+                  onTap: _togglePresentationControls,
                   child: Container(
                     width: 34,
                     height: 34,
@@ -822,11 +772,50 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         ),
       );
 
-      return Stack(
+      return Column(
         children: <Widget>[
-          Positioned.fill(child: _buildSimplePreviewPane(context)),
-          Positioned.fill(child: controlsOverlay),
-          Positioned.fill(child: revealControlsHint),
+          if (_presentationControlsVisible)
+            SafeArea(
+              bottom: false,
+              child: Container(
+                color: theme.colorScheme.surface,
+                height: kToolbarHeight,
+                child: Row(
+                  children: <Widget>[
+                    const SizedBox(width: 16),
+                    Text(
+                      l10n.appTitle,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const Spacer(),
+                    ..._buildAppBarActions(
+                      context,
+                      l10n,
+                      _currentScreenMode == _HomeScreenMode.presentation
+                          ? Icons.fit_screen
+                          : (_homeControlMode == _HomeControlMode.books
+                                ? Icons.library_books_outlined
+                                : Icons.view_list_outlined),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          Expanded(
+            child: Stack(
+              children: <Widget>[
+                Positioned.fill(child: _buildSimplePreviewPane(context)),
+                Positioned.fill(child: revealControlsHint),
+              ],
+            ),
+          ),
+          if (_presentationControlsVisible) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: _buildActionButtons(context),
+            ),
+          ],
         ],
       );
     }
@@ -1321,7 +1310,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                 ? _handlePresentationPreviewTap
                 : controller.toggleShowing,
             onPreviewLongPress: _homeLayoutMode == 1
-                ? _showPresentationControls
+                ? _togglePresentationControls
                 : null,
           );
           final bool scrollableProjection = !controller.settings.projAutoSize;
@@ -4644,6 +4633,7 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
   }
 
   void _resetDrag() {
+    if (!mounted) return;
     if (_dragOffset == Offset.zero && !_isDragging) {
       return;
     }
@@ -4660,6 +4650,7 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
   }
 
   void _startDrag() {
+    if (!mounted) return;
     if (_isAnimatingPageTurn) {
       return;
     }
@@ -4770,6 +4761,7 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
   }
 
   void _updateDrag(Offset nextOffset) {
+    if (!mounted) return;
     if (_isAnimatingPageTurn) {
       return;
     }

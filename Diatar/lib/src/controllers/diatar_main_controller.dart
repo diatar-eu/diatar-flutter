@@ -1054,6 +1054,15 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setPresentationControlsVisible(bool visible) async {
+    if (settings.presentationControlsVisible == visible) {
+      return;
+    }
+    settings = settings.copyWith(presentationControlsVisible: visible);
+    await _settingsStore.save(settings);
+    notifyListeners();
+  }
+
   Future<void> saveSzentirasApiKey(String key) async {
     final String trimmed = key.trim();
     if (settings.szentirasApiKey == trimmed) return;
