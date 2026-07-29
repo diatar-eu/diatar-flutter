@@ -4530,16 +4530,24 @@ class _SwipePagingPreview extends StatefulWidget {
 class _SwipePagingPreviewState extends State<_SwipePagingPreview>
     with SingleTickerProviderStateMixin {
   static const Duration _settleDuration = Duration(milliseconds: 180);
+  static const double _zoomEpsilon = 0.01;
 
   Offset _dragOffset = Offset.zero;
   bool _isDragging = false;
   bool _isAnimatingPageTurn = false;
+  bool _isZoomed = false;
+  int _activePointerCount = 0;
+  int? _dragPointer;
+  Offset? _dragStartPosition;
   late final AnimationController _pageTurnController;
+  late final TransformationController _zoomController;
   Animation<Offset>? _pageTurnAnimation;
 
   @override
   void initState() {
     super.initState();
+    _zoomController = TransformationController()
+      ..addListener(_handleZoomTransformChanged);
     _pageTurnController =
         AnimationController(vsync: this, duration: _settleDuration)
           ..addListener(() {
@@ -4555,8 +4563,33 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
 
   @override
   void dispose() {
+    _zoomController
+      ..removeListener(_handleZoomTransformChanged)
+      ..dispose();
     _pageTurnController.dispose();
     super.dispose();
+  }
+
+  void _handleZoomTransformChanged() {
+    final double scale = _zoomController.value.getMaxScaleOnAxis();
+    final bool nextZoomed = scale > (1.0 + _zoomEpsilon);
+    if (nextZoomed == _isZoomed) {
+      return;
+    }
+    setState(() {
+      _isZoomed = nextZoomed;
+      if (_isZoomed) {
+        _isDragging = false;
+        _dragOffset = Offset.zero;
+      }
+    });
+  }
+
+  void _resetZoom() {
+    if (_zoomController.value == Matrix4.identity()) {
+      return;
+    }
+    _zoomController.value = Matrix4.identity();
   }
 
   bool _isDesktopPlatform(TargetPlatform platform) {
@@ -4575,6 +4608,12 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
     });
   }
 
+  void _clearPointerTracking() {
+    _dragPointer = null;
+    _dragStartPosition = null;
+    _isDragging = false;
+  }
+
   void _startDrag() {
     if (_isAnimatingPageTurn) {
       return;
@@ -4584,6 +4623,105 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
       _dragOffset = Offset.zero;
       _isDragging = true;
     });
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    _activePointerCount += 1;
+    if (_isZoomed || _isAnimatingPageTurn || _activePointerCount != 1) {
+      _clearPointerTracking();
+      return;
+    }
+    _dragPointer = event.pointer;
+    _dragStartPosition = event.position;
+    _startDrag();
+  }
+
+  void _handlePointerMove(
+    PointerMoveEvent event, {
+    required double maxDrag,
+    required double maxVerticalDrag,
+  }) {
+    if (_isZoomed || _isAnimatingPageTurn || _activePointerCount != 1) {
+      return;
+    }
+    if (_dragPointer != event.pointer) {
+      return;
+    }
+    final Offset? start = _dragStartPosition;
+    if (start == null) {
+      return;
+    }
+
+    final Offset totalDelta = event.position - start;
+    final bool horizontalDominant =
+        totalDelta.dx.abs() >= totalDelta.dy.abs();
+    if (horizontalDominant) {
+      _updateDrag(
+        Offset(totalDelta.dx.clamp(-maxDrag, maxDrag).toDouble(), 0),
+      );
+      return;
+    }
+    _updateDrag(
+      Offset(0, totalDelta.dy.clamp(-maxVerticalDrag, maxVerticalDrag).toDouble()),
+    );
+  }
+
+  void _handlePointerUpOrCancel(
+    PointerEvent event, {
+    required double distanceThreshold,
+    required double verticalDistanceThreshold,
+    required double turnTargetX,
+    required double turnTargetY,
+  }) {
+    _activePointerCount = math.max(0, _activePointerCount - 1);
+
+    if (_dragPointer != event.pointer) {
+      if (_activePointerCount == 0) {
+        _clearPointerTracking();
+        _resetDrag();
+      }
+      return;
+    }
+
+    final Offset currentOffset = _dragOffset;
+    _clearPointerTracking();
+
+    if (_isZoomed || _isAnimatingPageTurn) {
+      _resetDrag();
+      return;
+    }
+
+    final bool horizontalDominant =
+        currentOffset.dx.abs() >= currentOffset.dy.abs();
+    if (horizontalDominant) {
+      if (currentOffset.dx > distanceThreshold) {
+        unawaited(
+          _animatePageTurn(Offset(turnTargetX, 0), widget.controller.prevVerse),
+        );
+      } else if (currentOffset.dx < -distanceThreshold) {
+        unawaited(
+          _animatePageTurn(
+            Offset(-turnTargetX, 0),
+            widget.controller.nextVerse,
+          ),
+        );
+      } else {
+        _resetDrag();
+      }
+      return;
+    }
+
+    if (currentOffset.dy > verticalDistanceThreshold) {
+      unawaited(
+        _animatePageTurn(Offset(0, turnTargetY), widget.controller.prevSong),
+      );
+    } else if (currentOffset.dy < -verticalDistanceThreshold) {
+      unawaited(
+        _animatePageTurn(Offset(0, -turnTargetY), widget.controller.nextSong),
+      );
+    } else {
+      _resetDrag();
+    }
   }
 
   void _updateDrag(Offset nextOffset) {
@@ -4658,7 +4796,6 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
             : MediaQuery.of(context).size.width;
         final double maxDrag = width * (desktopLike ? 0.30 : 0.40);
         final double distanceThreshold = width * (desktopLike ? 0.20 : 0.14);
-        final double swipeVelocityThreshold = desktopLike ? 420.0 : 220.0;
         final double turnTargetX = width * 0.92;
 
         final double height = constraints.maxHeight.isFinite
@@ -4667,93 +4804,58 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
         final double maxVerticalDrag = height * (desktopLike ? 0.30 : 0.38);
         final double verticalDistanceThreshold =
             height * (desktopLike ? 0.17 : 0.13);
-        final double verticalSwipeVelocityThreshold = desktopLike
-            ? 420.0
-            : 220.0;
         final double turnTargetY = height * 0.90;
 
         return IgnorePointer(
           ignoring: _isAnimatingPageTurn,
-          child: GestureDetector(
+          child: Listener(
             behavior: HitTestBehavior.opaque,
-            onTap: widget.onTap ?? widget.controller.toggleShowing,
-            onLongPress: widget.onLongPress,
-            onHorizontalDragStart: (_) => _startDrag(),
-            onHorizontalDragUpdate: (DragUpdateDetails details) {
-              _updateDrag(
-                Offset(
-                  (_dragOffset.dx + details.delta.dx)
-                      .clamp(-maxDrag, maxDrag)
-                      .toDouble(),
-                  0,
-                ),
+            onPointerDown: _handlePointerDown,
+            onPointerMove: (PointerMoveEvent event) {
+              _handlePointerMove(
+                event,
+                maxDrag: maxDrag,
+                maxVerticalDrag: maxVerticalDrag,
               );
             },
-            onHorizontalDragCancel: _resetDrag,
-            onHorizontalDragEnd: (DragEndDetails details) {
-              final double velocityDx = details.velocity.pixelsPerSecond.dx;
-
-              final bool goPrev =
-                  velocityDx > swipeVelocityThreshold ||
-                  _dragOffset.dx > distanceThreshold;
-              final bool goNext =
-                  velocityDx < -swipeVelocityThreshold ||
-                  _dragOffset.dx < -distanceThreshold;
-
-              if (goPrev) {
-                _animatePageTurn(
-                  Offset(turnTargetX, 0),
-                  widget.controller.prevVerse,
-                );
-              } else if (goNext) {
-                _animatePageTurn(
-                  Offset(-turnTargetX, 0),
-                  widget.controller.nextVerse,
-                );
-              } else {
-                _resetDrag();
-              }
-            },
-            onVerticalDragStart: (_) => _startDrag(),
-            onVerticalDragUpdate: (DragUpdateDetails details) {
-              _updateDrag(
-                Offset(
-                  0,
-                  (_dragOffset.dy + details.delta.dy)
-                      .clamp(-maxVerticalDrag, maxVerticalDrag)
-                      .toDouble(),
-                ),
+            onPointerUp: (PointerUpEvent event) {
+              _handlePointerUpOrCancel(
+                event,
+                distanceThreshold: distanceThreshold,
+                verticalDistanceThreshold: verticalDistanceThreshold,
+                turnTargetX: turnTargetX,
+                turnTargetY: turnTargetY,
               );
             },
-            onVerticalDragCancel: _resetDrag,
-            onVerticalDragEnd: (DragEndDetails details) {
-              final double velocityDy = details.velocity.pixelsPerSecond.dy;
-
-              final bool goPrevSong =
-                  velocityDy > verticalSwipeVelocityThreshold ||
-                  _dragOffset.dy > verticalDistanceThreshold;
-              final bool goNextSong =
-                  velocityDy < -verticalSwipeVelocityThreshold ||
-                  _dragOffset.dy < -verticalDistanceThreshold;
-
-              if (goPrevSong) {
-                _animatePageTurn(
-                  Offset(0, turnTargetY),
-                  widget.controller.prevSong,
-                );
-              } else if (goNextSong) {
-                _animatePageTurn(
-                  Offset(0, -turnTargetY),
-                  widget.controller.nextSong,
-                );
-              } else {
-                _resetDrag();
-              }
+            onPointerCancel: (PointerCancelEvent event) {
+              _handlePointerUpOrCancel(
+                event,
+                distanceThreshold: distanceThreshold,
+                verticalDistanceThreshold: verticalDistanceThreshold,
+                turnTargetX: turnTargetX,
+                turnTargetY: turnTargetY,
+              );
             },
-            child: ClipRect(
-              child: Transform.translate(
-                offset: _dragOffset,
-                child: widget.child,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _isZoomed
+                  ? null
+                  : (widget.onTap ?? widget.controller.toggleShowing),
+              onDoubleTap: _isZoomed ? _resetZoom : null,
+              onLongPress: _isZoomed ? null : widget.onLongPress,
+              child: ClipRect(
+                child: Transform.translate(
+                  offset: _dragOffset,
+                  child: InteractiveViewer(
+                    transformationController: _zoomController,
+                    minScale: 1.0,
+                    maxScale: 4.0,
+                    panEnabled: _isZoomed,
+                    scaleEnabled: true,
+                    boundaryMargin: const EdgeInsets.all(120),
+                    child: widget.child,
+                  ),
+                ),
               ),
             ),
           ),
