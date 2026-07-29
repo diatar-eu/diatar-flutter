@@ -720,6 +720,9 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       final Color overlayColor = theme.colorScheme.surface.withValues(
         alpha: 0.72,
       );
+      final Color revealHintColor = theme.colorScheme.surface.withValues(
+        alpha: 0.42,
+      );
       final Widget controlsOverlay = IgnorePointer(
         ignoring: !_presentationControlsVisible,
         child: AnimatedOpacity(
@@ -777,11 +780,53 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           ),
         ),
       );
+      final Widget revealControlsHint = IgnorePointer(
+        ignoring: _presentationControlsVisible,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          opacity: _presentationControlsVisible ? 0.0 : 1.0,
+          child: SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10, right: 10),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _showPresentationControls,
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: revealHintColor,
+                      borderRadius: BorderRadius.circular(17),
+                      border: Border.all(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.28,
+                        ),
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.tune,
+                      size: 18,
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.85,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 
       return Stack(
         children: <Widget>[
           Positioned.fill(child: _buildSimplePreviewPane(context)),
           Positioned.fill(child: controlsOverlay),
+          Positioned.fill(child: revealControlsHint),
         ],
       );
     }
@@ -4653,16 +4698,16 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
     }
 
     final Offset totalDelta = event.position - start;
-    final bool horizontalDominant =
-        totalDelta.dx.abs() >= totalDelta.dy.abs();
+    final bool horizontalDominant = totalDelta.dx.abs() >= totalDelta.dy.abs();
     if (horizontalDominant) {
-      _updateDrag(
-        Offset(totalDelta.dx.clamp(-maxDrag, maxDrag).toDouble(), 0),
-      );
+      _updateDrag(Offset(totalDelta.dx.clamp(-maxDrag, maxDrag).toDouble(), 0));
       return;
     }
     _updateDrag(
-      Offset(0, totalDelta.dy.clamp(-maxVerticalDrag, maxVerticalDrag).toDouble()),
+      Offset(
+        0,
+        totalDelta.dy.clamp(-maxVerticalDrag, maxVerticalDrag).toDouble(),
+      ),
     );
   }
 
