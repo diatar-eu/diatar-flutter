@@ -499,6 +499,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
   _HomeControlMode _homeControlMode = _HomeControlMode.books;
   int _homeLayoutMode = 0;
   double? _landscapeControlsRatio;
+  bool _presentationControlsVisible = false;
 
   DiatarMainController get controller => widget.controller;
 
@@ -561,8 +562,83 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     }
     setState(() {
       _homeLayoutMode = mode;
+      if (mode != 1) {
+        _presentationControlsVisible = false;
+      }
     });
     unawaited(controller.setHomeLayoutMode(mode));
+  }
+
+  void _showPresentationControls() {
+    if (_homeLayoutMode != 1 || _presentationControlsVisible) {
+      return;
+    }
+    setState(() {
+      _presentationControlsVisible = true;
+    });
+  }
+
+  void _handlePresentationPreviewTap() {
+    if (_homeLayoutMode == 1 && _presentationControlsVisible) {
+      setState(() {
+        _presentationControlsVisible = false;
+      });
+      return;
+    }
+    controller.toggleShowing();
+  }
+
+  List<Widget> _buildAppBarActions(
+    BuildContext context,
+    AppLocalizations l10n,
+    IconData modeIcon,
+  ) {
+    return <Widget>[
+      PopupMenuButton<_HomeScreenMode>(
+        tooltip: l10n.homeControlModeTooltip,
+        initialValue: _currentScreenMode,
+        onSelected: _setHomeScreenMode,
+        itemBuilder: (BuildContext context) =>
+            <PopupMenuEntry<_HomeScreenMode>>[
+              CheckedPopupMenuItem<_HomeScreenMode>(
+                value: _HomeScreenMode.books,
+                checked: _currentScreenMode == _HomeScreenMode.books,
+                child: Text(l10n.homeControlModeBooks),
+              ),
+              CheckedPopupMenuItem<_HomeScreenMode>(
+                value: _HomeScreenMode.dialist,
+                checked: _currentScreenMode == _HomeScreenMode.dialist,
+                child: Text(l10n.homeControlModeDialist),
+              ),
+              CheckedPopupMenuItem<_HomeScreenMode>(
+                value: _HomeScreenMode.presentation,
+                checked: _currentScreenMode == _HomeScreenMode.presentation,
+                child: Text(l10n.homeControlModePresentation),
+              ),
+            ],
+        icon: Icon(modeIcon),
+      ),
+      IconButton(
+        tooltip: l10n.searchLabel,
+        onPressed: () => _openSearchSheet(context),
+        icon: const Icon(Icons.search),
+      ),
+      IconButton(
+        tooltip: l10n.settingsTooltip,
+        onPressed: () => _openSettings(context),
+        icon: const Icon(Icons.settings),
+      ),
+      IconButton(
+        tooltip: l10n.customOrderTooltip,
+        onPressed: () => _openCustomOrderEditor(context),
+        icon: const Icon(Icons.queue_music),
+      ),
+      IconButton(
+        tooltip: l10n.downloadBooksTooltip,
+        onPressed: () => _openDownloadDialog(context),
+        icon: const Icon(Icons.download_for_offline_outlined),
+      ),
+    ];
   }
 
   void _setHomeControlMode(_HomeControlMode mode) {
@@ -601,57 +677,14 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         : (_homeControlMode == _HomeControlMode.books
               ? Icons.library_books_outlined
               : Icons.view_list_outlined);
+    final bool isPresentationMode = _homeLayoutMode == 1;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.appTitle),
-        actions: <Widget>[
-          PopupMenuButton<_HomeScreenMode>(
-            tooltip: l10n.homeControlModeTooltip,
-            initialValue: _currentScreenMode,
-            onSelected: _setHomeScreenMode,
-            itemBuilder: (BuildContext context) =>
-                <PopupMenuEntry<_HomeScreenMode>>[
-                  CheckedPopupMenuItem<_HomeScreenMode>(
-                    value: _HomeScreenMode.books,
-                    checked: _currentScreenMode == _HomeScreenMode.books,
-                    child: Text(l10n.homeControlModeBooks),
-                  ),
-                  CheckedPopupMenuItem<_HomeScreenMode>(
-                    value: _HomeScreenMode.dialist,
-                    checked: _currentScreenMode == _HomeScreenMode.dialist,
-                    child: Text(l10n.homeControlModeDialist),
-                  ),
-                  CheckedPopupMenuItem<_HomeScreenMode>(
-                    value: _HomeScreenMode.presentation,
-                    checked: _currentScreenMode == _HomeScreenMode.presentation,
-                    child: Text(l10n.homeControlModePresentation),
-                  ),
-                ],
-            icon: Icon(modeIcon),
-          ),
-          IconButton(
-            tooltip: l10n.searchLabel,
-            onPressed: () => _openSearchSheet(context),
-            icon: const Icon(Icons.search),
-          ),
-          IconButton(
-            tooltip: l10n.settingsTooltip,
-            onPressed: () => _openSettings(context),
-            icon: const Icon(Icons.settings),
-          ),
-          IconButton(
-            tooltip: l10n.customOrderTooltip,
-            onPressed: () => _openCustomOrderEditor(context),
-            icon: const Icon(Icons.queue_music),
-          ),
-
-          IconButton(
-            tooltip: l10n.downloadBooksTooltip,
-            onPressed: () => _openDownloadDialog(context),
-            icon: const Icon(Icons.download_for_offline_outlined),
-          ),
-        ],
-      ),
+      appBar: isPresentationMode
+          ? null
+          : AppBar(
+              title: Text(l10n.appTitle),
+              actions: _buildAppBarActions(context, l10n, modeIcon),
+            ),
       body: AnimatedBuilder(
         animation: controller,
         builder: (BuildContext context, Widget? child) {
@@ -683,14 +716,72 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     final bool isLandscape = mq.orientation == Orientation.landscape;
 
     if (_homeLayoutMode == 1) {
-      return Column(
-        children: <Widget>[
-          Expanded(child: _buildSimplePreviewPane(context)),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: _buildActionButtons(context),
+      final ThemeData theme = Theme.of(context);
+      final Color overlayColor = theme.colorScheme.surface.withValues(
+        alpha: 0.72,
+      );
+      final Widget controlsOverlay = IgnorePointer(
+        ignoring: !_presentationControlsVisible,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          opacity: _presentationControlsVisible ? 1.0 : 0.0,
+          child: Stack(
+            children: <Widget>[
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: SafeArea(
+                  bottom: false,
+                  child: Container(
+                    color: overlayColor,
+                    child: Row(
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            context.l10n.appTitle,
+                            style: theme.textTheme.titleMedium,
+                          ),
+                        ),
+                        const Spacer(),
+                        ..._buildAppBarActions(
+                          context,
+                          context.l10n,
+                          _currentScreenMode == _HomeScreenMode.presentation
+                              ? Icons.fit_screen
+                              : (_homeControlMode == _HomeControlMode.books
+                                    ? Icons.library_books_outlined
+                                    : Icons.view_list_outlined),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SafeArea(
+                  top: false,
+                  child: Container(
+                    color: overlayColor,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: _buildActionButtons(context),
+                  ),
+                ),
+              ),
+            ],
           ),
+        ),
+      );
+
+      return Stack(
+        children: <Widget>[
+          Positioned.fill(child: _buildSimplePreviewPane(context)),
+          Positioned.fill(child: controlsOverlay),
         ],
       );
     }
@@ -1181,6 +1272,12 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           final Widget preview = _buildActivePreview(
             context,
             panelTitle: l10n.previewTitle,
+            onPreviewTap: _homeLayoutMode == 1
+                ? _handlePresentationPreviewTap
+                : controller.toggleShowing,
+            onPreviewLongPress: _homeLayoutMode == 1
+                ? _showPresentationControls
+                : null,
           );
           final bool scrollableProjection = !controller.settings.projAutoSize;
           if (scrollableProjection) {
@@ -1196,7 +1293,52 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     );
   }
 
-  Widget _buildNormalPreview(BuildContext context) {
+  Widget _buildActivePreview(
+    BuildContext context, {
+    required String panelTitle,
+    required VoidCallback onPreviewTap,
+    VoidCallback? onPreviewLongPress,
+  }) {
+    final AppLocalizations l10n = context.l10n;
+
+    if (controller.showPhotoInControl) {
+      final CustomOrderEntry? projectedCustom =
+          controller.projectedCustomOrderEntry;
+      final bool isCustomEntry =
+          projectedCustom != null &&
+          (projectedCustom.isCustomText || projectedCustom.isCustomImage);
+      if (!isCustomEntry) {
+        final String? photoPath = controller.currentPhotoPath;
+        if (photoPath != null && photoPath.isNotEmpty) {
+          return _PhotoPreviewWithFallback(
+            photoPath: photoPath,
+            notFoundLabel: photoPath,
+            fallback: _buildNormalPreviewWithGestures(
+              context,
+              onPreviewTap: onPreviewTap,
+              onPreviewLongPress: onPreviewLongPress,
+            ),
+            controller: controller,
+            l10n: l10n,
+            onPreviewTap: onPreviewTap,
+            onPreviewLongPress: onPreviewLongPress,
+          );
+        }
+      }
+    }
+
+    return _buildNormalPreviewWithGestures(
+      context,
+      onPreviewTap: onPreviewTap,
+      onPreviewLongPress: onPreviewLongPress,
+    );
+  }
+
+  Widget _buildNormalPreviewWithGestures(
+    BuildContext context, {
+    required VoidCallback onPreviewTap,
+    VoidCallback? onPreviewLongPress,
+  }) {
     final AppLocalizations l10n = context.l10n;
     final CustomOrderEntry? projectedCustom =
         controller.projectedCustomOrderEntry;
@@ -1214,6 +1356,8 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         controller: controller,
         title: title,
         lines: lines,
+        onPreviewTap: onPreviewTap,
+        onPreviewLongPress: onPreviewLongPress,
       );
     }
     if (projectedCustom != null && projectedCustom.isCustomImage) {
@@ -1221,6 +1365,8 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         controller: controller,
         title: localizedCustomEntryLabel(l10n, projectedCustom),
         imagePath: projectedCustom.customImagePath ?? '',
+        onPreviewTap: onPreviewTap,
+        onPreviewLongPress: onPreviewLongPress,
       );
     }
 
@@ -1236,36 +1382,9 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       controller: controller,
       title: controller.currentCustomOrderProjectionTitle,
       panelTitle: context.l10n.previewTitle,
+      onPreviewTap: onPreviewTap,
+      onPreviewLongPress: onPreviewLongPress,
     );
-  }
-
-  Widget _buildActivePreview(
-    BuildContext context, {
-    required String panelTitle,
-  }) {
-    final AppLocalizations l10n = context.l10n;
-
-    if (controller.showPhotoInControl) {
-      final CustomOrderEntry? projectedCustom =
-          controller.projectedCustomOrderEntry;
-      final bool isCustomEntry =
-          projectedCustom != null &&
-          (projectedCustom.isCustomText || projectedCustom.isCustomImage);
-      if (!isCustomEntry) {
-        final String? photoPath = controller.currentPhotoPath;
-        if (photoPath != null && photoPath.isNotEmpty) {
-          return _PhotoPreviewWithFallback(
-            photoPath: photoPath,
-            notFoundLabel: photoPath,
-            fallback: _buildNormalPreview(context),
-            controller: controller,
-            l10n: l10n,
-          );
-        }
-      }
-    }
-
-    return _buildNormalPreview(context);
   }
 
   Future<void> _openSettings(
@@ -3830,11 +3949,15 @@ class _VersePreview extends StatelessWidget {
     required this.controller,
     required this.title,
     required this.panelTitle,
+    required this.onPreviewTap,
+    this.onPreviewLongPress,
   });
 
   final DiatarMainController controller;
   final String? title;
   final String panelTitle;
+  final VoidCallback onPreviewTap;
+  final VoidCallback? onPreviewLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -3905,6 +4028,8 @@ class _VersePreview extends StatelessWidget {
 
         return _SwipePagingPreview(
           controller: controller,
+          onTap: onPreviewTap,
+          onLongPress: onPreviewLongPress,
           child: constraints.maxHeight.isFinite
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3988,11 +4113,15 @@ class _CustomTextPreview extends StatelessWidget {
     required this.controller,
     required this.title,
     required this.lines,
+    required this.onPreviewTap,
+    this.onPreviewLongPress,
   });
 
   final DiatarMainController controller;
   final String title;
   final List<String> lines;
+  final VoidCallback onPreviewTap;
+  final VoidCallback? onPreviewLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -4057,6 +4186,8 @@ class _CustomTextPreview extends StatelessWidget {
 
         return _SwipePagingPreview(
           controller: controller,
+          onTap: onPreviewTap,
+          onLongPress: onPreviewLongPress,
           child: constraints.maxHeight.isFinite
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -4186,6 +4317,8 @@ class _PhotoPreviewWithFallback extends StatefulWidget {
     required this.fallback,
     required this.controller,
     required this.l10n,
+    required this.onPreviewTap,
+    this.onPreviewLongPress,
   });
 
   final String photoPath;
@@ -4193,6 +4326,8 @@ class _PhotoPreviewWithFallback extends StatefulWidget {
   final Widget fallback;
   final DiatarMainController controller;
   final AppLocalizations l10n;
+  final VoidCallback onPreviewTap;
+  final VoidCallback? onPreviewLongPress;
 
   @override
   State<_PhotoPreviewWithFallback> createState() =>
@@ -4258,6 +4393,8 @@ class _PhotoPreviewWithFallbackState extends State<_PhotoPreviewWithFallback> {
               final bool bounded = constraints.maxHeight.isFinite;
               return _SwipePagingPreview(
                 controller: widget.controller,
+                onTap: widget.onPreviewTap,
+                onLongPress: widget.onPreviewLongPress,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -4311,11 +4448,15 @@ class _CustomImagePreview extends StatelessWidget {
     required this.controller,
     required this.title,
     required this.imagePath,
+    required this.onPreviewTap,
+    this.onPreviewLongPress,
   });
 
   final DiatarMainController controller;
   final String title;
   final String imagePath;
+  final VoidCallback onPreviewTap;
+  final VoidCallback? onPreviewLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -4339,6 +4480,8 @@ class _CustomImagePreview extends StatelessWidget {
         final bool bounded = constraints.maxHeight.isFinite;
         return _SwipePagingPreview(
           controller: controller,
+          onTap: onPreviewTap,
+          onLongPress: onPreviewLongPress,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -4368,10 +4511,17 @@ class _CustomImagePreview extends StatelessWidget {
 }
 
 class _SwipePagingPreview extends StatefulWidget {
-  const _SwipePagingPreview({required this.controller, required this.child});
+  const _SwipePagingPreview({
+    required this.controller,
+    required this.child,
+    this.onTap,
+    this.onLongPress,
+  });
 
   final DiatarMainController controller;
   final Widget child;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   @override
   State<_SwipePagingPreview> createState() => _SwipePagingPreviewState();
@@ -4526,7 +4676,8 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
           ignoring: _isAnimatingPageTurn,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: widget.controller.toggleShowing,
+            onTap: widget.onTap ?? widget.controller.toggleShowing,
+            onLongPress: widget.onLongPress,
             onHorizontalDragStart: (_) => _startDrag(),
             onHorizontalDragUpdate: (DragUpdateDetails details) {
               _updateDrag(
