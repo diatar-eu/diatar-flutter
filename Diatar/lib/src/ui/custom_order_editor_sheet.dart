@@ -59,8 +59,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
     final ScrollPosition position = _headerActionsScrollController.position;
     final bool canLeft = position.pixels > 0.5;
-    final bool canRight =
-        position.maxScrollExtent - position.pixels > 0.5;
+    final bool canRight = position.maxScrollExtent - position.pixels > 0.5;
     if (canLeft == _canScrollHeaderActionsLeft &&
         canRight == _canScrollHeaderActionsRight) {
       return;
@@ -85,13 +84,39 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
   }
 
-  Widget _buildHeaderScrollHint(bool visible, IconData icon) {
-    return AnimatedOpacity(
-      opacity: visible ? 1 : 0,
-      duration: const Duration(milliseconds: 150),
-      child: SizedBox(
-        width: 14,
-        child: Icon(icon, size: 14, color: Theme.of(context).hintColor),
+  Future<void> _scrollHeaderActionsBy(double delta) async {
+    if (!_headerActionsScrollController.hasClients) {
+      return;
+    }
+    final ScrollPosition position = _headerActionsScrollController.position;
+    final double target = (position.pixels + delta).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    if ((target - position.pixels).abs() < 0.5) {
+      return;
+    }
+    await _headerActionsScrollController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Widget _buildHeaderScrollHint(
+    bool enabled,
+    IconData icon, {
+    required bool goRight,
+  }) {
+    return SizedBox(
+      width: 30,
+      child: IconButton(
+        tooltip: goRight ? context.l10n.next : context.l10n.previous,
+        onPressed: enabled
+            ? () => unawaited(_scrollHeaderActionsBy(goRight ? 180 : -180))
+            : null,
+        icon: Icon(icon, size: 16),
+        visualDensity: VisualDensity.compact,
       ),
     );
   }
@@ -150,8 +175,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       return false;
     }
     final String previousLabel = localizedCustomEntryLabel(l10n, previous);
-    final ({String prefix, String suffix})? previousSplit =
-        _splitSlashLabel(previousLabel);
+    final ({String prefix, String suffix})? previousSplit = _splitSlashLabel(
+      previousLabel,
+    );
     if (previousSplit == null || previousSplit.prefix != split.prefix) {
       return false;
     }
@@ -167,7 +193,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     required String firstLine,
   }) {
     final List<InlineSpan> spans = <InlineSpan>[
-      TextSpan(text: prefix, style: const TextStyle(color: Colors.transparent)),
+      TextSpan(
+        text: prefix,
+        style: const TextStyle(color: Colors.transparent),
+      ),
       TextSpan(text: '/$suffix'),
     ];
     if (firstLine.trim().isNotEmpty) {
@@ -406,17 +435,15 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                             _buildHeaderScrollHint(
                               _canScrollHeaderActionsLeft,
                               Icons.chevron_left,
+                              goRight: false,
                             ),
                             Expanded(
-                              child: NotificationListener<
-                                ScrollMetricsNotification
-                              >(
-                                onNotification: (
-                                  ScrollMetricsNotification notification,
-                                ) {
-                                  _scheduleHeaderActionsIndicatorRefresh();
-                                  return false;
-                                },
+                              child: NotificationListener<ScrollMetricsNotification>(
+                                onNotification:
+                                    (ScrollMetricsNotification notification) {
+                                      _scheduleHeaderActionsIndicatorRefresh();
+                                      return false;
+                                    },
                                 child: Align(
                                   alignment: Alignment.centerRight,
                                   child: SingleChildScrollView(
@@ -441,7 +468,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                                           tooltip: l10n
                                               .customOrderInsertSeparatorAction,
                                           onPressed: _insertSeparator,
-                                          icon: const Icon(Icons.horizontal_rule),
+                                          icon: const Icon(
+                                            Icons.horizontal_rule,
+                                          ),
                                         ),
                                         IconButton(
                                           tooltip: l10n.addTextSlide,
@@ -470,12 +499,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                                         IconButton(
                                           tooltip: l10n.szentirasTooltip,
                                           onPressed: _openSzentirasDialog,
-                                          icon: const Icon(
-                                            Icons.auto_stories,
-                                          ),
+                                          icon: const Icon(Icons.auto_stories),
                                         ),
                                         IconButton(
-                                          tooltip: l10n.customOrderClearAllTooltip,
+                                          tooltip:
+                                              l10n.customOrderClearAllTooltip,
                                           onPressed: _entries.isEmpty
                                               ? null
                                               : _confirmAndClearAll,
@@ -493,6 +521,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                             _buildHeaderScrollHint(
                               _canScrollHeaderActionsRight,
                               Icons.chevron_right,
+                              goRight: true,
                             ),
                           ],
                         ),
@@ -503,7 +532,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
               ),
               const Divider(height: 1),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 child: Row(
                   children: <Widget>[
                     Expanded(
@@ -530,7 +562,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                                   style: set.enabled
                                       ? null
                                       : const TextStyle(
-                                          decoration: TextDecoration.lineThrough,
+                                          decoration:
+                                              TextDecoration.lineThrough,
                                         ),
                                 ),
                               ),
@@ -577,7 +610,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 child: Row(
                   children: <Widget>[
                     Text(l10n.customOrderGroupReorder),
@@ -676,14 +712,13 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                       : songs.first.songIndex;
                 }
 
-                final List<_SongOption> filteredSongs =
-                    songSearchQuery.isEmpty
-                        ? songs
-                        : songs.where((_SongOption option) {
-                            return option.songTitle
-                                .toLowerCase()
-                                .contains(songSearchQuery.toLowerCase());
-                          }).toList();
+                final List<_SongOption> filteredSongs = songSearchQuery.isEmpty
+                    ? songs
+                    : songs.where((_SongOption option) {
+                        return option.songTitle.toLowerCase().contains(
+                          songSearchQuery.toLowerCase(),
+                        );
+                      }).toList();
 
                 return AlertDialog(
                   title: Text(l10n.customOrderInsertVersesAction),
@@ -786,25 +821,23 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                         SizedBox(
                           height: 200,
                           child: ListView(
-                            children: filteredSongs
-                                .map((_SongOption option) {
-                                  final bool isSelected =
-                                      option.songIndex == selectedSongIndex;
-                                  return ListTile(
-                                    dense: true,
-                                    title: Text(
-                                      option.songTitle,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    selected: isSelected,
-                                    onTap: () {
-                                      setDialogState(() {
-                                        selectedSongIndex = option.songIndex;
-                                      });
-                                    },
-                                  );
-                                })
-                                .toList(),
+                            children: filteredSongs.map((_SongOption option) {
+                              final bool isSelected =
+                                  option.songIndex == selectedSongIndex;
+                              return ListTile(
+                                dense: true,
+                                title: Text(
+                                  option.songTitle,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                selected: isSelected,
+                                onTap: () {
+                                  setDialogState(() {
+                                    selectedSongIndex = option.songIndex;
+                                  });
+                                },
+                              );
+                            }).toList(),
                           ),
                         ),
                       ],
@@ -973,7 +1006,6 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
   }
 
-
   Future<void> _pickAndSendImageSlide() async {
     final AppLocalizations l10n = context.l10n;
     final XTypeGroup images = XTypeGroup(
@@ -1075,8 +1107,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       builder: (BuildContext context) {
         return _SzentirasDialog(
           controller: controller,
-          onApiKeySaved: (String key) =>
-              controller.saveSzentirasApiKey(key),
+          onApiKeySaved: (String key) => controller.saveSzentirasApiKey(key),
         );
       },
     );
@@ -1268,9 +1299,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                               value: selected,
                               title: _buildTitleWithFirstLine(
                                 title: verses[i].name,
-                                firstLine: firstMeaningfulLine(
-                                  verses[i].lines,
-                                ),
+                                firstLine: firstMeaningfulLine(verses[i].lines),
                               ),
                               onChanged: (bool? value) {
                                 setModalState(() {
@@ -1407,9 +1436,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           final AppLocalizations l10n = dialogContext.l10n;
           return AlertDialog(
             title: Text(l10n.customOrderSetRemove),
-            content: Text(
-              l10n.customOrderSetRemoveHotkeyWarning(boundHotkey),
-            ),
+            content: Text(l10n.customOrderSetRemoveHotkeyWarning(boundHotkey)),
             actions: <Widget>[
               FilledButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
@@ -1613,7 +1640,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             );
             if (existingSelectedDir != null) {
               await controller.applySettings(
-                controller.settings.copyWith(diaExportPath: existingSelectedDir),
+                controller.settings.copyWith(
+                  diaExportPath: existingSelectedDir,
+                ),
               );
             }
           }
@@ -1647,8 +1676,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             controller.settings.copyWith(diaExportPath: exportDir.path),
           );
         }
-        targetPath =
-            '${exportDir.path}/$fileBaseName.dia';
+        targetPath = '${exportDir.path}/$fileBaseName.dia';
       }
 
       if (targetPath == null || targetPath.trim().isEmpty) {
@@ -1681,8 +1709,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       'diatar_dia_export_',
     );
     try {
-      final String tempPath =
-          '${tempDir.path}/$defaultFileName';
+      final String tempPath = '${tempDir.path}/$defaultFileName';
       final String exportedTempPath = await controller.exportCustomOrderToDia(
         tempPath,
       );
@@ -1789,13 +1816,14 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           content: Text(l10n.customOrderLoadModeMessage),
           actions: <Widget>[
             TextButton(
-              onPressed: () => Navigator.of(dialogContext)
-                  .pop(CustomOrderImportMode.overwriteActive),
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(CustomOrderImportMode.overwriteActive),
               child: Text(l10n.customOrderLoadModeOverwrite),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(dialogContext)
-                  .pop(CustomOrderImportMode.addNew),
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(CustomOrderImportMode.addNew),
               child: Text(l10n.customOrderLoadModeAdd),
             ),
           ],
@@ -1856,8 +1884,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       onReorder: (int oldIndex, int newIndex) {
         setState(() {
           if (_groupReorder) {
-            final ({int start, int end}) group =
-                _contiguousGroupRange(oldIndex);
+            final ({int start, int end}) group = _contiguousGroupRange(
+              oldIndex,
+            );
             final int groupStart = group.start;
             final int groupEnd = group.end;
             // Dropping inside the same group is a no-op.
@@ -1888,8 +1917,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         final bool isSongEntry = controller.isSongOrderEntry(entry);
         final bool isContinuation = isSongEntry
             ? (index > 0 &&
-                _entries[index - 1].fileName == entry.fileName &&
-                _entries[index - 1].songIndex == entry.songIndex)
+                  _entries[index - 1].fileName == entry.fileName &&
+                  _entries[index - 1].songIndex == entry.songIndex)
             : _isCustomTextContinuation(context.l10n, index, entry);
         final List<DtxVerse> verses = isSongEntry
             ? controller.versesForEntry(entry)
@@ -1912,8 +1941,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             firstLine: firstLine,
           );
         } else if (isContinuation) {
-          final ({String prefix, String suffix}) split =
-              _splitSlashLabel(fullLabel)!;
+          final ({String prefix, String suffix}) split = _splitSlashLabel(
+            fullLabel,
+          )!;
           titleWidget = _buildContinuationTitle(
             prefix: split.prefix,
             suffix: split.suffix,
@@ -1961,10 +1991,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             ),
           ),
           title: Padding(
-            padding: EdgeInsets.only(
-              left: isContinuation ? 70 : 16,
-              right: 8,
-            ),
+            padding: EdgeInsets.only(left: isContinuation ? 70 : 16, right: 8),
             child: titleWidget,
           ),
           trailing: Row(
@@ -2180,7 +2207,6 @@ class CustomOrderEditorSheet extends StatelessWidget {
     );
   }
 }
-
 
 class _SongOption {
   const _SongOption({required this.songIndex, required this.songTitle});
@@ -2613,8 +2639,9 @@ class _BatyuDialogState extends State<_BatyuDialog> {
   List<NapiLelkiBatyuCelebration> _celebrations =
       const <NapiLelkiBatyuCelebration>[];
   int _wordsPerSlide = 30;
-  final TextEditingController _wordsPerSlideController =
-      TextEditingController(text: '30');
+  final TextEditingController _wordsPerSlideController = TextEditingController(
+    text: '30',
+  );
 
   @override
   void initState() {
@@ -2816,8 +2843,9 @@ class _SzentirasDialog extends StatefulWidget {
 
 class _SzentirasDialogState extends State<_SzentirasDialog> {
   final TextEditingController _referenceController = TextEditingController();
-  final TextEditingController _chunkSizeController =
-      TextEditingController(text: '30');
+  final TextEditingController _chunkSizeController = TextEditingController(
+    text: '30',
+  );
   final TextEditingController _apiKeyEditingController =
       TextEditingController();
   final SzentirasApiService _apiService = SzentirasApiService();
@@ -2856,8 +2884,8 @@ class _SzentirasDialogState extends State<_SzentirasDialog> {
       _error = null;
     });
     try {
-      final List<SzentirasTranslation> translations =
-          await _apiService.getTranslations(_apiKey);
+      final List<SzentirasTranslation> translations = await _apiService
+          .getTranslations(_apiKey);
       if (mounted) {
         setState(() {
           _translations = translations;

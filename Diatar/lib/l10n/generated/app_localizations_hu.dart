@@ -21,7 +21,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get playlistsTitle => 'Diasorok';
 
   @override
-  String get customOrderTooltip => 'Diasor';
+  String get customOrderTooltip => 'Szerkesztő';
 
   @override
   String get zsolozsmaTooltip => 'Zsolozsma';
@@ -856,7 +856,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderSuggestedFileName => 'sorrend.dia';
 
   @override
-  String get customOrderEditTitle => 'Diasor';
+  String get customOrderEditTitle => 'Szerkesztő';
 
   @override
   String get customOrderGroupReorder => 'Csoportos áthelyezés';

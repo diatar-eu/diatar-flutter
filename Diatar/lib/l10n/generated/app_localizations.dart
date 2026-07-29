@@ -125,7 +125,7 @@ abstract class AppLocalizations {
   /// No description provided for @customOrderTooltip.
   ///
   /// In hu, this message translates to:
-  /// **'Diasor'**
+  /// **'Szerkesztő'**
   String get customOrderTooltip;
 
   /// No description provided for @zsolozsmaTooltip.
@@ -1544,7 +1544,7 @@ abstract class AppLocalizations {
   /// No description provided for @customOrderEditTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Diasor'**
+  /// **'Szerkesztő'**
   String get customOrderEditTitle;
 
   /// No description provided for @customOrderGroupReorder.

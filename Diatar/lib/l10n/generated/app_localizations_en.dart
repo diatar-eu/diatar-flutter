@@ -21,7 +21,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get playlistsTitle => 'Playlists';
 
   @override
-  String get customOrderTooltip => 'Slide list';
+  String get customOrderTooltip => 'Editor';
 
   @override
   String get zsolozsmaTooltip => 'Liturgy of the Hours';
@@ -853,7 +853,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderSuggestedFileName => 'order.dia';
 
   @override
-  String get customOrderEditTitle => 'Slide list';
+  String get customOrderEditTitle => 'Editor';
 
   @override
   String get customOrderGroupReorder => 'Group reordering';
