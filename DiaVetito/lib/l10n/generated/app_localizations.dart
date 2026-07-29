@@ -488,6 +488,12 @@ abstract class AppLocalizations {
   /// **'Ha megszakad az internet vagy a helyi hálózati kapcsolat, jelenjen meg újra a logo, amíg nincs kapcsolat.'**
   String get keepStartupLogoHint;
 
+  /// No description provided for @settingsLongPressHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beállítások: nyomd hosszan.'**
+  String get settingsLongPressHint;
+
   /// No description provided for @qrScanButton.
   ///
   /// In hu, this message translates to:

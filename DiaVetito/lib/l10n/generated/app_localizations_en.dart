@@ -231,6 +231,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'If internet or local network connection is lost, show the logo screen again until connection is restored.';
 
   @override
+  String get settingsLongPressHint => 'Settings: press and hold.';
+
+  @override
   String get qrScanButton => 'Scan QR';
 
   @override

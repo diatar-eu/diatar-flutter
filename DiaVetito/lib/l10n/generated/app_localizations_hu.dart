@@ -231,6 +231,9 @@ class AppLocalizationsHu extends AppLocalizations {
       'Ha megszakad az internet vagy a helyi hálózati kapcsolat, jelenjen meg újra a logo, amíg nincs kapcsolat.';
 
   @override
+  String get settingsLongPressHint => 'Beállítások: nyomd hosszan.';
+
+  @override
   String get qrScanButton => 'QR beolvasás';
 
   @override

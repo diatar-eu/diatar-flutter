@@ -84,6 +84,7 @@ class _HomePageState extends State<HomePage> {
                 children: <Widget>[
                   Positioned.fill(
                     child: GestureDetector(
+                      onTap: () => _showSettingsHint(context),
                       onLongPress: () => _openSettings(context),
                       child: Semantics(
                         label: isLogoFrame
@@ -221,6 +222,19 @@ class _HomePageState extends State<HomePage> {
         );
       },
     );
+  }
+
+  void _showSettingsHint(BuildContext context) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.settingsLongPressHint),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   void _handleShutdownRequested() {
