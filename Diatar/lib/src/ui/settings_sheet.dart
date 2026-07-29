@@ -325,16 +325,18 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final bool showCast =
         (_castService?.isSupported ?? false) &&
         _matches(query, 'cast google cast');
-    final bool showColors = _matches(query, 'szinek hatter szoveg highlight');
     final bool showProjection = _matches(
       query,
-      'vetites betu meret cim hatter opacity',
+      'vetites betu meret cim hatter opacity szinek szin',
     );
     final bool showFiles = _matches(
       query,
       'enektar fajlok dtx hatterkep hatter kep blank export import backup biztonsagi mentes zip',
     );
-    final bool showGeneral = _matches(query, 'altalanos tema nyelv language');
+    final bool showGeneral = _matches(
+      query,
+      'altalanos tema nyelv language gorgetheto akkord kotta hatterkep szokiemeles',
+    );
     final bool showSystem = _matches(
       query,
       'rendszer kilepes leallas stop shutdown epstop epshutdown',
@@ -353,7 +355,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         showInternet ||
         showLan ||
         showCast ||
-        showColors ||
         showProjection ||
         showFiles ||
         showGeneral ||
@@ -418,7 +419,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     ),
                   if (showInternet &&
                       (showLan ||
-                          showColors ||
                           showProjection ||
                           showFiles ||
                           showGeneral ||
@@ -439,7 +439,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     ),
                   if (showApiKeys &&
                       (showLan ||
-                          showColors ||
                           showProjection ||
                           showFiles ||
                           showGeneral))
@@ -459,7 +458,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     ),
                   if (showLan &&
                       (showCast ||
-                          showColors ||
                           showProjection ||
                           showFiles ||
                           showGeneral))
@@ -474,26 +472,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     ),
                   if (showCast &&
                       (_castService?.isSupported ?? false) &&
-                      (showColors ||
-                          showProjection ||
+                      (showProjection ||
                           showFiles ||
                           showGeneral))
-                    const Divider(height: 1),
-                  if (showColors)
-                    _settingsTile(
-                      leading: const Icon(Icons.palette_outlined),
-                      title: Text(l10n.colorsTitle),
-                      subtitle: Text(
-                        l10n.settingsColorSummary(
-                          _rgbHex(_bkColor),
-                          _rgbHex(_txtColor),
-                        ),
-                      ),
-                      onTap: _openColorSettings,
-                      description: l10n.colorsDescription,
-                    ),
-                  if (showColors &&
-                      (showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
                   if (showProjection)
                     _settingsTile(
@@ -1586,6 +1567,38 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             value: _useSound,
             onChanged: (bool v) => setBoth(() => _useSound = v),
             title: Text(l10n.useSound),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: !_projAutoSize,
+            onChanged: (bool v) => setBoth(() => _projAutoSize = !v),
+            title: Text(l10n.scrollableProjection),
+            subtitle: Text(l10n.scrollableProjectionHint),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projUseAkkord,
+            onChanged: (bool v) => setBoth(() => _projUseAkkord = v),
+            title: Text(l10n.showChords),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projUseKotta,
+            onChanged: (bool v) => setBoth(() => _projUseKotta = v),
+            title: Text(l10n.showKotta),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projShowBackgroundImage,
+            onChanged: (bool v) => setBoth(() => _projShowBackgroundImage = v),
+            title: Text(l10n.showBackgroundImage),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _homeShowHighlightControls,
+            onChanged: (bool v) =>
+                setBoth(() => _homeShowHighlightControls = v),
+            title: Text(l10n.wordHighlight),
           ),
         ];
       },
@@ -2819,13 +2832,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           ],
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            value: !_projAutoSize,
-            onChanged: (bool v) => setBoth(() => _projAutoSize = !v),
-            title: Text(l10n.scrollableProjection),
-            subtitle: Text(l10n.scrollableProjectionHint),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
             value: _projUseTitle,
             onChanged: (bool v) => setBoth(() => _projUseTitle = v),
             title: Text(l10n.showTitle),
@@ -2844,46 +2850,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            value: _projUseAkkord,
-            onChanged: (bool v) => setBoth(() => _projUseAkkord = v),
-            title: Text(l10n.showChords),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _projUseKotta,
-            onChanged: (bool v) => setBoth(() => _projUseKotta = v),
-            title: Text(l10n.showKotta),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _projShowBackgroundImage,
-            onChanged: (bool v) => setBoth(() => _projShowBackgroundImage = v),
-            title: Text(l10n.showBackgroundImage),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _homeShowHighlightControls,
-            onChanged: (bool v) =>
-                setBoth(() => _homeShowHighlightControls = v),
-            title: Text(l10n.wordHighlight),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
             value: _projBoldText,
             onChanged: (bool v) => setBoth(() => _projBoldText = v),
             title: Text(l10n.boldText),
           ),
-        ];
-      },
-    );
-  }
-
-  Future<void> _openColorSettings() {
-    return _openSectionSheet(
-      title: context.l10n.colorsTitle,
-      builder: (BuildContext context, void Function(void Function()) setBoth) {
-        final l10n = context.l10n;
-        return <Widget>[
+          const SizedBox(height: 8),
+          Text(
+            l10n.colorsTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 6),
           Wrap(
             spacing: 8,
             runSpacing: 8,
