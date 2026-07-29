@@ -135,7 +135,7 @@ class SettingsStore {
       dtxPath: '',
       blankPicPath: prefs.getString(_kBlankPicPath) ?? '',
       diaExportPath: prefs.getString(_kDiaExportPath) ?? '',
-      projFontSize: prefs.getInt(_kProjFontSize) ?? 70,
+      projFontSize: prefs.getInt(_kProjFontSize) ?? 250,
       projTitleSize: prefs.getInt(_kProjTitleSize) ?? 12,
       projLeftIndent: prefs.getInt(_kProjLeftIndent) ?? 2,
       projBorderL: prefs.getInt(_kProjBorderL) ?? 0,
