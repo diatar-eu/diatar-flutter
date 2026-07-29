@@ -2937,6 +2937,41 @@ class DiatarMainController extends ChangeNotifier {
         .toList();
   }
 
+  List<String> get projectionDisplayLines {
+    if (_customOrderCursor >= 0 && _customOrderCursor < _customOrder.length) {
+      final CustomOrderEntry entry = _customOrder[_customOrderCursor];
+      if (entry.isSongEntry &&
+          entry.mergeWithNext &&
+          _customOrderCursor + 1 < _customOrder.length) {
+        final CustomOrderEntry next = _customOrder[_customOrderCursor + 1];
+        if (next.isSongEntry &&
+            next.fileName == entry.fileName &&
+            next.songIndex == entry.songIndex) {
+          final DtxSong? s = currentSong;
+          if (s != null &&
+              next.verseIndex >= 0 &&
+              next.verseIndex < s.verses.length) {
+            final List<String> currentLines = displayLines;
+            final int offset = currentTransposition;
+            final List<String> nextLines = offset == 0
+                ? s.verses[next.verseIndex].lines
+                : s.verses[next.verseIndex]
+                    .lines
+                    .map(
+                      (String line) =>
+                          TranspositionUtils.transposeLine(line, offset),
+                    )
+                    .toList();
+            if (nextLines.isNotEmpty) {
+              return <String>[...currentLines, '', ...nextLines];
+            }
+          }
+        }
+      }
+    }
+    return displayLines;
+  }
+
   /// Beallitja az aktualis enek transzpozicio eltolasat es ujrajelzi a vetítést.
   Future<void> setTransposition(int semitones) async {
     final String key = _currentSongKey;
@@ -3494,7 +3529,7 @@ class DiatarMainController extends ChangeNotifier {
     final DtxSong? song = currentSong;
     final DtxBook? book = currentBook;
     final DtxVerse? verse = currentVerse;
-    final List<String> lines = displayLines;
+    final List<String> lines = projectionDisplayLines;
 
     final String bookNick = book?.displayName ?? '';
     final String songTitle = song?.title ?? '';
@@ -3621,15 +3656,24 @@ class DiatarMainController extends ChangeNotifier {
         // For now, we'll fall back to text rendering or handle it elsewhere
         return null;
       } else if (entry.isCustomText) {
-        // Create a TextFrame for custom text entries
-        final String title = (entry.customTextTitle ?? '').trim().isEmpty
-            ? 'Dia'
-            : (entry.customTextTitle ?? '').trim();
-        final List<String> lines = (entry.customTextBody ?? '')
-            .split(RegExp(r'\r?\n'))
-            .map((String line) => line.trimRight())
-            .where((String line) => line.trim().isNotEmpty)
-            .toList();
+        final bool isMergeLeader =
+            isCustomOrderEntryMergeLeaderAt(_projectedCustomCursor);
+        final String title = isMergeLeader
+            ? customOrderProjectionTitleAt(_projectedCustomCursor)
+            : (entry.customTextTitle ?? '').trim().isEmpty
+                ? 'Dia'
+                : (entry.customTextTitle ?? '').trim();
+        final List<String> lines = () {
+          final String body = isMergeLeader &&
+                  _projectedCustomCursor + 1 < _customOrder.length
+              ? '${entry.customTextBody ?? ''}\n${_customOrder[_projectedCustomCursor + 1].customTextBody ?? ''}'
+              : (entry.customTextBody ?? '');
+          return body
+              .split(RegExp(r'\r?\n'))
+              .map((String line) => line.trimRight())
+              .where((String line) => line.trim().isNotEmpty)
+              .toList();
+        }();
         final RecTextRecord record = RecTextRecord(
           scholaLine: '',
           title: title,
@@ -3677,14 +3721,23 @@ class DiatarMainController extends ChangeNotifier {
     if (entry.isCustomText) {
       highPos = 0;
       _resetHighlightRenderState();
-      final String title = (entry.customTextTitle ?? '').trim().isEmpty
-          ? 'Dia'
-          : (entry.customTextTitle ?? '').trim();
-      final List<String> lines = (entry.customTextBody ?? '')
-          .split(RegExp(r'\r?\n'))
-          .map((String line) => line.trimRight())
-          .where((String line) => line.trim().isNotEmpty)
-          .toList();
+      final bool isMergeLeader = isCustomOrderEntryMergeLeaderAt(cursor);
+      final String title = isMergeLeader
+          ? customOrderProjectionTitleAt(cursor)
+          : (entry.customTextTitle ?? '').trim().isEmpty
+              ? 'Dia'
+              : (entry.customTextTitle ?? '').trim();
+      final List<String> lines = () {
+        final String body = isMergeLeader &&
+                cursor + 1 < _customOrder.length
+            ? '${entry.customTextBody ?? ''}\n${_customOrder[cursor + 1].customTextBody ?? ''}'
+            : (entry.customTextBody ?? '');
+        return body
+            .split(RegExp(r'\r?\n'))
+            .map((String line) => line.trimRight())
+            .where((String line) => line.trim().isNotEmpty)
+            .toList();
+      }();
       final List<String> payloadLines = lines.isEmpty
           ? const <String>['']
           : lines;

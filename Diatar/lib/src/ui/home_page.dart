@@ -1378,14 +1378,24 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         controller.projectedCustomOrderEntry;
 
     if (projectedCustom != null && projectedCustom.isCustomText) {
-      final String title =
-          controller.currentCustomOrderProjectionTitle ??
-          localizedCustomEntryLabel(l10n, projectedCustom);
-      final List<String> lines = (projectedCustom.customTextBody ?? '')
-          .split(RegExp(r'\r?\n'))
-          .map((String line) => line.trimRight())
-          .where((String line) => line.trim().isNotEmpty)
-          .toList();
+      final int cursor = controller.selectedCustomOrderCursor;
+      final bool isMergeLeader =
+          controller.isCustomOrderEntryMergeLeaderAt(cursor);
+      final String title = isMergeLeader
+          ? controller.customOrderProjectionTitleAt(cursor)
+          : controller.currentCustomOrderProjectionTitle ??
+                localizedCustomEntryLabel(l10n, projectedCustom);
+      final List<String> lines = () {
+        final String body = isMergeLeader &&
+                cursor + 1 < controller.customOrder.length
+            ? '${projectedCustom.customTextBody ?? ''}\n${controller.customOrder[cursor + 1].customTextBody ?? ''}'
+            : (projectedCustom.customTextBody ?? '');
+        return body
+            .split(RegExp(r'\r?\n'))
+            .map((String line) => line.trimRight())
+            .where((String line) => line.trim().isNotEmpty)
+            .toList();
+      }();
       return _CustomTextPreview(
         controller: controller,
         title: title,
@@ -3999,7 +4009,7 @@ class _VersePreview extends StatelessWidget {
     final RecTextRecord previewRecord = RecTextRecord(
       scholaLine: '',
       title: '',
-      lines: controller.displayLines,
+      lines: controller.projectionDisplayLines,
     );
     final ProjectionFrame frame = TextFrame(record: previewRecord);
     final ProjectionGlobals globals = controller.globals.copyWith(
