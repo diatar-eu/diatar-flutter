@@ -1833,30 +1833,28 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                         tristate: true,
                                         value: _dtxUpdateValue(items),
                                         onChanged: canToggleUpdates
-                                            ? (bool? checked) {
-                                                setState(() {
-                                                  final bool selectAll =
-                                                      checked == true;
-                                                  for (final DtxManageItem item
-                                                      in items) {
+                                             ? (bool? checked) {
+                                                 setState(() {
+                                                   for (final DtxManageItem item
+                                                       in items) {
                                                     if (!item.item.isOfficial ||
                                                         !item
                                                             .item
                                                             .updateAvailable) {
                                                       continue;
                                                     }
-                                                    if (selectAll) {
-                                                      if (_excludedFiles
-                                                          .contains(
-                                                            item.item.fileName,
-                                                          )) {
-                                                        continue;
-                                                      }
+                                                    if (checked == true) {
                                                       _downloadSelected.add(
                                                         item.item.fileName,
                                                       );
-                                                    } else {
+                                                      _excludedFiles.remove(
+                                                        item.item.fileName,
+                                                      );
+                                                    } else if (checked == false) {
                                                       _downloadSelected.remove(
+                                                        item.item.fileName,
+                                                      );
+                                                      _excludedFiles.add(
                                                         item.item.fileName,
                                                       );
                                                     }
@@ -1886,10 +1884,16 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                 _downloadSelected.remove(
                                                   item.item.fileName,
                                                 );
-                                              } else {
+                                              } else if (checked == false) {
                                                 _excludedFiles.remove(
                                                   item.item.fileName,
                                                 );
+                                                if (item.item.isOfficial &&
+                                                    item.item.updateAvailable) {
+                                                  _downloadSelected.add(
+                                                    item.item.fileName,
+                                                  );
+                                                }
                                               }
                                             }
                                           });
@@ -1985,53 +1989,61 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                             .updateAvailable) {
                                                       continue;
                                                     }
-                                                    if (checked == true) {
-                                                      if (_excludedFiles
-                                                          .contains(
-                                                            item.item.fileName,
-                                                          )) {
-                                                        continue;
-                                                      }
-                                                      _downloadSelected.add(
-                                                        item.item.fileName,
-                                                      );
-                                                    } else {
-                                                      _downloadSelected.remove(
-                                                        item.item.fileName,
-                                                      );
+                                                      if (checked == true) {
+                                                        _downloadSelected.add(
+                                                          item.item.fileName,
+                                                        );
+                                                        _excludedFiles.remove(
+                                                          item.item.fileName,
+                                                        );
+                                                      } else if (checked == false) {
+                                                        _downloadSelected.remove(
+                                                          item.item.fileName,
+                                                        );
+                                                        _excludedFiles.add(
+                                                          item.item.fileName,
+                                                        );
+                                                       }
                                                     }
+                                                  });
                                                   }
-                                                });
-                                              }
-                                            : null,
+                                                  : null,
                                       ),
                                     ),
                                   ),
                                   SizedBox(
                                     width: actionColumnWidth,
-                                    child: Center(
-                                      child: Checkbox(
-                                        tristate: true,
-                                        value: _groupExcludedValue(groupItems),
-                                        onChanged: (bool? checked) {
-                                          setState(() {
-                                            for (final DtxManageItem item
-                                                in groupItems) {
-                                              if (checked == true) {
-                                                _excludedFiles.add(
-                                                  item.item.fileName,
-                                                );
-                                                _downloadSelected.remove(
-                                                  item.item.fileName,
-                                                );
-                                              } else {
-                                                _excludedFiles.remove(
-                                                  item.item.fileName,
-                                                );
+                                      child: Center(
+                                        child: Checkbox(
+                                          tristate: true,
+                                          value: _dtxExcludedValue(groupItems),
+                                          onChanged: (bool? checked) {
+                                            setState(() {
+                                              final bool markExcluded =
+                                                  checked == true;
+                                              for (final DtxManageItem item
+                                                  in groupItems) {
+                                                if (markExcluded) {
+                                                  _excludedFiles.add(
+                                                    item.item.fileName,
+                                                  );
+                                                  _downloadSelected.remove(
+                                                    item.item.fileName,
+                                                  );
+                                                } else if (checked == false) {
+                                                  _excludedFiles.remove(
+                                                    item.item.fileName,
+                                                  );
+                                                  if (item.item.isOfficial &&
+                                                      item.item.updateAvailable) {
+                                                    _downloadSelected.add(
+                                                      item.item.fileName,
+                                                    );
+                                                  }
+                                                }
                                               }
-                                            }
-                                          });
-                                        },
+                                            });
+                                          },
                                       ),
                                     ),
                                   ),
@@ -2073,10 +2085,6 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                   _excludedFiles.remove(
                                                     item.fileName,
                                                   );
-                                                } else {
-                                                  _downloadSelected.remove(
-                                                    item.fileName,
-                                                  );
                                                 }
                                               });
                                             },
@@ -2103,10 +2111,6 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                           if (checked ?? false) {
                                             _excludedFiles.add(item.fileName);
                                             _downloadSelected.remove(
-                                              item.fileName,
-                                            );
-                                          } else {
-                                            _excludedFiles.remove(
                                               item.fileName,
                                             );
                                           }
@@ -2245,8 +2249,6 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                         onChanged: canToggleUpdates
                                             ? (bool? checked) {
                                                 setState(() {
-                                                  final bool selectAll =
-                                                      checked == true;
                                                   for (final DtzManageItem item
                                                       in _dtzAllItems) {
                                                     if (!item.item.isOfficial ||
@@ -2255,21 +2257,20 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                             .updateAvailable) {
                                                       continue;
                                                     }
-                                                    if (selectAll) {
-                                                      if (_dtzExcludedFiles
-                                                          .contains(
-                                                            item.item.fileName,
-                                                          )) {
-                                                        continue;
-                                                      }
+                                                    if (checked == true) {
                                                       _dtzDownloadSelected.add(
                                                         item.item.fileName,
                                                       );
-                                                    } else {
-                                                      _dtzDownloadSelected
-                                                          .remove(
-                                                            item.item.fileName,
-                                                          );
+                                                      _dtzExcludedFiles.remove(
+                                                        item.item.fileName,
+                                                      );
+                                                    } else if (checked == false) {
+                                                      _dtzDownloadSelected.remove(
+                                                        item.item.fileName,
+                                                      );
+                                                      _dtzExcludedFiles.add(
+                                                        item.item.fileName,
+                                                      );
                                                     }
                                                   }
                                                 });
@@ -2297,10 +2298,16 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                 _dtzDownloadSelected.remove(
                                                   item.item.fileName,
                                                 );
-                                              } else {
+                                              } else if (checked == false) {
                                                 _dtzExcludedFiles.remove(
                                                   item.item.fileName,
                                                 );
+                                                if (item.item.isOfficial &&
+                                                    item.item.updateAvailable) {
+                                                  _dtzDownloadSelected.add(
+                                                    item.item.fileName,
+                                                  );
+                                                }
                                               }
                                             }
                                           });
@@ -2355,10 +2362,6 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                   _dtzExcludedFiles.remove(
                                                     item.fileName,
                                                   );
-                                                } else {
-                                                  _dtzDownloadSelected.remove(
-                                                    item.fileName,
-                                                  );
                                                 }
                                               });
                                             },
@@ -2380,22 +2383,18 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                       value: _dtzExcludedFiles.contains(
                                         item.fileName,
                                       ),
-                                      onChanged: (bool? checked) {
-                                        setState(() {
-                                          if (checked ?? false) {
-                                            _dtzExcludedFiles.add(
-                                              item.fileName,
-                                            );
-                                            _dtzDownloadSelected.remove(
-                                              item.fileName,
-                                            );
-                                          } else {
-                                            _dtzExcludedFiles.remove(
-                                              item.fileName,
-                                            );
-                                          }
-                                        });
-                                      },
+                                          onChanged: (bool? checked) {
+                                            setState(() {
+                                              if (checked ?? false) {
+                                                _dtzExcludedFiles.add(
+                                                  item.fileName,
+                                                );
+                                                _dtzDownloadSelected.remove(
+                                                  item.fileName,
+                                                );
+                                              }
+                                            });
+                                          },
                                     ),
                                   ),
                                 ),
