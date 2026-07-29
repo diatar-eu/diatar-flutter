@@ -818,8 +818,9 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                               DiatarSettingsInitialSection.localNetwork,
                           sectionOnly: true,
                         ),
-                        projectionDisplayButton:
-                            _buildProjectionDisplayButton(context),
+                        projectionDisplayButton: _buildProjectionDisplayButton(
+                          context,
+                        ),
                       ),
                     ),
                   ] else ...<Widget>[
@@ -863,8 +864,9 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                       initialSection: DiatarSettingsInitialSection.localNetwork,
                       sectionOnly: true,
                     ),
-                    projectionDisplayButton:
-                        _buildProjectionDisplayButton(context),
+                    projectionDisplayButton: _buildProjectionDisplayButton(
+                      context,
+                    ),
                   ),
                 ),
               ] else ...<Widget>[_buildKotetekSelectors(context)],
@@ -1200,13 +1202,14 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         controller.projectedCustomOrderEntry;
 
     if (projectedCustom != null && projectedCustom.isCustomText) {
-      final String title = controller.currentCustomOrderProjectionTitle ??
-        localizedCustomEntryLabel(l10n, projectedCustom);
+      final String title =
+          controller.currentCustomOrderProjectionTitle ??
+          localizedCustomEntryLabel(l10n, projectedCustom);
       final List<String> lines = (projectedCustom.customTextBody ?? '')
-        .split(RegExp(r'\r?\n'))
-        .map((String line) => line.trimRight())
-        .where((String line) => line.trim().isNotEmpty)
-        .toList();
+          .split(RegExp(r'\r?\n'))
+          .map((String line) => line.trimRight())
+          .where((String line) => line.trim().isNotEmpty)
+          .toList();
       return _CustomTextPreview(
         controller: controller,
         title: title,
@@ -1245,7 +1248,8 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     if (controller.showPhotoInControl) {
       final CustomOrderEntry? projectedCustom =
           controller.projectedCustomOrderEntry;
-      final bool isCustomEntry = projectedCustom != null &&
+      final bool isCustomEntry =
+          projectedCustom != null &&
           (projectedCustom.isCustomText || projectedCustom.isCustomImage);
       if (!isCustomEntry) {
         final String? photoPath = controller.currentPhotoPath;
@@ -1296,8 +1300,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             return songOptions;
           },
           availableOrderSetsLoader: () {
-            return controller.customOrderSets
-                .map((CustomOrderSet set) {
+            return controller.customOrderSets.map((CustomOrderSet set) {
               return CustomOrderSetOption(id: set.id, name: set.name);
             }).toList();
           },
@@ -1497,24 +1500,6 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
       return false;
     }
     if (selectedCount == eligible.length) {
-      return true;
-    }
-    return null;
-  }
-
-  bool? _groupExcludedValue(List<DtxManageItem> items) {
-    if (items.isEmpty) {
-      return false;
-    }
-    final int selectedCount = items
-        .where(
-          (DtxManageItem item) => _excludedFiles.contains(item.item.fileName),
-        )
-        .length;
-    if (selectedCount == 0) {
-      return false;
-    }
-    if (selectedCount == items.length) {
       return true;
     }
     return null;
@@ -1833,28 +1818,28 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                         tristate: true,
                                         value: _dtxUpdateValue(items),
                                         onChanged: canToggleUpdates
-                                             ? (bool? checked) {
-                                                 setState(() {
-                                                   for (final DtxManageItem item
-                                                       in items) {
+                                            ? (bool? checked) {
+                                                setState(() {
+                                                  final bool clearColumn =
+                                                      _dtxUpdateValue(items) !=
+                                                      false;
+                                                  for (final DtxManageItem item
+                                                      in items) {
                                                     if (!item.item.isOfficial ||
                                                         !item
                                                             .item
                                                             .updateAvailable) {
                                                       continue;
                                                     }
-                                                    if (checked == true) {
+                                                    if (!clearColumn) {
                                                       _downloadSelected.add(
                                                         item.item.fileName,
                                                       );
                                                       _excludedFiles.remove(
                                                         item.item.fileName,
                                                       );
-                                                    } else if (checked == false) {
+                                                    } else {
                                                       _downloadSelected.remove(
-                                                        item.item.fileName,
-                                                      );
-                                                      _excludedFiles.add(
                                                         item.item.fileName,
                                                       );
                                                     }
@@ -1873,27 +1858,22 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                         value: _dtxExcludedValue(items),
                                         onChanged: (bool? checked) {
                                           setState(() {
-                                            final bool markExcluded =
-                                                checked == true;
+                                            final bool clearColumn =
+                                                _dtxExcludedValue(items) !=
+                                                false;
                                             for (final DtxManageItem item
                                                 in items) {
-                                              if (markExcluded) {
+                                              if (!clearColumn) {
                                                 _excludedFiles.add(
                                                   item.item.fileName,
                                                 );
                                                 _downloadSelected.remove(
                                                   item.item.fileName,
                                                 );
-                                              } else if (checked == false) {
+                                              } else {
                                                 _excludedFiles.remove(
                                                   item.item.fileName,
                                                 );
-                                                if (item.item.isOfficial &&
-                                                    item.item.updateAvailable) {
-                                                  _downloadSelected.add(
-                                                    item.item.fileName,
-                                                  );
-                                                }
                                               }
                                             }
                                           });
@@ -1981,6 +1961,11 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                         onChanged: hasDownloadEligible
                                             ? (bool? checked) {
                                                 setState(() {
+                                                  final bool clearColumn =
+                                                      _groupDownloadValue(
+                                                        groupItems,
+                                                      ) !=
+                                                      false;
                                                   for (final DtxManageItem item
                                                       in groupItems) {
                                                     if (!item.item.isOfficial ||
@@ -1989,61 +1974,53 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                             .updateAvailable) {
                                                       continue;
                                                     }
-                                                      if (checked == true) {
-                                                        _downloadSelected.add(
-                                                          item.item.fileName,
-                                                        );
-                                                        _excludedFiles.remove(
-                                                          item.item.fileName,
-                                                        );
-                                                      } else if (checked == false) {
-                                                        _downloadSelected.remove(
-                                                          item.item.fileName,
-                                                        );
-                                                        _excludedFiles.add(
-                                                          item.item.fileName,
-                                                        );
-                                                       }
+                                                    if (!clearColumn) {
+                                                      _downloadSelected.add(
+                                                        item.item.fileName,
+                                                      );
+                                                      _excludedFiles.remove(
+                                                        item.item.fileName,
+                                                      );
+                                                    } else {
+                                                      _downloadSelected.remove(
+                                                        item.item.fileName,
+                                                      );
                                                     }
-                                                  });
                                                   }
-                                                  : null,
+                                                });
+                                              }
+                                            : null,
                                       ),
                                     ),
                                   ),
                                   SizedBox(
                                     width: actionColumnWidth,
-                                      child: Center(
-                                        child: Checkbox(
-                                          tristate: true,
-                                          value: _dtxExcludedValue(groupItems),
-                                          onChanged: (bool? checked) {
-                                            setState(() {
-                                              final bool markExcluded =
-                                                  checked == true;
-                                              for (final DtxManageItem item
-                                                  in groupItems) {
-                                                if (markExcluded) {
-                                                  _excludedFiles.add(
-                                                    item.item.fileName,
-                                                  );
-                                                  _downloadSelected.remove(
-                                                    item.item.fileName,
-                                                  );
-                                                } else if (checked == false) {
-                                                  _excludedFiles.remove(
-                                                    item.item.fileName,
-                                                  );
-                                                  if (item.item.isOfficial &&
-                                                      item.item.updateAvailable) {
-                                                    _downloadSelected.add(
-                                                      item.item.fileName,
-                                                    );
-                                                  }
-                                                }
+                                    child: Center(
+                                      child: Checkbox(
+                                        tristate: true,
+                                        value: _dtxExcludedValue(groupItems),
+                                        onChanged: (bool? checked) {
+                                          setState(() {
+                                            final bool clearColumn =
+                                                _dtxExcludedValue(groupItems) !=
+                                                false;
+                                            for (final DtxManageItem item
+                                                in groupItems) {
+                                              if (!clearColumn) {
+                                                _excludedFiles.add(
+                                                  item.item.fileName,
+                                                );
+                                                _downloadSelected.remove(
+                                                  item.item.fileName,
+                                                );
+                                              } else {
+                                                _excludedFiles.remove(
+                                                  item.item.fileName,
+                                                );
                                               }
-                                            });
-                                          },
+                                            }
+                                          });
+                                        },
                                       ),
                                     ),
                                   ),
@@ -2085,6 +2062,10 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                   _excludedFiles.remove(
                                                     item.fileName,
                                                   );
+                                                } else {
+                                                  _downloadSelected.remove(
+                                                    item.fileName,
+                                                  );
                                                 }
                                               });
                                             },
@@ -2111,6 +2092,10 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                           if (checked ?? false) {
                                             _excludedFiles.add(item.fileName);
                                             _downloadSelected.remove(
+                                              item.fileName,
+                                            );
+                                          } else {
+                                            _excludedFiles.remove(
                                               item.fileName,
                                             );
                                           }
@@ -2249,6 +2234,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                         onChanged: canToggleUpdates
                                             ? (bool? checked) {
                                                 setState(() {
+                                                  final bool clearColumn =
+                                                      _dtzUpdateValue() !=
+                                                      false;
                                                   for (final DtzManageItem item
                                                       in _dtzAllItems) {
                                                     if (!item.item.isOfficial ||
@@ -2257,20 +2245,18 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                             .updateAvailable) {
                                                       continue;
                                                     }
-                                                    if (checked == true) {
+                                                    if (!clearColumn) {
                                                       _dtzDownloadSelected.add(
                                                         item.item.fileName,
                                                       );
                                                       _dtzExcludedFiles.remove(
                                                         item.item.fileName,
                                                       );
-                                                    } else if (checked == false) {
-                                                      _dtzDownloadSelected.remove(
-                                                        item.item.fileName,
-                                                      );
-                                                      _dtzExcludedFiles.add(
-                                                        item.item.fileName,
-                                                      );
+                                                    } else {
+                                                      _dtzDownloadSelected
+                                                          .remove(
+                                                            item.item.fileName,
+                                                          );
                                                     }
                                                   }
                                                 });
@@ -2287,27 +2273,21 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                         value: _dtzExcludedValue(),
                                         onChanged: (bool? checked) {
                                           setState(() {
-                                            final bool markExcluded =
-                                                checked == true;
+                                            final bool clearColumn =
+                                                _dtzExcludedValue() != false;
                                             for (final DtzManageItem item
                                                 in _dtzAllItems) {
-                                              if (markExcluded) {
+                                              if (!clearColumn) {
                                                 _dtzExcludedFiles.add(
                                                   item.item.fileName,
                                                 );
                                                 _dtzDownloadSelected.remove(
                                                   item.item.fileName,
                                                 );
-                                              } else if (checked == false) {
+                                              } else {
                                                 _dtzExcludedFiles.remove(
                                                   item.item.fileName,
                                                 );
-                                                if (item.item.isOfficial &&
-                                                    item.item.updateAvailable) {
-                                                  _dtzDownloadSelected.add(
-                                                    item.item.fileName,
-                                                  );
-                                                }
                                               }
                                             }
                                           });
@@ -2362,6 +2342,10 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                   _dtzExcludedFiles.remove(
                                                     item.fileName,
                                                   );
+                                                } else {
+                                                  _dtzDownloadSelected.remove(
+                                                    item.fileName,
+                                                  );
                                                 }
                                               });
                                             },
@@ -2383,18 +2367,22 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                       value: _dtzExcludedFiles.contains(
                                         item.fileName,
                                       ),
-                                          onChanged: (bool? checked) {
-                                            setState(() {
-                                              if (checked ?? false) {
-                                                _dtzExcludedFiles.add(
-                                                  item.fileName,
-                                                );
-                                                _dtzDownloadSelected.remove(
-                                                  item.fileName,
-                                                );
-                                              }
-                                            });
-                                          },
+                                      onChanged: (bool? checked) {
+                                        setState(() {
+                                          if (checked ?? false) {
+                                            _dtzExcludedFiles.add(
+                                              item.fileName,
+                                            );
+                                            _dtzDownloadSelected.remove(
+                                              item.fileName,
+                                            );
+                                          } else {
+                                            _dtzExcludedFiles.remove(
+                                              item.fileName,
+                                            );
+                                          }
+                                        });
+                                      },
                                     ),
                                   ),
                                 ),
@@ -2577,10 +2565,8 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
       _analysis = null;
     });
     try {
-      final DtzUserImportAnalysis analysis =
-          await widget.controller.analyzeDtzUserImport(
-            <XFile>[_dtzFile!, ..._zipFiles],
-          );
+      final DtzUserImportAnalysis analysis = await widget.controller
+          .analyzeDtzUserImport(<XFile>[_dtzFile!, ..._zipFiles]);
       if (!mounted) return;
       setState(() {
         _analysing = false;
@@ -2608,16 +2594,15 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
     if (analysis == null || _dtzFile == null || _importing) return;
     final List<DtzImportPackageAnalysis> toImport = analysis.packages
         .where(
-          (DtzImportPackageAnalysis p) =>
-              _selectedPkgs.contains(p.dtzFileName),
+          (DtzImportPackageAnalysis p) => _selectedPkgs.contains(p.dtzFileName),
         )
         .toList();
     if (toImport.isEmpty) return;
 
     setState(() => _importing = true);
     try {
-      final DtzUserImportCommitResult result =
-          await widget.controller.commitDtzUserImport(
+      final DtzUserImportCommitResult result = await widget.controller
+          .commitDtzUserImport(
             toImport: toImport,
             files: <XFile>[_dtzFile!, ..._zipFiles],
           );
@@ -2628,8 +2613,9 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
               result.extractedFileCount,
             )
           : context.l10n.importDtzSuccessNoMedia(result.importedDtzCount);
-      final ScaffoldMessengerState? messenger =
-          ScaffoldMessenger.maybeOf(context);
+      final ScaffoldMessengerState? messenger = ScaffoldMessenger.maybeOf(
+        context,
+      );
       Navigator.of(context).pop(true);
       messenger?.showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
@@ -2712,8 +2698,7 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           visualDensity: VisualDensity.compact,
-                          onPressed:
-                              _importing ? null : () => _removeZip(i),
+                          onPressed: _importing ? null : () => _removeZip(i),
                         ),
                       ],
                     ),
@@ -2733,18 +2718,17 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
                   _PackageRow(
                     pkg: pkg,
                     selected: _selectedPkgs.contains(pkg.dtzFileName),
-                    onChanged:
-                        pkg.status == DtzImportStatus.error || _importing
-                            ? null
-                            : (bool? v) {
-                                setState(() {
-                                  if (v ?? false) {
-                                    _selectedPkgs.add(pkg.dtzFileName);
-                                  } else {
-                                    _selectedPkgs.remove(pkg.dtzFileName);
-                                  }
-                                });
-                              },
+                    onChanged: pkg.status == DtzImportStatus.error || _importing
+                        ? null
+                        : (bool? v) {
+                            setState(() {
+                              if (v ?? false) {
+                                _selectedPkgs.add(pkg.dtzFileName);
+                              } else {
+                                _selectedPkgs.remove(pkg.dtzFileName);
+                              }
+                            });
+                          },
                     l10n: l10n,
                   ),
                 if (analysis.orphanZipNames.isNotEmpty)
@@ -2843,10 +2827,7 @@ class _PackageRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          Checkbox(
-            value: selected,
-            onChanged: onChanged,
-          ),
+          Checkbox(value: selected, onChanged: onChanged),
           const SizedBox(width: 4),
           Icon(statusIcon, size: 18, color: statusColor),
           const SizedBox(width: 6),
@@ -3238,12 +3219,7 @@ class _SongDropdown extends StatelessWidget {
               suffixIcon: const Icon(Icons.search, size: 20),
             ),
             onTap: () {
-              _showQuickSongSearch(
-                context,
-                controller,
-                songs,
-                textController,
-              );
+              _showQuickSongSearch(context, controller, songs, textController);
             },
           ),
         ),
@@ -3286,11 +3262,14 @@ void _showQuickSongSearch(
       return StatefulBuilder(
         builder: (BuildContext context, StateSetter setSheetState) {
           final String query = searchController.text.trim().toLowerCase();
-          final List<MapEntry<int, DtxSong>> filtered =
-              songs.asMap().entries.where((MapEntry<int, DtxSong> e) {
-            if (query.isEmpty) return true;
-            return e.value.title.toLowerCase().contains(query);
-          }).toList();
+          final List<MapEntry<int, DtxSong>> filtered = songs
+              .asMap()
+              .entries
+              .where((MapEntry<int, DtxSong> e) {
+                if (query.isEmpty) return true;
+                return e.value.title.toLowerCase().contains(query);
+              })
+              .toList();
 
           return Padding(
             padding: EdgeInsets.only(
@@ -3738,8 +3717,8 @@ class _DialistPanelState extends State<_DialistPanel> {
                           itemBuilder: (BuildContext context, int index) {
                             final CustomOrderEntry entry = entries[index];
                             final bool isSeparator = entry.isSeparator;
-                            final int normalizedIndex =
-                                controller.normalizeCustomOrderIndex(index);
+                            final int normalizedIndex = controller
+                                .normalizeCustomOrderIndex(index);
                             final bool selected =
                                 normalizedIndex == selectedCursor;
                             return ListTile(
@@ -3750,12 +3729,16 @@ class _DialistPanelState extends State<_DialistPanel> {
                               ),
                               minTileHeight: 38,
                               leading: MergeIndicator(
-                                visual: controller
-                                        .isCustomOrderEntryMergeFollowerAt(index)
+                                visual:
+                                    controller
+                                        .isCustomOrderEntryMergeFollowerAt(
+                                          index,
+                                        )
                                     ? MergeIndicatorVisual.lowerBrace
-                                    : controller.isCustomOrderEntryMergeLeaderAt(
-                                        index,
-                                      )
+                                    : controller
+                                          .isCustomOrderEntryMergeLeaderAt(
+                                            index,
+                                          )
                                     ? MergeIndicatorVisual.upperBrace
                                     : MergeIndicatorVisual.hidden,
                               ),
@@ -4216,8 +4199,7 @@ class _PhotoPreviewWithFallback extends StatefulWidget {
       _PhotoPreviewWithFallbackState();
 }
 
-class _PhotoPreviewWithFallbackState
-    extends State<_PhotoPreviewWithFallback> {
+class _PhotoPreviewWithFallbackState extends State<_PhotoPreviewWithFallback> {
   late Future<Uint8List?> _bytesFuture;
   bool _snackbarShown = false;
 
