@@ -1775,7 +1775,14 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     final String normalized = base.toLowerCase().endsWith('.dia')
         ? base.substring(0, base.length - 4)
         : base;
-    return normalized.trim().isEmpty ? fallback : normalized;
+    final String cleanName = normalized.trim();
+    if (cleanName.isEmpty) return fallback;
+    final RegExp osSuffix = RegExp(r'\s+\(\d+\)$');
+    String result = cleanName;
+    while (osSuffix.hasMatch(result)) {
+      result = result.replaceFirst(osSuffix, '');
+    }
+    return result.trim().isEmpty ? fallback : result;
   }
 
   String? _existingDirectoryPathOrNull(String rawPath) {

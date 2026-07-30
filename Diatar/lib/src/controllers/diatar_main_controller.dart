@@ -274,7 +274,17 @@ class DiatarMainController extends ChangeNotifier {
     if (normalizedBase.toLowerCase().endsWith('.bin')) {
       return null;
     }
-    return normalizedBase;
+    return _stripOSSuffix(normalizedBase);
+  }
+
+  /// Strips trailing OS-generated filename suffixes like " (1)", " (2)".
+  String _stripOSSuffix(String name) {
+    final RegExp pattern = RegExp(r'\s+\(\d+\)$');
+    String result = name;
+    while (pattern.hasMatch(result)) {
+      result = result.replaceFirst(pattern, '');
+    }
+    return result;
   }
 
   /// Betölti a párhuzamosan tárolt diasoroket a perzisztenciából.
@@ -2515,9 +2525,10 @@ class DiatarMainController extends ChangeNotifier {
     final String savedName = _stripFileExtension(
       _fileNameFromPath(decodedPath),
     );
-    _lastImportedCustomOrderBaseName = savedName.trim().isEmpty
+    final String cleanName = _stripOSSuffix(savedName);
+    _lastImportedCustomOrderBaseName = cleanName.trim().isEmpty
         ? null
-        : savedName;
+        : cleanName;
     _customOrderSourceType = null;
     _zsolozsmaVirtualBookLabel = null;
     _napiLelkiBatyuVirtualBookLabel = null;
