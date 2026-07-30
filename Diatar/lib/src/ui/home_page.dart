@@ -1297,7 +1297,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: controller.globals.bkColor,
-        border: Border.all(color: previewBorderColor, width: 1.5),
+        border: Border.all(color: previewBorderColor, width: 3.0),
       ),
       width: double.infinity,
       padding: const EdgeInsets.all(16),
