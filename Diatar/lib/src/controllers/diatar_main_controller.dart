@@ -2959,6 +2959,8 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   List<String> get projectionDisplayLines {
+    if (!customOrderActive) return displayLines;
+
     if (_customOrderCursor >= 0 && _customOrderCursor < _customOrder.length) {
       final CustomOrderEntry entry = _customOrder[_customOrderCursor];
       if (entry.isSongEntry &&
