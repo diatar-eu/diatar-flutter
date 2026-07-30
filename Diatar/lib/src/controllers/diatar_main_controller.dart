@@ -220,6 +220,8 @@ class DiatarMainController extends ChangeNotifier {
   int _projectedCustomCursor = -1;
   String? _lastImportedCustomOrderBaseName;
   bool _diaVirtualBookSelected = false;
+  Map<String, int> _lastSongPerBook = <String, int>{};
+  Map<String, int> _lastVersePerBook = <String, int>{};
   bool _startupDownloadDialogHandled = false;
   String _zsolozsmaLastDiagnostics = '';
   static const String _customOrderSourceZsolozsmaUnsaved = 'zsolozsma-unsaved';
@@ -856,6 +858,8 @@ class DiatarMainController extends ChangeNotifier {
   Future<void> init() async {
     settings = await _settingsStore.load();
     _transpositions = await _settingsStore.loadTranspositions();
+    _lastSongPerBook = await _settingsStore.loadLastSongPerBook();
+    _lastVersePerBook = await _settingsStore.loadLastVersePerBook();
     lastBlankPath = settings.blankPicPath;
     _disabledSongbooks = await _orderStore.loadDisabled();
     _disabledDtzFiles = await _loadDisabledDtzFiles();
@@ -1815,6 +1819,11 @@ class DiatarMainController extends ChangeNotifier {
     if (_customOrder.isEmpty) {
       return;
     }
+    final DtxBook? oldBook = currentBook;
+    if (oldBook != null) {
+      _lastSongPerBook[oldBook.fileName] = songIndex;
+      _lastVersePerBook[oldBook.fileName] = verseIndex;
+    }
     _diaVirtualBookSelected = true;
     customOrderActive = true;
     int target = _customOrderCursor;
@@ -1851,6 +1860,18 @@ class DiatarMainController extends ChangeNotifier {
 
     _diaVirtualBookSelected = false;
     _projectedCustomCursor = -1;
+
+    final DtxBook? book = currentBook;
+    if (book != null) {
+      final int? savedSong = _lastSongPerBook[book.fileName];
+      if (savedSong != null && savedSong < book.songs.length) {
+        songIndex = savedSong;
+        verseIndex = _lastVersePerBook[book.fileName]
+                ?.clamp(0, book.songs[savedSong].verses.length - 1) ??
+            0;
+      }
+    }
+
     notifyListeners();
     unawaited(_syncCurrentDia());
   }
@@ -2997,20 +3018,40 @@ class DiatarMainController extends ChangeNotifier {
     if (books.isEmpty) {
       return;
     }
+
+    final DtxBook? oldBook = currentBook;
+    if (oldBook != null) {
+      _lastSongPerBook[oldBook.fileName] = songIndex;
+      _lastVersePerBook[oldBook.fileName] = verseIndex;
+    }
+
     _diaVirtualBookSelected = false;
     bookIndex = value.clamp(0, books.length - 1);
-    songIndex = 0;
-    verseIndex = 0;
+
+    final DtxBook? newBook = currentBook;
+    final int? lastSong = newBook != null
+        ? _lastSongPerBook[newBook.fileName]
+        : null;
+    if (lastSong != null && newBook != null && lastSong < newBook.songs.length) {
+      songIndex = lastSong;
+      verseIndex = _lastVersePerBook[newBook.fileName]
+              ?.clamp(0, newBook.songs[lastSong].verses.length - 1) ??
+          0;
+    } else {
+      songIndex = 0;
+      verseIndex = 0;
+    }
+
     highPos = 0;
     _resetHighlightRenderState();
     _projectedCustomCursor = -1;
-    final DtxBook? selected = currentBook;
     _setStatus('statusBookSelected', <String, String>{
-      'name': selected?.displayName ?? '-',
+      'name': newBook?.displayName ?? '-',
     });
-    _syncCustomCursorFromCurrentSong();
     notifyListeners();
     _syncCurrentDia();
+    unawaited(_settingsStore.saveLastSongPerBook(_lastSongPerBook));
+    unawaited(_settingsStore.saveLastVersePerBook(_lastVersePerBook));
   }
 
   void setSongIndex(int value) {

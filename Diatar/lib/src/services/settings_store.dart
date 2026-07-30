@@ -53,6 +53,8 @@ class SettingsStore {
   static const String _kUseSound = 'UseSound';
   static const String _kSzentirasApiKey = 'SzentirasApiKey';
   static const String _kTranspositions = 'Transpositions';
+  static const String _kLastSongPerBook = 'LastSongPerBook';
+  static const String _kLastVersePerBook = 'LastVersePerBook';
   static const String _kHasSeenOnboarding = 'HasSeenOnboarding';
 
   static const Map<String, String> _defaultDesktopActionHotkeys =
@@ -81,6 +83,40 @@ class SettingsStore {
   Future<void> saveTranspositions(Map<String, int> transpositions) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kTranspositions, jsonEncode(transpositions));
+  }
+
+  Future<Map<String, int>> loadLastSongPerBook() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? json = prefs.getString(_kLastSongPerBook);
+    if (json == null) return <String, int>{};
+    try {
+      final Map<String, dynamic> decoded = jsonDecode(json);
+      return decoded.map((k, v) => MapEntry(k, v as int));
+    } catch (_) {
+      return <String, int>{};
+    }
+  }
+
+  Future<void> saveLastSongPerBook(Map<String, int> map) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kLastSongPerBook, jsonEncode(map));
+  }
+
+  Future<Map<String, int>> loadLastVersePerBook() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? json = prefs.getString(_kLastVersePerBook);
+    if (json == null) return <String, int>{};
+    try {
+      final Map<String, dynamic> decoded = jsonDecode(json);
+      return decoded.map((k, v) => MapEntry(k, v as int));
+    } catch (_) {
+      return <String, int>{};
+    }
+  }
+
+  Future<void> saveLastVersePerBook(Map<String, int> map) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kLastVersePerBook, jsonEncode(map));
   }
 
   Future<bool> hasSeenOnboarding() async {
