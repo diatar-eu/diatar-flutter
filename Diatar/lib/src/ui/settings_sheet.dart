@@ -606,7 +606,18 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               message: description,
               child: IconButton(
                 icon: const Icon(Icons.info_outline, size: 18),
-                onPressed: () {},
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (BuildContext ctx) => AlertDialog(
+                    content: Text(description!),
+                    actions: <Widget>[
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(context.l10n.ok),
+                      ),
+                    ],
+                  ),
+                ),
                 padding: EdgeInsets.zero,
                 splashRadius: 16,
               ),
