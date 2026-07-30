@@ -38,7 +38,7 @@ class AppSettings {
     this.projKottaArany = 100,
     this.projAkkordArany = 100,
     this.projBoldText = false,
-    this.projBgMode = 0,
+    this.projBgMode = 1,
     this.projBackTrans = 0,
     this.projBlankTrans = 0,
     this.projShowBackgroundImage = true,

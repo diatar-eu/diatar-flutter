@@ -189,7 +189,7 @@ class SettingsStore {
       projKottaArany: prefs.getInt(_kProjKottaArany) ?? 100,
       projAkkordArany: prefs.getInt(_kProjAkkordArany) ?? 100,
       projBoldText: prefs.getBool(_kProjBoldText) ?? false,
-      projBgMode: prefs.getInt(_kProjBgMode) ?? 0,
+      projBgMode: prefs.getInt(_kProjBgMode) ?? 1,
       projBackTrans: prefs.getInt(_kProjBackTrans) ?? 0,
       projBlankTrans: prefs.getInt(_kProjBlankTrans) ?? 0,
         projShowBackgroundImage:

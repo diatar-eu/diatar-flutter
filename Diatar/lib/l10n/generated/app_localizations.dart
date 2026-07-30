@@ -1322,31 +1322,31 @@ abstract class AppLocalizations {
   /// No description provided for @bgModeCenter.
   ///
   /// In hu, this message translates to:
-  /// **'Center'**
+  /// **'Középre'**
   String get bgModeCenter;
 
   /// No description provided for @bgModeZoom.
   ///
   /// In hu, this message translates to:
-  /// **'Zoom'**
+  /// **'Arányosan'**
   String get bgModeZoom;
 
   /// No description provided for @bgModeFull.
   ///
   /// In hu, this message translates to:
-  /// **'Full'**
+  /// **'Kitöltve'**
   String get bgModeFull;
 
   /// No description provided for @bgModeCascade.
   ///
   /// In hu, this message translates to:
-  /// **'Cascade'**
+  /// **'Csempézve'**
   String get bgModeCascade;
 
   /// No description provided for @bgModeMirror.
   ///
   /// In hu, this message translates to:
-  /// **'Mirror'**
+  /// **'Tükrözve'**
   String get bgModeMirror;
 
   /// No description provided for @backgroundOpacity.

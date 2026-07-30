@@ -744,19 +744,19 @@ class AppLocalizationsHu extends AppLocalizations {
   String get backgroundMode => 'Háttér kép mód';
 
   @override
-  String get bgModeCenter => 'Center';
+  String get bgModeCenter => 'Középre';
 
   @override
-  String get bgModeZoom => 'Zoom';
+  String get bgModeZoom => 'Arányosan';
 
   @override
-  String get bgModeFull => 'Full';
+  String get bgModeFull => 'Kitöltve';
 
   @override
-  String get bgModeCascade => 'Cascade';
+  String get bgModeCascade => 'Csempézve';
 
   @override
-  String get bgModeMirror => 'Mirror';
+  String get bgModeMirror => 'Tükrözve';
 
   @override
   String get backgroundOpacity => 'Háttér átlátszóság';
