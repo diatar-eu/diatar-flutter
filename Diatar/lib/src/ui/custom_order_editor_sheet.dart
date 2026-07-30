@@ -1967,10 +1967,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           selectedTileColor: Colors.blue.withValues(alpha: 0.12),
           onTap: () => controller.selectCustomOrderEntryForEditing(index),
           leading: SizedBox(
-            width: 42,
+            width: 50,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
+                const SizedBox(width: 8),
                 MergeIndicator(
                   visual: _isMergeFollower(index)
                       ? MergeIndicatorVisual.lowerBrace
