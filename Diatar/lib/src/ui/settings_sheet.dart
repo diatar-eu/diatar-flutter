@@ -1224,6 +1224,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       data: url,
       version: QrVersions.auto,
       gapless: true,
+       color: Colors.black,
+       emptyColor: Colors.white,
     );
     return painter
         .toImageData(size, format: ui.ImageByteFormat.png)
