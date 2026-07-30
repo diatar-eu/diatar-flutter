@@ -140,7 +140,9 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
-                  if (controller.settings.receiverKeepStartupLogo &&
+                  if ((defaultTargetPlatform == TargetPlatform.android ||
+                          defaultTargetPlatform == TargetPlatform.iOS) &&
+                      controller.settings.receiverKeepStartupLogo &&
                       controller.activeFrame is LogoFrame)
                     Positioned(
                       right: 12,

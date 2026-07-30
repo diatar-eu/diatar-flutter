@@ -292,7 +292,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
                       onTap: _openInternetSettings,
                     ),
                   if (showInternet) const Divider(height: 1),
-                  if (showInternet)
+                  if (showInternet &&
+                      (defaultTargetPlatform == TargetPlatform.android ||
+                          defaultTargetPlatform == TargetPlatform.iOS))
                     _settingsTile(
                       leading: const Icon(Icons.qr_code_scanner),
                       title: Text(l10n.qrScanButton),
