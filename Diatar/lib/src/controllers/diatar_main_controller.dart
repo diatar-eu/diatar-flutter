@@ -424,7 +424,7 @@ class DiatarMainController extends ChangeNotifier {
     if (index < 0 || index >= _customOrderSets.length) {
       return;
     }
-    if (index == _activeOrderSetIndex) {
+    if (index == _activeOrderSetIndex && _activeOrderSetIndex >= 0) {
       return;
     }
     _persistActiveSetToSets();
@@ -3117,8 +3117,7 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
-    setBookIndex(bookIdx);
-    setSongIndex(targetSong);
+    goToSong(bookIdx, targetSong, 0);
   }
 
   void setVerseIndex(int value) {
