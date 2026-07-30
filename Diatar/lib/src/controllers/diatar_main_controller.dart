@@ -3019,6 +3019,12 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
+    if (customOrderActive) {
+      _persistActiveSetToSets();
+      customOrderActive = false;
+      _activeOrderSetIndex = -1;
+    }
+
     final DtxBook? oldBook = currentBook;
     if (oldBook != null) {
       _lastSongPerBook[oldBook.fileName] = songIndex;
@@ -3052,6 +3058,7 @@ class DiatarMainController extends ChangeNotifier {
     _syncCurrentDia();
     unawaited(_settingsStore.saveLastSongPerBook(_lastSongPerBook));
     unawaited(_settingsStore.saveLastVersePerBook(_lastVersePerBook));
+    unawaited(_persistAllSets());
   }
 
   void setSongIndex(int value) {
