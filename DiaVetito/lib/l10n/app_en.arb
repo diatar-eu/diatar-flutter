@@ -161,6 +161,8 @@
   "statusExitRequested": "Exiting...",
   "statusShutdownRequested": "Shutdown requested...",
   "statusShutdownUnsupported": "System shutdown is not supported in Flutter.",
+  "statusShutdownDenied": "The operating system denied the shutdown request.",
+  "shutdownConfirmDialogMessage": "Are you sure you want to shut down the computer?",
   "shutdownPermissionDeniedDialogMessage": "No permission to shut down the device.",
   "statusRebootUnsupported": "System reboot is not supported in Flutter.",
   "statusStopRequested": "Stop requested (epStop).",

@@ -36,9 +36,7 @@ class ProjectionController extends ChangeNotifier {
         onConnection: _onMqttConnectionStatic,
       ) {
     _instance = this;
-    _lifecycleListener = AppLifecycleListener(
-      onResume: _onAppResumed,
-    );
+    _lifecycleListener = AppLifecycleListener(onResume: _onAppResumed);
   }
 
   static ProjectionController? _instance;
@@ -245,6 +243,22 @@ class ProjectionController extends ChangeNotifier {
     _setStatus('statusExitRequested');
     await _server.stop();
     await _mqtt.closeReceiver();
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux)) {
+      try {
+        final bool? closed = await _systemChannel.invokeMethod<bool>(
+          'requestExit',
+        );
+        if (closed == true) {
+          return;
+        }
+      } on MissingPluginException {
+        // Fallback below.
+      } on PlatformException {
+        // Fallback below.
+      }
+    }
     await SystemNavigator.pop();
   }
 
@@ -284,16 +298,13 @@ class ProjectionController extends ChangeNotifier {
       if (ep == RecStateEndProgram.stop ||
           ep == RecStateEndProgram.stop + RecStateEndProgram.skipSerialOff) {
         _setStatus('statusStopRequested', notify: false);
-        await SystemNavigator.pop();
+        await requestExit();
         return;
       }
       if (ep == RecStateEndProgram.shutdown ||
           ep ==
               RecStateEndProgram.shutdown + RecStateEndProgram.skipSerialOff) {
-        final bool started = await _requestShutdown();
-        if (!started) {
-          await requestExit();
-        }
+        await _requestShutdown();
         return;
       }
     }
@@ -315,7 +326,15 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return false;
     }
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+    if (kIsWeb) {
+      _setStatus('statusShutdownUnsupported');
+      return false;
+    }
+    final bool supportedPlatform =
+        defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
+    if (!supportedPlatform) {
       _setStatus('statusShutdownUnsupported');
       return false;
     }
@@ -329,10 +348,14 @@ class ProjectionController extends ChangeNotifier {
         return true;
       }
     } on PlatformException {
-      // fall through to unsupported message
+      _setStatus('statusShutdownDenied');
+      return false;
+    } on MissingPluginException {
+      _setStatus('statusShutdownUnsupported');
+      return false;
     }
 
-    _setStatus('statusShutdownUnsupported');
+    _setStatus('statusShutdownDenied');
     return false;
   }
 
@@ -578,10 +601,7 @@ class ProjectionController extends ChangeNotifier {
       _ignoreNextMqttEndProgram = false;
       await _mqtt.closeReceiver();
       await _server.stop();
-      _setStatus(
-        'statusTcpOff',
-        notify: false,
-      );
+      _setStatus('statusTcpOff', notify: false);
     } else {
       mqttActive = true;
       connected = false;

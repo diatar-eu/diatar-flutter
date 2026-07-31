@@ -337,6 +337,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'System shutdown is not supported in Flutter.';
 
   @override
+  String get statusShutdownDenied =>
+      'The operating system denied the shutdown request.';
+
+  @override
+  String get shutdownConfirmDialogMessage =>
+      'Are you sure you want to shut down the computer?';
+
+  @override
   String get shutdownPermissionDeniedDialogMessage =>
       'No permission to shut down the device.';
 

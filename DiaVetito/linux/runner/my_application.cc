@@ -1,11 +1,58 @@
 #include "my_application.h"
 
+#include <cstring>
+
 #include <flutter_linux/flutter_linux.h>
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
 #endif
 
 #include "flutter/generated_plugin_registrant.h"
+
+namespace {
+
+constexpr char kSystemChannel[] = "com.polyjoe.diavetito/system";
+
+gboolean request_shutdown() {
+  static constexpr const char* kCommands[] = {
+      "systemctl poweroff",
+      "shutdown -h now",
+      "poweroff",
+  };
+
+  for (const char* command : kCommands) {
+    g_autoptr(GError) error = nullptr;
+    if (g_spawn_command_line_async(command, &error)) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+void system_channel_method_call_cb(FlMethodChannel* channel,
+                                   FlMethodCall* method_call,
+                                   gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  const gchar* method = fl_method_call_get_name(method_call);
+
+  if (std::strcmp(method, "requestExit") == 0) {
+    g_application_quit(G_APPLICATION(self));
+    g_autoptr(FlValue) result = fl_value_new_bool(TRUE);
+    fl_method_call_respond_success(method_call, result, nullptr);
+    return;
+  }
+
+  if (std::strcmp(method, "requestShutdown") == 0) {
+    g_autoptr(FlValue) result = fl_value_new_bool(request_shutdown());
+    fl_method_call_respond_success(method_call, result, nullptr);
+    return;
+  }
+
+  fl_method_call_respond_not_implemented(method_call, nullptr);
+}
+
+}  // namespace
 
 struct _MyApplication {
   GtkApplication parent_instance;
@@ -58,6 +105,17 @@ static void my_application_activate(GApplication* application) {
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+
+  FlEngine* engine = fl_view_get_engine(view);
+  FlBinaryMessenger* messenger = fl_engine_get_binary_messenger(engine);
+  g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+  FlMethodChannel* system_channel =
+      fl_method_channel_new(messenger, kSystemChannel, FL_METHOD_CODEC(codec));
+  fl_method_channel_set_method_call_handler(system_channel,
+                                            system_channel_method_call_cb,
+                                            g_object_ref(self),
+                                            g_object_unref);
+  g_object_unref(system_channel);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }

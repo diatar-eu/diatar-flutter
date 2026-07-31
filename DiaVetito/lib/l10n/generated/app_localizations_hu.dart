@@ -105,7 +105,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get remoteShutdownSubtitle =>
-      'Ha be van kapcsolva, a távoli epStop és epShutdown parancsok leállíthatják a programot.';
+      'Ha be van kapcsolva, a távoli vetítő leállíthatja a programot.';
 
   @override
   String get internetBroadcastTitle => 'Internetes közvetítés';
@@ -335,6 +335,14 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get statusShutdownUnsupported =>
       'Rendszerleállítás Flutteren nem támogatott.';
+
+  @override
+  String get statusShutdownDenied =>
+      'Az operációs rendszer elutasította a leállítási kérést.';
+
+  @override
+  String get shutdownConfirmDialogMessage =>
+      'Biztosan leállítod a számítógépet?';
 
   @override
   String get shutdownPermissionDeniedDialogMessage =>

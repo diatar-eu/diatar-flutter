@@ -251,7 +251,7 @@ abstract class AppLocalizations {
   /// No description provided for @remoteShutdownSubtitle.
   ///
   /// In hu, this message translates to:
-  /// **'Ha be van kapcsolva, a távoli epStop és epShutdown parancsok leállíthatják a programot.'**
+  /// **'Ha be van kapcsolva, a távoli vetítő leállíthatja a programot.'**
   String get remoteShutdownSubtitle;
 
   /// No description provided for @internetBroadcastTitle.
@@ -685,6 +685,18 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Rendszerleállítás Flutteren nem támogatott.'**
   String get statusShutdownUnsupported;
+
+  /// No description provided for @statusShutdownDenied.
+  ///
+  /// In hu, this message translates to:
+  /// **'Az operációs rendszer elutasította a leállítási kérést.'**
+  String get statusShutdownDenied;
+
+  /// No description provided for @shutdownConfirmDialogMessage.
+  ///
+  /// In hu, this message translates to:
+  /// **'Biztosan leállítod a számítógépet?'**
+  String get shutdownConfirmDialogMessage;
 
   /// No description provided for @shutdownPermissionDeniedDialogMessage.
   ///

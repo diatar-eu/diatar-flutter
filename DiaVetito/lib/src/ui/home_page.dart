@@ -244,17 +244,43 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _handleShutdownRequestedAsync() async {
+    final l10n = context.l10n;
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(l10n.shutdown),
+          content: Text(l10n.shutdownConfirmDialogMessage),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l10n.shutdown),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
     final bool started = await controller.requestShutdown();
     if (started || !mounted) {
       return;
     }
-    final l10n = context.l10n;
+    final String message = controller.statusCode == 'statusShutdownUnsupported'
+        ? l10n.statusShutdownUnsupported
+        : l10n.statusShutdownDenied;
     await showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(l10n.shutdown),
-          content: Text(l10n.shutdownPermissionDeniedDialogMessage),
+          content: Text(message),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -309,7 +335,8 @@ class _HomePageState extends State<HomePage> {
     if (uri == null || uri.hasPort || uri.fragment.isNotEmpty) {
       return null;
     }
-    if (uri.queryParameters.length != 1 || !uri.queryParameters.containsKey('mqtt')) {
+    if (uri.queryParameters.length != 1 ||
+        !uri.queryParameters.containsKey('mqtt')) {
       return null;
     }
     final String user = uri.queryParameters['mqtt']?.trim() ?? '';
@@ -425,7 +452,9 @@ class _HomePageState extends State<HomePage> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text(
-            connected ? l10n.qrScanConnectSuccessTitle : l10n.qrScanConnectFailedTitle,
+            connected
+                ? l10n.qrScanConnectSuccessTitle
+                : l10n.qrScanConnectFailedTitle,
           ),
           content: RichText(
             text: TextSpan(

@@ -1,6 +1,10 @@
 #include "flutter_window.h"
 
+#include <flutter/method_channel.h>
+#include <flutter/standard_method_codec.h>
+
 #include <optional>
+#include <string>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -27,6 +31,41 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  system_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(),
+          "com.polyjoe.diavetito/system",
+          &flutter::StandardMethodCodec::GetInstance());
+  system_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        if (call.method_name() == "requestExit") {
+          PostMessage(GetHandle(), WM_CLOSE, 0, 0);
+          result->Success(flutter::EncodableValue(true));
+          return;
+        }
+
+        if (call.method_name() == "requestShutdown") {
+          std::wstring command = L"shutdown /s /t 0";
+          STARTUPINFOW startup_info = {0};
+          startup_info.cb = sizeof(startup_info);
+          PROCESS_INFORMATION process_info = {0};
+          const BOOL started = CreateProcessW(
+              nullptr, command.data(), nullptr, nullptr, FALSE,
+              CREATE_NO_WINDOW, nullptr, nullptr, &startup_info,
+              &process_info);
+          if (started == TRUE) {
+            CloseHandle(process_info.hThread);
+            CloseHandle(process_info.hProcess);
+          }
+          result->Success(flutter::EncodableValue(started == TRUE));
+          return;
+        }
+
+        result->NotImplemented();
+      });
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -40,6 +79,10 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  if (system_channel_) {
+    system_channel_ = nullptr;
+  }
+
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
