@@ -29,6 +29,8 @@ class _HomePageState extends State<HomePage> {
   int _lastFrameSignature = 0;
   String _appVersion = '-';
   String _buildNumber = '-';
+  Timer? _quickExitHideTimer;
+  bool _showQuickExitButton = false;
 
   ProjectionController get controller => widget.controller;
 
@@ -36,6 +38,12 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadAppVersion();
+  }
+
+  @override
+  void dispose() {
+    _quickExitHideTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadAppVersion() async {
@@ -153,6 +161,16 @@ class _HomePageState extends State<HomePage> {
                         label: Text(context.l10n.qrScanButton),
                       ),
                     ),
+                  if (_showQuickExitButton && _supportsQuickExitOverlay)
+                    Positioned(
+                      right: 12,
+                      top: 12,
+                      child: FilledButton.tonalIcon(
+                        onPressed: controller.requestExit,
+                        icon: const Icon(Icons.close),
+                        label: Text(context.l10n.exit),
+                      ),
+                    ),
                 ],
               );
             },
@@ -228,6 +246,7 @@ class _HomePageState extends State<HomePage> {
 
   void _showSettingsHint(BuildContext context) {
     final messenger = ScaffoldMessenger.of(context);
+    _showQuickExitOverlay();
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -237,6 +256,34 @@ class _HomePageState extends State<HomePage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+  }
+
+  bool get _supportsQuickExitOverlay {
+    if (kIsWeb) {
+      return false;
+    }
+    return defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
+  }
+
+  void _showQuickExitOverlay() {
+    if (!_supportsQuickExitOverlay) {
+      return;
+    }
+    _quickExitHideTimer?.cancel();
+    if (!_showQuickExitButton && mounted) {
+      setState(() {
+        _showQuickExitButton = true;
+      });
+    }
+    _quickExitHideTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted || !_showQuickExitButton) {
+        return;
+      }
+      setState(() {
+        _showQuickExitButton = false;
+      });
+    });
   }
 
   void _handleShutdownRequested() {

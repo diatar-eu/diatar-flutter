@@ -18,6 +18,24 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
 
+  HWND const window_handle = GetHandle();
+  LONG window_style = GetWindowLong(window_handle, GWL_STYLE);
+  window_style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX |
+                    WS_MAXIMIZEBOX | WS_SYSMENU);
+  window_style |= WS_POPUP;
+  SetWindowLong(window_handle, GWL_STYLE, window_style);
+
+  MONITORINFO monitor_info = {0};
+  monitor_info.cbSize = sizeof(monitor_info);
+  HMONITOR monitor = MonitorFromWindow(window_handle, MONITOR_DEFAULTTONEAREST);
+  if (GetMonitorInfo(monitor, &monitor_info)) {
+    const RECT& monitor_rect = monitor_info.rcMonitor;
+    SetWindowPos(window_handle, HWND_TOP, monitor_rect.left, monitor_rect.top,
+                 monitor_rect.right - monitor_rect.left,
+                 monitor_rect.bottom - monitor_rect.top,
+                 SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+  }
+
   RECT frame = GetClientArea();
 
   // The size here must match the window dimensions to avoid unnecessary surface
