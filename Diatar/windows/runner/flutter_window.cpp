@@ -3,7 +3,33 @@
 #include <optional>
 
 #include "desktop_multi_window/desktop_multi_window_plugin.h"
+#include "file_selector_windows/file_selector_windows.h"
 #include "flutter/generated_plugin_registrant.h"
+#include "permission_handler_windows/permission_handler_windows_plugin.h"
+#include "screen_retriever_windows/screen_retriever_windows_plugin_c_api.h"
+#include "url_launcher_windows/url_launcher_windows.h"
+#include "window_manager/window_manager_plugin.h"
+
+namespace {
+
+// Secondary window engines are short-lived during projector toggle/restart.
+// Excluding audioplayers there avoids native teardown crashes.
+void RegisterSecondaryWindowPlugins(flutter::PluginRegistry* registry) {
+  DesktopMultiWindowPluginRegisterWithRegistrar(
+    registry->GetRegistrarForPlugin("DesktopMultiWindowPlugin"));
+  FileSelectorWindowsRegisterWithRegistrar(
+    registry->GetRegistrarForPlugin("FileSelectorWindows"));
+  PermissionHandlerWindowsPluginRegisterWithRegistrar(
+    registry->GetRegistrarForPlugin("PermissionHandlerWindowsPlugin"));
+  ScreenRetrieverWindowsPluginCApiRegisterWithRegistrar(
+    registry->GetRegistrarForPlugin("ScreenRetrieverWindowsPluginCApi"));
+  UrlLauncherWindowsRegisterWithRegistrar(
+    registry->GetRegistrarForPlugin("UrlLauncherWindows"));
+  WindowManagerPluginRegisterWithRegistrar(
+    registry->GetRegistrarForPlugin("WindowManagerPlugin"));
+}
+
+}  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -30,7 +56,7 @@ bool FlutterWindow::OnCreate() {
     auto *flutter_view_controller =
         reinterpret_cast<flutter::FlutterViewController *>(controller);
     auto *registry = flutter_view_controller->engine();
-    RegisterPlugins(registry);
+    RegisterSecondaryWindowPlugins(registry);
   });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 

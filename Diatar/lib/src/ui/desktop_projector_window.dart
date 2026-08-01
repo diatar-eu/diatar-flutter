@@ -33,6 +33,7 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     mode: ChannelMode.bidirectional,
   );
   final DesktopProjectorController _controller = DesktopProjectorController();
+  WindowController? _currentWindowController;
 
   @override
   void initState() {
@@ -60,12 +61,30 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
   Future<void> _bootstrap() async {
     final WindowController windowController =
         await WindowController.fromCurrentEngine();
-    final Map<String, dynamic> args = _decodeArguments(windowController.arguments);
+    _currentWindowController = windowController;
+    final Map<String, dynamic> args = _decodeArguments(
+      windowController.arguments,
+    );
     final int requestedMonitor = (args['monitor'] as int?) ?? widget.monitor;
     final int mainMonitor = (args['mainMonitor'] as int?) ?? -1;
     _controller.applyMonitor(requestedMonitor);
     _controller.onClose = _shutdown;
-    await _channel.setMethodCallHandler(_controller.handleMethodCall);
+    await windowController.setWindowMethodHandler((MethodCall call) async {
+      if (call.method == 'window_close') {
+        await _shutdown();
+        return null;
+      }
+      throw MissingPluginException('Unknown window method: ${call.method}');
+    });
+    try {
+      await _channel.setMethodCallHandler(_controller.handleMethodCall);
+    } catch (error) {
+      if (_isChannelLimitReached(error)) {
+        await _shutdown();
+        return;
+      }
+      rethrow;
+    }
     // A vezérlő ablakkal való kommunikációhoz (vetítésbe kattintás ->
     // vezérlő visszahozása) egy bidirekcionális csatornán párba állunk a
     // főablakkal.
@@ -86,10 +105,10 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
         await windowManager.setAsFrameless();
         await windowManager.setSkipTaskbar(true);
         await windowManager.setPreventClose(true);
-        final int targetIndex =
-            await _positionOnSelectedDisplay(requestedMonitor);
-        final bool sameMonitor =
-            mainMonitor >= 0 && mainMonitor == targetIndex;
+        final int targetIndex = await _positionOnSelectedDisplay(
+          requestedMonitor,
+        );
+        final bool sameMonitor = mainMonitor >= 0 && mainMonitor == targetIndex;
         // Ha a vetítő ablak a vezérlő ablakkal azonos monitoron van, akkor
         // ne legyen mindig felül, hogy a vezérlő ablak kerülhessen a tetejére.
         await windowManager.setAlwaysOnTop(!sameMonitor);
@@ -137,6 +156,10 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     return <String, dynamic>{};
   }
 
+  bool _isChannelLimitReached(Object error) {
+    return error.toString().contains('CHANNEL_LIMIT_REACHED');
+  }
+
   /// A kért monitorra pozícionálja az ablakot.
   /// [monitor] >= 0 esetén az adott indexű kijelző, egyébként az utolsó
   /// (jobb szélső) kijelző. Visszaadja a ténylegesen kiválasztott indexet.
@@ -151,8 +174,9 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
         final double bx = b.visiblePosition?.dx ?? 0;
         return ax.compareTo(bx);
       });
-    final int index =
-        (monitor >= 0 && monitor < sorted.length) ? monitor : sorted.length - 1;
+    final int index = (monitor >= 0 && monitor < sorted.length)
+        ? monitor
+        : sorted.length - 1;
     final Display selected = sorted[index];
     final ui.Offset position = selected.visiblePosition ?? ui.Offset.zero;
     final ui.Size size = selected.visibleSize ?? selected.size;
@@ -177,7 +201,9 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
         final double bx = b.visiblePosition?.dx ?? 0;
         return ax.compareTo(bx);
       });
-    final int i = (index >= 0 && index < sorted.length) ? index : sorted.length - 1;
+    final int i = (index >= 0 && index < sorted.length)
+        ? index
+        : sorted.length - 1;
     final Display d = sorted[i];
     final ui.Offset position = d.visiblePosition ?? ui.Offset.zero;
     final ui.Size size = d.visibleSize ?? d.size;
@@ -187,6 +213,10 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
   @override
   void dispose() {
     windowManager.removeListener(this);
+    final WindowController? current = _currentWindowController;
+    if (current != null) {
+      unawaited(current.setWindowMethodHandler(null));
+    }
     unawaited(_channel.setMethodCallHandler(null));
     unawaited(_controlChannel.setMethodCallHandler(null));
     _controller.dispose();
@@ -236,7 +266,9 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
 }
 
 class DesktopProjectorController extends ChangeNotifier {
-  ProjectionGlobals globals = const ProjectionGlobals().copyWith(projecting: true);
+  ProjectionGlobals globals = const ProjectionGlobals().copyWith(
+    projecting: true,
+  );
   AppSettings settings = const AppSettings();
   ProjectionFrame? diaFrame = const LogoFrame(0);
   ProjectionFrame? blankFrame;
@@ -247,36 +279,51 @@ class DesktopProjectorController extends ChangeNotifier {
   Future<dynamic> handleMethodCall(MethodCall call) async {
     switch (call.method) {
       case 'settings':
-        _applySettings(AppSettings.fromMap(Map<String, dynamic>.from(call.arguments as Map)));
+        _applySettings(
+          AppSettings.fromMap(Map<String, dynamic>.from(call.arguments as Map)),
+        );
         return null;
       case 'state':
-        _onState(Uint8List.fromList(List<int>.from(call.arguments as List<int>)));
+        _onState(
+          Uint8List.fromList(List<int>.from(call.arguments as List<int>)),
+        );
         return null;
       case 'text':
-        _onText(Uint8List.fromList(List<int>.from(call.arguments as List<int>)));
+        _onText(
+          Uint8List.fromList(List<int>.from(call.arguments as List<int>)),
+        );
         return null;
       case 'pic':
-        await _onPic(Uint8List.fromList(List<int>.from(call.arguments as List<int>)));
+        await _onPic(
+          Uint8List.fromList(List<int>.from(call.arguments as List<int>)),
+        );
         return null;
       case 'blank':
-        await _onBlank(Uint8List.fromList(List<int>.from(call.arguments as List<int>)));
+        await _onBlank(
+          Uint8List.fromList(List<int>.from(call.arguments as List<int>)),
+        );
         return null;
       case 'idle':
         return null;
       case 'close':
-        _onClose();
+        await _onClose();
         return null;
       default:
-        throw MissingPluginException('Unknown projector method: ${call.method}');
+        throw MissingPluginException(
+          'Unknown projector method: ${call.method}',
+        );
     }
   }
 
   /// A vezérlő ablak bezárását (a 'close' csatornaüzenetre) a vetítőablak
   /// állapotkezelőjéből indítjuk, hogy a natív csatornák is leiratkozzanak.
-  VoidCallback? onClose;
+  Future<void> Function()? onClose;
 
-  void _onClose() {
-    onClose?.call();
+  Future<void> _onClose() async {
+    if (onClose == null) {
+      return;
+    }
+    await onClose!.call();
   }
 
   void applyMonitor(int value) {

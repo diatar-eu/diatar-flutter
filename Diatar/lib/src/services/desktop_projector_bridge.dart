@@ -15,6 +15,8 @@ class DesktopProjectorBridge {
 
   static const String _channelName = 'diatar/desktop_projector';
   static const String _businessId = 'desktop_projector';
+  static const String _windowCloseMethod = 'window_close';
+  static const Duration _windowOpTimeout = Duration(milliseconds: 1200);
 
   final WindowMethodChannel _channel = const WindowMethodChannel(
     _channelName,
@@ -24,6 +26,7 @@ class DesktopProjectorBridge {
   WindowController? _windowController;
   bool _starting = false;
   bool _enabled = false;
+  Future<void> _settingsTransition = Future<void>.value();
   AppSettings _lastSettings = const AppSettings();
   ui.Rect? _savedControlBounds;
 
@@ -46,40 +49,23 @@ class DesktopProjectorBridge {
     _enabled = _isDesktopPlatform() && settings.desktopProjectorEnabled;
     _lastSettings = settings;
     if (!_enabled) {
+      await _closeProjectorWindowsBestEffort();
       return;
     }
-    // Csak egyszer hozzuk létre a vetítőablakot. Ha már létezik (vagy épp
-    // készül), akkor csak frissítjük a beállításokat, hogy ne nyíljon meg
-    // második vetítőablak.
-    if (_windowController != null || _starting) {
-      await updateSettings(settings);
-      return;
-    }
-
-    _starting = true;
-    try {
-      final int mainMonitor = await _currentDisplayIndex();
-      _windowController = await WindowController.create(
-        WindowConfiguration(
-          hiddenAtLaunch: true,
-          arguments: jsonEncode(<String, Object?>{
-            'businessId': _businessId,
-            'monitor': settings.desktopProjectorMonitor,
-            'mainMonitor': mainMonitor,
-          }),
-        ),
-      );
-      if (_windowController == null) {
-        return;
-      }
-      await _windowController?.show();
-      unawaited(_retryReplayPending());
-    } finally {
-      _starting = false;
-    }
+    await _adoptExistingProjectorWindow();
+    await _ensureProjectorWindow();
+    await _invoke('settings', settings.toMap(), cache: () {});
   }
 
   Future<void> updateSettings(AppSettings settings) async {
+    _settingsTransition = _settingsTransition.then(
+      (_) => _updateSettingsCore(settings),
+      onError: (_) => _updateSettingsCore(settings),
+    );
+    return _settingsTransition;
+  }
+
+  Future<void> _updateSettingsCore(AppSettings settings) async {
     final bool newEnabled =
         _isDesktopPlatform() && settings.desktopProjectorEnabled;
     _lastSettings = settings;
@@ -88,8 +74,10 @@ class DesktopProjectorBridge {
     // beállításokat (pl. monitorváltás) a meglévő vetítőablaknak.
     if (newEnabled == _enabled) {
       if (!_enabled) {
+        await _closeProjectorWindowsBestEffort();
         return;
       }
+      await _adoptExistingProjectorWindow();
       await _invoke('settings', settings.toMap(), cache: () {});
       return;
     }
@@ -97,37 +85,18 @@ class DesktopProjectorBridge {
     // Állapotváltás: be/ki kapcsolás azonnali hatálya.
     if (newEnabled) {
       _enabled = true;
-      if (_windowController != null || _starting) {
-        await _invoke('settings', settings.toMap(), cache: () {});
-        return;
-      }
-      _starting = true;
-      try {
-        final int mainMonitor = await _currentDisplayIndex();
-        _windowController = await WindowController.create(
-          WindowConfiguration(
-            hiddenAtLaunch: true,
-            arguments: jsonEncode(<String, Object?>{
-              'businessId': _businessId,
-              'monitor': settings.desktopProjectorMonitor,
-              'mainMonitor': mainMonitor,
-            }),
-          ),
-        );
-        if (_windowController == null) {
-          return;
-        }
-        await _windowController?.show();
-        unawaited(_retryReplayPending());
-      } finally {
-        _starting = false;
-      }
+      await _adoptExistingProjectorWindow();
+      await _ensureProjectorWindow();
+      await _invoke('settings', settings.toMap(), cache: () {});
     } else {
+      // Az `_enabled` jelzőt azonnal lekapcsoljuk, hogy bármely közben futó
+      // küldés/ikonművelet ne tudja visszanyitni a vetítőablakot.
+      _enabled = false;
       // Kikapcsoláskor előbb visszaállítjuk a vezérlő ablakot (ha épp
       // el volt rejtve), majd bezárjuk a vetítőablakot.
       await _restoreControlWindow();
       await _closeWindow();
-      _enabled = false;
+      await _closeProjectorWindowsBestEffort();
     }
   }
 
@@ -136,7 +105,7 @@ class DesktopProjectorBridge {
       // A vetítőablakot a saját maga zárja be (windowManager.close),
       // mivel a WindowControllernek nincs close metódusa. Így a
       // WindowListener.onWindowClose is megfelelően lefut.
-      await _channel.invokeMethod('close', null);
+      await _channel.invokeMethod('close', null).timeout(_windowOpTimeout);
     } catch (_) {
       // nem kritikus
     }
@@ -170,7 +139,10 @@ class DesktopProjectorBridge {
     await _invoke('state', body, cache: () {});
   }
 
-  Future<void> sendText({required String title, required List<String> lines}) async {
+  Future<void> sendText({
+    required String title,
+    required List<String> lines,
+  }) async {
     if (!_enabled) {
       return;
     }
@@ -233,8 +205,9 @@ class DesktopProjectorBridge {
           return ax.compareTo(bx);
         });
       final int mainIndex = await _currentDisplayIndex();
-      final int index =
-          (mainIndex >= 0 && mainIndex < sorted.length) ? mainIndex : 0;
+      final int index = (mainIndex >= 0 && mainIndex < sorted.length)
+          ? mainIndex
+          : 0;
       final Display d = sorted[index];
       final ui.Offset pos = d.visiblePosition ?? ui.Offset.zero;
       final ui.Size size = d.visibleSize ?? d.size;
@@ -338,7 +311,116 @@ class DesktopProjectorBridge {
       await _channel.invokeMethod(method, arguments);
     } catch (_) {
       cache();
+      // Ha a csatorna már nem elérhető, a tárolt controller valószínűleg
+      // egy lezárt (árva) vetítőablakra mutat. Eldobjuk és újranyitjuk.
+      _windowController = null;
+      if (_enabled) {
+        unawaited(_recoverProjectorWindow());
+      }
+    }
+  }
+
+  Future<void> _recoverProjectorWindow() async {
+    await _adoptExistingProjectorWindow();
+    await _ensureProjectorWindow();
+    await _invoke('settings', _lastSettings.toMap(), cache: () {});
+  }
+
+  Future<void> _ensureProjectorWindow() async {
+    if (!_enabled || _windowController != null || _starting) {
+      return;
+    }
+    _starting = true;
+    try {
+      final int mainMonitor = await _currentDisplayIndex();
+      _windowController = await WindowController.create(
+        WindowConfiguration(
+          hiddenAtLaunch: true,
+          arguments: jsonEncode(<String, Object?>{
+            'businessId': _businessId,
+            'monitor': _lastSettings.desktopProjectorMonitor,
+            'mainMonitor': mainMonitor,
+          }),
+        ),
+      );
+      if (_windowController == null) {
+        return;
+      }
+      await _windowController?.show();
       unawaited(_retryReplayPending());
+    } finally {
+      _starting = false;
+    }
+  }
+
+  Future<void> _adoptExistingProjectorWindow() async {
+    try {
+      final List<WindowController> all = await WindowController.getAll();
+      final List<WindowController> projectors = all
+          .where(
+            (WindowController controller) =>
+                _isProjectorWindowArgs(controller.arguments),
+          )
+          .toList();
+      if (projectors.isEmpty) {
+        return;
+      }
+      final WindowController adopted = projectors.last;
+      _windowController = adopted;
+      await adopted.show().timeout(_windowOpTimeout);
+      for (int i = 0; i < projectors.length - 1; i++) {
+        unawaited(_closeWindowControllerBestEffort(projectors[i]));
+      }
+    } catch (_) {
+      // nem kritikus
+    }
+  }
+
+  Future<void> _closeProjectorWindowsBestEffort() async {
+    try {
+      final List<WindowController> all = await WindowController.getAll();
+      for (final WindowController controller in all) {
+        if (!_isProjectorWindowArgs(controller.arguments)) {
+          continue;
+        }
+        await _closeWindowControllerBestEffort(controller);
+      }
+    } catch (_) {
+      // nem kritikus
+    }
+  }
+
+  Future<void> _closeWindowControllerBestEffort(
+    WindowController controller,
+  ) async {
+    try {
+      await controller
+          .invokeMethod(_windowCloseMethod)
+          .timeout(_windowOpTimeout);
+      return;
+    } catch (_) {
+      // Ha a per-window close nincs bekötve, próbáljuk a legacy close-t.
+    }
+    try {
+      await controller.invokeMethod('close').timeout(_windowOpTimeout);
+    } catch (_) {
+      // nem kritikus
+    }
+  }
+
+  bool _isProjectorWindowArgs(String raw) {
+    try {
+      if (raw.trim().isEmpty) {
+        return false;
+      }
+      final Object decoded = jsonDecode(raw);
+      if (decoded is! Map) {
+        return false;
+      }
+      final Map<dynamic, dynamic> map = decoded;
+      return map['businessId'] == _businessId;
+    } catch (_) {
+      return false;
     }
   }
 

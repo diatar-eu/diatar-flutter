@@ -1483,7 +1483,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       mqttChannel: '1',
     );
 
-    unawaited(widget.onApply(updated));
+    unawaited(_applySettingsSafely(updated));
     return true;
   }
 
@@ -1528,7 +1528,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       szentirasApiKey: _szentirasApiKey.text.trim(),
     );
 
-    unawaited(widget.onApply(updated));
+    unawaited(_applySettingsSafely(updated));
     return true;
   }
 
@@ -3073,7 +3073,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     });
   }
 
-  void _save() {
+  Future<void> _save() async {
     final String mqttUser = _mqttUser.text.trim();
     final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
     final List<String> tcpTargets = kIsWeb
@@ -3208,8 +3208,28 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       hiColor: _hiColor,
     );
 
-    unawaited(widget.onApply(updated));
+    final bool applied = await _applySettingsSafely(updated);
+    if (!applied || !mounted) {
+      return;
+    }
     Navigator.of(context).pop();
+  }
+
+  Future<bool> _applySettingsSafely(AppSettings updated) async {
+    try {
+      await widget.onApply(updated);
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('Settings apply failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) {
+        return false;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.statusCommandSendError('$error'))),
+      );
+      return false;
+    }
   }
 
   List<String> _parseTcpTargets(String raw) {
