@@ -204,15 +204,17 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _castAutoConnect = s.castAutoConnect;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
     _desktopSongHotkeys = Map<String, String>.from(s.desktopSongHotkeys);
-    _desktopOrderSetHotkeys =
-        Map<String, String>.from(s.desktopOrderSetHotkeys);
+    _desktopOrderSetHotkeys = Map<String, String>.from(
+      s.desktopOrderSetHotkeys,
+    );
     _availableSongs = List<SongHotkeyOption>.from(widget.availableSongs);
     _availableSongsResolved = widget.availableSongs.isNotEmpty;
     if (_availableSongs.isNotEmpty) {
       _selectedSongHotkeyOptionId = _availableSongs.first.id;
     }
-    _availableOrderSets =
-        List<CustomOrderSetOption>.from(widget.availableOrderSets);
+    _availableOrderSets = List<CustomOrderSetOption>.from(
+      widget.availableOrderSets,
+    );
     _availableOrderSetsResolved = widget.availableOrderSets.isNotEmpty;
     if (_selectedOrderSetOptionId.isEmpty && _availableOrderSets.isNotEmpty) {
       _selectedOrderSetOptionId = _availableOrderSets.first.id;
@@ -347,10 +349,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           query,
           'gyorsbillentyu hotkey billentyu shortcut vezerles enek',
         );
-    final bool showApiKeys = _matches(
-      query,
-      'api kulcs key szentiras',
-    );
+    final bool showApiKeys = _matches(query, 'api kulcs key szentiras');
     final bool anyVisible =
         showInternet ||
         showLan ||
@@ -438,10 +437,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openApiKeysSettings,
                     ),
                   if (showApiKeys &&
-                      (showLan ||
-                          showProjection ||
-                          showFiles ||
-                          showGeneral))
+                      (showLan || showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
                   if (showLan)
                     _settingsTile(
@@ -457,10 +453,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       description: l10n.settingsLocalNetworkDescription,
                     ),
                   if (showLan &&
-                      (showCast ||
-                          showProjection ||
-                          showFiles ||
-                          showGeneral))
+                      (showCast || showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
                   if (showCast && (_castService?.isSupported ?? false))
                     _settingsTile(
@@ -472,9 +465,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     ),
                   if (showCast &&
                       (_castService?.isSupported ?? false) &&
-                      (showProjection ||
-                          showFiles ||
-                          showGeneral))
+                      (showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
                   if (showProjection)
                     _settingsTile(
@@ -561,7 +552,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                   isScrollControlled: true,
                   useSafeArea: true,
                   shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
                   ),
                   builder: (BuildContext bc) {
                     return OnboardingSheet(
@@ -1224,8 +1217,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       data: url,
       version: QrVersions.auto,
       gapless: true,
-       color: Colors.black,
-       emptyColor: Colors.white,
+      color: Colors.black,
+      emptyColor: Colors.white,
     );
     return painter
         .toImageData(size, format: ui.ImageByteFormat.png)
@@ -1326,10 +1319,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }) {
     return _androidBackupSaveChannel.invokeMethod<String>(
       'saveDiaFile',
-      <String, Object?>{
-        'fileName': fileName,
-        'bytes': bytes,
-      },
+      <String, Object?>{'fileName': fileName, 'bytes': bytes},
     );
   }
 
@@ -1704,9 +1694,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             ),
           ],
         ];
-        },
-      );
-    }
+      },
+    );
+  }
 
   Future<void> _openCastDeviceSelector(
     void Function(void Function()) setBoth,
@@ -1880,10 +1870,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         await exportFile.saveTo(fileName);
       } else if (defaultTargetPlatform == TargetPlatform.android) {
         try {
-          final String? savedPath = await _saveDiatarBackupWithAndroidSystemDialog(
-            fileName: fileName,
-            bytes: zipData,
-          );
+          final String? savedPath =
+              await _saveDiatarBackupWithAndroidSystemDialog(
+                fileName: fileName,
+                bytes: zipData,
+              );
           if (savedPath == null) {
             return;
           }
@@ -1926,10 +1917,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }) {
     return _androidBackupSaveChannel.invokeMethod<String>(
       'saveBackupFile',
-      <String, Object?>{
-        'fileName': fileName,
-        'bytes': bytes,
-      },
+      <String, Object?>{'fileName': fileName, 'bytes': bytes},
     );
   }
 
@@ -1949,6 +1937,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     void Function(void Function()) setBoth,
   ) async {
     final XTypeGroup zipType = _diatarZipType(sectionContext.l10n);
+    String? tempArchivePath;
     setBoth(() => _fileTransferRunning = true);
     try {
       final XFile? selectedFile = await openFile(
@@ -1958,9 +1947,26 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         return;
       }
 
-      final zipData = await selectedFile.readAsBytes();
-      final DiatarImportPreview preview = await _exportImportService
-          .inspectImportArchive(zipData);
+      final String selectedPath = selectedFile.path.trim();
+      final bool hasDirectPath =
+          !kIsWeb && selectedPath.isNotEmpty && !selectedPath.contains('://');
+
+      Uint8List? zipData;
+      final String? importPath;
+      if (kIsWeb) {
+        importPath = null;
+        zipData = await selectedFile.readAsBytes();
+      } else if (hasDirectPath) {
+        importPath = selectedPath;
+      } else {
+        final File tempArchive = await _createTempImportArchive(selectedFile);
+        tempArchivePath = tempArchive.path;
+        importPath = tempArchive.path;
+      }
+
+      final DiatarImportPreview preview = importPath != null
+          ? await _exportImportService.inspectImportArchiveFile(importPath)
+          : await _exportImportService.inspectImportArchive(zipData!);
       ExistingFilePolicy policy = ExistingFilePolicy.skip;
       if (preview.conflictingFileCount > 0) {
         if (!sectionContext.mounted) {
@@ -1976,8 +1982,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         policy = selectedPolicy;
       }
 
-      final DiatarImportResult result = await _exportImportService
-          .importArchive(zipData, existingFilePolicy: policy);
+      final DiatarImportResult result = importPath != null
+          ? await _exportImportService.importArchiveFile(
+              importPath,
+              existingFilePolicy: policy,
+            )
+          : await _exportImportService.importArchive(
+              zipData!,
+              existingFilePolicy: policy,
+            );
+
       if (result.importedFileCount > 0) {
         widget.onReloadBooksRequested();
       }
@@ -2004,8 +2018,33 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         await _showFileTransferError(sectionContext, error);
       }
     } finally {
+      if (tempArchivePath != null) {
+        final File tempArchive = FileSystemProvider.instance.file(
+          tempArchivePath,
+        );
+        if (await tempArchive.exists()) {
+          await tempArchive.delete();
+        }
+      }
       _finishFileTransfer(sectionContext.mounted, setBoth);
     }
+  }
+
+  Future<File> _createTempImportArchive(XFile selectedFile) async {
+    final FileSystem fs = FileSystemProvider.instance;
+    final Directory tempDir = fs.systemTempDirectory;
+    await tempDir.create(recursive: true);
+    final String tempPath = fs.path.join(
+      tempDir.path,
+      'diatar-import-${DateTime.now().microsecondsSinceEpoch}.zip',
+    );
+    final File tempFile = fs.file(tempPath);
+    final sink = tempFile.openWrite();
+    await for (final chunk in selectedFile.openRead()) {
+      sink.add(chunk);
+    }
+    await sink.close();
+    return tempFile;
   }
 
   Future<ExistingFilePolicy?> _askExistingFilePolicy(
@@ -2337,8 +2376,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               onPressed: _selectedSongHotkeyOptionId.isEmpty
                   ? null
                   : () async {
-                      final String? captured =
-                          await _showHotkeyCaptureDialog(context);
+                      final String? captured = await _showHotkeyCaptureDialog(
+                        context,
+                      );
                       if (captured != null) {
                         setBoth(() {
                           _desktopSongHotkeys[captured] =
@@ -2413,8 +2453,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               onPressed: _selectedOrderSetOptionId.isEmpty
                   ? null
                   : () async {
-                      final String? captured =
-                          await _showHotkeyCaptureDialog(context);
+                      final String? captured = await _showHotkeyCaptureDialog(
+                        context,
+                      );
                       if (captured != null) {
                         setBoth(() {
                           _desktopOrderSetHotkeys[captured] =
@@ -2868,10 +2909,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             title: Text(l10n.boldText),
           ),
           const SizedBox(height: 8),
-          Text(
-            l10n.colorsTitle,
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
+          Text(l10n.colorsTitle, style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
@@ -3157,8 +3195,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       desktopProjectorMonitor: _desktopProjectorMonitor,
       desktopActionHotkeys: Map<String, String>.from(_desktopActionHotkeys),
       desktopSongHotkeys: Map<String, String>.from(_desktopSongHotkeys),
-      desktopOrderSetHotkeys:
-          Map<String, String>.from(_desktopOrderSetHotkeys),
+      desktopOrderSetHotkeys: Map<String, String>.from(_desktopOrderSetHotkeys),
       projBoldText: _projBoldText,
       useSound: _useSound,
       castEnabled: _castEnabled,
@@ -3481,7 +3518,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _availableOrderSetsResolved = true;
     final List<CustomOrderSetOption> loaded =
         widget.availableOrderSetsLoader?.call() ??
-            const <CustomOrderSetOption>[];
+        const <CustomOrderSetOption>[];
     _availableOrderSets = loaded;
     if (_selectedOrderSetOptionId.isEmpty && _availableOrderSets.isNotEmpty) {
       _selectedOrderSetOptionId = _availableOrderSets.first.id;
@@ -3507,8 +3544,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       growable: true,
     );
 
-    final CustomOrderSetOption? selected = await showDialog<
-        CustomOrderSetOption>(
+    final CustomOrderSetOption?
+    selected = await showDialog<CustomOrderSetOption>(
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
@@ -3525,13 +3562,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onChanged: (String value) {
                         setState(() {
                           final String lowerValue = value.toLowerCase();
-                          filteredIndexes = List<int>.generate(
-                            _availableOrderSets.length,
-                            (int i) => i,
-                            growable: true,
-                          ).where((int i) {
-                            return lowerLabels[i].contains(lowerValue);
-                          }).toList(growable: false);
+                          filteredIndexes =
+                              List<int>.generate(
+                                    _availableOrderSets.length,
+                                    (int i) => i,
+                                    growable: true,
+                                  )
+                                  .where((int i) {
+                                    return lowerLabels[i].contains(lowerValue);
+                                  })
+                                  .toList(growable: false);
                         });
                       },
                       decoration: InputDecoration(
@@ -3543,8 +3583,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                     Flexible(
                       child: ListView.builder(
                         itemCount: filteredIndexes.length,
-                        itemBuilder:
-                            (BuildContext context, int index) {
+                        itemBuilder: (BuildContext context, int index) {
                           final CustomOrderSetOption option =
                               _availableOrderSets[filteredIndexes[index]];
                           return ListTile(

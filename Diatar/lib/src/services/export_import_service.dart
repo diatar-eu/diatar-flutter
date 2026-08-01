@@ -112,7 +112,99 @@ class ExportImportService {
   }
 
   Future<DiatarImportPreview> inspectImportArchive(Uint8List zipData) async {
-    final _ValidatedArchive archive = _decodeAndValidate(zipData);
+    final _DecodedArchive decoded = _decodeArchiveFromBytes(zipData);
+    try {
+      return _inspectValidatedArchive(
+        _decodeAndValidateArchive(decoded.archive),
+      );
+    } finally {
+      await decoded.close();
+    }
+  }
+
+  Future<DiatarImportPreview> inspectImportArchiveFile(
+    String zipFilePath,
+  ) async {
+    final _DecodedArchive decoded = _decodeArchiveFromFilePath(zipFilePath);
+    try {
+      return _inspectValidatedArchive(
+        _decodeAndValidateArchive(decoded.archive),
+      );
+    } finally {
+      await decoded.close();
+    }
+  }
+
+  Future<DiatarImportResult> importArchive(
+    Uint8List zipData, {
+    required ExistingFilePolicy existingFilePolicy,
+  }) async {
+    final _DecodedArchive decoded = _decodeArchiveFromBytes(zipData);
+    try {
+      return _importValidatedArchive(
+        _decodeAndValidateArchive(decoded.archive),
+        existingFilePolicy: existingFilePolicy,
+      );
+    } finally {
+      await decoded.close();
+    }
+  }
+
+  Future<DiatarImportResult> importArchiveFile(
+    String zipFilePath, {
+    required ExistingFilePolicy existingFilePolicy,
+  }) async {
+    final _DecodedArchive decoded = _decodeArchiveFromFilePath(zipFilePath);
+    try {
+      return _importValidatedArchive(
+        _decodeAndValidateArchive(decoded.archive),
+        existingFilePolicy: existingFilePolicy,
+      );
+    } finally {
+      await decoded.close();
+    }
+  }
+
+  _DecodedArchive _decodeArchiveFromBytes(Uint8List zipData) {
+    try {
+      final Archive archive = ZipDecoder().decodeBytes(zipData, verify: true);
+      return _DecodedArchive(
+        archive: archive,
+        close: () async {
+          await archive.clear();
+        },
+      );
+    } catch (error) {
+      throw DiatarArchiveException(
+        DiatarArchiveErrorCode.invalidArchive,
+        error,
+      );
+    }
+  }
+
+  _DecodedArchive _decodeArchiveFromFilePath(String zipFilePath) {
+    final InputFileStream input = InputFileStream(zipFilePath);
+    try {
+      final Archive archive = ZipDecoder().decodeStream(input, verify: true);
+      return _DecodedArchive(
+        archive: archive,
+        close: () async {
+          await input.close();
+          await archive.clear();
+        },
+      );
+    } catch (error) {
+      input.closeSync();
+      throw DiatarArchiveException(
+        DiatarArchiveErrorCode.invalidArchive,
+        error,
+      );
+    }
+  }
+
+  Future<DiatarImportPreview> _inspectValidatedArchive(
+    _ValidatedArchive archive,
+  ) async {
     final Directory targetDirectory = await resolveDiatarDirectory();
     int conflictingFileCount = 0;
 
@@ -129,11 +221,10 @@ class ExportImportService {
     );
   }
 
-  Future<DiatarImportResult> importArchive(
-    Uint8List zipData, {
+  Future<DiatarImportResult> _importValidatedArchive(
+    _ValidatedArchive archive, {
     required ExistingFilePolicy existingFilePolicy,
   }) async {
-    final _ValidatedArchive archive = _decodeAndValidate(zipData);
     final Directory targetDirectory = await resolveDiatarDirectory();
     await targetDirectory.create(recursive: true);
 
@@ -174,7 +265,13 @@ class ExportImportService {
         }
 
         await target.parent.create(recursive: true);
-        await target.writeAsBytes(archivedFile.bytes, flush: true);
+        final OutputFileStream output = OutputFileStream(target.path);
+        try {
+          archivedFile.archiveEntry.writeContent(output, freeMemory: true);
+        } finally {
+          await output.close();
+          archivedFile.archiveEntry.clear();
+        }
         importedFileCount++;
       } catch (error) {
         errors.add('${archivedFile.relativePath}: $error');
@@ -196,17 +293,7 @@ class ExportImportService {
     );
   }
 
-  _ValidatedArchive _decodeAndValidate(Uint8List zipData) {
-    final Archive archive;
-    try {
-      archive = ZipDecoder().decodeBytes(zipData, verify: true);
-    } catch (error) {
-      throw DiatarArchiveException(
-        DiatarArchiveErrorCode.invalidArchive,
-        error,
-      );
-    }
-
+  _ValidatedArchive _decodeAndValidateArchive(Archive archive) {
     final List<_ValidatedFile> files = <_ValidatedFile>[];
     final Set<String> directories = <String>{};
     final Set<String> targets = <String>{};
@@ -237,10 +324,7 @@ class ExportImportService {
           directories.add(relativePath);
         } else {
           files.add(
-            _ValidatedFile(
-              relativePath: relativePath,
-              bytes: Uint8List.fromList(entry.content),
-            ),
+            _ValidatedFile(relativePath: relativePath, archiveEntry: entry),
           );
         }
       }
@@ -318,8 +402,18 @@ class _ValidatedArchive {
 }
 
 class _ValidatedFile {
-  const _ValidatedFile({required this.relativePath, required this.bytes});
+  const _ValidatedFile({
+    required this.relativePath,
+    required this.archiveEntry,
+  });
 
   final String relativePath;
-  final Uint8List bytes;
+  final ArchiveFile archiveEntry;
+}
+
+class _DecodedArchive {
+  const _DecodedArchive({required this.archive, required this.close});
+
+  final Archive archive;
+  final Future<void> Function() close;
 }
