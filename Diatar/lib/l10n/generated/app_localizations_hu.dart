@@ -534,6 +534,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get previewTitle => 'Dia előnézet';
 
   @override
+  String get previewResizeInProgress => 'Előnézet átméretezése...';
+
+  @override
   String customTextEntryLabel(Object name) {
     return 'Dia: $name';
   }

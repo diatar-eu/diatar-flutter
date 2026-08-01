@@ -499,6 +499,8 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
   _HomeControlMode _homeControlMode = _HomeControlMode.books;
   int _homeLayoutMode = 0;
   double? _landscapeControlsRatio;
+  bool _isLandscapeSplitterDragging = false;
+  double? _landscapeDragControlsWidth;
   bool _presentationControlsVisible = false;
 
   DiatarMainController get controller => widget.controller;
@@ -677,6 +679,59 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     _landscapeControlsRatio = (controlsWidth / width).clamp(0.0, 1.0);
   }
 
+  void _startLandscapeSplitterDrag(double controlsWidth) {
+    setState(() {
+      _isLandscapeSplitterDragging = true;
+      _landscapeDragControlsWidth = controlsWidth;
+    });
+  }
+
+  void _updateLandscapeSplitterDrag({
+    required double fallbackControlsWidth,
+    required double minControlsWidth,
+    required double maxControlsWidth,
+    required double delta,
+  }) {
+    final double current = _landscapeDragControlsWidth ?? fallbackControlsWidth;
+    final double next = (current + delta).clamp(
+      minControlsWidth,
+      maxControlsWidth,
+    );
+    if (_landscapeDragControlsWidth == next) {
+      return;
+    }
+    setState(() {
+      _landscapeDragControlsWidth = next;
+    });
+  }
+
+  void _commitLandscapeSplitterDrag(
+    BoxConstraints constraints, {
+    required double minControlsWidth,
+    required double maxControlsWidth,
+  }) {
+    final double? draggedWidth = _landscapeDragControlsWidth;
+    setState(() {
+      _isLandscapeSplitterDragging = false;
+      _landscapeDragControlsWidth = null;
+      if (draggedWidth != null) {
+        final double clampedWidth = draggedWidth.clamp(
+          minControlsWidth,
+          maxControlsWidth,
+        );
+        _landscapeControlsRatio =
+            clampedWidth / math.max(constraints.maxWidth, 1.0);
+      }
+    });
+  }
+
+  void _cancelLandscapeSplitterDrag() {
+    setState(() {
+      _isLandscapeSplitterDragging = false;
+      _landscapeDragControlsWidth = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     _syncHomeModeFromSettings();
@@ -783,10 +838,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                 child: Row(
                   children: <Widget>[
                     const SizedBox(width: 16),
-                    Text(
-                      l10n.appTitle,
-                      style: theme.textTheme.titleMedium,
-                    ),
+                    Text(l10n.appTitle, style: theme.textTheme.titleMedium),
                     const Spacer(),
                     ..._buildAppBarActions(
                       context,
@@ -826,8 +878,6 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           const double minPreviewWidth = 320.0;
           const double minControlsWidth = 300.0;
           const double preferredControlsWidth = 460.0;
-          const double minControlsRatio = 0.26;
-          const double maxControlsRatio = 0.56;
           // 10 circle buttons (including display options) + 9 gaps + side paddings.
           const double controlsRowMinWidthForButtons = 596.0;
 
@@ -837,22 +887,14 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           );
 
           final double defaultRatio =
-              (preferredControlsWidth / math.max(constraints.maxWidth, 1.0))
-                  .clamp(minControlsRatio, maxControlsRatio);
+              preferredControlsWidth / math.max(constraints.maxWidth, 1.0);
           final double effectiveRatio =
-              (_landscapeControlsRatio ?? defaultRatio).clamp(
-                minControlsRatio,
-                maxControlsRatio,
-              );
+              (_landscapeControlsRatio ?? defaultRatio).clamp(0.0, 1.0);
 
           double controlsWidth = constraints.maxWidth * effectiveRatio;
 
-          controlsWidth = controlsWidth.clamp(
-            minControlsWidth,
-            preferredControlsWidth,
-          );
-
-          if (maxControlsWidth >= controlsRowMinWidthForButtons &&
+          if (_landscapeControlsRatio == null &&
+              maxControlsWidth >= controlsRowMinWidthForButtons &&
               controlsWidth < controlsRowMinWidthForButtons) {
             controlsWidth = controlsRowMinWidthForButtons;
           }
@@ -861,29 +903,42 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             minControlsWidth,
             maxControlsWidth,
           );
-          _updateLandscapeControlsRatio(constraints, controlsWidth);
+
+          if (!_isLandscapeSplitterDragging &&
+              _landscapeDragControlsWidth == null) {
+            _updateLandscapeControlsRatio(constraints, controlsWidth);
+          }
+
+          final double visibleControlsWidth =
+              (_landscapeDragControlsWidth ?? controlsWidth).clamp(
+                minControlsWidth,
+                maxControlsWidth,
+              );
 
           return Row(
             children: <Widget>[
               SizedBox(
-                width: controlsWidth,
+                width: visibleControlsWidth,
                 child: _buildSimpleControls(context, isLandscape: true),
               ),
               GestureDetector(
                 behavior: HitTestBehavior.translucent,
+                onHorizontalDragStart: (_) =>
+                    _startLandscapeSplitterDrag(controlsWidth),
                 onHorizontalDragUpdate: (DragUpdateDetails details) {
-                  final double next = (controlsWidth + details.delta.dx).clamp(
-                    minControlsWidth,
-                    maxControlsWidth,
+                  _updateLandscapeSplitterDrag(
+                    fallbackControlsWidth: controlsWidth,
+                    minControlsWidth: minControlsWidth,
+                    maxControlsWidth: maxControlsWidth,
+                    delta: details.delta.dx,
                   );
-                  setState(() {
-                    _landscapeControlsRatio =
-                        (next / math.max(constraints.maxWidth, 1.0)).clamp(
-                          minControlsRatio,
-                          maxControlsRatio,
-                        );
-                  });
                 },
+                onHorizontalDragEnd: (_) => _commitLandscapeSplitterDrag(
+                  constraints,
+                  minControlsWidth: minControlsWidth,
+                  maxControlsWidth: maxControlsWidth,
+                ),
+                onHorizontalDragCancel: _cancelLandscapeSplitterDrag,
                 child: MouseRegion(
                   cursor: SystemMouseCursors.resizeColumn,
                   child: SizedBox(
@@ -897,7 +952,11 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                   ),
                 ),
               ),
-              Expanded(child: _buildSimplePreviewPane(context)),
+              Expanded(
+                child: _isLandscapeSplitterDragging
+                    ? _buildPreviewResizePlaceholder(context)
+                    : _buildSimplePreviewPane(context),
+              ),
             ],
           );
         },
@@ -1327,6 +1386,46 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     );
   }
 
+  Widget _buildPreviewResizePlaceholder(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color previewBorderColor = controller.globals.projecting
+        ? Colors.red.shade700
+        : theme.dividerColor.withValues(alpha: 0.65);
+
+    return Container(
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: controller.globals.bkColor,
+        border: Border.all(color: previewBorderColor, width: 3.0),
+      ),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: Opacity(
+          opacity: 0.82,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                Icons.open_with,
+                size: 42,
+                color: controller.globals.txtColor,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                context.l10n.previewResizeInProgress,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: controller.globals.txtColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildActivePreview(
     BuildContext context, {
     required String panelTitle,
@@ -1379,15 +1478,16 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
 
     if (projectedCustom != null && projectedCustom.isCustomText) {
       final int cursor = controller.selectedCustomOrderCursor;
-      final bool isMergeLeader =
-          controller.isCustomOrderEntryMergeLeaderAt(cursor);
+      final bool isMergeLeader = controller.isCustomOrderEntryMergeLeaderAt(
+        cursor,
+      );
       final String title = isMergeLeader
           ? controller.customOrderProjectionTitleAt(cursor)
           : controller.currentCustomOrderProjectionTitle ??
                 localizedCustomEntryLabel(l10n, projectedCustom);
       final List<String> lines = () {
-        final String body = isMergeLeader &&
-                cursor + 1 < controller.customOrder.length
+        final String body =
+            isMergeLeader && cursor + 1 < controller.customOrder.length
             ? '${projectedCustom.customTextBody ?? ''}\n${controller.customOrder[cursor + 1].customTextBody ?? ''}'
             : (projectedCustom.customTextBody ?? '');
         return body

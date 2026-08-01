@@ -531,6 +531,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get previewTitle => 'Slide preview';
 
   @override
+  String get previewResizeInProgress => 'Resizing preview...';
+
+  @override
   String customTextEntryLabel(Object name) {
     return 'Slide: $name';
   }

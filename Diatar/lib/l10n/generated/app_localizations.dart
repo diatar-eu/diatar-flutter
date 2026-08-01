@@ -923,6 +923,12 @@ abstract class AppLocalizations {
   /// **'Dia előnézet'**
   String get previewTitle;
 
+  /// No description provided for @previewResizeInProgress.
+  ///
+  /// In hu, this message translates to:
+  /// **'Előnézet átméretezése...'**
+  String get previewResizeInProgress;
+
   /// No description provided for @customTextEntryLabel.
   ///
   /// In hu, this message translates to:

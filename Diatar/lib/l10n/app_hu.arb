@@ -447,6 +447,7 @@
   "stateInactive": "Inaktív",
   "nextShort": "Kov.",
   "previewTitle": "Dia előnézet",
+  "previewResizeInProgress": "Előnézet átméretezése...",
   "customTextEntryLabel": "Dia: {name}",
   "@customTextEntryLabel": {
     "placeholders": {

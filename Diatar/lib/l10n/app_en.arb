@@ -447,6 +447,7 @@
   "stateInactive": "Inactive",
   "nextShort": "Next",
   "previewTitle": "Slide preview",
+  "previewResizeInProgress": "Resizing preview...",
   "customTextEntryLabel": "Slide: {name}",
   "@customTextEntryLabel": {
     "placeholders": {
