@@ -80,6 +80,14 @@ class DesktopProjectorBridge {
       }
       await _adoptExistingProjectorWindow();
       await _invoke('settings', settings.toMap(), cache: () {});
+      await _invoke(
+        'relocate',
+        <String, Object?>{
+          'monitor': settings.desktopProjectorMonitor,
+          'mainMonitor': await _currentDisplayIndex(),
+        },
+        cache: () {},
+      );
       return;
     }
 

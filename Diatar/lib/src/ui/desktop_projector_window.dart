@@ -34,6 +34,8 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
   );
   final DesktopProjectorController _controller = DesktopProjectorController();
   WindowController? _currentWindowController;
+  int _mainMonitor = -1;
+  bool _windowReady = false;
 
   @override
   void initState() {
@@ -66,7 +68,7 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
       windowController.arguments,
     );
     final int requestedMonitor = (args['monitor'] as int?) ?? widget.monitor;
-    final int mainMonitor = (args['mainMonitor'] as int?) ?? -1;
+    _mainMonitor = (args['mainMonitor'] as int?) ?? -1;
     _controller.applyMonitor(requestedMonitor);
     _controller.onClose = _shutdown;
     await windowController.setWindowMethodHandler((MethodCall call) async {
@@ -77,7 +79,7 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
       throw MissingPluginException('Unknown window method: ${call.method}');
     });
     try {
-      await _channel.setMethodCallHandler(_controller.handleMethodCall);
+      await _channel.setMethodCallHandler(_handleProjectorMethodCall);
     } catch (error) {
       if (_isChannelLimitReached(error)) {
         await _shutdown();
@@ -105,41 +107,69 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
         await windowManager.setAsFrameless();
         await windowManager.setSkipTaskbar(true);
         await windowManager.setPreventClose(true);
-        final int targetIndex = await _positionOnSelectedDisplay(
-          requestedMonitor,
-        );
-        final bool sameMonitor = mainMonitor >= 0 && mainMonitor == targetIndex;
-        // Ha a vetítő ablak a vezérlő ablakkal azonos monitoron van, akkor
-        // ne legyen mindig felül, hogy a vezérlő ablak kerülhessen a tetejére.
-        await windowManager.setAlwaysOnTop(!sameMonitor);
-        // Teljes képernyőre helyezzük a kiválasztott kijelzőn a bounds
-        // beállításával (a natív macOS fullscreen helyett), így futás
-        // közbeni (beállításokból történő) megnyitáskor is megbízhatóan
-        // kitölti a kijelzőt, és nem függ a fullscreen-animáció
-        // időzítésétől.
-        await windowManager.setFullScreen(false);
-        final ui.Rect displayRect = await _displayRect(targetIndex);
-        await windowManager.setBounds(displayRect, animate: false);
-        await windowManager.show(inactive: true);
-        if (!sameMonitor) {
-          await windowManager.focus();
-        }
-        // Biztonsági újraalkalmazás: futás közbeni (beállításokból történő)
-        // megnyitáskor a window_manager néha nem érvényesíti azonnal a
-        // bounds/alwaysOnTop beállításokat, ezért egy képkockányi késleltetés
-        // után újra kitöltjük a kijelzőt és a fókuszt is rendezük.
-        await Future<void>.delayed(const Duration(milliseconds: 120));
-        await windowManager.setBounds(displayRect, animate: false);
-        await windowManager.setAlwaysOnTop(!sameMonitor);
-        if (!sameMonitor) {
-          await windowManager.focus();
-        } else {
-          // Azonos monitoron a vezérlő ablakot tartjuk felül, de a vetítő
-          // ablakot is láthatóvá tesszük (átlátszó, ha a vezérlő el van rejtve).
-          await windowManager.show(inactive: true);
-        }
+        await _applyWindowPlacement(requestedMonitor);
+        _windowReady = true;
       },
     );
+  }
+
+  Future<dynamic> _handleProjectorMethodCall(MethodCall call) async {
+    if (call.method == 'relocate') {
+      final Map<String, dynamic> payload =
+          Map<String, dynamic>.from(call.arguments as Map);
+      final int? monitor = payload['monitor'] as int?;
+      final int? mainMonitor = payload['mainMonitor'] as int?;
+      if (mainMonitor != null) {
+        _mainMonitor = mainMonitor;
+      }
+      if (monitor != null) {
+        _controller.applyMonitor(monitor);
+      }
+      await _applyWindowPlacement(_controller.monitor);
+      return null;
+    }
+
+    final int previousMonitor = _controller.monitor;
+    final dynamic result = await _controller.handleMethodCall(call);
+    if (call.method == 'settings' && previousMonitor != _controller.monitor) {
+      await _applyWindowPlacement(_controller.monitor);
+    }
+    return result;
+  }
+
+  Future<void> _applyWindowPlacement(int requestedMonitor) async {
+    if (!_windowReady && _currentWindowController == null) {
+      return;
+    }
+    try {
+      final int targetIndex = await _positionOnSelectedDisplay(requestedMonitor);
+      final bool sameMonitor =
+          _mainMonitor >= 0 && _mainMonitor == targetIndex;
+      // Ha a vetítő ablak a vezérlő ablakkal azonos monitoron van, akkor
+      // ne legyen mindig felül, hogy a vezérlő ablak kerülhessen a tetejére.
+      await windowManager.setAlwaysOnTop(!sameMonitor);
+      // Teljes képernyőre helyezzük a kiválasztott kijelzőn a bounds
+      // beállításával (a natív macOS fullscreen helyett), így futás
+      // közbeni monitorváltáskor is megbízhatóan kitölti a kijelzőt.
+      await windowManager.setFullScreen(false);
+      final ui.Rect displayRect = await _displayRect(targetIndex);
+      await windowManager.setBounds(displayRect, animate: false);
+      await windowManager.show(inactive: true);
+      if (!sameMonitor) {
+        await windowManager.focus();
+      }
+      // Biztonsági újraalkalmazás: futás közbeni monitorváltáskor a
+      // window_manager néha nem érvényesíti azonnal a bounds/alwaysOnTop
+      // beállításokat.
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      await windowManager.setBounds(displayRect, animate: false);
+      await windowManager.setAlwaysOnTop(!sameMonitor);
+      if (!sameMonitor) {
+        await windowManager.focus();
+      }
+    } catch (_) {
+      // Nem kritikus: következő settings/relocate ciklus újrapróbálja.
+    }
   }
 
   Map<String, dynamic> _decodeArguments(String raw) {
