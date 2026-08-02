@@ -84,6 +84,12 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  auto force_redraw = [&]() {
+    if (flutter_controller_) {
+      flutter_controller_->ForceRedraw();
+    }
+  };
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =
@@ -96,7 +102,19 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
 
   switch (message) {
     case WM_FONTCHANGE:
-      flutter_controller_->engine()->ReloadSystemFonts();
+      if (flutter_controller_ && flutter_controller_->engine()) {
+        flutter_controller_->engine()->ReloadSystemFonts();
+      }
+      break;
+    case WM_WINDOWPOSCHANGED:
+      // Win10 alatt az átlátszóság/fókusz váltás után előfordulhat, hogy
+      // a surface képe nem frissül azonnal. Kényszerített redraw stabilizálja.
+      force_redraw();
+      break;
+    case WM_SIZE:
+    case WM_SHOWWINDOW:
+    case WM_EXITSIZEMOVE:
+      force_redraw();
       break;
   }
 

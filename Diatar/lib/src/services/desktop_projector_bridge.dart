@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'dart:ui' as ui;
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
@@ -17,6 +18,7 @@ class DesktopProjectorBridge {
   static const String _businessId = 'desktop_projector';
   static const String _windowCloseMethod = 'window_close';
   static const Duration _windowOpTimeout = Duration(milliseconds: 1200);
+  static const double _hiddenOpacityWindows = 0.01;
 
   final WindowMethodChannel _channel = const WindowMethodChannel(
     _channelName,
@@ -28,7 +30,6 @@ class DesktopProjectorBridge {
   bool _enabled = false;
   Future<void> _settingsTransition = Future<void>.value();
   AppSettings _lastSettings = const AppSettings();
-  ui.Rect? _savedControlBounds;
 
   /// Akkor hívódik meg, ha a vezérlő ablakot külső esemény (pl. a vetítő
   /// ablakba való kattintás) hozza vissza. A controller ezen keresztül
@@ -182,41 +183,18 @@ class DesktopProjectorBridge {
   /// Elrejti a vezérlő (fő) ablakot, ha a vetítő ablakkal azonos
   /// monitoron vagyunk, hogy a vetítés látszódjon.
   ///
-  /// Ablak teljes elrejtése helyett átlátszóvá (opacity 0) tesszük, miközben
-  /// megőrizzük a fókuszt. Így a Flutter Focus-rétegen keresztül a
-  /// gyorsbillentyűk továbbra is működnek. A vezérlő ablakot teljes
-  /// képernyőre (a kijelző teljes területére) helyezzük, hogy az átlátszó
-  /// `cursor: none` réteg az egész vetítőfelületet lefedje – így a kurzor
-  /// akkor is el van rejtve, ha a vezérlő eredeti helyén kívülre húzzuk az
-  /// egeret. A `setIgnoreMouseEvents(true, forward: true)` gondoskodik róla,
-  /// hogy az átlátszó ablak ne kapja el az egérmutatót, hanem továbbadja az
-  /// alatta lévő vetítőablaknak (visszahozáshoz a vetítésbe kattintva).
+  /// Ablakmozgatás/átméretezés nélkül átlátszóvá tesszük, és átadjuk az
+  /// egéreseményeket a vetítőablaknak. Win10 alatt ez stabilabb, mert elkerüli
+  /// a DPI/surface deszinkront, ami torz visszarajzolást okozhat.
   Future<void> hideControlWindow() async {
     if (!_enabled) {
       return;
     }
     try {
-      _savedControlBounds = await windowManager.getBounds();
-      final List<Display> displays = await screenRetriever.getAllDisplays();
-      final List<Display> sorted = List<Display>.from(displays)
-        ..sort((Display a, Display b) {
-          final double ax = a.visiblePosition?.dx ?? 0;
-          final double bx = b.visiblePosition?.dx ?? 0;
-          return ax.compareTo(bx);
-        });
-      final int mainIndex = await _currentDisplayIndex();
-      final int index = (mainIndex >= 0 && mainIndex < sorted.length)
-          ? mainIndex
-          : 0;
-      final Display d = sorted[index];
-      final ui.Offset pos = d.visiblePosition ?? ui.Offset.zero;
-      final ui.Size size = d.visibleSize ?? d.size;
-      await windowManager.setFullScreen(true);
-      await windowManager.setBounds(
-        ui.Rect.fromLTWH(pos.dx, pos.dy, size.width, size.height),
-      );
       await windowManager.setIgnoreMouseEvents(true, forward: true);
-      await windowManager.setOpacity(0.0);
+      await windowManager.setOpacity(
+        Platform.isWindows ? _hiddenOpacityWindows : 0.0,
+      );
     } catch (_) {
       // nem kritikus
     }
@@ -235,12 +213,9 @@ class DesktopProjectorBridge {
   /// állapottól, így kikapcsoláskor is meghívható.
   Future<void> _restoreControlWindow() async {
     try {
-      await windowManager.setOpacity(1.0);
       await windowManager.setIgnoreMouseEvents(false);
-      if (_savedControlBounds != null) {
-        await windowManager.setBounds(_savedControlBounds!);
-      }
-      await windowManager.setFullScreen(false);
+      await windowManager.setOpacity(1.0);
+      await windowManager.show();
       await windowManager.focus();
     } catch (_) {
       // nem kritikus
