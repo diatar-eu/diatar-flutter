@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/path_helper.dart';
 import '../utils/file_system_provider.dart';
+import '../utils/browser_window_close.dart' as browser_window_close;
 
 import '../core/books/book_sort_policy.dart';
 import '../core/custom_order/custom_order_normalizer.dart';
@@ -4354,6 +4355,10 @@ class DiatarMainController extends ChangeNotifier {
     await _sender.stop();
     await _mqttSender.close();
     await _desktopProjectorBridge.dispose();
+    if (kIsWeb) {
+      await browser_window_close.tryCloseBrowserWindow();
+      return;
+    }
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       exit(0);
     } else {

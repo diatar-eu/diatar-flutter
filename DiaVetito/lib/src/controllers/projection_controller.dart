@@ -10,6 +10,7 @@ import 'package:flutter/widgets.dart';
 import '../services/settings_store.dart';
 import '../services/tcp_server_service.dart';
 import '../services/web_mqtt_settings.dart';
+import '../utils/browser_window_close.dart' as browser_window_close;
 
 class ProjectionController extends ChangeNotifier {
   static const MethodChannel _systemChannel = MethodChannel(
@@ -243,6 +244,10 @@ class ProjectionController extends ChangeNotifier {
     _setStatus('statusExitRequested');
     await _server.stop();
     await _mqtt.closeReceiver();
+    if (kIsWeb) {
+      await browser_window_close.tryCloseBrowserWindow();
+      return;
+    }
     if (!kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.windows ||
             defaultTargetPlatform == TargetPlatform.linux)) {
