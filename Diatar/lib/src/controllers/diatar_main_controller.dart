@@ -1773,6 +1773,69 @@ class DiatarMainController extends ChangeNotifier {
     return _customOrder[index - 1].mergeWithNext;
   }
 
+  static String _normalizeMergeLabelSlashSpacing(String text) {
+    return text.replaceAll(RegExp(r'\s*/\s*'), '/').trim();
+  }
+
+  static bool _isMergeLabelBoundaryChar(String ch) {
+    return ch == ' ' ||
+        ch == ':' ||
+        ch == '/' ||
+        ch == ',' ||
+        ch == '-' ||
+        ch == '(' ||
+        ch == ')' ||
+        ch == '[' ||
+        ch == ']' ||
+        ch == '{' ||
+        ch == '}';
+  }
+
+  static String _semanticSharedMergeLabelPrefix(String left, String right) {
+    final int limit = math.min(left.length, right.length);
+    int rawShared = 0;
+    while (rawShared < limit && left[rawShared] == right[rawShared]) {
+      rawShared++;
+    }
+    if (rawShared == 0) {
+      return '';
+    }
+    int boundary = 0;
+    for (int i = 0; i < rawShared; i++) {
+      if (_isMergeLabelBoundaryChar(left[i])) {
+        boundary = i + 1;
+      }
+    }
+    if (boundary <= 0) {
+      return '';
+    }
+    return left.substring(0, boundary);
+  }
+
+  @visibleForTesting
+  static String formatMergedProjectionLabel(
+    String leaderLabel,
+    String followerLabel,
+  ) {
+    final String left = _normalizeMergeLabelSlashSpacing(leaderLabel);
+    final String right = _normalizeMergeLabelSlashSpacing(followerLabel);
+    if (left.isEmpty) return right;
+    if (right.isEmpty) return left;
+    if (left == right) return left;
+
+    final String sharedPrefix = _semanticSharedMergeLabelPrefix(left, right);
+    if (sharedPrefix.isEmpty) {
+      return '$left, $right';
+    }
+
+    final String leftSuffix = left.substring(sharedPrefix.length).trimLeft();
+    final String rightSuffix = right.substring(sharedPrefix.length).trimLeft();
+    if (leftSuffix.isEmpty || rightSuffix.isEmpty) {
+      return '$left, $right';
+    }
+    return '$sharedPrefix$leftSuffix, $rightSuffix';
+  }
+
   /// Returns the combined display label for the merge-pair starting at [index].
   String customOrderProjectionTitleAt(int index) {
     if (!isCustomOrderEntryMergeLeaderAt(index)) {
@@ -1780,7 +1843,8 @@ class DiatarMainController extends ChangeNotifier {
     }
     final String leader = _customOrder[index].label;
     if (index + 1 < _customOrder.length) {
-      return '$leader / ${_customOrder[index + 1].label}';
+      final String follower = _customOrder[index + 1].label;
+      return formatMergedProjectionLabel(leader, follower);
     }
     return leader;
   }
