@@ -59,6 +59,8 @@ Future<void> main() async {
     await controlChannel.setMethodCallHandler((MethodCall call) async {
       if (call.method == 'showControl') {
         await DesktopProjectorBridge.instance.showControlWindow();
+      } else if (call.method == 'focusControl') {
+        await DesktopProjectorBridge.instance.focusControlWindow();
       }
       return null;
     });

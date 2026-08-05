@@ -166,9 +166,19 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
       await windowManager.setAlwaysOnTop(!sameMonitor);
       if (!sameMonitor) {
         await windowManager.focus();
+      } else {
+        await _requestControlForeground();
       }
     } catch (_) {
       // Nem kritikus: következő settings/relocate ciklus újrapróbálja.
+    }
+  }
+
+  Future<void> _requestControlForeground() async {
+    try {
+      await _controlChannel.invokeMethod('focusControl');
+    } catch (_) {
+      // nem kritikus
     }
   }
 

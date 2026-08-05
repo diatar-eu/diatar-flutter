@@ -28,6 +28,7 @@ class DesktopProjectorBridge {
   WindowController? _windowController;
   bool _starting = false;
   bool _enabled = false;
+  bool _controlWindowHidden = false;
   Future<void> _settingsTransition = Future<void>.value();
   AppSettings _lastSettings = const AppSettings();
 
@@ -206,6 +207,7 @@ class DesktopProjectorBridge {
     } catch (_) {
       // nem kritikus
     }
+    _controlWindowHidden = true;
   }
 
   /// Visszaállítja a vezérlő (fő) ablakot a vetítésbe való kattintás után.
@@ -225,6 +227,7 @@ class DesktopProjectorBridge {
       await windowManager.setOpacity(1.0);
       await windowManager.show();
       await windowManager.focus();
+      _controlWindowHidden = false;
     } catch (_) {
       // nem kritikus
     }
@@ -232,6 +235,20 @@ class DesktopProjectorBridge {
     // (pl. a vetítőbe kattintás miatt), hogy a UI visszaálljon.
     try {
       onControlWindowRestored?.call();
+    } catch (_) {
+      // nem kritikus
+    }
+  }
+
+  /// A vezérlőablakot fókuszba hozza a vetítő fölé úgy, hogy közben
+  /// a rejtett állapotot nem módosítja.
+  Future<void> focusControlWindow() async {
+    if (!_enabled || _controlWindowHidden) {
+      return;
+    }
+    try {
+      await windowManager.show();
+      await windowManager.focus();
     } catch (_) {
       // nem kritikus
     }
