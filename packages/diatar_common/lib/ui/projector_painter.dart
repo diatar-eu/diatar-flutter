@@ -759,16 +759,26 @@ class ProjectorPainter extends CustomPainter {
     }
 
     final double fitHeight = size.height * 0.95;
-    final double minScale = (_minAutoFontSize / baseFontSize).clamp(0.01, 1.0);
+    final int renderedLineCount = math.max(
+      1,
+      frame.record.lines.length +
+          ((!globals.hideTitle && frame.record.title.isNotEmpty) ? 1 : 0),
+    );
+    final double theoreticalMaxFontSize = fitHeight / renderedLineCount;
+    final double startFontSize = math
+        .min(baseFontSize, theoreticalMaxFontSize)
+        .clamp(_minAutoFontSize, baseFontSize);
+
+    final double minScale = (_minAutoFontSize / startFontSize).clamp(0.01, 1.0);
     double sizeMul = 1.0;
     double step = _autoResizeBigStep;
     bool preferPreferredBreaks = true;
 
     int guard = 0;
     while (sizeMul >= minScale && guard++ < 300) {
-      final double fontSize = (baseFontSize * sizeMul).clamp(
+      final double fontSize = (startFontSize * sizeMul).clamp(
         _minAutoFontSize,
-        baseFontSize,
+        startFontSize,
       );
 
       final bool preferredFits =
@@ -806,7 +816,7 @@ class ProjectorPainter extends CustomPainter {
 
     final double fallbackFontSize = _minAutoFontSize.clamp(
       _minAutoFontSize,
-      baseFontSize,
+      startFontSize,
     );
     final bool preferredFitsAtMin =
         _measureTextRequiredHeightForFontSize(
