@@ -307,6 +307,50 @@ void main() {
     expect(continuations.any((List<bool> pair) => pair[0] && pair[1]), true);
   });
 
+  test('slur apex moves away from intermediate notes', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(),
+      settings: const AppSettings(),
+    );
+
+    final Offset apexWithoutMiddle = painter.debugSlurApexForPoints(
+      <Offset>[const Offset(0, 10), const Offset(20, 10)],
+      down: false,
+      lineGap: 4,
+    );
+    final Offset apexWithMiddle = painter.debugSlurApexForPoints(
+      <Offset>[
+        const Offset(0, 10),
+        const Offset(10, 4),
+        const Offset(20, 10),
+      ],
+      down: false,
+      lineGap: 4,
+    );
+
+    expect(apexWithMiddle.dy, lessThan(apexWithoutMiddle.dy));
+    expect(apexWithMiddle.dy, lessThan(4));
+    expect(apexWithMiddle.dx, 10);
+  });
+
+  test('slur is translated by one staff space without reshaping', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(),
+      settings: const AppSettings(),
+    );
+
+    expect(
+      painter.debugSlurYOffsetForDirection(down: false, lineGap: 4),
+      -4,
+    );
+    expect(
+      painter.debugSlurYOffsetForDirection(down: true, lineGap: 4),
+      4,
+    );
+  });
+
   test('kotta control sequences do not create intra-word wrap points', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,

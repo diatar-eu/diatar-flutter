@@ -217,6 +217,23 @@ class ProjectorPainter extends CustomPainter {
     }).toList();
   }
 
+  @visibleForTesting
+  Offset debugSlurApexForPoints(
+    List<Offset> points, {
+    required bool down,
+    double lineGap = 4.0,
+  }) {
+    return _resolveSlurApex(points, down: down, lineGap: lineGap);
+  }
+
+  @visibleForTesting
+  double debugSlurYOffsetForDirection({
+    required bool down,
+    double lineGap = 4.0,
+  }) {
+    return _slurYOffset(down: down, lineGap: lineGap);
+  }
+
   List<String> debugTextWrappedRowsForLine(
     String source, {
     double fontSize = 24,
@@ -3538,10 +3555,14 @@ class ProjectorPainter extends CustomPainter {
   void _trackSlurPoint(_KottaDrawState state, Offset noteCenter) {
     if (state.slurType != ' ') {
       state.slurEnd = noteCenter;
+      state.slurPoints.add(noteCenter);
       return;
     }
     state.slurStart = noteCenter;
     state.slurEnd = noteCenter;
+    state.slurPoints
+      ..clear()
+      ..add(noteCenter);
     if (state.slurNext != ' ') {
       state.slurType = state.slurNext;
       state.slurNext = ' ';
@@ -3558,24 +3579,34 @@ class ProjectorPainter extends CustomPainter {
     if (state.slurStart == null || state.slurEnd == null || t == ' ') {
       state.slurType = ' ';
       state.slurNext = ' ';
+      state.slurPoints.clear();
       return;
     }
     final Offset s = state.slurStart!;
     final Offset e = state.slurEnd!;
     final bool down = t.toLowerCase() == 'a';
-    final double dy = down ? lineGap * 1.1 : -lineGap * 1.1;
-    final Offset c1 = Offset((s.dx * 3 + e.dx) / 4, (s.dy + e.dy) / 2 + dy);
-    final Offset c2 = Offset((s.dx + e.dx * 3) / 4, (s.dy + e.dy) / 2 + dy);
+    final double slurYOffset = _slurYOffset(down: down, lineGap: lineGap);
+    final Offset apex = _resolveSlurApex(
+      state.slurPoints.isEmpty ? <Offset>[s, e] : state.slurPoints,
+      down: down,
+      lineGap: lineGap,
+    );
+    final double edgeOffset = math.max(1.0, lineGap * 0.25);
+    final double innerY = apex.dy + slurYOffset + (down ? -edgeOffset : edgeOffset);
+    final Offset c1 = Offset((s.dx * 3 + e.dx) / 4, apex.dy + slurYOffset);
+    final Offset c2 = Offset((s.dx + e.dx * 3) / 4, apex.dy + slurYOffset);
+    final Offset start = Offset(s.dx, s.dy + slurYOffset);
+    final Offset end = Offset(e.dx, e.dy + slurYOffset);
     final Path p = Path()
-      ..moveTo(s.dx, s.dy)
-      ..cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, e.dx, e.dy)
+      ..moveTo(start.dx, start.dy)
+      ..cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, end.dx, end.dy)
       ..cubicTo(
         c2.dx,
-        c2.dy + (down ? -lineGap * 0.25 : lineGap * 0.25),
+        innerY,
         c1.dx,
-        c1.dy + (down ? -lineGap * 0.25 : lineGap * 0.25),
-        s.dx,
-        s.dy,
+        innerY,
+        start.dx,
+        start.dy,
       )
       ..close();
     canvas.drawPath(p, Paint()..color = globals.txtColor);
@@ -3583,6 +3614,35 @@ class ProjectorPainter extends CustomPainter {
     state.slurNext = ' ';
     state.slurStart = null;
     state.slurEnd = null;
+    state.slurPoints.clear();
+  }
+
+  Offset _resolveSlurApex(
+    List<Offset> points, {
+    required bool down,
+    required double lineGap,
+  }) {
+    if (points.isEmpty) {
+      return Offset.zero;
+    }
+
+    double extremeY = points.first.dy;
+    for (final Offset point in points) {
+      if (down) {
+        extremeY = math.max(extremeY, point.dy);
+      } else {
+        extremeY = math.min(extremeY, point.dy);
+      }
+    }
+
+    final double clearance = math.max(lineGap * 0.9, lineGap * 0.55);
+    final double apexY = down ? extremeY + clearance : extremeY - clearance;
+    final double apexX = (points.first.dx + points.last.dx) / 2.0;
+    return Offset(apexX, apexY);
+  }
+
+  double _slurYOffset({required bool down, required double lineGap}) {
+    return down ? lineGap : -lineGap;
   }
 
   void _trackTupletPoint(
@@ -4401,6 +4461,7 @@ class _KottaDrawState {
   String slurNext = ' ';
   Offset? slurStart;
   Offset? slurEnd;
+  final List<Offset> slurPoints = <Offset>[];
   bool triLe = false;
   String triTipus = ' ';
   bool deferFinalDoubleBarAtEnd = false;
@@ -4421,6 +4482,7 @@ class _KottaDrawState {
     c.slurNext = slurNext;
     c.slurStart = slurStart;
     c.slurEnd = slurEnd;
+    c.slurPoints.addAll(slurPoints);
     c.triLe = triLe;
     c.triTipus = triTipus;
     c.deferFinalDoubleBarAtEnd = deferFinalDoubleBarAtEnd;
