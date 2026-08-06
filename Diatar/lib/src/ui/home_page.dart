@@ -3950,15 +3950,15 @@ class _DialistPanelState extends State<_DialistPanel> {
         .where((CustomOrderSet s) => s.enabled)
         .toList();
 
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _CustomOrderSetSelector(controller: controller),
-        if (enabledSets.length > 1) const SizedBox(height: 6),
         Expanded(
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
+              _CustomOrderSetSelector(controller: controller),
+              if (enabledSets.length > 1) const SizedBox(height: 6),
               Expanded(
                 child: InputDecorator(
                   decoration: InputDecoration(
@@ -4038,50 +4038,50 @@ class _DialistPanelState extends State<_DialistPanel> {
                         ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: <Widget>[
-                  Tooltip(
-                    message: _statusTooltip(
-                      context,
-                      title: context.l10n.settingsInternetTitle,
-                      state: _mqttIndicatorState(controller),
-                    ),
-                    child: InkResponse(
-                      radius: 20,
-                      onTap: widget.onInternetSettingsTap,
-                      child: _statusIcon(
-                        icon: Icons.public,
-                        state: _mqttIndicatorState(controller),
-                        theme: theme,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (!kIsWeb)
-                    Tooltip(
-                      message: _statusTooltip(
-                        context,
-                        title: context.l10n.settingsLocalNetworkTitle,
-                        state: _localNetworkIndicatorState(controller),
-                      ),
-                      child: InkResponse(
-                        radius: 20,
-                        onTap: widget.onLocalNetworkSettingsTap,
-                        child: _statusIcon(
-                          icon: Icons.lan,
-                          state: _localNetworkIndicatorState(controller),
-                          theme: theme,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-                  widget.projectionDisplayButton,
-                ],
-              ),
             ],
           ),
+        ),
+        const SizedBox(width: 8),
+        Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: <Widget>[
+            Tooltip(
+              message: _statusTooltip(
+                context,
+                title: context.l10n.settingsInternetTitle,
+                state: _mqttIndicatorState(controller),
+              ),
+              child: InkResponse(
+                radius: 20,
+                onTap: widget.onInternetSettingsTap,
+                child: _statusIcon(
+                  icon: Icons.public,
+                  state: _mqttIndicatorState(controller),
+                  theme: theme,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (!kIsWeb)
+              Tooltip(
+                message: _statusTooltip(
+                  context,
+                  title: context.l10n.settingsLocalNetworkTitle,
+                  state: _localNetworkIndicatorState(controller),
+                ),
+                child: InkResponse(
+                  radius: 20,
+                  onTap: widget.onLocalNetworkSettingsTap,
+                  child: _statusIcon(
+                    icon: Icons.lan,
+                    state: _localNetworkIndicatorState(controller),
+                    theme: theme,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
+            widget.projectionDisplayButton,
+          ],
         ),
       ],
     );
