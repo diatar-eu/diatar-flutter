@@ -2209,8 +2209,15 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
-  Future<void> syncProjectionToCurrentDia() {
-    return _syncCurrentDia();
+  Future<void> syncProjectionToCurrentDia() async {
+    _projectedCustomCursor = -1;
+    if (customOrderActive &&
+        _customOrderCursor >= 0 &&
+        _customOrderCursor < _customOrder.length) {
+      _selectByCustomOrderCursor(_customOrderCursor, sync: true);
+      return;
+    }
+    await _syncCurrentDia();
   }
 
   Future<void> projectCustomOrderEntry(
