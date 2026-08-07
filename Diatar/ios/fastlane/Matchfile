@@ -1,4 +1,4 @@
-git_url("https://github.com/diatar-eu/ios-certs.git")
+git_url("https://github.com/szentjozsefhackathon/ios-certs.git")
 storage_mode("git")
 type("appstore")
 app_identifier(["eu.diatar.diatar"])
