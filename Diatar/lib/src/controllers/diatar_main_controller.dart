@@ -225,6 +225,7 @@ class DiatarMainController extends ChangeNotifier {
   Map<String, int> _lastSongPerBook = <String, int>{};
   Map<String, int> _lastVersePerBook = <String, int>{};
   bool _startupDownloadDialogHandled = false;
+  bool _startupDownloadDialogRequested = false;
   String _zsolozsmaLastDiagnostics = '';
   static const String _customOrderSourceZsolozsmaUnsaved = 'zsolozsma-unsaved';
   static const String _customOrderSourceBatyuUnsaved = 'batyu-unsaved';
@@ -813,7 +814,7 @@ class DiatarMainController extends ChangeNotifier {
   bool get shouldAutoOpenDownloadDialog =>
       !_startupDownloadDialogHandled &&
       !loading &&
-      statusCode == 'statusNoDtxFiles';
+      (statusCode == 'statusNoDtxFiles' || _startupDownloadDialogRequested);
   bool get tcpActive => settings.tcpClientEnabled;
   bool get tcpConfigured => _transportSettingsPolicy.isTcpConfigured(settings);
 
@@ -846,6 +847,7 @@ class DiatarMainController extends ChangeNotifier {
 
   void markStartupDownloadDialogHandled() {
     _startupDownloadDialogHandled = true;
+    _startupDownloadDialogRequested = false;
   }
 
   void _setStatus(
@@ -891,6 +893,7 @@ class DiatarMainController extends ChangeNotifier {
       await _castService!.initialize();
     }
     await reloadBooks();
+    unawaited(_checkStartupDtxUpdates());
     await _tryAutoLoadTodayDia();
     if (customOrderActive &&
         _customOrderCursor >= 0 &&
@@ -984,6 +987,30 @@ class DiatarMainController extends ChangeNotifier {
           ..sort();
     await prefs.setStringList(_disabledDtzPrefsKey, normalized);
     _hasSavedDtzExclusions = true;
+  }
+
+  Future<void> _checkStartupDtxUpdates() async {
+    if (_startupDownloadDialogHandled || _startupDownloadDialogRequested) {
+      return;
+    }
+    try {
+      final List<DtxManageItem> items = await loadDtxManagerItems();
+      final bool hasInstalledUpdate = items.any(
+        (DtxManageItem managed) =>
+            managed.item.isOfficial &&
+            managed.item.isInstalled &&
+            managed.item.updateAvailable,
+      );
+      if (!hasInstalledUpdate ||
+          _startupDownloadDialogHandled ||
+          _startupDownloadDialogRequested) {
+        return;
+      }
+      _startupDownloadDialogRequested = true;
+      notifyListeners();
+    } catch (_) {
+      // Offline or remote list failure should not block startup.
+    }
   }
 
   void _configureSender() {
