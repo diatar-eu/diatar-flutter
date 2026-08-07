@@ -141,12 +141,64 @@ void main() {
       throwsA(isA<DiatarArchiveException>()),
     );
   });
+
+  test('records a CRC error and removes the partial file', () async {
+    const String content = 'this is the original song content for the crc test';
+    final Uint8List bytes = _storeZip(<String, List<int>>{
+      'diatar/DTXs/song.dtx': utf8.encode(content),
+    });
+
+    final List<int> haystack = bytes;
+    final List<int> needle = utf8.encode(content);
+    int index = -1;
+    for (int i = 0; i + needle.length <= haystack.length; i++) {
+      if (haystack[i] == needle[0]) {
+        bool matches = true;
+        for (int j = 1; j < needle.length; j++) {
+          if (haystack[i + j] != needle[j]) {
+            matches = false;
+            break;
+          }
+        }
+        if (matches) {
+          index = i;
+          break;
+        }
+      }
+    }
+    expect(index, greaterThanOrEqualTo(0));
+    final Uint8List corrupted = Uint8List.fromList(bytes);
+    corrupted[index + needle.length ~/ 2] ^= 0xff;
+
+    final DiatarImportResult result = await service.importArchive(
+      corrupted,
+      existingFilePolicy: ExistingFilePolicy.overwrite,
+    );
+
+    expect(result.importedFileCount, 0);
+    expect(result.errors, isNotEmpty);
+    expect(
+      await fileSystem.file('/documents/diatar/DTXs/song.dtx').exists(),
+      isFalse,
+    );
+  });
 }
 
 Uint8List _zip(Map<String, List<int>> files) {
   final Archive archive = Archive()..addFile(ArchiveFile.directory('diatar/'));
   for (final MapEntry<String, List<int>> entry in files.entries) {
     archive.addFile(ArchiveFile.bytes(entry.key, entry.value));
+  }
+  return Uint8List.fromList(ZipEncoder().encode(archive));
+}
+
+Uint8List _storeZip(Map<String, List<int>> files) {
+  final Archive archive = Archive()..addFile(ArchiveFile.directory('diatar/'));
+  for (final MapEntry<String, List<int>> entry in files.entries) {
+    archive.addFile(
+      ArchiveFile.bytes(entry.key, entry.value)
+        ..compression = CompressionType.none,
+    );
   }
   return Uint8List.fromList(ZipEncoder().encode(archive));
 }

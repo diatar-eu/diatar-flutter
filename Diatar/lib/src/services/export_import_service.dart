@@ -1,3 +1,4 @@
+import 'dart:io' show IOSink;
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -112,26 +113,26 @@ class ExportImportService {
   }
 
   Future<DiatarImportPreview> inspectImportArchive(Uint8List zipData) async {
-    final _DecodedArchive decoded = _decodeArchiveFromBytes(zipData);
+    final _ReadArchive read = _readArchiveFromBytes(zipData);
     try {
       return _inspectValidatedArchive(
-        _decodeAndValidateArchive(decoded.archive),
+        _validateCentralDirectory(read.headers),
       );
     } finally {
-      await decoded.close();
+      await read.close();
     }
   }
 
   Future<DiatarImportPreview> inspectImportArchiveFile(
     String zipFilePath,
   ) async {
-    final _DecodedArchive decoded = _decodeArchiveFromFilePath(zipFilePath);
+    final _ReadArchive read = _readArchiveFromFilePath(zipFilePath);
     try {
       return _inspectValidatedArchive(
-        _decodeAndValidateArchive(decoded.archive),
+        _validateCentralDirectory(read.headers),
       );
     } finally {
-      await decoded.close();
+      await read.close();
     }
   }
 
@@ -139,14 +140,14 @@ class ExportImportService {
     Uint8List zipData, {
     required ExistingFilePolicy existingFilePolicy,
   }) async {
-    final _DecodedArchive decoded = _decodeArchiveFromBytes(zipData);
+    final _ReadArchive read = _readArchiveFromBytes(zipData);
     try {
       return _importValidatedArchive(
-        _decodeAndValidateArchive(decoded.archive),
+        _validateCentralDirectory(read.headers),
         existingFilePolicy: existingFilePolicy,
       );
     } finally {
-      await decoded.close();
+      await read.close();
     }
   }
 
@@ -154,45 +155,49 @@ class ExportImportService {
     String zipFilePath, {
     required ExistingFilePolicy existingFilePolicy,
   }) async {
-    final _DecodedArchive decoded = _decodeArchiveFromFilePath(zipFilePath);
+    final _ReadArchive read = _readArchiveFromFilePath(zipFilePath);
     try {
       return _importValidatedArchive(
-        _decodeAndValidateArchive(decoded.archive),
+        _validateCentralDirectory(read.headers),
         existingFilePolicy: existingFilePolicy,
       );
     } finally {
-      await decoded.close();
+      await read.close();
     }
   }
 
-  _DecodedArchive _decodeArchiveFromBytes(Uint8List zipData) {
-    try {
-      final Archive archive = ZipDecoder().decodeBytes(zipData, verify: true);
-      return _DecodedArchive(
-        archive: archive,
-        close: () async {
-          await archive.clear();
-        },
-      );
-    } catch (error) {
-      throw DiatarArchiveException(
-        DiatarArchiveErrorCode.invalidArchive,
-        error,
-      );
-    }
+  static const int _streamBufferSize = 256 * 1024;
+
+  _ReadArchive _readArchiveFromBytes(Uint8List zipData) {
+    final InputMemoryStream input = InputMemoryStream(zipData);
+    return _readArchiveFromInput(input, close: input.close);
   }
 
-  _DecodedArchive _decodeArchiveFromFilePath(String zipFilePath) {
-    final InputFileStream input = InputFileStream(zipFilePath);
+  _ReadArchive _readArchiveFromFilePath(String zipFilePath) {
+    final InputFileStream input = InputFileStream(
+      zipFilePath,
+      bufferSize: _streamBufferSize,
+    );
+    return _readArchiveFromInput(input, close: input.close);
+  }
+
+  /// Reads only the central directory of a ZIP archive (the end of central
+  /// directory record, ZIP64 record and per-entry headers). No file content
+  /// is read or decompressed, so memory usage stays proportional to the
+  /// number of entries rather than the total uncompressed size.
+  _ReadArchive _readArchiveFromInput(
+    InputStream input, {
+    required Future<void> Function() close,
+  }) {
     try {
-      final Archive archive = ZipDecoder().decodeStream(input, verify: true);
-      return _DecodedArchive(
-        archive: archive,
-        close: () async {
-          await input.close();
-          await archive.clear();
-        },
-      );
+      final ZipDirectory directory = ZipDirectory();
+      directory.read(input);
+      if (directory.filePosition < 0) {
+        throw const FormatException(
+          'End of central directory record not found.',
+        );
+      }
+      return _ReadArchive(headers: directory.fileHeaders, close: close);
     } catch (error) {
       input.closeSync();
       throw DiatarArchiveException(
@@ -265,14 +270,44 @@ class ExportImportService {
         }
 
         await target.parent.create(recursive: true);
-        final OutputFileStream output = OutputFileStream(target.path);
-        try {
-          archivedFile.archiveEntry.writeContent(output, freeMemory: true);
-        } finally {
-          await output.close();
-          archivedFile.archiveEntry.clear();
+        final ZipFile? entry = archivedFile.header.file;
+        if (entry == null) {
+          throw const FormatException('Archive entry could not be read.');
         }
-        importedFileCount++;
+
+        _FsOutputStream? output;
+        Object? failure;
+        try {
+          output = _FsOutputStream(target);
+          output.open();
+          entry.decompress(output);
+          final int computedCrc32 = output.crc32;
+          final int expectedCrc32 = archivedFile.header.crc32;
+          if (computedCrc32 != expectedCrc32) {
+            throw FormatException(
+              'CRC mismatch: expected $expectedCrc32, got $computedCrc32.',
+            );
+          }
+        } catch (error) {
+          failure = error;
+        } finally {
+          if (output != null) {
+            await output.close();
+          }
+        }
+
+        if (failure != null) {
+          try {
+            if (await target.exists()) {
+              await target.delete();
+            }
+          } catch (_) {
+            // Best effort cleanup of the partial file.
+          }
+          errors.add('${archivedFile.relativePath}: $failure');
+        } else {
+          importedFileCount++;
+        }
       } catch (error) {
         errors.add('${archivedFile.relativePath}: $error');
       }
@@ -293,16 +328,19 @@ class ExportImportService {
     );
   }
 
-  _ValidatedArchive _decodeAndValidateArchive(Archive archive) {
+  _ValidatedArchive _validateCentralDirectory(List<ZipFileHeader> headers) {
     final List<_ValidatedFile> files = <_ValidatedFile>[];
     final Set<String> directories = <String>{};
     final Set<String> targets = <String>{};
 
     try {
-      for (final ArchiveFile entry in archive.files) {
-        final String archiveName = entry.name.replaceAll(r'\', '/');
+      for (final ZipFileHeader header in headers) {
+        final String archiveName = header.filename.replaceAll(r'\', '/');
+        final int mode = header.externalFileAttributes >> 16;
+        final bool isDirectory =
+            archiveName.endsWith('/') || (mode & 0x4000) != 0;
         if (archiveName == 'diatar' || archiveName == 'diatar/') {
-          if (entry.isFile) {
+          if (!isDirectory) {
             throw const FormatException('The diatar root is not a directory.');
           }
           continue;
@@ -310,7 +348,7 @@ class ExportImportService {
         if (!archiveName.startsWith('diatar/')) {
           throw const FormatException('Unexpected archive root.');
         }
-        if (entry.isSymbolicLink) {
+        if ((mode & 0xf000) == 0xa000) {
           throw const FormatException('Symbolic links are not supported.');
         }
 
@@ -320,11 +358,11 @@ class ExportImportService {
           throw const FormatException('Duplicate archive entry.');
         }
 
-        if (entry.isDirectory) {
+        if (isDirectory) {
           directories.add(relativePath);
         } else {
           files.add(
-            _ValidatedFile(relativePath: relativePath, archiveEntry: entry),
+            _ValidatedFile(relativePath: relativePath, header: header),
           );
         }
       }
@@ -402,18 +440,122 @@ class _ValidatedArchive {
 }
 
 class _ValidatedFile {
-  const _ValidatedFile({
-    required this.relativePath,
-    required this.archiveEntry,
-  });
+  const _ValidatedFile({required this.relativePath, required this.header});
 
   final String relativePath;
-  final ArchiveFile archiveEntry;
+  final ZipFileHeader header;
 }
 
-class _DecodedArchive {
-  const _DecodedArchive({required this.archive, required this.close});
+class _ReadArchive {
+  const _ReadArchive({required this.headers, required this.close});
 
-  final Archive archive;
+  final List<ZipFileHeader> headers;
   final Future<void> Function() close;
+}
+
+/// A streaming [OutputStream] that writes decompressed bytes directly to a
+/// [File] through the injected [FileSystem] abstraction, keeping memory usage
+/// bounded by a fixed chunk buffer instead of the uncompressed file size.
+class _FsOutputStream extends OutputStream {
+  static const int _chunkSize = 64 * 1024;
+
+  _FsOutputStream(File file)
+      : _file = file,
+        super(byteOrder: ByteOrder.littleEndian);
+
+  final File _file;
+  final Uint8List _chunk = Uint8List(_chunkSize);
+  IOSink? _sink;
+  int _chunkLength = 0;
+  int _length = 0;
+  int _crc32 = 0;
+
+  @override
+  int get length => _length;
+
+  /// CRC32 of all bytes written so far.
+  int get crc32 => _crc32;
+
+  /// Opens the underlying file for writing. Called before the first write so
+  /// that empty entries still produce an (empty) file on disk.
+  @override
+  void open() {
+    _sink ??= _file.openWrite();
+  }
+
+  void _flushChunk() {
+    if (_chunkLength == 0) {
+      return;
+    }
+    final Uint8List bytes = Uint8List.fromList(
+      _chunk.sublist(0, _chunkLength),
+    );
+    _crc32 = getCrc32(bytes, _crc32);
+    _sink!.add(bytes);
+    _chunkLength = 0;
+  }
+
+  @override
+  void writeByte(int value) {
+    _chunk[_chunkLength++] = value;
+    _length++;
+    if (_chunkLength == _chunk.length) {
+      _flushChunk();
+    }
+  }
+
+  @override
+  void writeBytes(List<int> bytes, {int? length}) {
+    final int count = length ?? bytes.length;
+    int offset = 0;
+    int remaining = count;
+    while (remaining > 0) {
+      final int space = _chunk.length - _chunkLength;
+      if (space == 0) {
+        _flushChunk();
+        continue;
+      }
+      final int take = remaining < space ? remaining : space;
+      _chunk.setRange(_chunkLength, _chunkLength + take, bytes, offset);
+      _chunkLength += take;
+      offset += take;
+      remaining -= take;
+      _length += take;
+    }
+  }
+
+  @override
+  void writeStream(InputStream stream) {
+    const int chunkSize = 1024 * 1024;
+    var remaining = stream.length;
+    while (remaining > 0) {
+      final int take = remaining < chunkSize ? remaining : chunkSize;
+      writeBytes(stream.readBytes(take).toUint8List());
+      remaining -= take;
+    }
+  }
+
+  @override
+  void flush() {
+    _flushChunk();
+  }
+
+  @override
+  void clear() {
+    _flushChunk();
+  }
+
+  @override
+  Future<void> close() async {
+    _flushChunk();
+    await _sink?.close();
+    _sink = null;
+  }
+
+  @override
+  Uint8List subset(int start, [int? end]) {
+    throw UnsupportedError(
+      'Reading back from an output stream is not supported.',
+    );
+  }
 }
