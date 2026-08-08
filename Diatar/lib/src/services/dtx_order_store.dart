@@ -128,8 +128,6 @@ class StoredCustomOrderSet {
     this.enabled = true,
     this.baseName,
     this.sourceType,
-    this.zsolozsmaLabel,
-    this.batyuLabel,
     this.cursor = -1,
   });
 
@@ -139,8 +137,6 @@ class StoredCustomOrderSet {
   final bool enabled;
   final String? baseName;
   final String? sourceType;
-  final String? zsolozsmaLabel;
-  final String? batyuLabel;
 
   /// A diasor utoljára ismert kurzorpozíciója. Visszamenőleges
   /// kompatibilitás: ha a tárolt JSON nem tartalmazza, -1 a default.
@@ -159,12 +155,6 @@ class StoredCustomOrderSet {
     }
     if (sourceType != null && sourceType!.trim().isNotEmpty) {
       out['sourceType'] = sourceType!.trim();
-    }
-    if (zsolozsmaLabel != null && zsolozsmaLabel!.trim().isNotEmpty) {
-      out['zsolozsmaLabel'] = zsolozsmaLabel!.trim();
-    }
-    if (batyuLabel != null && batyuLabel!.trim().isNotEmpty) {
-      out['batyuLabel'] = batyuLabel!.trim();
     }
     return out;
   }
@@ -191,8 +181,6 @@ class StoredCustomOrderSet {
     final Object? enabled = raw['enabled'];
     final Object? baseName = raw['baseName'];
     final Object? sourceType = raw['sourceType'];
-    final Object? zsolozsmaLabel = raw['zsolozsmaLabel'];
-    final Object? batyuLabel = raw['batyuLabel'];
     final Object? cursor = raw['cursor'];
     return StoredCustomOrderSet(
       id: id,
@@ -201,8 +189,6 @@ class StoredCustomOrderSet {
       enabled: enabled is bool ? enabled : true,
       baseName: baseName is String ? baseName.trim() : null,
       sourceType: sourceType is String ? sourceType.trim() : null,
-      zsolozsmaLabel: zsolozsmaLabel is String ? zsolozsmaLabel.trim() : null,
-      batyuLabel: batyuLabel is String ? batyuLabel.trim() : null,
       cursor: cursor is num ? cursor.toInt() : -1,
     );
   }
@@ -216,10 +202,6 @@ class DtxOrderStore {
       'CurrentCustomOrderBaseName';
   static const String _kCurrentCustomOrderSourceType =
       'CurrentCustomOrderSourceType';
-  static const String _kCurrentCustomOrderZsolozsmaLabel =
-      'CurrentCustomOrderZsolozsmaLabel';
-  static const String _kCurrentCustomOrderBatyuLabel =
-      'CurrentCustomOrderBatyuLabel';
   static const String _kCustomOrderPresets = 'CustomOrderPresets';
   static const String _kCustomOrderSets = 'CustomOrderSets';
   static const String _kCustomOrderSetsActive = 'CustomOrderSetsActive';
@@ -243,8 +225,6 @@ class DtxOrderStore {
     required bool active,
     String? baseName,
     String? sourceType,
-    String? zsolozsmaLabel,
-    String? batyuLabel,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String json = jsonEncode(
@@ -258,14 +238,6 @@ class DtxOrderStore {
       _kCurrentCustomOrderSourceType,
       (sourceType ?? '').trim(),
     );
-    await prefs.setString(
-      _kCurrentCustomOrderZsolozsmaLabel,
-      (zsolozsmaLabel ?? '').trim(),
-    );
-    await prefs.setString(
-      _kCurrentCustomOrderBatyuLabel,
-      (batyuLabel ?? '').trim(),
-    );
   }
 
   Future<
@@ -274,8 +246,6 @@ class DtxOrderStore {
       bool active,
       String? baseName,
       String? sourceType,
-      String? zsolozsmaLabel,
-      String? batyuLabel,
     })
   >
   loadCurrentCustomOrder() async {
@@ -292,16 +262,6 @@ class DtxOrderStore {
     final String? sourceType = sourceTypeRaw.trim().isEmpty
         ? null
         : sourceTypeRaw.trim();
-    final String zsolozsmaLabelRaw =
-        prefs.getString(_kCurrentCustomOrderZsolozsmaLabel) ?? '';
-    final String? zsolozsmaLabel = zsolozsmaLabelRaw.trim().isEmpty
-        ? null
-        : zsolozsmaLabelRaw.trim();
-    final String batyuLabelRaw =
-        prefs.getString(_kCurrentCustomOrderBatyuLabel) ?? '';
-    final String? batyuLabel = batyuLabelRaw.trim().isEmpty
-        ? null
-        : batyuLabelRaw.trim();
 
     final List<StoredCustomOrderEntry> entries = <StoredCustomOrderEntry>[];
     try {
@@ -322,8 +282,6 @@ class DtxOrderStore {
       active: active,
       baseName: baseName,
       sourceType: sourceType,
-      zsolozsmaLabel: zsolozsmaLabel,
-      batyuLabel: batyuLabel,
     );
   }
 

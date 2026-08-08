@@ -3258,13 +3258,7 @@ class _BookDropdown extends StatelessWidget {
         : context.l10n.customOrderUnnamedFileName;
     final String diaName =
         controller.suggestedCustomOrderBaseName ?? fallbackDiaName;
-    final bool showZsolozsmaLabel = controller.customOrderIsUnsavedZsolozsma;
-    final bool showBatyuLabel = controller.customOrderIsUnsavedBatyu;
-    final String virtualBookLabel = showBatyuLabel
-        ? context.l10n.batyuBookLabel(diaName)
-        : showZsolozsmaLabel
-        ? context.l10n.zsolozsmaBookLabel(diaName)
-        : context.l10n.diaBookLabel(diaName);
+    final String virtualBookLabel = context.l10n.diaBookLabel(diaName);
     final List<_BookDropdownEntry> entries = _buildBookDropdownEntries(
       controller.books,
       context.l10n.ungroupedBookGroupLabel,

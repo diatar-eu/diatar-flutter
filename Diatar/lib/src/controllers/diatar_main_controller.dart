@@ -227,11 +227,7 @@ class DiatarMainController extends ChangeNotifier {
   bool _startupDownloadDialogHandled = false;
   bool _startupDownloadDialogRequested = false;
   String _zsolozsmaLastDiagnostics = '';
-  static const String _customOrderSourceZsolozsmaUnsaved = 'zsolozsma-unsaved';
-  static const String _customOrderSourceBatyuUnsaved = 'batyu-unsaved';
   String? _customOrderSourceType;
-  String? _zsolozsmaVirtualBookLabel;
-  String? _napiLelkiBatyuVirtualBookLabel;
   static const String _disabledDtzPrefsKey = 'disabled_dtz_files';
 
   /// A párhuzamosan betöltött diasorok (saját diasorok) listája.
@@ -310,8 +306,6 @@ class DiatarMainController extends ChangeNotifier {
           enabled: s.enabled,
           baseName: normalizedBaseName,
           sourceType: s.sourceType,
-          zsolozsmaLabel: s.zsolozsmaLabel,
-          batyuLabel: s.batyuLabel,
         );
       }).toList();
       _activeOrderSetIndex = storedSets.activeIndex;
@@ -320,8 +314,6 @@ class DiatarMainController extends ChangeNotifier {
         _customOrder = List<CustomOrderEntry>.from(active.entries);
         _lastImportedCustomOrderBaseName = active.baseName;
         _customOrderSourceType = active.sourceType;
-        _zsolozsmaVirtualBookLabel = active.zsolozsmaLabel;
-        _napiLelkiBatyuVirtualBookLabel = active.batyuLabel;
         customOrderActive = active.entries.isNotEmpty;
         _diaVirtualBookSelected = active.entries.isNotEmpty;
         _customOrderCursor = active.entries.isEmpty
@@ -345,8 +337,6 @@ class DiatarMainController extends ChangeNotifier {
         customOrderState.sourceType,
       );
       _customOrderSourceType = customOrderState.sourceType;
-      _zsolozsmaVirtualBookLabel = customOrderState.zsolozsmaLabel;
-      _napiLelkiBatyuVirtualBookLabel = customOrderState.batyuLabel;
       _diaVirtualBookSelected = customOrderState.diaVirtualBookSelected;
       if (_customOrder.isNotEmpty) {
         _customOrderSets = <CustomOrderSet>[
@@ -357,8 +347,6 @@ class DiatarMainController extends ChangeNotifier {
             enabled: true,
             baseName: _lastImportedCustomOrderBaseName,
             sourceType: customOrderState.sourceType,
-            zsolozsmaLabel: customOrderState.zsolozsmaLabel,
-            batyuLabel: customOrderState.batyuLabel,
           ),
         ];
         _activeOrderSetIndex = 0;
@@ -382,8 +370,6 @@ class DiatarMainController extends ChangeNotifier {
           entries: List<CustomOrderEntry>.from(_customOrder),
           baseName: _lastImportedCustomOrderBaseName,
           sourceType: _customOrderSourceType,
-          zsolozsmaLabel: _zsolozsmaVirtualBookLabel,
-          batyuLabel: _napiLelkiBatyuVirtualBookLabel,
           cursor: safeCursor,
         );
   }
@@ -406,8 +392,6 @@ class DiatarMainController extends ChangeNotifier {
             enabled: s.enabled,
             baseName: s.baseName,
             sourceType: s.sourceType,
-            zsolozsmaLabel: s.zsolozsmaLabel,
-            batyuLabel: s.batyuLabel,
           ),
         )
         .toList();
@@ -432,8 +416,6 @@ class DiatarMainController extends ChangeNotifier {
     _customOrder = List<CustomOrderEntry>.from(set.entries);
     _lastImportedCustomOrderBaseName = set.baseName;
     _customOrderSourceType = set.sourceType;
-    _zsolozsmaVirtualBookLabel = set.zsolozsmaLabel;
-    _napiLelkiBatyuVirtualBookLabel = set.batyuLabel;
     customOrderActive = set.entries.isNotEmpty;
     _diaVirtualBookSelected = set.entries.isNotEmpty;
     _customOrderCursor = set.entries.isEmpty
@@ -575,8 +557,6 @@ class DiatarMainController extends ChangeNotifier {
       _projectedCustomCursor = -1;
       _lastImportedCustomOrderBaseName = null;
       _customOrderSourceType = null;
-      _zsolozsmaVirtualBookLabel = null;
-      _napiLelkiBatyuVirtualBookLabel = null;
     } else {
       if (_activeOrderSetIndex > index) {
         _activeOrderSetIndex--;
@@ -589,8 +569,6 @@ class DiatarMainController extends ChangeNotifier {
         _customOrder = List<CustomOrderEntry>.from(set.entries);
         _lastImportedCustomOrderBaseName = set.baseName;
         _customOrderSourceType = set.sourceType;
-        _zsolozsmaVirtualBookLabel = set.zsolozsmaLabel;
-        _napiLelkiBatyuVirtualBookLabel = set.batyuLabel;
         customOrderActive = set.entries.isNotEmpty;
         _diaVirtualBookSelected = set.entries.isNotEmpty;
         _customOrderCursor = set.entries.isEmpty
@@ -626,7 +604,13 @@ class DiatarMainController extends ChangeNotifier {
     if (trimmed.isEmpty) {
       return;
     }
-    _customOrderSets[index] = _customOrderSets[index].copyWith(name: trimmed);
+    _customOrderSets[index] = _customOrderSets[index].copyWith(
+      name: trimmed,
+      baseName: trimmed,
+    );
+    if (index == _activeOrderSetIndex) {
+      _lastImportedCustomOrderBaseName = trimmed;
+    }
     await _persistAllSets();
     notifyListeners();
   }
@@ -651,8 +635,6 @@ class DiatarMainController extends ChangeNotifier {
     _customOrder = const <CustomOrderEntry>[];
     _lastImportedCustomOrderBaseName = trimmed;
     _customOrderSourceType = null;
-    _zsolozsmaVirtualBookLabel = null;
-    _napiLelkiBatyuVirtualBookLabel = null;
     customOrderActive = false;
     _diaVirtualBookSelected = false;
     _customOrderCursor = -1;
@@ -773,27 +755,7 @@ class DiatarMainController extends ChangeNotifier {
 
   String? get lastImportedCustomOrderBaseName =>
       _lastImportedCustomOrderBaseName;
-  bool get customOrderIsUnsavedZsolozsma =>
-      _customOrder.isNotEmpty &&
-      _customOrderSourceType == _customOrderSourceZsolozsmaUnsaved;
-  String? get zsolozsmaVirtualBookLabel =>
-      customOrderIsUnsavedZsolozsma ? _zsolozsmaVirtualBookLabel : null;
-  bool get customOrderIsUnsavedBatyu =>
-      _customOrder.isNotEmpty &&
-      _customOrderSourceType == _customOrderSourceBatyuUnsaved;
-  String? get napiLelkiBatyuVirtualBookLabel =>
-      customOrderIsUnsavedBatyu ? _napiLelkiBatyuVirtualBookLabel : null;
-  String? get suggestedCustomOrderBaseName {
-    final String? batyuLabel = napiLelkiBatyuVirtualBookLabel?.trim();
-    if (batyuLabel != null && batyuLabel.isNotEmpty) {
-      return batyuLabel;
-    }
-    final String? zsolozsmaLabel = zsolozsmaVirtualBookLabel?.trim();
-    if (zsolozsmaLabel != null && zsolozsmaLabel.isNotEmpty) {
-      return zsolozsmaLabel;
-    }
-    return lastImportedCustomOrderBaseName;
-  }
+  String? get suggestedCustomOrderBaseName => lastImportedCustomOrderBaseName;
 
   bool get customOrderLooksLikeZsolozsma =>
       _customOrder.isNotEmpty &&
@@ -1429,7 +1391,6 @@ class DiatarMainController extends ChangeNotifier {
       return false;
     }
 
-    final bool wasEmpty = _customOrder.isEmpty;
     final List<CustomOrderEntry> combined = _insertEntriesIntoOrder(
       entries,
       insertAtIndex,
@@ -1438,10 +1399,6 @@ class DiatarMainController extends ChangeNotifier {
     _logZsolozsmaDebug('applyCustomOrder complete entries=${entries.length}');
     final String zsolozsmaLabel = '${_formatDateIso(day)} ${part.title.trim()}'
         .trim();
-    if (wasEmpty) {
-      _customOrderSourceType = _customOrderSourceZsolozsmaUnsaved;
-      _zsolozsmaVirtualBookLabel = zsolozsmaLabel;
-    }
     _lastImportedCustomOrderBaseName = zsolozsmaLabel;
     await _persistCurrentCustomOrder();
     _persistActiveSetToSets();
@@ -1520,7 +1477,6 @@ class DiatarMainController extends ChangeNotifier {
       return false;
     }
 
-    final bool wasEmpty = _customOrder.isEmpty;
     final List<CustomOrderEntry> combined = _insertEntriesIntoOrder(
       entries,
       insertAtIndex,
@@ -1528,10 +1484,6 @@ class DiatarMainController extends ChangeNotifier {
     await applyCustomOrder(combined, activate: true);
     final String batyuLabel =
         '${_formatDateIso(day)} ${celebration.title.trim()}'.trim();
-    if (wasEmpty) {
-      _customOrderSourceType = _customOrderSourceBatyuUnsaved;
-      _napiLelkiBatyuVirtualBookLabel = batyuLabel;
-    }
     _lastImportedCustomOrderBaseName = batyuLabel;
     await _persistCurrentCustomOrder();
     _persistActiveSetToSets();
@@ -2024,8 +1976,6 @@ class DiatarMainController extends ChangeNotifier {
       active: customOrderActive,
       baseName: _customOrder.isEmpty ? null : _lastImportedCustomOrderBaseName,
       sourceType: _customOrder.isEmpty ? null : _customOrderSourceType,
-      zsolozsmaLabel: _customOrder.isEmpty ? null : _zsolozsmaVirtualBookLabel,
-      batyuLabel: _customOrder.isEmpty ? null : _napiLelkiBatyuVirtualBookLabel,
     );
   }
 
@@ -2180,8 +2130,6 @@ class DiatarMainController extends ChangeNotifier {
       _diaVirtualBookSelected = false;
       _lastImportedCustomOrderBaseName = null;
       _customOrderSourceType = null;
-      _zsolozsmaVirtualBookLabel = null;
-      _napiLelkiBatyuVirtualBookLabel = null;
     }
     customOrderActive = activate && _customOrder.isNotEmpty;
     if (customOrderActive) {
@@ -2652,8 +2600,6 @@ class DiatarMainController extends ChangeNotifier {
         ? null
         : cleanName;
     _customOrderSourceType = null;
-    _zsolozsmaVirtualBookLabel = null;
-    _napiLelkiBatyuVirtualBookLabel = null;
     await _persistCurrentCustomOrder();
     _setStatus('statusOrderSaved', <String, String>{'path': path});
     notifyListeners();
@@ -2812,15 +2758,11 @@ class DiatarMainController extends ChangeNotifier {
       await applyCustomOrder(imported, activate: activate);
       _lastImportedCustomOrderBaseName = baseName;
       _customOrderSourceType = null;
-      _zsolozsmaVirtualBookLabel = null;
-      _napiLelkiBatyuVirtualBookLabel = null;
       _customOrderSets[_activeOrderSetIndex] =
           _customOrderSets[_activeOrderSetIndex].copyWith(
             name: baseName ?? _customOrderSets[_activeOrderSetIndex].name,
             baseName: baseName,
             sourceType: null,
-            zsolozsmaLabel: null,
-            batyuLabel: null,
             cursor: _customOrder.isEmpty
                 ? -1
                 : _customOrderCursor.clamp(0, _customOrder.length - 1),
@@ -2845,8 +2787,6 @@ class DiatarMainController extends ChangeNotifier {
       _customOrder = List<CustomOrderEntry>.from(newSet.entries);
       _lastImportedCustomOrderBaseName = baseName;
       _customOrderSourceType = null;
-      _zsolozsmaVirtualBookLabel = null;
-      _napiLelkiBatyuVirtualBookLabel = null;
       customOrderActive = activate && imported.isNotEmpty;
       _diaVirtualBookSelected = imported.isNotEmpty;
       _customOrderCursor = imported.isEmpty ? -1 : 0;

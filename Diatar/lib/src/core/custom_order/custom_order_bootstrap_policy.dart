@@ -8,8 +8,6 @@ class CustomOrderBootstrapState {
     required this.active,
     required this.baseName,
     required this.sourceType,
-    required this.zsolozsmaLabel,
-    required this.batyuLabel,
     required this.cursor,
     required this.diaVirtualBookSelected,
   });
@@ -18,8 +16,6 @@ class CustomOrderBootstrapState {
   final bool active;
   final String? baseName;
   final String? sourceType;
-  final String? zsolozsmaLabel;
-  final String? batyuLabel;
   final int cursor;
   final bool diaVirtualBookSelected;
 }
@@ -36,8 +32,6 @@ class CustomOrderBootstrapPolicy {
       bool active,
       String? baseName,
       String? sourceType,
-      String? zsolozsmaLabel,
-      String? batyuLabel,
     })
     stored,
   ) {
@@ -51,8 +45,6 @@ class CustomOrderBootstrapPolicy {
       active: active,
       baseName: hasEntries ? stored.baseName : null,
       sourceType: hasEntries ? stored.sourceType : null,
-      zsolozsmaLabel: hasEntries ? stored.zsolozsmaLabel : null,
-      batyuLabel: hasEntries ? stored.batyuLabel : null,
       cursor: active ? 0 : -1,
       diaVirtualBookSelected: hasEntries,
     );

@@ -14,8 +14,6 @@ class CustomOrderSet {
     this.enabled = true,
     this.baseName,
     this.sourceType,
-    this.zsolozsmaLabel,
-    this.batyuLabel,
     this.cursor = -1,
   });
 
@@ -25,8 +23,6 @@ class CustomOrderSet {
   final bool enabled;
   final String? baseName;
   final String? sourceType;
-  final String? zsolozsmaLabel;
-  final String? batyuLabel;
 
   /// A diasor utoljára ismert kurzorpozíciója (a bejegyzéslistában).
   /// Diasorok közötti váltáskor ezt tároljuk el, hogy visszaváltáskor
@@ -35,13 +31,12 @@ class CustomOrderSet {
 
   /// A felhasználói felületen megjelenítendő név.
   ///
-  /// Előnyben részesíti a származtatott címkéket (zsolozsma/batyu), majd a
-  /// fájlnévből származtatott alapnevet, végül magát a megadott nevet.
+  /// Előnyben részesíti a fájlnévből származtatott alapnevet, majd magát a
+  /// megadott nevet.
   String get displayName {
-    final String? derived = zsolozsmaLabel ?? batyuLabel ?? baseName;
-    final String trimmed = (derived ?? '').trim();
-    if (trimmed.isNotEmpty) {
-      return trimmed;
+    final String base = (baseName ?? '').trim();
+    if (base.isNotEmpty) {
+      return base;
     }
     final String named = name.trim();
     if (named.isNotEmpty) {
@@ -59,10 +54,6 @@ class CustomOrderSet {
     bool clearBaseName = false,
     String? sourceType,
     bool clearSourceType = false,
-    String? zsolozsmaLabel,
-    bool clearZsolozsmaLabel = false,
-    String? batyuLabel,
-    bool clearBatyuLabel = false,
     int? cursor,
     bool clearCursor = false,
   }) {
@@ -73,9 +64,6 @@ class CustomOrderSet {
       enabled: enabled ?? this.enabled,
       baseName: clearBaseName ? null : (baseName ?? this.baseName),
       sourceType: clearSourceType ? null : (sourceType ?? this.sourceType),
-      zsolozsmaLabel:
-          clearZsolozsmaLabel ? null : (zsolozsmaLabel ?? this.zsolozsmaLabel),
-      batyuLabel: clearBatyuLabel ? null : (batyuLabel ?? this.batyuLabel),
       cursor: clearCursor ? -1 : (cursor ?? this.cursor),
     );
   }
