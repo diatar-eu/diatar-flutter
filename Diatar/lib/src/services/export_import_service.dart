@@ -1,4 +1,5 @@
 import 'dart:io' show IOSink;
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -110,6 +111,38 @@ class ExportImportService {
     }
 
     return Uint8List.fromList(ZipEncoder().encode(archive));
+  }
+
+  /// Streams the complete diatar directory into a ZIP file on disk, keeping
+  /// memory usage bounded by the size of the largest single file instead of the
+  /// whole library. The archive is built in a background isolate so the UI
+  /// thread stays responsive.
+  ///
+  /// Returns the path of the created temporary archive. The caller owns the
+  /// returned file and its parent directory and must delete them when done.
+  Future<String> createExportArchiveFile() async {
+    final FileSystem fs = _fs;
+    final String documentsPath = await _documentsDirectoryPathProvider();
+    final Directory tempDir = await fs.systemTempDirectory.createTemp(
+      'diatar_backup_',
+    );
+    final String targetPath = fs.path.join(tempDir.path, 'diatar-backup.zip');
+    try {
+      final ({String? path, Object? error}) result = await Isolate.run(
+        () => _streamExportArchiveTo(fs, documentsPath, targetPath),
+      );
+      if (result.error != null) {
+        throw result.error!;
+      }
+      return result.path!;
+    } catch (_) {
+      try {
+        await tempDir.delete(recursive: true);
+      } catch (_) {
+        // Ignore temp cleanup failures.
+      }
+      rethrow;
+    }
   }
 
   Future<DiatarImportPreview> inspectImportArchive(Uint8List zipData) async {
@@ -557,5 +590,68 @@ class _FsOutputStream extends OutputStream {
     throw UnsupportedError(
       'Reading back from an output stream is not supported.',
     );
+  }
+}
+
+/// Runs inside a background isolate. Streams the diatar directory at
+/// [documentsPath] into the ZIP file at [targetPath] and reports the outcome
+/// as a sendable record so the original exception type survives the isolate
+/// boundary.
+Future<({String? path, Object? error})> _streamExportArchiveTo(
+  FileSystem fs,
+  String documentsPath,
+  String targetPath,
+) async {
+  try {
+    final Directory source = fs.directory(
+      fs.path.join(documentsPath, 'diatar'),
+    );
+    if (!await source.exists()) {
+      throw const DiatarArchiveException(
+        DiatarArchiveErrorCode.sourceDirectoryMissing,
+      );
+    }
+
+    final _FsOutputStream output = _FsOutputStream(fs.file(targetPath));
+    output.open();
+    final ZipEncoder encoder = ZipEncoder();
+    encoder.startEncode(output);
+    try {
+      encoder.add(ArchiveFile.directory('diatar/'));
+      final List<FileSystemEntity> entities =
+          source.listSync(recursive: true, followLinks: false)..sort(
+            (FileSystemEntity left, FileSystemEntity right) =>
+                left.path.compareTo(right.path),
+          );
+      for (final FileSystemEntity entity in entities) {
+        final String relativePath = fs.path.relative(
+          entity.path,
+          from: source.path,
+        );
+        final String archivePath = path.posix.joinAll(<String>[
+          'diatar',
+          ...fs.path.split(relativePath),
+        ]);
+        if (entity is Directory) {
+          encoder.add(ArchiveFile.directory('$archivePath/'));
+        } else if (entity is File) {
+          encoder.add(
+            ArchiveFile.bytes(archivePath, await entity.readAsBytes()),
+          );
+        }
+      }
+      encoder.endEncode();
+      await output.close();
+    } catch (_) {
+      try {
+        await output.close();
+      } catch (_) {
+        // Ignore output cleanup failures.
+      }
+      rethrow;
+    }
+    return (path: targetPath, error: null);
+  } catch (error) {
+    return (path: null, error: error);
   }
 }

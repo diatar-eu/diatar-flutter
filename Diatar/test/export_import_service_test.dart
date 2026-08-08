@@ -6,6 +6,7 @@ import 'package:file/memory.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:diatar_app/src/services/export_import_service.dart';
+import 'package:diatar_app/src/utils/file_system_provider.dart';
 
 void main() {
   late MemoryFileSystem fileSystem;
@@ -34,6 +35,62 @@ void main() {
     await fileSystem.directory('/documents/diatar/empty').create();
 
     final Uint8List bytes = await service.createExportArchive();
+    final Archive archive = ZipDecoder().decodeBytes(bytes);
+    final Map<String, ArchiveFile> entries = <String, ArchiveFile>{
+      for (final ArchiveFile entry in archive.files) entry.name: entry,
+    };
+
+    expect(entries, contains('diatar/'));
+    expect(entries, contains('diatar/DTXs/'));
+    expect(entries, contains('diatar/DTXs/song.dtx'));
+    expect(entries, contains('diatar/empty/'));
+    expect(
+      utf8.decode(entries['diatar/DTXs/song.dtx']!.content),
+      equals('song'),
+    );
+  });
+
+  test('exports the complete diatar directory to a temp file', () async {
+    final Directory tempRoot =
+        await FileSystemProvider.instance.systemTempDirectory.createTemp(
+      'diatar_export_test_',
+    );
+    addTearDown(() async {
+      try {
+        await tempRoot.delete(recursive: true);
+      } catch (_) {
+        // Ignore cleanup failures.
+      }
+    });
+
+    final ExportImportService diskService = ExportImportService(
+      documentsDirectoryPathProvider: () async => tempRoot.path,
+    );
+
+    await FileSystemProvider.instance
+        .file('${tempRoot.path}/diatar/DTXs/song.dtx')
+        .create(recursive: true);
+    await FileSystemProvider.instance
+        .file('${tempRoot.path}/diatar/DTXs/song.dtx')
+        .writeAsString('song');
+    await FileSystemProvider.instance
+        .directory('${tempRoot.path}/diatar/empty')
+        .create();
+
+    final String zipPath = await diskService.createExportArchiveFile();
+    addTearDown(() async {
+      try {
+        await FileSystemProvider.instance.file(zipPath).parent.delete(
+          recursive: true,
+        );
+      } catch (_) {
+        // Ignore cleanup failures.
+      }
+    });
+
+    final Uint8List bytes = await FileSystemProvider.instance
+        .file(zipPath)
+        .readAsBytes();
     final Archive archive = ZipDecoder().decodeBytes(bytes);
     final Map<String, ArchiveFile> entries = <String, ArchiveFile>{
       for (final ArchiveFile entry in archive.files) entry.name: entry,

@@ -16,6 +16,7 @@ class MainActivity : FlutterActivity() {
 
 	private var pendingSaveResult: MethodChannel.Result? = null
 	private var pendingSaveBytes: ByteArray? = null
+	private var pendingSavePath: String? = null
 
 	override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
 		super.configureFlutterEngine(flutterEngine)
@@ -70,14 +71,21 @@ class MainActivity : FlutterActivity() {
 		val fileName = (call.argument<String>("fileName") ?: "diatar-backup.zip").trim().ifEmpty {
 			"diatar-backup.zip"
 		}
+		val path = call.argument<String>("path")
 		val bytes = call.argument<ByteArray>("bytes")
-		if (bytes == null || bytes.isEmpty()) {
-			result.error("invalid_args", "Missing or empty file bytes.", null)
+		if (path != null) {
+			if (!java.io.File(path).isFile) {
+				result.error("invalid_args", "Backup file not found.", null)
+				return
+			}
+		} else if (bytes == null || bytes.isEmpty()) {
+			result.error("invalid_args", "Missing or empty file data.", null)
 			return
 		}
 
 		pendingSaveResult = result
 		pendingSaveBytes = bytes
+		pendingSavePath = path
 
 		val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
 			addCategory(Intent.CATEGORY_OPENABLE)
@@ -101,6 +109,7 @@ class MainActivity : FlutterActivity() {
 
 		val result = pendingSaveResult
 		val bytes = pendingSaveBytes
+		val path = pendingSavePath
 		clearPendingSave()
 
 		if (result == null) {
@@ -110,7 +119,7 @@ class MainActivity : FlutterActivity() {
 			result.success(null)
 			return
 		}
-		if (bytes == null) {
+		if (bytes == null && path == null) {
 			result.error("missing_bytes", "No file data available for save.", null)
 			return
 		}
@@ -120,7 +129,13 @@ class MainActivity : FlutterActivity() {
 			val stream = contentResolver.openOutputStream(targetUri!!)
 				?: throw IOException("Cannot open output stream for target URI.")
 			stream.use { out ->
-				out.write(bytes)
+				if (path != null) {
+					java.io.File(path).inputStream().use { input ->
+						input.copyTo(out, bufferSize = 64 * 1024)
+					}
+				} else {
+					out.write(bytes!!)
+				}
 				out.flush()
 			}
 			result.success(targetUri.toString())
@@ -132,5 +147,6 @@ class MainActivity : FlutterActivity() {
 	private fun clearPendingSave() {
 		pendingSaveResult = null
 		pendingSaveBytes = null
+		pendingSavePath = null
 	}
 }

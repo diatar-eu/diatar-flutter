@@ -18,6 +18,8 @@ import '../utils/custom_entry_labels.dart';
 import '../utils/escape_sequences.dart';
 import '../utils/friendly_path.dart';
 import '../services/song_search_service.dart';
+import '../services/desktop_projector_bridge.dart';
+import '../services/macos_file_panels.dart';
 import '../services/zsolozsma_service.dart';
 import '../services/napi_lelki_batyu_service.dart';
 import '../services/szentiras_api_service.dart';
@@ -1008,13 +1010,13 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
   Future<void> _pickAndSendImageSlide() async {
     final AppLocalizations l10n = context.l10n;
-    final XTypeGroup images = XTypeGroup(
-      label: context.l10n.imagesFileTypeLabel,
-      extensions: <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
+    final List<XFile> files =
+        await DesktopProjectorBridge.instance.runWithNativeDialog(
+      () => showFileOpenPanel(
+        extensions: const <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
+      ),
     );
-    final XFile? file = await openFile(
-      acceptedTypeGroups: <XTypeGroup>[images],
-    );
+    final XFile? file = files.isEmpty ? null : files.first;
     if (file == null) {
       return;
     }
@@ -1581,10 +1583,6 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
   Future<void> _exportDia() async {
     final l10n = context.l10n;
-    final XTypeGroup diaType = XTypeGroup(
-      label: l10n.diatarPlaylistFileTypeLabel,
-      extensions: <String>['dia'],
-    );
     try {
       await _commitEntries();
 
@@ -1626,10 +1624,13 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           return;
         }
 
-        final FileSaveLocation? saveLocation = await getSaveLocation(
-          acceptedTypeGroups: <XTypeGroup>[diaType],
-          initialDirectory: initialDir,
-          suggestedName: defaultFileName,
+        final FileSaveLocation? saveLocation =
+            await DesktopProjectorBridge.instance.runWithNativeDialog(
+          () => showFileSavePanel(
+            initialDirectory: initialDir,
+            suggestedName: defaultFileName,
+            extensions: const <String>['dia'],
+          ),
         );
         if (saveLocation != null) {
           targetPath = saveLocation.path;
@@ -1840,13 +1841,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<void> _importDia() async {
-    final XTypeGroup diaType = XTypeGroup(
-      label: context.l10n.diatarPlaylistFileTypeLabel,
-      extensions: <String>['dia'],
+    final List<XFile> files =
+        await DesktopProjectorBridge.instance.runWithNativeDialog(
+      () => showFileOpenPanel(extensions: const <String>['dia']),
     );
-    final XFile? file = await openFile(
-      acceptedTypeGroups: <XTypeGroup>[diaType],
-    );
+    final XFile? file = files.isEmpty ? null : files.first;
     if (file == null) {
       return;
     }
@@ -2427,7 +2426,9 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
                 IconButton(
                   tooltip: l10n.fileChoose,
                   onPressed: () async {
-                    final String? folderPath = await getDirectoryPath();
+                    final String? folderPath =
+                        await DesktopProjectorBridge.instance
+                            .runWithNativeDialog(showDirectoryPicker);
                     if (folderPath == null || !mounted) {
                       return;
                     }

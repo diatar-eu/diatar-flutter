@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -13,6 +12,8 @@ import '../models/custom_order_set.dart';
 import '../services/dtx_download_service.dart';
 import '../services/dtz_download_service.dart';
 import '../services/dtz_user_import_service.dart';
+import '../services/desktop_projector_bridge.dart';
+import '../services/macos_file_panels.dart';
 import '../utils/custom_entry_labels.dart';
 import '../utils/file_system_provider.dart';
 import '../utils/friendly_path.dart';
@@ -2686,13 +2687,10 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
   }
 
   Future<void> _importDtxFiles(BuildContext context) async {
-    const XTypeGroup dtxType = XTypeGroup(
-      label: 'DTX',
-      extensions: <String>['dtx'],
+    final List<XFile> files = await DesktopProjectorBridge.instance
+        .runWithNativeDialog(
+      () => showFileOpenPanel(extensions: const <String>['dtx']),
     );
-    final List<XFile> files = (kIsWeb || Platform.isAndroid)
-        ? await openFiles()
-        : await openFiles(acceptedTypeGroups: <XTypeGroup>[dtxType]);
     if (files.isEmpty || !context.mounted) {
       return;
     }
@@ -2784,13 +2782,10 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
 
   Future<void> _pickDtz() async {
     if (_importing) return;
-    const XTypeGroup type = XTypeGroup(
-      label: 'DTZ',
-      extensions: <String>['dtz'],
+    final List<XFile> files = await DesktopProjectorBridge.instance
+        .runWithNativeDialog(
+      () => showFileOpenPanel(extensions: const <String>['dtz']),
     );
-    final List<XFile> files = (kIsWeb || Platform.isAndroid)
-        ? await openFiles()
-        : await openFiles(acceptedTypeGroups: <XTypeGroup>[type]);
     if (!mounted || files.isEmpty) return;
     setState(() {
       _dtzFile = files.first;
@@ -2800,13 +2795,10 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
 
   Future<void> _addZips() async {
     if (_importing) return;
-    const XTypeGroup type = XTypeGroup(
-      label: 'ZIP',
-      extensions: <String>['zip'],
+    final List<XFile> files = await DesktopProjectorBridge.instance
+        .runWithNativeDialog(
+      () => showFileOpenPanel(extensions: const <String>['zip']),
     );
-    final List<XFile> files = (kIsWeb || Platform.isAndroid)
-        ? await openFiles()
-        : await openFiles(acceptedTypeGroups: <XTypeGroup>[type]);
     if (!mounted || files.isEmpty) return;
     setState(() {
       _zipFiles.addAll(files);

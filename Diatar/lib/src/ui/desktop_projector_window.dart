@@ -89,10 +89,10 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     }
     // A vezérlő ablakkal való kommunikációhoz (vetítésbe kattintás ->
     // vezérlő visszahozása) egy bidirekcionális csatornán párba állunk a
-    // főablakkal.
-    await _controlChannel.setMethodCallHandler((MethodCall call) async {
-      return null;
-    });
+    // főablakkal. Ha egy korábbi vetítőablak regisztrációja megmaradt
+    // (CHANNEL_LIMIT_REACHED), újrapróbáljuk, hogy a kattintásos visszahozás
+    // ne törjön el véglegesen.
+    await _registerControlChannelWithRetry();
     await windowManager.ensureInitialized();
     windowManager.addListener(this);
     await windowManager.waitUntilReadyToShow(
@@ -113,6 +113,19 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     );
   }
 
+  Future<void> _registerControlChannelWithRetry() async {
+    for (int attempt = 0; attempt < 10; attempt++) {
+      try {
+        await _controlChannel.setMethodCallHandler((MethodCall call) async {
+          return null;
+        });
+        return;
+      } catch (_) {
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      }
+    }
+  }
+
   Future<dynamic> _handleProjectorMethodCall(MethodCall call) async {
     if (call.method == 'relocate') {
       final Map<String, dynamic> payload =
@@ -126,6 +139,13 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
         _controller.applyMonitor(monitor);
       }
       await _applyWindowPlacement(_controller.monitor);
+      return null;
+    }
+
+    if (call.method == 'dialog_mode') {
+      // A macOS fájlpárbeszédablakok a `runModal` alapú natív útvonalon
+      // mennek (lásd: `macos_file_panels`), így erre az üzenetre nincs
+      // szükség. A beérkező üzeneteket figyelmen kívül hagyjuk.
       return null;
     }
 

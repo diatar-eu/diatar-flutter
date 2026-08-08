@@ -20,6 +20,8 @@ import '../l10n/l10n.dart';
 import '../services/mqtt_user_api_service.dart';
 import '../services/cast_service.dart';
 import '../services/export_import_service.dart';
+import '../services/desktop_projector_bridge.dart';
+import '../services/macos_file_panels.dart';
 import '../services/web_diavetito_url.dart';
 import '../utils/friendly_path.dart';
 import 'onboarding_sheet.dart';
@@ -1237,15 +1239,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     return 'diavetito-$safeUser-qr.png';
   }
 
-  XTypeGroup _qrPngType(AppLocalizations l10n) {
-    return XTypeGroup(
-      label: l10n.imagesFileTypeLabel,
-      extensions: const <String>['png'],
-      mimeTypes: const <String>['image/png'],
-      uniformTypeIdentifiers: const <String>['public.png'],
-    );
-  }
-
   Future<void> _saveInternetQrImage(BuildContext sectionContext) async {
     final AppLocalizations l10n = sectionContext.l10n;
     final String url = _internetRelayUrl;
@@ -1286,9 +1279,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           bytes: png,
         );
       } else {
-        final FileSaveLocation? location = await getSaveLocation(
-          acceptedTypeGroups: <XTypeGroup>[_qrPngType(l10n)],
-          suggestedName: fileName,
+        final FileSaveLocation? location =
+            await DesktopProjectorBridge.instance.runWithNativeDialog(
+          () => showFileSavePanel(
+            suggestedName: fileName,
+            extensions: const <String>['png'],
+          ),
         );
         if (location == null) {
           return;
@@ -1842,57 +1838,57 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
-  XTypeGroup _diatarZipType(AppLocalizations l10n) {
-    return XTypeGroup(
-      label: l10n.diatarZipFileTypeLabel,
-      extensions: const <String>['zip'],
-      mimeTypes: const <String>['application/zip'],
-      uniformTypeIdentifiers: const <String>['public.zip-archive'],
-    );
-  }
-
   Future<void> _exportDiatarData(
     BuildContext sectionContext,
     void Function(void Function()) setBoth,
   ) async {
-    final XTypeGroup zipType = _diatarZipType(sectionContext.l10n);
     setBoth(() => _fileTransferRunning = true);
+    String? tempExportDir;
+    // A vezérlőablakot előrehozzuk, hogy a (macOS-on `runModal` alapú)
+    // mentési panel megbízhatóan megjelenhessen; a vetítőablak jelenléte
+    // nem zavarja, mivel a panel a fájlpárbeszédablak felett jelenik meg.
+    await DesktopProjectorBridge.instance.prepareForNativeDialog();
     try {
-      final zipData = await _exportImportService.createExportArchive();
       final String fileName = _backupFileName(DateTime.now());
-      final XFile exportFile = XFile.fromData(
-        zipData,
-        mimeType: 'application/zip',
-        name: fileName,
-      );
 
       if (kIsWeb) {
+        final Uint8List zipData = await _exportImportService.createExportArchive();
+        final XFile exportFile = XFile.fromData(
+          zipData,
+          mimeType: 'application/zip',
+          name: fileName,
+        );
         await exportFile.saveTo(fileName);
-      } else if (defaultTargetPlatform == TargetPlatform.android) {
-        try {
-          final String? savedPath =
-              await _saveDiatarBackupWithAndroidSystemDialog(
-                fileName: fileName,
-                bytes: zipData,
-              );
-          if (savedPath == null) {
+      } else {
+        final String zipPath =
+            await _exportImportService.createExportArchiveFile();
+        tempExportDir = FileSystemProvider.instance.file(zipPath).parent.path;
+        if (defaultTargetPlatform == TargetPlatform.android) {
+          try {
+            final String? savedPath =
+                await _saveDiatarBackupWithAndroidSystemDialog(
+                  fileName: fileName,
+                  sourcePath: zipPath,
+                );
+            if (savedPath == null) {
+              return;
+            }
+          } on MissingPluginException {
+            await _saveDiatarBackupToDocumentsDirectory(
+              fileName: fileName,
+              sourcePath: zipPath,
+            );
+          }
+        } else {
+          final FileSaveLocation? location = await showFileSavePanel(
+            suggestedName: fileName,
+            extensions: const <String>['zip'],
+          );
+          if (location == null) {
             return;
           }
-        } on MissingPluginException {
-          await _saveDiatarBackupToDocumentsDirectory(
-            fileName: fileName,
-            bytes: zipData,
-          );
+          await FileSystemProvider.instance.file(zipPath).copy(location.path);
         }
-      } else {
-        final FileSaveLocation? location = await getSaveLocation(
-          acceptedTypeGroups: <XTypeGroup>[zipType],
-          suggestedName: fileName,
-        );
-        if (location == null) {
-          return;
-        }
-        await exportFile.saveTo(location.path);
       }
 
       if (sectionContext.mounted) {
@@ -1907,42 +1903,60 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         await _showFileTransferError(sectionContext, error);
       }
     } finally {
+      if (tempExportDir != null) {
+        try {
+          final Directory tempDir =
+              FileSystemProvider.instance.directory(tempExportDir);
+          if (await tempDir.exists()) {
+            await tempDir.delete(recursive: true);
+          }
+        } catch (_) {
+          // Ignore temp cleanup failures.
+        }
+      }
+      // A fájlművelet (mentési panel, másolás) végeztével visszaállítjuk
+      // a vezérlőablak fókuszát és a vetítőablak megjelenését.
+      await DesktopProjectorBridge.instance.releaseFromNativeDialog();
       _finishFileTransfer(sectionContext.mounted, setBoth);
     }
   }
 
   Future<String?> _saveDiatarBackupWithAndroidSystemDialog({
     required String fileName,
-    required Uint8List bytes,
+    required String sourcePath,
   }) {
     return _androidBackupSaveChannel.invokeMethod<String>(
       'saveBackupFile',
-      <String, Object?>{'fileName': fileName, 'bytes': bytes},
+      <String, Object?>{'fileName': fileName, 'path': sourcePath},
     );
   }
 
   Future<void> _saveDiatarBackupToDocumentsDirectory({
     required String fileName,
-    required Uint8List bytes,
+    required String sourcePath,
   }) async {
     final String documentsPath = await PathHelper.getDocumentsDirectoryPath();
     final String exportPath = '$documentsPath/diatar/$fileName';
     final File exportFile = FileSystemProvider.instance.file(exportPath);
     await exportFile.parent.create(recursive: true);
-    await exportFile.writeAsBytes(bytes, flush: true);
+    await FileSystemProvider.instance.file(sourcePath).copy(exportPath);
   }
 
   Future<void> _importDiatarData(
     BuildContext sectionContext,
     void Function(void Function()) setBoth,
   ) async {
-    final XTypeGroup zipType = _diatarZipType(sectionContext.l10n);
     String? tempArchivePath;
     setBoth(() => _fileTransferRunning = true);
     try {
-      final XFile? selectedFile = await openFile(
-        acceptedTypeGroups: <XTypeGroup>[zipType],
+      final List<XFile> selectedFiles =
+          await DesktopProjectorBridge.instance.runWithNativeDialog(
+        () => showFileOpenPanel(
+          extensions: const <String>['zip'],
+        ),
       );
+      final XFile? selectedFile =
+          selectedFiles.isEmpty ? null : selectedFiles.first;
       if (selectedFile == null) {
         return;
       }
@@ -3321,13 +3335,13 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 
   Future<void> _pickBlankFile() async {
-    final XTypeGroup images = XTypeGroup(
-      label: context.l10n.imagesFileTypeLabel,
-      extensions: <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
+    final List<XFile> files = await DesktopProjectorBridge.instance
+        .runWithNativeDialog(
+      () => showFileOpenPanel(
+        extensions: const <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
+      ),
     );
-    final XFile? file = await openFile(
-      acceptedTypeGroups: <XTypeGroup>[images],
-    );
+    final XFile? file = files.isEmpty ? null : files.first;
     if (!mounted || file == null) {
       return;
     }
@@ -3337,7 +3351,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 
   Future<void> _pickDiaExportFolder() async {
-    final String? folderPath = await getDirectoryPath();
+    final String? folderPath =
+        await DesktopProjectorBridge.instance.runWithNativeDialog(
+      showDirectoryPicker,
+    );
     if (!mounted || folderPath == null) {
       return;
     }

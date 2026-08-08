@@ -254,6 +254,60 @@ class DesktopProjectorBridge {
     }
   }
 
+  /// Újra a felszínre hozza a vezérlőablakot (pl. a macOS mentési panel
+  /// bezárása után), ha az a vetítőablak mögé került vagy elvesztette a
+  /// fókuszt. Nem módosítja a rejtett/átlátszó állapotot.
+  Future<void> reassertControlWindow() async {
+    if (!_isDesktopPlatform()) {
+      return;
+    }
+    try {
+      await windowManager.show();
+      await windowManager.focus();
+    } catch (_) {
+      // nem kritikus
+    }
+  }
+
+  /// Natív rendszer-párbeszédablak (mentés/megnyitás/mappa) előkészítése.
+  ///
+  /// A vezérlő (fő) ablakot hozza előre, hogy a párbeszédablak megbízhatóan
+  /// megjelenhessen. A macOS-os fájlpárbeszédablakok a `runModal` alapú natív
+  /// útvonalon mennek (lásd: `macos_file_panels`), így a vetítőablak
+  /// jelenléte nem zavarja őket.
+  Future<void> prepareForNativeDialog() async {
+    if (!_isDesktopPlatform()) {
+      return;
+    }
+    try {
+      await windowManager.show();
+      await windowManager.focus();
+    } catch (_) {
+      // nem kritikus
+    }
+  }
+
+  /// A natív rendszer-párbeszédablak bezárása után visszaállítja a
+  /// vezérlőablak állapotát.
+  Future<void> releaseFromNativeDialog() async {
+    if (!_isDesktopPlatform()) {
+      return;
+    }
+    await reassertControlWindow();
+  }
+
+  /// Natív rendszer-párbeszédablakot (mentés/megnyitás/mappa választó)
+  /// futtat az előkészítő/visszaállító lépésekkel körülvéve. Weben és
+  /// mobilon nem csinál semmit.
+  Future<T> runWithNativeDialog<T>(Future<T> Function() action) async {
+    await prepareForNativeDialog();
+    try {
+      return await action();
+    } finally {
+      await releaseFromNativeDialog();
+    }
+  }
+
   Future<void> dispose() async {
     await _closeWindow();
     _enabled = false;
