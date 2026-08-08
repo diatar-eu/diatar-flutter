@@ -665,6 +665,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get fileChoose => 'Fájl választása';
 
   @override
+  String get blankImageDelete => 'Háttérkép törlése';
+
+  @override
   String get openDtxFolder => 'Diatár állományok megnyitása';
 
   @override

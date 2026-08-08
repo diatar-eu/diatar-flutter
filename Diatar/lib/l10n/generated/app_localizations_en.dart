@@ -662,6 +662,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileChoose => 'Choose file';
 
   @override
+  String get blankImageDelete => 'Delete background image';
+
+  @override
   String get openDtxFolder => 'Open Diatár files';
 
   @override

@@ -1163,6 +1163,12 @@ abstract class AppLocalizations {
   /// **'Fájl választása'**
   String get fileChoose;
 
+  /// No description provided for @blankImageDelete.
+  ///
+  /// In hu, this message translates to:
+  /// **'Háttérkép törlése'**
+  String get blankImageDelete;
+
   /// No description provided for @openDtxFolder.
   ///
   /// In hu, this message translates to:

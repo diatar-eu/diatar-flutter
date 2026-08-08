@@ -22,6 +22,7 @@ import '../services/cast_service.dart';
 import '../services/export_import_service.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/macos_file_panels.dart';
+import '../services/blank_image_storage.dart';
 import '../services/web_diavetito_url.dart';
 import '../utils/friendly_path.dart';
 import 'onboarding_sheet.dart';
@@ -90,6 +91,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _mqttPassword;
   late final TextEditingController _blankPicPath;
   late final TextEditingController _diaExportPath;
+  final BlankImageStore _blankImageStore = BlankImageStore();
   late final TextEditingController _projFontSize;
   late final TextEditingController _projTitleSize;
   late final TextEditingController _projLeftIndent;
@@ -1777,16 +1779,21 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               await _pickBlankFile();
               setBoth(() {});
             },
-          ),
-          _buildPathPickerRow(
-            l10n: l10n,
-            label: l10n.diaExportFolderPath,
-            rawPath: _diaExportPath.text.trim(),
-            onPick: () async {
-              await _pickDiaExportFolder();
+            onClear: () {
+              _clearBlankImage();
               setBoth(() {});
             },
           ),
+          if (_isDesktopPlatform())
+            _buildPathPickerRow(
+              l10n: l10n,
+              label: l10n.diaExportFolderPath,
+              rawPath: _diaExportPath.text.trim(),
+              onPick: () async {
+                await _pickDiaExportFolder();
+                setBoth(() {});
+              },
+            ),
           const SizedBox(height: 16),
           const Divider(height: 1),
           const SizedBox(height: 16),
@@ -2187,6 +2194,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     required String rawPath,
     String? helperText,
     required Future<void> Function() onPick,
+    VoidCallback? onClear,
   }) {
     final String trimmed = rawPath.trim();
     final String friendly = trimmed.isEmpty
@@ -2205,6 +2213,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             ),
           ),
         ),
+        if (onClear != null && trimmed.isNotEmpty)
+          IconButton(
+            onPressed: onClear,
+            icon: const Icon(Icons.delete_outline),
+            tooltip: l10n.blankImageDelete,
+          ),
         IconButton(
           onPressed: () async {
             await onPick();
@@ -3345,9 +3359,32 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     if (!mounted || file == null) {
       return;
     }
+    if (_isDesktopPlatform()) {
+      setState(() {
+        _blankPicPath.text = file.path;
+      });
+      return;
+    }
+    // Weben és mobilon nincs megbízható külső elérési út (blob-URL, illetve
+    // ideiglenes cache), ezért a képet a belső fájlrendszerbe importáljuk.
+    final Uint8List bytes = await file.readAsBytes();
+    final String internalPath = await _blankImageStore.import(
+      bytes,
+      BlankImageStore.resolveImageExtension(file),
+    );
+    if (!mounted) {
+      return;
+    }
     setState(() {
-      _blankPicPath.text = file.path;
+      _blankPicPath.text = internalPath;
     });
+  }
+
+  void _clearBlankImage() {
+    _blankPicPath.text = '';
+    if (!_isDesktopPlatform()) {
+      unawaited(_blankImageStore.delete());
+    }
   }
 
   Future<void> _pickDiaExportFolder() async {

@@ -513,6 +513,7 @@
   "blankImagePath": "Háttérkép útvonal",
   "diaExportFolderPath": "DIA mentési mappa",
   "fileChoose": "Fájl választása",
+  "blankImageDelete": "Háttérkép törlése",
   "openDtxFolder": "Diatár állományok megnyitása",
   "openDtxFolderTooltip": "A Diatár állományait tartalmazó mappa megnyitása",
   "copyPathTooltip": "Eredeti útvonal másolása",

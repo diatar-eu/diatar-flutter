@@ -517,6 +517,7 @@
   "blankImagePath": "Background image path",
   "diaExportFolderPath": "DIA export folder",
   "fileChoose": "Choose file",
+  "blankImageDelete": "Delete background image",
   "openDtxFolder": "Open Diatár files",
   "openDtxFolderTooltip": "Open the folder containing the Diatár files",
   "copyPathTooltip": "Copy original path",
