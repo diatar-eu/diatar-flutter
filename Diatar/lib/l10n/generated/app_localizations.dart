@@ -1715,6 +1715,18 @@ abstract class AppLocalizations {
   /// **'Névtelen'**
   String get customOrderUnnamedFileName;
 
+  /// No description provided for @customOrderDiaOverwriteTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Fájl felülírása'**
+  String get customOrderDiaOverwriteTitle;
+
+  /// No description provided for @customOrderDiaOverwriteMessage.
+  ///
+  /// In hu, this message translates to:
+  /// **'A(z) „{name}” fájl már létezik. Felülírja?'**
+  String customOrderDiaOverwriteMessage(Object name);
+
   /// No description provided for @savedPath.
   ///
   /// In hu, this message translates to:

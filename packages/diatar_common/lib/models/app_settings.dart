@@ -21,6 +21,7 @@ class AppSettings {
     this.dtxPath = '',
     this.blankPicPath = '',
     this.diaExportPath = '',
+    this.diaExportTreeUri = '',
     this.projFontSize = 255,
     this.projTitleSize = 12,
     this.projLeftIndent = 2,
@@ -93,6 +94,7 @@ class AppSettings {
   final String dtxPath;
   final String blankPicPath;
   final String diaExportPath;
+  final String diaExportTreeUri;
   final int projFontSize;
   final int projTitleSize;
   final int projLeftIndent;
@@ -172,6 +174,7 @@ class AppSettings {
     String? dtxPath,
     String? blankPicPath,
     String? diaExportPath,
+    String? diaExportTreeUri,
     int? projFontSize,
     int? projTitleSize,
     int? projLeftIndent,
@@ -242,6 +245,7 @@ class AppSettings {
       dtxPath: dtxPath ?? this.dtxPath,
       blankPicPath: blankPicPath ?? this.blankPicPath,
       diaExportPath: diaExportPath ?? this.diaExportPath,
+      diaExportTreeUri: diaExportTreeUri ?? this.diaExportTreeUri,
       projFontSize: projFontSize ?? this.projFontSize,
       projTitleSize: projTitleSize ?? this.projTitleSize,
       projLeftIndent: projLeftIndent ?? this.projLeftIndent,
@@ -331,6 +335,7 @@ class AppSettings {
       'projBackTrans': projBackTrans,
       'projBlankTrans': projBlankTrans,
       'projShowBackgroundImage': projShowBackgroundImage,
+      'diaExportTreeUri': diaExportTreeUri,
       'desktopProjectorEnabled': desktopProjectorEnabled,
       'desktopProjectorMonitor': desktopProjectorMonitor,
       'bkColor': bkColor.toARGB32(),
@@ -410,6 +415,7 @@ class AppSettings {
       projBackTrans: intValue('projBackTrans', 0),
       projBlankTrans: intValue('projBlankTrans', 0),
       projShowBackgroundImage: boolValue('projShowBackgroundImage', true),
+      diaExportTreeUri: map['diaExportTreeUri'] as String? ?? '',
       desktopProjectorEnabled: boolValue('desktopProjectorEnabled', false),
       desktopProjectorMonitor: intValue('desktopProjectorMonitor', -1),
       bkColor: colorValue('bkColor', const Color(0xFF000000)),

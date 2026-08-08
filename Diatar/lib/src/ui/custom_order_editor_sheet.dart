@@ -1607,8 +1607,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
       try {
         if (!kIsWeb && Platform.isAndroid) {
-          final String? savedPath = await _saveDiaWithAndroidSystemDialog(
-            defaultFileName: defaultFileName,
+          final String? savedPath = await _saveDiaWithAndroidTreeFlow(
+            defaultBaseName: defaultBaseName,
           );
           if (savedPath == null || !mounted) {
             return;
@@ -1656,31 +1656,44 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       }
 
       if (!nativeSaveDialogAvailable) {
-        final _DiaSaveTarget? chosenTarget = await _askDiaSaveTarget(
-          initialName: defaultBaseName,
-          initialDirectory: initialDir ?? '',
-        );
-        if (chosenTarget == null) {
-          return;
-        }
-        final String fileBaseName = _normalizeDiaBaseName(
-          chosenTarget.fileName,
-          fallback: defaultBaseName,
-        );
-        final String targetDir = chosenTarget.directoryPath.trim();
-        if (targetDir.isEmpty) {
-          return;
-        }
-        final Directory exportDir = Directory(targetDir);
-        if (!await exportDir.exists()) {
-          return;
-        }
-        if (!hadUsableConfiguredDir) {
-          await controller.applySettings(
-            controller.settings.copyWith(diaExportPath: exportDir.path),
+        while (true) {
+          final _DiaSaveTarget? chosenTarget = await _askDiaSaveTarget(
+            initialName: defaultBaseName,
+            initialDirectory: initialDir ?? '',
           );
+          if (chosenTarget == null) {
+            return;
+          }
+          final String fileBaseName = _normalizeDiaBaseName(
+            chosenTarget.fileName,
+            fallback: defaultBaseName,
+          );
+          final String targetDir = chosenTarget.directoryPath.trim();
+          if (targetDir.isEmpty) {
+            return;
+          }
+          final Directory exportDir = Directory(targetDir);
+          if (!await exportDir.exists()) {
+            return;
+          }
+          if (!hadUsableConfiguredDir) {
+            await controller.applySettings(
+              controller.settings.copyWith(diaExportPath: exportDir.path),
+            );
+          }
+          final String fallbackTargetPath = '${exportDir.path}/$fileBaseName.dia';
+          if (!await File(fallbackTargetPath).exists()) {
+            targetPath = fallbackTargetPath;
+            break;
+          }
+          final bool overwrite = await _askDiaOverwriteConfirmation(
+            fileBaseName,
+          );
+          if (overwrite) {
+            targetPath = fallbackTargetPath;
+            break;
+          }
         }
-        targetPath = '${exportDir.path}/$fileBaseName.dia';
       }
 
       if (targetPath == null || targetPath.trim().isEmpty) {
@@ -1706,22 +1719,70 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
   }
 
-  Future<String?> _saveDiaWithAndroidSystemDialog({
-    required String defaultFileName,
+  Future<String?> _saveDiaWithAndroidTreeFlow({
+    required String defaultBaseName,
   }) async {
+    String? treeUri = controller.settings.diaExportTreeUri.trim().isEmpty
+        ? null
+        : controller.settings.diaExportTreeUri.trim();
+    if (treeUri == null) {
+      treeUri = await _androidDiaSaveChannel.invokeMethod<String>(
+        'pickDiaSaveFolder',
+      );
+      if (treeUri == null || !mounted) {
+        return null;
+      }
+      await controller.applySettings(
+        controller.settings.copyWith(diaExportTreeUri: treeUri),
+      );
+    }
+
     final Directory tempDir = await Directory.systemTemp.createTemp(
       'diatar_dia_export_',
     );
     try {
-      final String tempPath = '${tempDir.path}/$defaultFileName';
-      final String exportedTempPath = await controller.exportCustomOrderToDia(
-        tempPath,
-      );
-      final Uint8List data = await File(exportedTempPath).readAsBytes();
-      return _androidDiaSaveChannel.invokeMethod<String>(
-        'saveDiaFile',
-        <String, Object?>{'fileName': defaultFileName, 'bytes': data},
-      );
+      final String tempPath = '${tempDir.path}/$defaultBaseName.dia';
+      await controller.exportCustomOrderToDia(tempPath);
+      final Uint8List data = await File(tempPath).readAsBytes();
+
+      while (true) {
+        final String? chosenBaseName = await _askAndroidDiaSaveName(
+          initialName: defaultBaseName,
+        );
+        if (chosenBaseName == null) {
+          return null;
+        }
+        final String fileBaseName = _normalizeDiaBaseName(
+          chosenBaseName,
+          fallback: defaultBaseName,
+        );
+        final String fileName = '$fileBaseName.dia';
+        final bool exists =
+            (await _androidDiaSaveChannel.invokeMethod<bool>(
+              'diaFileExists',
+              <String, Object?>{'treeUri': treeUri, 'fileName': fileName},
+            )) ??
+            false;
+        if (exists) {
+          final bool overwrite = await _askDiaOverwriteConfirmation(
+            fileBaseName,
+          );
+          if (!overwrite) {
+            continue;
+          }
+        }
+        final String? savedUri = await _androidDiaSaveChannel.invokeMethod<
+          String
+        >(
+          'writeDiaFileToFolder',
+          <String, Object?>{
+            'treeUri': treeUri,
+            'fileName': fileName,
+            'bytes': data,
+          },
+        );
+        return savedUri;
+      }
     } finally {
       try {
         if (await tempDir.exists()) {
@@ -1731,6 +1792,39 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         // Ignore temp cleanup failures.
       }
     }
+  }
+
+  Future<String?> _askAndroidDiaSaveName({required String initialName}) {
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return _AndroidDiaSaveNameDialog(initialName: initialName);
+      },
+    );
+  }
+
+  Future<bool> _askDiaOverwriteConfirmation(String fileBaseName) async {
+    final l10n = context.l10n;
+    final bool? overwrite = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.customOrderDiaOverwriteTitle),
+          content: Text(l10n.customOrderDiaOverwriteMessage(fileBaseName)),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.diatarImportOverwriteAll),
+            ),
+          ],
+        );
+      },
+    );
+    return overwrite ?? false;
   }
 
   Future<void> _showDiaSaveErrorDialog(Object error) async {
@@ -2460,6 +2554,72 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
                     Navigator.of(context).pop(target);
                   }
                 },
+          child: Text(l10n.saveDia),
+        ),
+      ],
+    );
+  }
+}
+
+class _AndroidDiaSaveNameDialog extends StatefulWidget {
+  const _AndroidDiaSaveNameDialog({required this.initialName});
+
+  final String initialName;
+
+  @override
+  State<_AndroidDiaSaveNameDialog> createState() =>
+      _AndroidDiaSaveNameDialogState();
+}
+
+class _AndroidDiaSaveNameDialogState extends State<_AndroidDiaSaveNameDialog> {
+  late final TextEditingController _fileNameController;
+
+  @override
+  void initState() {
+    super.initState();
+    _fileNameController = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _fileNameController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final String fileName = _fileNameController.text.trim();
+    if (fileName.isNotEmpty) {
+      Navigator.of(context).pop(fileName);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.saveDia),
+      content: SizedBox(
+        width: 420,
+        child: TextField(
+          controller: _fileNameController,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: l10n.customOrderDiaFileNameLabel,
+            border: const OutlineInputBorder(),
+          ),
+          onChanged: (_) => setState(() {}),
+          onSubmitted: (_) => _submit(),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: _fileNameController.text.trim().isEmpty
+              ? null
+              : _submit,
           child: Text(l10n.saveDia),
         ),
       ],

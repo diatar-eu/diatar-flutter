@@ -948,6 +948,14 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderUnnamedFileName => 'Névtelen';
 
   @override
+  String get customOrderDiaOverwriteTitle => 'Fájl felülírása';
+
+  @override
+  String customOrderDiaOverwriteMessage(Object name) {
+    return 'A(z) „$name” fájl már létezik. Felülírja?';
+  }
+
+  @override
   String savedPath(Object path) {
     return 'Mentve: $path';
   }

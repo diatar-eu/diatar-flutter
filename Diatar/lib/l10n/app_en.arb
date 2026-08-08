@@ -610,6 +610,13 @@
   },
   "customOrderDiaFileNameLabel": "File name",
   "customOrderUnnamedFileName": "Unnamed",
+  "customOrderDiaOverwriteTitle": "Overwrite file",
+  "customOrderDiaOverwriteMessage": "The file \"{name}\" already exists. Do you want to overwrite it?",
+  "@customOrderDiaOverwriteMessage": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "savedPath": "Saved: {path}",
   "@savedPath": {
     "placeholders": {

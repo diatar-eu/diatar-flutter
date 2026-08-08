@@ -945,6 +945,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderUnnamedFileName => 'Unnamed';
 
   @override
+  String get customOrderDiaOverwriteTitle => 'Overwrite file';
+
+  @override
+  String customOrderDiaOverwriteMessage(Object name) {
+    return 'The file \"$name\" already exists. Do you want to overwrite it?';
+  }
+
+  @override
   String savedPath(Object path) {
     return 'Saved: $path';
   }

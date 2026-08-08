@@ -610,6 +610,13 @@
   },
   "customOrderDiaFileNameLabel": "Fájlnév",
   "customOrderUnnamedFileName": "Névtelen",
+  "customOrderDiaOverwriteTitle": "Fájl felülírása",
+  "customOrderDiaOverwriteMessage": "A(z) „{name}” fájl már létezik. Felülírja?",
+  "@customOrderDiaOverwriteMessage": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "savedPath": "Mentve: {path}",
   "@savedPath": {
     "placeholders": {
