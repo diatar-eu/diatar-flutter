@@ -298,6 +298,9 @@ class ProjectionController extends ChangeNotifier {
       _ignoreNextMqttEndProgram = false;
     }
     globals = _applyReceiverDisplayFilters(globals.fromState(record));
+    if (!globals.isBlankPic && !globals.showBlankPic) {
+      blankFrame = null;
+    }
     final int ep = record.endProgram;
     if (!ignoreEndProgram && settings.remoteShutdownEnabled) {
       if (ep == RecStateEndProgram.stop ||
@@ -394,10 +397,9 @@ class ProjectionController extends ChangeNotifier {
     }
     _hasDataForCurrentConnection = true;
     final ui.Image? image = await _decodeImage(record.imageBytes);
-    if (image == null) {
-      return;
-    }
-    blankFrame = ImageFrame(image: image, bgMode: globals.bgMode);
+    blankFrame = image == null
+        ? null
+        : ImageFrame(image: image, bgMode: globals.bgMode);
     if (!_disposed) {
       notifyListeners();
     }
@@ -484,6 +486,10 @@ class ProjectionController extends ChangeNotifier {
     }
     if (connected != isConnected) {
       _hasDataForCurrentConnection = false;
+      if (!isConnected) {
+        diaFrame = null;
+        blankFrame = null;
+      }
     }
     connected = isConnected;
     _syncNoConnectionLogo();
@@ -523,6 +529,10 @@ class ProjectionController extends ChangeNotifier {
     }
     if (mqttConnected != isConnected) {
       _hasDataForCurrentConnection = false;
+      if (!isConnected) {
+        diaFrame = null;
+        blankFrame = null;
+      }
     }
     mqttConnected = isConnected;
     _syncNoConnectionLogo();
