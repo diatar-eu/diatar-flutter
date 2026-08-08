@@ -2854,6 +2854,13 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
         .toList();
     if (toImport.isEmpty) return;
 
+    if (toImport.any(
+      (DtzImportPackageAnalysis p) => p.status == DtzImportStatus.error,
+    )) {
+      final bool proceed = await _confirmImportWithErrors(toImport);
+      if (!mounted || !proceed) return;
+    }
+
     setState(() => _importing = true);
     try {
       final DtzUserImportCommitResult result = await widget.controller
@@ -2880,6 +2887,42 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
         SnackBar(content: Text(context.l10n.importDtzError(e.toString()))),
       );
     }
+  }
+
+  Future<bool> _confirmImportWithErrors(
+    List<DtzImportPackageAnalysis> toImport,
+  ) async {
+    final int errorCount = toImport
+        .where(
+          (DtzImportPackageAnalysis p) => p.status == DtzImportStatus.error,
+        )
+        .length;
+    final bool? proceed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dlgContext) => AlertDialog(
+        title: Text(dlgContext.l10n.importDtzConfirmErrorsTitle),
+        content: Text(dlgContext.l10n.importDtzConfirmErrorsBody(errorCount)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dlgContext).pop(false),
+            child: Text(dlgContext.l10n.close),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dlgContext).pop(true),
+            child: Text(dlgContext.l10n.importDtzImportButton),
+          ),
+        ],
+      ),
+    );
+    return proceed ?? false;
+  }
+
+  /// Whether a package can be force-imported despite its error status.
+  /// A pure parse failure cannot be force-imported; missing media files and
+  /// missing dia-IDs are tolerated (the app is fault-tolerant at runtime).
+  bool _canForceImport(DtzImportPackageAnalysis pkg) {
+    if (pkg.status != DtzImportStatus.error) return true;
+    return pkg.missingFiles.isNotEmpty || pkg.missingDiaIds.isNotEmpty;
   }
 
   @override
@@ -2973,7 +3016,7 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
                   _PackageRow(
                     pkg: pkg,
                     selected: _selectedPkgs.contains(pkg.dtzFileName),
-                    onChanged: pkg.status == DtzImportStatus.error || _importing
+                    onChanged: !_canForceImport(pkg) || _importing
                         ? null
                         : (bool? v) {
                             setState(() {
@@ -3022,7 +3065,7 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
   }
 }
 
-class _PackageRow extends StatelessWidget {
+class _PackageRow extends StatefulWidget {
   const _PackageRow({
     required this.pkg,
     required this.selected,
@@ -3036,7 +3079,15 @@ class _PackageRow extends StatelessWidget {
   final AppLocalizations l10n;
 
   @override
+  State<_PackageRow> createState() => _PackageRowState();
+}
+
+class _PackageRowState extends State<_PackageRow> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final DtzImportPackageAnalysis pkg = widget.pkg;
     final Color statusColor;
     final IconData statusIcon;
     final String statusText;
@@ -3046,61 +3097,134 @@ class _PackageRow extends StatelessWidget {
         statusColor = Colors.green.shade700;
         statusIcon = Icons.check_circle_outline;
         statusText = pkg.referencedFiles.isEmpty
-            ? l10n.importDtzStatusNoRefs
-            : l10n.importDtzStatusOk(pkg.matchedFiles.length);
+            ? widget.l10n.importDtzStatusNoRefs
+            : widget.l10n.importDtzStatusOk(pkg.matchedFiles.length);
       case DtzImportStatus.warning:
         statusColor = Colors.orange.shade700;
         statusIcon = Icons.warning_amber_outlined;
-        if (pkg.errorReason != null &&
-            pkg.errorReason!.contains('Missing dia-IDs')) {
-          statusText = l10n.importDtzStatusMissingDiaIds(pkg.errorReason ?? '');
-        } else {
-          statusText = l10n.importDtzStatusWarning(
+        if (pkg.missingFiles.isNotEmpty) {
+          statusText = widget.l10n.importDtzStatusWarning(
             pkg.missingFiles.length,
             pkg.referencedFiles.length,
+          );
+        } else {
+          statusText = widget.l10n.importDtzStatusMissingDiaIdsCount(
+            pkg.missingDiaIds.length,
           );
         }
       case DtzImportStatus.error:
         statusColor = Theme.of(context).colorScheme.error;
         statusIcon = Icons.cancel_outlined;
-        if (pkg.errorReason != null &&
-            pkg.errorReason!.contains('Missing dia-IDs')) {
-          statusText = l10n.importDtzStatusMissingDiaIds(pkg.errorReason ?? '');
-        } else if (pkg.errorReason != null &&
-            pkg.errorReason!.contains('invalid')) {
-          statusText = l10n.importDtzStatusParseError;
-        } else {
-          statusText = l10n.importDtzStatusError(
+        if (pkg.missingFiles.isNotEmpty) {
+          statusText = widget.l10n.importDtzStatusError(
             pkg.missingFiles.length,
             pkg.referencedFiles.length,
           );
+        } else if (pkg.missingDiaIds.isNotEmpty) {
+          statusText = widget.l10n.importDtzStatusMissingDiaIdsCount(
+            pkg.missingDiaIds.length,
+          );
+        } else {
+          statusText = widget.l10n.importDtzStatusParseError;
         }
     }
 
+    final bool hasDetails =
+        pkg.missingFiles.isNotEmpty || pkg.missingDiaIds.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Checkbox(value: selected, onChanged: onChanged),
-          const SizedBox(width: 4),
-          Icon(statusIcon, size: 18, color: statusColor),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  pkg.dtzFileName,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Checkbox(value: widget.selected, onChanged: widget.onChanged),
+              const SizedBox(width: 4),
+              Icon(statusIcon, size: 18, color: statusColor),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      pkg.dtzFileName,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      statusText,
+                      style: TextStyle(fontSize: 12, color: statusColor),
+                    ),
+                  ],
                 ),
-                Text(
-                  statusText,
-                  style: TextStyle(fontSize: 12, color: statusColor),
+              ),
+              if (hasDetails)
+                IconButton(
+                  icon: Icon(
+                    _expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 18,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  visualDensity: VisualDensity.compact,
+                  tooltip: widget.l10n.importDtzDetails,
+                  onPressed: () => setState(() => _expanded = !_expanded),
                 ),
-              ],
-            ),
+            ],
           ),
+          if (_expanded && hasDetails)
+            Padding(
+              padding: const EdgeInsets.only(left: 28, bottom: 4),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    if (pkg.missingFiles.isNotEmpty) ...<Widget>[
+                      Text(
+                        widget.l10n.importDtzMissingFilesTitle,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      for (final String f in pkg.missingFiles.toList()..sort())
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8, top: 1),
+                          child: Text(
+                            f,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                    ],
+                    if (pkg.missingDiaIds.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.l10n.importDtzMissingDiaIdsTitle,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      for (final String id in pkg.missingDiaIds.toList()..sort())
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8, top: 1),
+                          child: Text(
+                            id,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

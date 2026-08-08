@@ -2081,11 +2081,41 @@ abstract class AppLocalizations {
   /// **'Nem importálható – érvénytelen DTZ fájl'**
   String get importDtzStatusParseError;
 
-  /// No description provided for @importDtzStatusMissingDiaIds.
+  /// No description provided for @importDtzStatusMissingDiaIdsCount.
   ///
   /// In hu, this message translates to:
-  /// **'Nem importálható – ismeretlen dia-ID a DTZ-ben: {reason}'**
-  String importDtzStatusMissingDiaIds(Object reason);
+  /// **'Ismeretlen dia-ID a DTZ-ben: {count} db'**
+  String importDtzStatusMissingDiaIdsCount(int count);
+
+  /// No description provided for @importDtzDetails.
+  ///
+  /// In hu, this message translates to:
+  /// **'Részletek'**
+  String get importDtzDetails;
+
+  /// No description provided for @importDtzMissingFilesTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hiányzó médiafájlok'**
+  String get importDtzMissingFilesTitle;
+
+  /// No description provided for @importDtzMissingDiaIdsTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ismeretlen dia-ID-k'**
+  String get importDtzMissingDiaIdsTitle;
+
+  /// No description provided for @importDtzConfirmErrorsTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hibás csomag importálása'**
+  String get importDtzConfirmErrorsTitle;
+
+  /// No description provided for @importDtzConfirmErrorsBody.
+  ///
+  /// In hu, this message translates to:
+  /// **'A kijelölt {count} csomag hibás (hiányzó médiafájl vagy ismeretlen dia-ID). A hiányzó fájlok nem kerülnek kibontásra. Mégis importálod?'**
+  String importDtzConfirmErrorsBody(int count);
 
   /// No description provided for @importDtzImportButton.
   ///

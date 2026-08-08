@@ -1256,8 +1256,26 @@ class DiatarMainController extends ChangeNotifier {
     return _dtzUserImportService.analyze(
       dtzFiles: dtzFiles,
       zipFiles: zipFiles,
-      availableDiaIds: _dtzLibrary.keys.toSet(),
+      availableDiaIds: _availableDiaIds(),
     );
+  }
+
+  /// dia-IDs of all loaded DTX books (from the '#' lines). These are the IDs
+  /// the DTZ import validation considers known, since a photo is only
+  /// displayable when a loaded song verse references it.
+  Set<String> _availableDiaIds() {
+    final Set<String> ids = <String>{};
+    for (final DtxBook book in books) {
+      for (final DtxSong song in book.songs) {
+        for (final DtxVerse verse in song.verses) {
+          final String? diaId = verse.diaId;
+          if (diaId != null && diaId.isNotEmpty) {
+            ids.add(diaId);
+          }
+        }
+      }
+    }
+    return ids;
   }
 
   /// Commits previously analysed packages to the DTZ directory.

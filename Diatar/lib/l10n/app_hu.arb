@@ -825,10 +825,24 @@
     }
   },
   "importDtzStatusParseError": "Nem importálható – érvénytelen DTZ fájl",
-  "importDtzStatusMissingDiaIds": "Nem importálható – ismeretlen dia-ID a DTZ-ben: {reason}",
-  "@importDtzStatusMissingDiaIds": {
+  "importDtzStatusMissingDiaIdsCount": "Ismeretlen dia-ID a DTZ-ben: {count} db",
+  "@importDtzStatusMissingDiaIdsCount": {
     "placeholders": {
-      "reason": {}
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importDtzDetails": "Részletek",
+  "importDtzMissingFilesTitle": "Hiányzó médiafájlok",
+  "importDtzMissingDiaIdsTitle": "Ismeretlen dia-ID-k",
+  "importDtzConfirmErrorsTitle": "Hibás csomag importálása",
+  "importDtzConfirmErrorsBody": "A kijelölt {count} csomag hibás (hiányzó médiafájl vagy ismeretlen dia-ID). A hiányzó fájlok nem kerülnek kibontásra. Mégis importálod?",
+  "@importDtzConfirmErrorsBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
     }
   },
   "importDtzImportButton": "Importálás",

@@ -1168,8 +1168,25 @@ class AppLocalizationsHu extends AppLocalizations {
       'Nem importálható – érvénytelen DTZ fájl';
 
   @override
-  String importDtzStatusMissingDiaIds(Object reason) {
-    return 'Nem importálható – ismeretlen dia-ID a DTZ-ben: $reason';
+  String importDtzStatusMissingDiaIdsCount(int count) {
+    return 'Ismeretlen dia-ID a DTZ-ben: $count db';
+  }
+
+  @override
+  String get importDtzDetails => 'Részletek';
+
+  @override
+  String get importDtzMissingFilesTitle => 'Hiányzó médiafájlok';
+
+  @override
+  String get importDtzMissingDiaIdsTitle => 'Ismeretlen dia-ID-k';
+
+  @override
+  String get importDtzConfirmErrorsTitle => 'Hibás csomag importálása';
+
+  @override
+  String importDtzConfirmErrorsBody(int count) {
+    return 'A kijelölt $count csomag hibás (hiányzó médiafájl vagy ismeretlen dia-ID). A hiányzó fájlok nem kerülnek kibontásra. Mégis importálod?';
   }
 
   @override

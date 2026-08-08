@@ -21,6 +21,7 @@ class DtzImportPackageAnalysis {
     required this.referencedFiles,
     required this.matchedFiles,
     required this.missingFiles,
+    required this.missingDiaIds,
     required this.status,
     this.errorReason,
   });
@@ -35,6 +36,9 @@ class DtzImportPackageAnalysis {
 
   /// Subset of [referencedFiles] that are NOT in any of the provided ZIPs.
   final Set<String> missingFiles;
+
+  /// Dia-IDs referenced by this DTZ that are not known from the DTX books.
+  final Set<String> missingDiaIds;
 
   final DtzImportStatus status;
 
@@ -224,6 +228,7 @@ class DtzUserImportService {
         referencedFiles: const <String>{},
         matchedFiles: const <String>{},
         missingFiles: const <String>{},
+        missingDiaIds: const <String>{},
         status: DtzImportStatus.error,
         errorReason: e.toString(),
       );
@@ -246,6 +251,7 @@ class DtzUserImportService {
           referencedFiles: const <String>{},
           matchedFiles: const <String>{},
           missingFiles: const <String>{},
+          missingDiaIds: missing,
           status: status,
           errorReason: 'Missing dia-IDs: ${missing.toList().join(", ")}',
         );
@@ -255,6 +261,7 @@ class DtzUserImportService {
         referencedFiles: const <String>{},
         matchedFiles: const <String>{},
         missingFiles: const <String>{},
+        missingDiaIds: const <String>{},
         status: DtzImportStatus.ok,
       );
     }
@@ -297,6 +304,7 @@ class DtzUserImportService {
           referencedFiles: referencedFiles,
           matchedFiles: matched,
           missingFiles: missing,
+          missingDiaIds: missingDiaIds,
           status: status,
           errorReason: diaInfo,
         );
@@ -308,6 +316,7 @@ class DtzUserImportService {
       referencedFiles: referencedFiles,
       matchedFiles: matched,
       missingFiles: missing,
+      missingDiaIds: const <String>{},
       status: status,
     );
   }

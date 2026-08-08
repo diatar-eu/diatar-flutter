@@ -825,10 +825,24 @@
     }
   },
   "importDtzStatusParseError": "Not importable – invalid DTZ file",
-  "importDtzStatusMissingDiaIds": "Not importable – unknown dia-IDs in DTZ: {reason}",
-  "@importDtzStatusMissingDiaIds": {
+  "importDtzStatusMissingDiaIdsCount": "Unknown dia-ID(s) in DTZ: {count}",
+  "@importDtzStatusMissingDiaIdsCount": {
     "placeholders": {
-      "reason": {}
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importDtzDetails": "Details",
+  "importDtzMissingFilesTitle": "Missing media files",
+  "importDtzMissingDiaIdsTitle": "Unknown dia-IDs",
+  "importDtzConfirmErrorsTitle": "Import faulty package",
+  "importDtzConfirmErrorsBody": "{count} selected package(s) have errors (missing media files or unknown dia-IDs). Missing files will not be extracted. Import anyway?",
+  "@importDtzConfirmErrorsBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
     }
   },
   "importDtzImportButton": "Import",

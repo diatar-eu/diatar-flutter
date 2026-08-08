@@ -1162,8 +1162,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importDtzStatusParseError => 'Not importable – invalid DTZ file';
 
   @override
-  String importDtzStatusMissingDiaIds(Object reason) {
-    return 'Not importable – unknown dia-IDs in DTZ: $reason';
+  String importDtzStatusMissingDiaIdsCount(int count) {
+    return 'Unknown dia-ID(s) in DTZ: $count';
+  }
+
+  @override
+  String get importDtzDetails => 'Details';
+
+  @override
+  String get importDtzMissingFilesTitle => 'Missing media files';
+
+  @override
+  String get importDtzMissingDiaIdsTitle => 'Unknown dia-IDs';
+
+  @override
+  String get importDtzConfirmErrorsTitle => 'Import faulty package';
+
+  @override
+  String importDtzConfirmErrorsBody(int count) {
+    return '$count selected package(s) have errors (missing media files or unknown dia-IDs). Missing files will not be extracted. Import anyway?';
   }
 
   @override
