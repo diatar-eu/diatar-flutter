@@ -1,0 +1,8 @@
+• Diasor átnevezése és mentése felülírás-megerősítéssel (Androidon a „(2)”, „(3)” utótag helyett kérdés jelenik meg)
+• Diasorok automatikus ellenőrzése indításkor
+• Biztonsági mentés exportálása és importálása
+• Háttérkép használata mobilon
+• Hibatűrő DTZ-import (a hibás részeket kihagyja, nem akad el)
+• Versszak beszúrásakor a beszúrt rész kiemelése
+• Kilépéskor az MQTT-üzenetek törlése, hogy a többi eszköz ne kapja meg a régi állapotot
+• Javítások: dupladiak-cím, diasor-szerkesztőből kilépés, kereső

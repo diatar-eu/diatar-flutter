@@ -1,0 +1,3 @@
+• Vetítési megjelenítés javításai: kotta és szövegméret
+• Háttér nullázódásának javítása
+• TV-s kezelés egyszerűsítése

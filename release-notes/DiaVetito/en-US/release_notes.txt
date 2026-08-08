@@ -1,0 +1,3 @@
+• Projection rendering fixes: chord and text sizing
+• Fix background reset
+• Simplified TV control

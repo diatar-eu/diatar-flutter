@@ -26,7 +26,7 @@ When you push a tag starting with `v` (e.g., `git tag v1.2.3 && git push origin 
 - **Android**: Builds the app bundle and uploads it to the Play Store **production** track via Fastlane (`upload_to_play_store`).
 - **iOS**: Builds the IPA, signs it, and uploads it to App Store Connect, submitting it for review and automatic release via Fastlane (`upload_to_app_store`).
 
-No new screenshots or metadata are uploaded; only the application binary is pushed to production.
+No new screenshots are uploaded; only the application binary and the localized "What's New" release notes (from `release-notes/<App>/<locale>/release_notes.txt`) are pushed to production.
 
 ### Flatpak and Web run after the stores deploy
 

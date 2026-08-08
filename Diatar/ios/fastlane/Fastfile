@@ -32,7 +32,9 @@ platform :ios do
     upload_to_app_store(
       api_key: api_key,
       skip_screenshots: true,
-      skip_metadata: true,
+      skip_metadata: false,
+      metadata_path: "../../release-notes/Diatar",
+      submission_information: { export_compliance_uses_encryption: false },
       submit_for_review: true,
       automatic_release: true,
       force: true,
