@@ -808,7 +808,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                         const SizedBox(height: 12),
                         TextField(
                           decoration: InputDecoration(
-                            hintText: l10n.searchHint,
+                            hintText: l10n.searchHintOrderEdit,
                             prefixIcon: const Icon(Icons.search, size: 20),
                             border: const OutlineInputBorder(),
                             isDense: true,

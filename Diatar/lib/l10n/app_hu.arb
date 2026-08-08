@@ -436,6 +436,7 @@
   },
   "searchLabel": "Diakereső",
   "searchHint": "Kötet, énekcím vagy dal szövege",
+  "searchHintOrderEdit": "Dal száma",
   "noResults": "Nincs találat.",
   "customOrderStatus": "Saját sorrend: {state}",
   "@customOrderStatus": {

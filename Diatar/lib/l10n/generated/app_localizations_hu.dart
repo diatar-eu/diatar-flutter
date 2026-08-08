@@ -514,6 +514,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get searchHint => 'Kötet, énekcím vagy dal szövege';
 
   @override
+  String get searchHintOrderEdit => 'Dal száma';
+
+  @override
   String get noResults => 'Nincs találat.';
 
   @override

@@ -436,6 +436,7 @@
   },
   "searchLabel": "Slide search",
   "searchHint": "Book, song title or lyric",
+  "searchHintOrderEdit": "Song number",
   "noResults": "No results.",
   "customOrderStatus": "Custom order: {state}",
   "@customOrderStatus": {

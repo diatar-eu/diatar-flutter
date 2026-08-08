@@ -511,6 +511,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchHint => 'Book, song title or lyric';
 
   @override
+  String get searchHintOrderEdit => 'Song number';
+
+  @override
   String get noResults => 'No results.';
 
   @override

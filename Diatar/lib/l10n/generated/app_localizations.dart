@@ -887,6 +887,12 @@ abstract class AppLocalizations {
   /// **'Kötet, énekcím vagy dal szövege'**
   String get searchHint;
 
+  /// No description provided for @searchHintOrderEdit.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dal száma'**
+  String get searchHintOrderEdit;
+
   /// No description provided for @noResults.
   ///
   /// In hu, this message translates to:
