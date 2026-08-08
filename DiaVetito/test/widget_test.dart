@@ -5,6 +5,8 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
 
@@ -57,7 +59,7 @@ void main() {
       const Locale('en'),
     );
 
-    await tester.tap(find.byType(GestureDetector).first);
+    await tester.longPress(find.byType(GestureDetector).first);
     await tester.pumpAndSettle();
 
     expect(
@@ -65,5 +67,48 @@ void main() {
           find.text(en.settingsTitleReceiver).evaluate().length,
       1,
     );
+  });
+
+  testWidgets('OK (select) key opens settings on Android TV',
+      (WidgetTester tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    const MethodChannel systemChannel = MethodChannel(
+      'com.polyjoe.diavetito/system',
+    );
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      systemChannel,
+      (MethodCall call) async {
+        if (call.method == 'isTv') {
+          return true;
+        }
+        return null;
+      },
+    );
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(systemChannel, null);
+    });
+
+    try {
+      await tester.pumpWidget(const DiaVetitoApp());
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+
+      final AppLocalizations hu = await AppLocalizations.delegate.load(
+        const Locale('hu'),
+      );
+      final AppLocalizations en = await AppLocalizations.delegate.load(
+        const Locale('en'),
+      );
+      expect(
+        find.text(hu.settingsTitleReceiver).evaluate().length +
+            find.text(en.settingsTitleReceiver).evaluate().length,
+        1,
+      );
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 }

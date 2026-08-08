@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../controllers/projection_controller.dart';
 import '../l10n/l10n.dart';
+import '../utils/system_platform.dart';
 import 'settings_sheet.dart';
 
 class HomePage extends StatefulWidget {
@@ -31,6 +33,7 @@ class _HomePageState extends State<HomePage> {
   String _buildNumber = '-';
   Timer? _quickExitHideTimer;
   bool _showQuickExitButton = false;
+  bool _isTv = false;
 
   ProjectionController get controller => widget.controller;
 
@@ -38,6 +41,17 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadAppVersion();
+    _detectTv();
+  }
+
+  Future<void> _detectTv() async {
+    final bool tv = await SystemPlatform.isTv();
+    if (!mounted || tv == _isTv) {
+      return;
+    }
+    setState(() {
+      _isTv = tv;
+    });
   }
 
   @override
@@ -71,14 +85,6 @@ class _HomePageState extends State<HomePage> {
               );
               final double viewportHeight = constraints.maxHeight;
               final bool fitToViewport = controller.settings.projAutoSize;
-              final double initialCanvasHeight =
-                  _canvasHeight ?? viewportHeight;
-              final double canvasHeight = fitToViewport
-                  ? viewportHeight
-                  : (initialCanvasHeight > viewportHeight
-                        ? initialCanvasHeight
-                        : viewportHeight);
-              final bool isLogoFrame = controller.activeFrame is LogoFrame;
 
               if (!fitToViewport) {
                 _scheduleHeightRefresh(
@@ -91,65 +97,17 @@ class _HomePageState extends State<HomePage> {
               return Stack(
                 children: <Widget>[
                   Positioned.fill(
-                    child: GestureDetector(
-                      onTap: () => _showSettingsHint(context),
-                      onLongPress: () => _openSettings(context),
-                      child: Semantics(
-                        label: isLogoFrame
-                            ? context.l10n.startupLogoSemanticLabel
-                            : null,
-                        image: isLogoFrame,
-                        child: fitToViewport
-                            ? SizedBox(
-                                width: constraints.maxWidth,
-                                height: viewportHeight,
-                                child: CustomPaint(
-                                  size: Size(
-                                    constraints.maxWidth,
-                                    viewportHeight,
-                                  ),
-                                  painter: ProjectorPainter(
-                                    frame: controller.activeFrame,
-                                    globals: controller.globals,
-                                    settings: controller.settings,
-                                    logoTitle: context.l10n.logoTitle,
-                                    logoSubtitle: context.l10n
-                                        .splashVersionSubtitle(
-                                          _appVersion,
-                                          _buildNumber,
-                                        ),
-                                  ),
-                                ),
-                              )
-                            : SingleChildScrollView(
-                                scrollDirection: Axis.vertical,
-                                child: SizedBox(
-                                  width: constraints.maxWidth,
-                                  height: canvasHeight,
-                                  child: CustomPaint(
-                                    size: Size(
-                                      constraints.maxWidth,
-                                      canvasHeight,
-                                    ),
-                                    painter: ProjectorPainter(
-                                      frame: controller.activeFrame,
-                                      globals: controller.globals,
-                                      settings: controller.settings,
-                                      logoTitle: context.l10n.logoTitle,
-                                      logoSubtitle: context.l10n
-                                          .splashVersionSubtitle(
-                                            _appVersion,
-                                            _buildNumber,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                      ),
-                    ),
+                    child: _isTv
+                        ? Focus(
+                            autofocus: true,
+                            onKeyEvent: _onBackgroundKeyEvent,
+                            child: _buildBackground(context, constraints),
+                          )
+                        : _buildBackground(context, constraints),
                   ),
                   if ((defaultTargetPlatform == TargetPlatform.android ||
                           defaultTargetPlatform == TargetPlatform.iOS) &&
+                      !_isTv &&
                       controller.settings.receiverKeepStartupLogo &&
                       controller.activeFrame is LogoFrame)
                     Positioned(
@@ -178,6 +136,88 @@ class _HomePageState extends State<HomePage> {
         },
       ),
     );
+  }
+
+  Widget _buildBackground(BuildContext context, BoxConstraints constraints) {
+    final double viewportHeight = constraints.maxHeight;
+    final bool fitToViewport = controller.settings.projAutoSize;
+    final double initialCanvasHeight = _canvasHeight ?? viewportHeight;
+    final double canvasHeight = fitToViewport
+        ? viewportHeight
+        : (initialCanvasHeight > viewportHeight
+              ? initialCanvasHeight
+              : viewportHeight);
+    final bool isLogoFrame = controller.activeFrame is LogoFrame;
+
+    final Widget canvas = fitToViewport
+        ? SizedBox(
+            width: constraints.maxWidth,
+            height: viewportHeight,
+            child: CustomPaint(
+              size: Size(
+                constraints.maxWidth,
+                viewportHeight,
+              ),
+              painter: ProjectorPainter(
+                frame: controller.activeFrame,
+                globals: controller.globals,
+                settings: controller.settings,
+                logoTitle: context.l10n.logoTitle,
+                logoSubtitle: context.l10n.splashVersionSubtitle(
+                  _appVersion,
+                  _buildNumber,
+                ),
+              ),
+            ),
+          )
+        : SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: SizedBox(
+              width: constraints.maxWidth,
+              height: canvasHeight,
+              child: CustomPaint(
+                size: Size(
+                  constraints.maxWidth,
+                  canvasHeight,
+                ),
+                painter: ProjectorPainter(
+                  frame: controller.activeFrame,
+                  globals: controller.globals,
+                  settings: controller.settings,
+                  logoTitle: context.l10n.logoTitle,
+                  logoSubtitle: context.l10n.splashVersionSubtitle(
+                    _appVersion,
+                    _buildNumber,
+                  ),
+                ),
+              ),
+            ),
+          );
+
+    return GestureDetector(
+      onTap: () => _showSettingsHint(context),
+      onLongPress: () => _openSettings(context),
+      child: Semantics(
+        label: isLogoFrame ? context.l10n.startupLogoSemanticLabel : null,
+        image: isLogoFrame,
+        child: canvas,
+      ),
+    );
+  }
+
+  KeyEventResult _onBackgroundKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+    final LogicalKeyboardKey key = event.logicalKey;
+    if (key != LogicalKeyboardKey.select &&
+        key != LogicalKeyboardKey.enter &&
+        key != LogicalKeyboardKey.numpadEnter &&
+        key != LogicalKeyboardKey.space) {
+      return KeyEventResult.ignored;
+    }
+    unawaited(_openSettings(context));
+    return KeyEventResult.handled;
   }
 
   void _scheduleHeightRefresh({

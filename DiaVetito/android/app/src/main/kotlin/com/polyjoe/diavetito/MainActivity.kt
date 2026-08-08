@@ -1,6 +1,7 @@
 package com.polyjoe.diavetito
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -15,6 +16,9 @@ class MainActivity : FlutterActivity() {
 		MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SYSTEM_CHANNEL)
 			.setMethodCallHandler { call, result ->
 				when (call.method) {
+					"isTv" -> result.success(
+						packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+					)
 					"requestShutdown" -> result.success(requestShutdown())
 					else -> result.notImplemented()
 				}
