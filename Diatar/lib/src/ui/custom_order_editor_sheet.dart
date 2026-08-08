@@ -833,6 +833,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 selected: isSelected,
+                                selectedTileColor: Colors.blue.withValues(
+                                  alpha: 0.12,
+                                ),
                                 onTap: () {
                                   setDialogState(() {
                                     selectedSongIndex = option.songIndex;
