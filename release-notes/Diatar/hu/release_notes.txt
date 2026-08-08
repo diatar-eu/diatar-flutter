@@ -1,4 +1,3 @@
-• Diasor átnevezése és mentése felülírás-megerősítéssel (Androidon a „(2)”, „(3)” utótag helyett kérdés jelenik meg)
 • Diasorok automatikus ellenőrzése indításkor
 • Biztonsági mentés exportálása és importálása
 • Háttérkép használata mobilon

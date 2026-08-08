@@ -1,4 +1,3 @@
-• Rename slide lists and save with overwrite confirmation (on Android, a dialog replaces the automatic “(2)”, “(3)” suffix)
 • Automatic slide-list check on startup
 • Export and import backups
 • Background image on mobile
