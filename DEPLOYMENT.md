@@ -32,6 +32,19 @@ No new screenshots are uploaded; only the application binary and the localized "
 
 The Flatpak (`.github/workflows/flatpak.yml`) and Web (`.github/workflows/web-deploy.yml`) deployments do **not** start directly on the tag push. They are triggered by the `workflow_run` event of the `Deploy to Stores` workflow, so they only execute once the stores deploy — including the build-number bump — has finished successfully. This guarantees the Flatpak and Web builds pick up the bumped `pubspec.yaml` version.
 
+### Web: downloadable artifacts
+
+Besides the web apps, the Web deploy also builds the Windows, Linux and Android artifacts and uploads them to the Pages site under `downloads/<App>/`. They are **not** linked from the landing page, but are directly downloadable at:
+
+- `https://web.diatar.eu/downloads/Diatar/Diatar.apk`
+- `https://web.diatar.eu/downloads/Diatar/Diatar-linux.tar.gz`
+- `https://web.diatar.eu/downloads/Diatar/Diatar-windows.zip`
+- `https://web.diatar.eu/downloads/DiaVetito/DiaVetito.apk`
+- `https://web.diatar.eu/downloads/DiaVetito/DiaVetito-linux.tar.gz`
+- `https://web.diatar.eu/downloads/DiaVetito/DiaVetito-windows.zip`
+
+These artifacts are built in `web-deploy.yml` from the same checked-out (already bumped) revision as the web apps, so they always match the deployed web version.
+
 ### Automatic build number bump
 
 The `deploy.yml` workflow automatically increments the build number (the `+N` suffix in the app's `pubspec.yaml`, i.e. `version: X.Y.Z+N`) **before** any store upload, and commits the change back to the repository with a `ci: bump build number to N [skip ci]` message. This guarantees that every store upload uses a strictly increasing `versionCode` (Android) / `CFBundleVersion` (iOS), so re-running a deploy (e.g. after a transient failure) never collides with an already-published build.
