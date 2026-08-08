@@ -4467,7 +4467,11 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> requestExit() async {
-    await _mqttSender.clearRetainedMessages();
+    try {
+      await _mqttSender.clearRetainedMessages();
+    } catch (_) {
+      // A törlés hibája sosem blokkolhatja a kilépést.
+    }
     await _sender.stop();
     await _mqttSender.close();
     await _desktopProjectorBridge.dispose();
@@ -4480,6 +4484,13 @@ class DiatarMainController extends ChangeNotifier {
     } else {
       await SystemNavigator.pop();
     }
+  }
+
+  /// Best-effort retained törlés (pl. web-es fülbezárásnál), ami sosem dob.
+  Future<void> clearRetainedBestEffort() async {
+    try {
+      await _mqttSender.clearRetainedMessages();
+    } catch (_) {}
   }
 
   String _fileExtension(String path) {

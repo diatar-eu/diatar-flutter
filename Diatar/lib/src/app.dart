@@ -11,6 +11,7 @@ import 'controllers/diatar_main_controller.dart';
 import 'ui/desktop_hotkeys_layer.dart';
 import 'ui/home_page.dart';
 import 'ui/onboarding_sheet.dart';
+import 'utils/web_page_hide.dart';
 
 class DiatarApp extends StatefulWidget {
   const DiatarApp({super.key});
@@ -41,6 +42,11 @@ class _DiatarAppState extends State<DiatarApp>
     WidgetsBinding.instance.addObserver(this);
     if (_isDesktopPlatform()) {
       windowManager.addListener(this);
+    }
+    if (kIsWeb) {
+      registerPageHideHandler(() {
+        unawaited(_controller.clearRetainedBestEffort());
+      });
     }
     unawaited(_enableImmersiveMode());
     unawaited(_controller.init());
@@ -92,6 +98,23 @@ class _DiatarAppState extends State<DiatarApp>
     }
   }
 
+  /// Androidon a back gomb a [requestExit]-re fut, így a kilépés előtt még
+  /// megtörténik a retained üzenetek törlése is.
+  Widget _wrapExitGuard(Widget child) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return child;
+    }
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (!didPop) {
+          unawaited(_controller.requestExit());
+        }
+      },
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -120,20 +143,22 @@ class _DiatarAppState extends State<DiatarApp>
           // mindig csatlakoztatjuk, hogy a billentyűk akkor is működjenek,
           // ha a vezérlő ablak el van rejtve. Ilyenkor csak az ablak
           // tartalma üres (és a kurzor el van rejtve), maga a réteg megmarad.
-          home: DesktopHotkeysLayer(
-            controller: _controller,
-            child: _controller.controlWindowHidden
-                ? MouseRegion(
-                    cursor: SystemMouseCursors.none,
-                    child: const SizedBox.expand(),
-                  )
-                : _controller.pendingOnboarding
-                    ? OnboardingSheet(
-                        onComplete: () {
-                          unawaited(_controller.markOnboardingSeen());
-                        },
-                      )
-                    : DiatarHomePage(controller: _controller),
+          home: _wrapExitGuard(
+            DesktopHotkeysLayer(
+              controller: _controller,
+              child: _controller.controlWindowHidden
+                  ? MouseRegion(
+                      cursor: SystemMouseCursors.none,
+                      child: const SizedBox.expand(),
+                    )
+                  : _controller.pendingOnboarding
+                      ? OnboardingSheet(
+                          onComplete: () {
+                            unawaited(_controller.markOnboardingSeen());
+                          },
+                        )
+                      : DiatarHomePage(controller: _controller),
+            ),
           ),
         );
       },

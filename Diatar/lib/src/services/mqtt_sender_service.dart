@@ -36,11 +36,18 @@ class MqttSenderService {
     required String password,
     required String channel,
   }) async {
-    await close();
-
     final String user = username.trim();
     final String pass = password;
     final String ch = channel.trim().isEmpty ? '1' : channel.trim();
+
+    // Ha másik felhasználó/csatorna: előbb töröljük a régi topic-csoport
+    // retained üzeneteit, amíg a régi kapcsolat még él.
+    if (_topicGroup.isNotEmpty && 'Diatar/$user/$ch/' != _topicGroup) {
+      await clearRetainedMessages();
+    }
+
+    await close();
+
     if (user.isEmpty) {
       onStatusChanged(false);
       return;
@@ -105,11 +112,51 @@ class MqttSenderService {
   Future<void> clearRetainedMessages() async {
     final MqttClient? client = _client;
     if (client == null) {
+      _cachedState = null;
+      _cachedText = null;
+      _cachedBlank = null;
       return;
     }
-    await _publishEmpty(_topicState);
-    await _publishEmpty(_topicDia);
-    await _publishEmpty(_topicBlank);
+
+    final List<String> topics = <String>[
+      _topicState,
+      _topicDia,
+      _topicBlank,
+    ].where((String t) => t.isNotEmpty).toList();
+    if (topics.isEmpty) {
+      return;
+    }
+
+    final Set<String> ackedTopics = <String>{};
+    final StreamSubscription<MqttPublishMessage>? sub = client.published?.listen(
+      (MqttPublishMessage msg) {
+        final String? topic = msg.variableHeader?.topicName;
+        if (topic != null) {
+          ackedTopics.add(topic);
+        }
+      },
+    );
+
+    try {
+      // Mindhárom törlő üzenetet szinkronban elindítjuk, hogy akár azonnali
+      // leállás (pl. web-es fülbezárás) esetén is mind a három topic-ra
+      // elinduljon a PUBLISH.
+      final List<Future<void>> sends = <Future<void>>[
+        for (final String topic in topics) _publishEmpty(topic),
+      ];
+      await Future.wait(sends);
+
+      // Megvárjuk a QoS1 PUBACK-okat, hogy a törlő üzenetek beérjenek a
+      // brokerre, mielőtt a kapcsolat bezárulna.
+      final Stopwatch stopwatch = Stopwatch()..start();
+      while (ackedTopics.length < topics.length &&
+          stopwatch.elapsedMilliseconds < 1500) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+    } finally {
+      await sub?.cancel();
+    }
+
     _cachedState = null;
     _cachedText = null;
     _cachedBlank = null;
@@ -157,7 +204,13 @@ class MqttSenderService {
     if (client == null || topic.isEmpty) {
       return;
     }
-    final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder();
-    client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!, retain: true);
+    try {
+      final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder();
+      client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!, retain: true);
+    } catch (_) {
+      // A kapcsolat nem connected lehet (pl. kilépés közbeni szakadás);
+      // az üres törlő üzenetet ilyenkor nem tudjuk kiküldeni, de nem
+      // szabad eldobnunk a többi topic törlését sem.
+    }
   }
 }
