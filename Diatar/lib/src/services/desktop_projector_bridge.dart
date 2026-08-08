@@ -47,6 +47,12 @@ class DesktopProjectorBridge {
 
   bool get isEnabled => _enabled;
 
+  /// Linuxon a desktop_multi_window 0.3.0 + window_manager 0.5.2
+  /// gyerekablak-bezárása crash-t okoz (lásd: _closeWindow), ezért
+  /// Linuxon eltérő (rejtő) viselkedést használunk.
+  bool get _isLinux =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
+
   Future<void> start(AppSettings settings) async {
     _enabled = _isDesktopPlatform() && settings.desktopProjectorEnabled;
     _lastSettings = settings;
@@ -112,10 +118,20 @@ class DesktopProjectorBridge {
 
   Future<void> _closeWindow() async {
     try {
-      // A vetítőablakot a saját maga zárja be (windowManager.close),
-      // mivel a WindowControllernek nincs close metódusa. Így a
-      // WindowListener.onWindowClose is megfelelően lefut.
-      await _channel.invokeMethod('close', null).timeout(_windowOpTimeout);
+      if (_isLinux) {
+        // A Linux-i desktop_multi_window 0.3.0 + window_manager 0.5.2
+        // kombinációban a gyerekablak bezárása (windowManager.close)
+        // crash-t okoz ("The implicit view cannot be removed", lásd
+        // MixinNetwork/flutter-plugins#488). Ezért Linuxon csak
+        // elrejtjük az ablakot, a motort nem állítjuk le; újra
+        // bekapcsoláskor a meglévő ablakot visszahozzuk.
+        await _windowController?.hide().timeout(_windowOpTimeout);
+      } else {
+        // A vetítőablakot a saját maga zárja be (windowManager.close),
+        // mivel a WindowControllernek nincs close metódusa. Így a
+        // WindowListener.onWindowClose is megfelelően lefut.
+        await _channel.invokeMethod('close', null).timeout(_windowOpTimeout);
+      }
     } catch (_) {
       // nem kritikus
     }
@@ -447,6 +463,16 @@ class DesktopProjectorBridge {
   Future<void> _closeWindowControllerBestEffort(
     WindowController controller,
   ) async {
+    if (_isLinux) {
+      // Linuxon nem zárjuk be a vetítőablakot, mert az crash-t okoz
+      // (lásd: _closeWindow); csak elrejtjük.
+      try {
+        await controller.hide().timeout(_windowOpTimeout);
+      } catch (_) {
+        // nem kritikus
+      }
+      return;
+    }
     try {
       await controller
           .invokeMethod(_windowCloseMethod)
