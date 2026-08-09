@@ -16,9 +16,10 @@ class MainActivity : FlutterActivity() {
 		MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SYSTEM_CHANNEL)
 			.setMethodCallHandler { call, result ->
 				when (call.method) {
-					"isTv" -> result.success(
-						packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
-					)
+				"isTv" -> result.success(
+					packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) ||
+						!packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+				)
 					"requestShutdown" -> result.success(requestShutdown())
 					else -> result.notImplemented()
 				}

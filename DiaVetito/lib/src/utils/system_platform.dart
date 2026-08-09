@@ -9,7 +9,8 @@ class SystemPlatform {
     'com.polyjoe.diavetito/system',
   );
 
-  /// Whether the device is an Android TV (leanback) box.
+  /// Whether the device is an Android TV (leanback) box or an Android device
+  /// without a touchscreen.
   ///
   /// Always false on web and non-Android platforms; gracefully falls back to
   /// false when the native side is unavailable (e.g. in tests).
