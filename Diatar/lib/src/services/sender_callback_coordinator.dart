@@ -25,10 +25,12 @@ class SenderCallbackCoordinator {
     required Future<void> Function() syncAfterConnect,
     required VoidCallback refreshFlags,
     required VoidCallback notify,
+    VoidCallback? onConnected,
   }) {
     return (bool connected) {
       setConnected(connected);
       if (connected) {
+        onConnected?.call();
         clearError();
         unawaited(syncAfterConnect());
       }

@@ -992,6 +992,11 @@ class DiatarMainController extends ChangeNotifier {
           syncAfterConnect: _syncBackgroundImageAfterConnect,
           refreshFlags: _refreshSenderFlags,
           notify: notifyListeners,
+          onConnected: () {
+            _setStatus('statusTcpSending', <String, String>{
+              'port': _transportSettingsPolicy.tcpTargetsStatusLabel(settings),
+            });
+          },
         );
     _sender.onError = _senderCallbackCoordinator.buildTcpErrorHandler(
       isActive: () => tcpActive,
@@ -1008,6 +1013,12 @@ class DiatarMainController extends ChangeNotifier {
           syncAfterConnect: _syncBackgroundImageAfterConnect,
           refreshFlags: _refreshSenderFlags,
           notify: notifyListeners,
+          onConnected: () {
+            _setStatus('statusMqttSending', <String, String>{
+              'user': _transportSettingsPolicy.normalizedMqttUser(settings),
+              'channel': settings.mqttChannel,
+            });
+          },
         );
     _mqttSender.onError = _senderCallbackCoordinator.buildMqttErrorHandler(
       isActive: () => mqttActive,
