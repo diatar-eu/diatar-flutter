@@ -890,7 +890,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchHintOrderEdit.
   ///
   /// In hu, this message translates to:
-  /// **'Dal száma'**
+  /// **'Ének száma'**
   String get searchHintOrderEdit;
 
   /// No description provided for @noResults.
@@ -1718,7 +1718,7 @@ abstract class AppLocalizations {
   /// No description provided for @customOrderSaveDiaPermissionDenied.
   ///
   /// In hu, this message translates to:
-  /// **'A kiválasztott mappa létezik, de az Android megtagadta az írási hozzáférést. Újabb Android-verziókon a közös mappákba (például /Belső tárhely/Diatar) történő közvetlen fájlírást a scoped storage blokkolhatja akkor is, ha a mappa kiválasztható. Válassz a rendszer mentési ablakából ajánlott helyet, vagy alkalmazás-specifikus mappát.'**
+  /// **'A DIA fájl mentése közben az Android nem tudta írni a kiválasztott célhelyet. Próbáld újra, és a rendszer mentési ablakában válassz másik mappát vagy fájlnevet.'**
   String get customOrderSaveDiaPermissionDenied;
 
   /// No description provided for @customOrderSaveDiaGenericError.
@@ -1726,6 +1726,30 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'A DIA fájl mentése nem sikerült. Részletek: {error}'**
   String customOrderSaveDiaGenericError(Object error);
+
+  /// No description provided for @customOrderOverwriteSavedDiaTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felülírás?'**
+  String get customOrderOverwriteSavedDiaTitle;
+
+  /// No description provided for @customOrderOverwriteSavedDiaBody.
+  ///
+  /// In hu, this message translates to:
+  /// **'Már van elmentve egy DIA fájl: {fileName}. Mit szeretnél?'**
+  String customOrderOverwriteSavedDiaBody(Object fileName);
+
+  /// No description provided for @customOrderOverwriteSavedDiaOverwrite.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felülírás'**
+  String get customOrderOverwriteSavedDiaOverwrite;
+
+  /// No description provided for @customOrderOverwriteSavedDiaNewLocation.
+  ///
+  /// In hu, this message translates to:
+  /// **'Új hely választása'**
+  String get customOrderOverwriteSavedDiaNewLocation;
 
   /// No description provided for @customOrderDiaFileNameLabel.
   ///

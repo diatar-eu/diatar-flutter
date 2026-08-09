@@ -13,7 +13,8 @@ class SettingsStore {
   static const String _kChannel = 'Channel';
   static const String _kBlankPicPath = 'BlankPicPath';
   static const String _kDiaExportPath = 'DiaExportPath';
-  static const String _kDiaExportTreeUri = 'DiaExportTreeUri';
+  static const String _kDiaExportUri = 'DiaExportUri';
+  static const String _kDiaExportFileName = 'DiaExportFileName';
   static const String _kBkColor = 'BkColor';
   static const String _kTxColor = 'TxColor';
   static const String _kBlankColor = 'BlankColor';
@@ -173,7 +174,8 @@ class SettingsStore {
       dtxPath: '',
       blankPicPath: prefs.getString(_kBlankPicPath) ?? '',
       diaExportPath: prefs.getString(_kDiaExportPath) ?? '',
-      diaExportTreeUri: prefs.getString(_kDiaExportTreeUri) ?? '',
+      diaExportUri: prefs.getString(_kDiaExportUri) ?? '',
+      diaExportFileName: prefs.getString(_kDiaExportFileName) ?? '',
       projFontSize: prefs.getInt(_kProjFontSize) ?? 250,
       projTitleSize: prefs.getInt(_kProjTitleSize) ?? 12,
       projLeftIndent: prefs.getInt(_kProjLeftIndent) ?? 2,
@@ -247,7 +249,8 @@ desktopSongHotkeys: _decodeStringMap(
     await prefs.setString(_kChannel, '1');
     await prefs.setString(_kBlankPicPath, settings.blankPicPath);
     await prefs.setString(_kDiaExportPath, settings.diaExportPath);
-    await prefs.setString(_kDiaExportTreeUri, settings.diaExportTreeUri);
+    await prefs.setString(_kDiaExportUri, settings.diaExportUri);
+    await prefs.setString(_kDiaExportFileName, settings.diaExportFileName);
     await prefs.setInt(_kProjFontSize, settings.projFontSize);
     await prefs.setInt(_kProjTitleSize, settings.projTitleSize);
     await prefs.setInt(_kProjLeftIndent, settings.projLeftIndent);

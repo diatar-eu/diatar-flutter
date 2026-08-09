@@ -2517,7 +2517,10 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
-  Future<String> exportCustomOrderToDia(String path) async {
+  Future<String> exportCustomOrderToDia(
+    String path, {
+    bool recordSave = true,
+  }) async {
     final String safePath = path.toLowerCase().endsWith('.dia')
         ? path
         : '$path.dia';
@@ -2590,27 +2593,34 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     await diaFile.writeAsString(out.toString(), encoding: utf8);
-    await markCustomOrderDiaExportSaved(safePath);
+    if (recordSave) {
+      await markCustomOrderDiaExportSaved(safePath);
+    }
     return safePath;
   }
 
   Future<void> markCustomOrderDiaExportSaved(String path) async {
-    // URI-decode to handle Android content URIs like
-    // content://...document/primary%3ADocuments%2Fsorrend.dia
-    // where %2F is an encoded '/' within the document-ID segment.
-    String decodedPath;
-    try {
-      decodedPath = Uri.decodeComponent(path);
-    } catch (_) {
-      decodedPath = path;
+    // Android SAF URIs (content://...) nem hordoznak megbízható fájlnevet,
+    // pl. a letöltések tárháza msf:<id> formátumot ad vissza. Ilyenkor nem
+    // nevezhetjük át a diasort a mentési útvonal alapján.
+    if (!path.trim().toLowerCase().startsWith('content://')) {
+      // URI-decode to handle Android content URIs like
+      // content://...document/primary%3ADocuments%2Fsorrend.dia
+      // where %2F is an encoded '/' within the document-ID segment.
+      String decodedPath;
+      try {
+        decodedPath = Uri.decodeComponent(path);
+      } catch (_) {
+        decodedPath = path;
+      }
+      final String savedName = _stripFileExtension(
+        _fileNameFromPath(decodedPath),
+      );
+      final String cleanName = _stripOSSuffix(savedName);
+      _lastImportedCustomOrderBaseName = cleanName.trim().isEmpty
+          ? null
+          : cleanName;
     }
-    final String savedName = _stripFileExtension(
-      _fileNameFromPath(decodedPath),
-    );
-    final String cleanName = _stripOSSuffix(savedName);
-    _lastImportedCustomOrderBaseName = cleanName.trim().isEmpty
-        ? null
-        : cleanName;
     _customOrderSourceType = null;
     await _persistCurrentCustomOrder();
     _setStatus('statusOrderSaved', <String, String>{'path': path});

@@ -514,7 +514,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get searchHint => 'Kötet, énekcím vagy dal szövege';
 
   @override
-  String get searchHintOrderEdit => 'Dal száma';
+  String get searchHintOrderEdit => 'Ének száma';
 
   @override
   String get noResults => 'Nincs találat.';
@@ -950,12 +950,26 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get customOrderSaveDiaPermissionDenied =>
-      'A kiválasztott mappa létezik, de az Android megtagadta az írási hozzáférést. Újabb Android-verziókon a közös mappákba (például /Belső tárhely/Diatar) történő közvetlen fájlírást a scoped storage blokkolhatja akkor is, ha a mappa kiválasztható. Válassz a rendszer mentési ablakából ajánlott helyet, vagy alkalmazás-specifikus mappát.';
+      'A DIA fájl mentése közben az Android nem tudta írni a kiválasztott célhelyet. Próbáld újra, és a rendszer mentési ablakában válassz másik mappát vagy fájlnevet.';
 
   @override
   String customOrderSaveDiaGenericError(Object error) {
     return 'A DIA fájl mentése nem sikerült. Részletek: $error';
   }
+
+  @override
+  String get customOrderOverwriteSavedDiaTitle => 'Felülírás?';
+
+  @override
+  String customOrderOverwriteSavedDiaBody(Object fileName) {
+    return 'Már van elmentve egy DIA fájl: $fileName. Mit szeretnél?';
+  }
+
+  @override
+  String get customOrderOverwriteSavedDiaOverwrite => 'Felülírás';
+
+  @override
+  String get customOrderOverwriteSavedDiaNewLocation => 'Új hely választása';
 
   @override
   String get customOrderDiaFileNameLabel => 'Fájlnév';
