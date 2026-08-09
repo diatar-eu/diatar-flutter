@@ -841,6 +841,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cancel => 'Cancel';
 
   @override
+  String get delete => 'Delete';
+
+  @override
+  String get deleteFilesTooltip => 'Delete file';
+
+  @override
+  String confirmDeleteDtxFiles(Object name) {
+    return 'Delete the songbook file “$name” from this device? This action cannot be undone.';
+  }
+
+  @override
+  String confirmDeleteDtzFiles(Object name) {
+    return 'Delete the projector file “$name” from this device? This action cannot be undone.';
+  }
+
+  @override
   String get save => 'Save';
 
   @override

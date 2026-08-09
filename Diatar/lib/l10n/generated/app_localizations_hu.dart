@@ -844,6 +844,22 @@ class AppLocalizationsHu extends AppLocalizations {
   String get cancel => 'Mégse';
 
   @override
+  String get delete => 'Törlés';
+
+  @override
+  String get deleteFilesTooltip => 'Fájl törlése';
+
+  @override
+  String confirmDeleteDtxFiles(Object name) {
+    return 'Törlöd a(z) „$name” énektár-fájlt a készülékről? Ez a művelet nem vonható vissza.';
+  }
+
+  @override
+  String confirmDeleteDtzFiles(Object name) {
+    return 'Törlöd a(z) „$name” vetítő-fájlt a készülékről? Ez a művelet nem vonható vissza.';
+  }
+
+  @override
   String get save => 'Ment';
 
   @override

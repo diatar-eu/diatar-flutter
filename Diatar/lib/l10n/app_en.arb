@@ -572,6 +572,20 @@
   "emptySlideColorTitle": "Empty slide color",
   "highlightColorTitle": "Highlight color",
   "cancel": "Cancel",
+  "delete": "Delete",
+  "deleteFilesTooltip": "Delete file",
+  "confirmDeleteDtxFiles": "Delete the songbook file “{name}” from this device? This action cannot be undone.",
+  "@confirmDeleteDtxFiles": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "confirmDeleteDtzFiles": "Delete the projector file “{name}” from this device? This action cannot be undone.",
+  "@confirmDeleteDtzFiles": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "save": "Save",
   "invalidPortRange": "Port must be between 0 and 65535.",
   "hexColorHint": "Hex color (#AARRGGBB or #RRGGBB)",

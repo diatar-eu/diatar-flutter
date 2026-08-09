@@ -572,6 +572,20 @@
   "emptySlideColorTitle": "Üres dia színe",
   "highlightColorTitle": "Kiemelés színe",
   "cancel": "Mégse",
+  "delete": "Törlés",
+  "deleteFilesTooltip": "Fájl törlése",
+  "confirmDeleteDtxFiles": "Törlöd a(z) „{name}” énektár-fájlt a készülékről? Ez a művelet nem vonható vissza.",
+  "@confirmDeleteDtxFiles": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "confirmDeleteDtzFiles": "Törlöd a(z) „{name}” vetítő-fájlt a készülékről? Ez a művelet nem vonható vissza.",
+  "@confirmDeleteDtzFiles": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "save": "Ment",
   "invalidPortRange": "A port 0..65535 között legyen.",
   "hexColorHint": "Hex szín (#AARRGGBB vagy #RRGGBB)",

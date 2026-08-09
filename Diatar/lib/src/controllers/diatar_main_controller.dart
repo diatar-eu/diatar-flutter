@@ -841,6 +841,12 @@ class DiatarMainController extends ChangeNotifier {
       projecting: showing,
       hasBackgroundImage: _hasConfiguredBackgroundImage,
     );
+
+    // A köteteket még a (hálózatfüggő) transport beállítása előtt betöltjük,
+    // így a könyvtár azonnal használható akkor is, ha az MQTT/TCP kapcsolat
+    // lassú vagy elérhetetlen.
+    await reloadBooks();
+
     await _desktopProjectorBridge.start(settings);
     _desktopProjectorBridge.onControlWindowRestored = () {
       if (_controlWindowHidden) {
@@ -854,7 +860,6 @@ class DiatarMainController extends ChangeNotifier {
       _castService ??= CastService();
       await _castService!.initialize();
     }
-    await reloadBooks();
     unawaited(_checkStartupDtxUpdates());
     await _tryAutoLoadTodayDia();
     if (customOrderActive &&
@@ -2406,6 +2411,19 @@ class DiatarMainController extends ChangeNotifier {
         .toList();
   }
 
+  Future<int> deleteDtzFiles(Set<String> fileNames) async {
+    final Directory dtzDir = await _dtzDownloadService.resolveDirectory();
+    final int deleted = await _dtzDownloadService.deleteLocalFiles(
+      targetDir: dtzDir,
+      fileNames: fileNames,
+    );
+    if (deleted > 0) {
+      await reloadBooks();
+      await _loadDtzPhotos();
+    }
+    return deleted;
+  }
+
   Future<void> applyDtzManagerSelection({
     required Set<String> downloadSelected,
     required Set<String> excludedSelected,
@@ -2420,81 +2438,75 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final Directory dtzDir = await _dtzDownloadService.resolveDirectory();
-      final List<DtzDownloadItem> all = await _dtzDownloadService.listAll(
-        targetDir: dtzDir,
-      );
-      final Map<String, DtzDownloadItem> byFile = <String, DtzDownloadItem>{
-        for (final DtzDownloadItem item in all) item.fileName: item,
-      };
-
-      final Set<String> effectiveDownload = downloadSelected
-          .map((String n) => n.trim())
-          .where((String n) => n.isNotEmpty)
-          .where((String n) {
-            final DtzDownloadItem? item = byFile[n];
-            return item != null && item.isOfficial && item.updateAvailable;
-          })
-          .toSet();
-
       final Set<String> effectiveExcluded = excludedSelected
           .map((String name) => name.trim())
           .where((String name) => name.isNotEmpty)
           .toSet();
 
-      final Set<String> filesToDelete = effectiveExcluded.where((String name) {
-        final DtzDownloadItem? item = byFile[name];
-        return item != null && item.isInstalled;
-      }).toSet();
-
-      downloadTotalFiles = effectiveDownload.length;
-
-      final List<DtzDownloadItem> selected = effectiveDownload
-          .map((String n) => byFile[n]!)
-          .toList();
-
-      final int deletedCount = await _dtzDownloadService.deleteLocalFiles(
-        targetDir: dtzDir,
-        fileNames: filesToDelete,
-      );
-
-      DtzDownloadSummary summary = const DtzDownloadSummary(
-        downloaded: 0,
-        skipped: 0,
-      );
-      if (selected.isNotEmpty) {
-        summary = await _dtzDownloadService.downloadUpdates(
-          targetDir: dtzDir,
-          selected: selected,
-          onProgress: (DtzDownloadProgress progress) {
-            downloadCurrentFile = progress.currentFile;
-            downloadTotalFiles = progress.totalFiles;
-            downloadCurrentName = progress.fileName;
-            downloadCurrentFraction = progress.fraction;
-            _setStatus('statusDownloadProgress', <String, String>{
-              'current': '${progress.currentFile}',
-              'total': '${progress.totalFiles}',
-              'name': progress.fileName,
-              'percent': (progress.fraction * 100).toStringAsFixed(0),
-            });
-            notifyListeners();
-          },
-        );
-      }
-
-      effectiveExcluded.removeAll(effectiveDownload);
+      // A mellőzés-módosítást mindenekelőtt mentjük, így az
+      // hálózati/letöltési hiba esetén is érvényesül.
       _disabledDtzFiles = effectiveExcluded;
       await _saveDisabledDtzFiles(_disabledDtzFiles);
-
       await _loadDtzPhotos();
 
-      if (summary.downloaded == 0 && deletedCount == 0) {
-        _setStatus('statusDownloadSummaryNone');
-      } else {
-        _setStatus('statusDownloadSummary', <String, String>{
-          'downloaded': '${summary.downloaded}',
-          'skipped': '${summary.skipped}',
-        });
+      try {
+        final Directory dtzDir = await _dtzDownloadService.resolveDirectory();
+        final List<DtzDownloadItem> all = await _dtzDownloadService.listAll(
+          targetDir: dtzDir,
+        );
+        final Map<String, DtzDownloadItem> byFile = <String, DtzDownloadItem>{
+          for (final DtzDownloadItem item in all) item.fileName: item,
+        };
+
+        final Set<String> effectiveDownload = downloadSelected
+            .map((String n) => n.trim())
+            .where((String n) => n.isNotEmpty)
+            .where((String n) {
+              final DtzDownloadItem? item = byFile[n];
+              return item != null && item.isOfficial && item.updateAvailable;
+            })
+            .toSet();
+
+        if (_disabledDtzFiles.intersection(effectiveDownload).isNotEmpty) {
+          _disabledDtzFiles.removeAll(effectiveDownload);
+          await _saveDisabledDtzFiles(_disabledDtzFiles);
+          await _loadDtzPhotos();
+        }
+
+        downloadTotalFiles = effectiveDownload.length;
+
+        final List<DtzDownloadItem> selected = effectiveDownload
+            .map((String n) => byFile[n]!)
+            .toList();
+
+        if (selected.isEmpty) {
+          _setStatus('statusDownloadSummaryNone');
+        } else {
+          final DtzDownloadSummary summary = await _dtzDownloadService
+              .downloadUpdates(
+                targetDir: dtzDir,
+                selected: selected,
+                onProgress: (DtzDownloadProgress progress) {
+                  downloadCurrentFile = progress.currentFile;
+                  downloadTotalFiles = progress.totalFiles;
+                  downloadCurrentName = progress.fileName;
+                  downloadCurrentFraction = progress.fraction;
+                  _setStatus('statusDownloadProgress', <String, String>{
+                    'current': '${progress.currentFile}',
+                    'total': '${progress.totalFiles}',
+                    'name': progress.fileName,
+                    'percent': (progress.fraction * 100).toStringAsFixed(0),
+                  });
+                  notifyListeners();
+                },
+              );
+          _setStatus('statusDownloadSummary', <String, String>{
+            'downloaded': '${summary.downloaded}',
+            'skipped': '${summary.skipped}',
+          });
+        }
+      } catch (e) {
+        _setStatus('statusDownloadError', <String, String>{'error': '$e'});
       }
     } catch (e) {
       _setStatus('statusDownloadError', <String, String>{'error': '$e'});
@@ -2832,6 +2844,18 @@ class DiatarMainController extends ChangeNotifier {
     return _diaIniParser.parse(content);
   }
 
+  Future<int> deleteDtxFiles(Set<String> fileNames) async {
+    final Directory dtxDir = await _resolveDtxDirectory();
+    final int deleted = await _downloadService.deleteLocalFiles(
+      targetDir: dtxDir,
+      fileNames: fileNames,
+    );
+    if (deleted > 0) {
+      await reloadBooks();
+    }
+    return deleted;
+  }
+
   Future<void> applyDtxManagerSelection({
     required Set<String> downloadSelected,
     required Set<String> excludedSelected,
@@ -2846,80 +2870,75 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final Directory dtxDir = await _resolveDtxDirectory();
-      final List<DtxDownloadItem> all = await _downloadService.listAll(
-        targetDir: dtxDir,
-      );
-      final Map<String, DtxDownloadItem> byFile = <String, DtxDownloadItem>{
-        for (final DtxDownloadItem item in all) item.fileName: item,
-      };
-
-      final Set<String> effectiveDownload = downloadSelected
-          .map((String name) => name.trim())
-          .where((String name) => name.isNotEmpty)
-          .where((String name) {
-            final DtxDownloadItem? item = byFile[name];
-            return item != null && item.isOfficial && item.updateAvailable;
-          })
-          .toSet();
-
-      downloadTotalFiles = effectiveDownload.length;
-
       final Set<String> effectiveExcluded = excludedSelected
           .map((String name) => name.trim())
           .where((String name) => name.isNotEmpty)
           .toSet();
 
-      final Set<String> filesToDelete = effectiveExcluded.where((String name) {
-        final DtxDownloadItem? item = byFile[name];
-        return item != null && item.isInstalled;
-      }).toSet();
-
-      final List<DtxDownloadItem> selectedForDownload = effectiveDownload
-          .map((String name) => byFile[name]!)
-          .toList();
-
-      final int deletedCount = await _downloadService.deleteLocalFiles(
-        targetDir: dtxDir,
-        fileNames: filesToDelete,
-      );
-
-      DtxDownloadSummary summary = const DtxDownloadSummary(
-        downloaded: 0,
-        skipped: 0,
-      );
-      if (selectedForDownload.isNotEmpty) {
-        summary = await _downloadService.downloadUpdates(
-          targetDir: dtxDir,
-          selected: selectedForDownload,
-          onProgress: (DtxDownloadProgress progress) {
-            downloadCurrentFile = progress.currentFile;
-            downloadTotalFiles = progress.totalFiles;
-            downloadCurrentName = progress.fileName;
-            downloadCurrentFraction = progress.fraction;
-            _setStatus('statusDownloadProgress', <String, String>{
-              'current': '${progress.currentFile}',
-              'total': '${progress.totalFiles}',
-              'name': progress.fileName,
-              'percent': (progress.fraction * 100).toStringAsFixed(0),
-            });
-            notifyListeners();
-          },
-        );
-      }
-
-      effectiveExcluded.removeAll(effectiveDownload);
+      // A mellőzés-módosítást mindenekelőtt mentjük, így az
+      // hálózati/letöltési hiba esetén is érvényesül.
       _disabledSongbooks = effectiveExcluded;
       await _orderStore.saveDisabled(_disabledSongbooks);
-
       await reloadBooks();
-      if (summary.downloaded == 0 && deletedCount == 0) {
-        _setStatus('statusDownloadSummaryNone');
-      } else {
-        _setStatus('statusDownloadSummary', <String, String>{
-          'downloaded': '${summary.downloaded}',
-          'skipped': '${summary.skipped}',
-        });
+
+      try {
+        final Directory dtxDir = await _resolveDtxDirectory();
+        final List<DtxDownloadItem> all = await _downloadService.listAll(
+          targetDir: dtxDir,
+        );
+        final Map<String, DtxDownloadItem> byFile = <String, DtxDownloadItem>{
+          for (final DtxDownloadItem item in all) item.fileName: item,
+        };
+
+        final Set<String> effectiveDownload = downloadSelected
+            .map((String name) => name.trim())
+            .where((String name) => name.isNotEmpty)
+            .where((String name) {
+              final DtxDownloadItem? item = byFile[name];
+              return item != null && item.isOfficial && item.updateAvailable;
+            })
+            .toSet();
+
+        if (_disabledSongbooks.intersection(effectiveDownload).isNotEmpty) {
+          _disabledSongbooks.removeAll(effectiveDownload);
+          await _orderStore.saveDisabled(_disabledSongbooks);
+          await reloadBooks();
+        }
+
+        downloadTotalFiles = effectiveDownload.length;
+
+        final List<DtxDownloadItem> selectedForDownload = effectiveDownload
+            .map((String name) => byFile[name]!)
+            .toList();
+
+        if (selectedForDownload.isEmpty) {
+          _setStatus('statusDownloadSummaryNone');
+        } else {
+          final DtxDownloadSummary summary = await _downloadService
+              .downloadUpdates(
+                targetDir: dtxDir,
+                selected: selectedForDownload,
+                onProgress: (DtxDownloadProgress progress) {
+                  downloadCurrentFile = progress.currentFile;
+                  downloadTotalFiles = progress.totalFiles;
+                  downloadCurrentName = progress.fileName;
+                  downloadCurrentFraction = progress.fraction;
+                  _setStatus('statusDownloadProgress', <String, String>{
+                    'current': '${progress.currentFile}',
+                    'total': '${progress.totalFiles}',
+                    'name': progress.fileName,
+                    'percent': (progress.fraction * 100).toStringAsFixed(0),
+                  });
+                  notifyListeners();
+                },
+              );
+          _setStatus('statusDownloadSummary', <String, String>{
+            'downloaded': '${summary.downloaded}',
+            'skipped': '${summary.skipped}',
+          });
+        }
+      } catch (e) {
+        _setStatus('statusDownloadError', <String, String>{'error': '$e'});
       }
     } catch (e) {
       _setStatus('statusDownloadError', <String, String>{'error': '$e'});

@@ -1517,6 +1517,30 @@ abstract class AppLocalizations {
   /// **'Mégse'**
   String get cancel;
 
+  /// No description provided for @delete.
+  ///
+  /// In hu, this message translates to:
+  /// **'Törlés'**
+  String get delete;
+
+  /// No description provided for @deleteFilesTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Fájl törlése'**
+  String get deleteFilesTooltip;
+
+  /// No description provided for @confirmDeleteDtxFiles.
+  ///
+  /// In hu, this message translates to:
+  /// **'Törlöd a(z) „{name}” énektár-fájlt a készülékről? Ez a művelet nem vonható vissza.'**
+  String confirmDeleteDtxFiles(Object name);
+
+  /// No description provided for @confirmDeleteDtzFiles.
+  ///
+  /// In hu, this message translates to:
+  /// **'Törlöd a(z) „{name}” vetítő-fájlt a készülékről? Ez a művelet nem vonható vissza.'**
+  String confirmDeleteDtzFiles(Object name);
+
   /// No description provided for @save.
   ///
   /// In hu, this message translates to:
