@@ -1609,14 +1609,17 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         // Androidon a rendszer "Mentés másként" ablakát (ACTION_CREATE_DOCUMENT)
         // használjuk az új hely kiválasztásához. Ha már van mentett célhely
         // (SAF URI), előbb felajánljuk a közvetlen felülírást.
-        final ({String uri, String displayName})? saved =
+        final ({String uri, String displayName, String? renameFromName})? saved =
             await _saveDiaWithAndroidFlow(
           defaultFileName: defaultFileName,
         );
         if (saved == null || !mounted) {
           return;
         }
-        await controller.markCustomOrderDiaExportSaved(saved.uri);
+        await controller.markCustomOrderDiaExportSaved(
+          saved.uri,
+          explicitName: saved.renameFromName,
+        );
         if (!mounted) {
           return;
         }
@@ -1721,7 +1724,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
   }
 
-  Future<({String uri, String displayName})?> _saveDiaWithAndroidFlow({
+  Future<({String uri, String displayName, String? renameFromName})?>
+      _saveDiaWithAndroidFlow({
     required String defaultFileName,
   }) async {
     final String storedUri = controller.settings.diaExportUri.trim();
@@ -1739,7 +1743,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       if (decision == 'overwrite') {
         final bool overwritten = await _tryAndroidOverwrite(storedUri);
         if (overwritten) {
-          return (uri: storedUri, displayName: storedName);
+          // Felülíráskor nincs névmegadás: a diasor neve ne változzon.
+          return (uri: storedUri, displayName: storedName, renameFromName: null);
         }
         await _clearAndroidSavedDiaTarget();
       }
@@ -1747,7 +1752,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     return _saveDiaWithAndroidSystemDialog(fileName: defaultFileName);
   }
 
-  Future<({String uri, String displayName})?> _saveDiaWithAndroidSystemDialog({
+  Future<({String uri, String displayName, String? renameFromName})?>
+      _saveDiaWithAndroidSystemDialog({
     required String fileName,
   }) async {
     final Directory tempDir = await Directory.systemTemp.createTemp(
@@ -1781,7 +1787,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           diaExportFileName: savedName,
         ),
       );
-      return (uri: uri, displayName: savedName);
+      return (uri: uri, displayName: savedName, renameFromName: savedName);
     } finally {
       try {
         if (await tempDir.exists()) {

@@ -2599,11 +2599,20 @@ class DiatarMainController extends ChangeNotifier {
     return safePath;
   }
 
-  Future<void> markCustomOrderDiaExportSaved(String path) async {
-    // Android SAF URIs (content://...) nem hordoznak megbízható fájlnevet,
-    // pl. a letöltések tárháza msf:<id> formátumot ad vissza. Ilyenkor nem
-    // nevezhetjük át a diasort a mentési útvonal alapján.
-    if (!path.trim().toLowerCase().startsWith('content://')) {
+  Future<void> markCustomOrderDiaExportSaved(
+    String path, {
+    String? explicitName,
+  }) async {
+    String? cleanName;
+    if (explicitName != null && explicitName.trim().isNotEmpty) {
+      // Androidon a rendszer mentési ablakából a valódi fájlnevet kapjuk
+      // (DISPLAY_NAME), azt használjuk a diasor nevéhez — a desktop
+      // viselkedéssel azonosan, az OS-utótagok (pl. " (1)") levágásával.
+      cleanName = _stripOSSuffix(_stripFileExtension(explicitName.trim()));
+    } else if (!path.trim().toLowerCase().startsWith('content://')) {
+      // Android SAF URIs (content://...) nem hordoznak megbízható fájlnevet,
+      // pl. a letöltések tárháza msf:<id> formátumot ad vissza. Ilyenkor nem
+      // nevezhetjük át a diasort a mentési útvonal alapján.
       // URI-decode to handle Android content URIs like
       // content://...document/primary%3ADocuments%2Fsorrend.dia
       // where %2F is an encoded '/' within the document-ID segment.
@@ -2616,7 +2625,9 @@ class DiatarMainController extends ChangeNotifier {
       final String savedName = _stripFileExtension(
         _fileNameFromPath(decodedPath),
       );
-      final String cleanName = _stripOSSuffix(savedName);
+      cleanName = _stripOSSuffix(savedName);
+    }
+    if (cleanName != null) {
       _lastImportedCustomOrderBaseName = cleanName.trim().isEmpty
           ? null
           : cleanName;
