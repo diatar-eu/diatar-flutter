@@ -13,9 +13,9 @@ class TcpSenderService {
   ValueChanged<bool> onStatusChanged;
   SenderErrorCallback onError;
 
-  final Map<String, Socket> _clients = <String, Socket>{};
-  final Map<String, StreamSubscription<Uint8List>> _subs =
-      <String, StreamSubscription<Uint8List>>{};
+  final Map<String, RawSocket> _clients = <String, RawSocket>{};
+  final Map<String, StreamSubscription<RawSocketEvent>> _subs =
+      <String, StreamSubscription<RawSocketEvent>>{};
   final Map<String, DateTime> _lastConnectError = <String, DateTime>{};
   final Set<String> _targetKeys = <String>{};
   bool _running = false;
@@ -81,14 +81,14 @@ class TcpSenderService {
     _lastConnectError.clear();
     _sendQueue = Future<void>.value();
 
-    for (final StreamSubscription<Uint8List> sub in _subs.values) {
+    for (final StreamSubscription<RawSocketEvent> sub in _subs.values) {
       try {
         await sub.cancel();
       } catch (_) {}
     }
     _subs.clear();
 
-    for (final Socket socket in _clients.values) {
+    for (final RawSocket socket in _clients.values) {
       try {
         socket.close();
       } catch (_) {}
@@ -104,8 +104,8 @@ class TcpSenderService {
     while (_running &&
         session == _session &&
         _targetKeys.contains(target.key)) {
-      Socket? socket;
-      StreamSubscription<Uint8List>? sub;
+      RawSocket? socket;
+      StreamSubscription<RawSocketEvent>? sub;
       try {
         socket = await _connectTarget(target.host, target.port);
 
@@ -115,9 +115,14 @@ class TcpSenderService {
 
         final Completer<void> done = Completer<void>();
         sub = socket.listen(
-          (Uint8List data) {
-            // No protocol response is expected from the receiver; data must
-            // still be drained so the stream keeps delivering events.
+          (RawSocketEvent event) {
+            if (event == RawSocketEvent.closed) {
+              if (!done.isCompleted) {
+                done.complete();
+              }
+            } else if (event == RawSocketEvent.read) {
+              socket?.read();
+            }
           },
           onError: (Object e) {
             _reportConnectOrClientError(target, e);
@@ -144,7 +149,7 @@ class TcpSenderService {
         }
         _subs.remove(target.key);
 
-        final Socket? old = _clients.remove(target.key);
+        final RawSocket? old = _clients.remove(target.key);
         try {
           old?.close();
         } catch (_) {}
@@ -157,9 +162,9 @@ class TcpSenderService {
     }
   }
 
-  Future<Socket> _connectTarget(String host, int port) async {
+  Future<RawSocket> _connectTarget(String host, int port) async {
     try {
-      final Socket s = await Socket.connect(host, port);
+      final RawSocket s = await RawSocket.connect(host, port);
       return s;
     } catch (e) {
       rethrow;
@@ -225,7 +230,7 @@ class TcpSenderService {
     await _enqueue(() => _sendPacket(RecTypes.scrSize, _cachedScrSize!));
   }
 
-  Future<void> _replayCache(Socket socket) async {
+  Future<void> _replayCache(RawSocket socket) async {
     await _sendToSocket(socket, RecTypes.scrSize, _cachedScrSize);
     await _sendToSocket(socket, RecTypes.state, _cachedState);
     await _sendToSocket(socket, RecTypes.text, _cachedText);
@@ -239,12 +244,11 @@ class TcpSenderService {
     }
     final Uint8List packet = encodeProjectionPacket(type, body);
     final List<String> dead = <String>[];
-    for (final MapEntry<String, Socket> entry in _clients.entries.toList()) {
+    for (final MapEntry<String, RawSocket> entry in _clients.entries.toList()) {
       final String key = entry.key;
-      final Socket socket = entry.value;
+      final RawSocket socket = entry.value;
       try {
-        socket.add(packet);
-        await socket.flush();
+        socket.write(packet, 0, packet.length);
         _lastSentAt = DateTime.now();
       } catch (e) {
         onError('senderTcpSendError', <String, String>{
@@ -254,7 +258,7 @@ class TcpSenderService {
       }
     }
     for (final String key in dead) {
-      final Socket? deadSocket = _clients.remove(key);
+      final RawSocket? deadSocket = _clients.remove(key);
       try {
         deadSocket?.close();
       } catch (_) {}
@@ -262,14 +266,13 @@ class TcpSenderService {
     _emitStatus();
   }
 
-  Future<void> _sendToSocket(Socket socket, int type, Uint8List? body) async {
+  Future<void> _sendToSocket(RawSocket socket, int type, Uint8List? body) async {
     if (body == null) {
       return;
     }
     try {
       final Uint8List packet = encodeProjectionPacket(type, body);
-      socket.add(packet);
-      await socket.flush();
+      socket.write(packet, 0, packet.length);
       _lastSentAt = DateTime.now();
     } catch (e) {
       onError('senderTcpSendError', <String, String>{
