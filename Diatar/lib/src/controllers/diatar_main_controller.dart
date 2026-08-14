@@ -2639,12 +2639,21 @@ class DiatarMainController extends ChangeNotifier {
       cleanName = _stripOSSuffix(savedName);
     }
     if (cleanName != null) {
-      _lastImportedCustomOrderBaseName = cleanName.trim().isEmpty
-          ? null
-          : cleanName;
+      final String normalizedName = cleanName.trim();
+      _lastImportedCustomOrderBaseName = normalizedName.isEmpty ? null : normalizedName;
+      if (_activeOrderSetIndex >= 0 &&
+          _activeOrderSetIndex < _customOrderSets.length) {
+        _customOrderSets[_activeOrderSetIndex] =
+            _customOrderSets[_activeOrderSetIndex].copyWith(
+              name: normalizedName,
+              baseName: normalizedName,
+              sourceType: null,
+            );
+      }
     }
     _customOrderSourceType = null;
     await _persistCurrentCustomOrder();
+    await _persistAllSets();
     _setStatus('statusOrderSaved', <String, String>{'path': path});
     notifyListeners();
   }
