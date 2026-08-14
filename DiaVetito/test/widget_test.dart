@@ -69,6 +69,50 @@ void main() {
     );
   });
 
+  testWidgets('tap shows a quick exit button on native apps',
+      (WidgetTester tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    const MethodChannel systemChannel = MethodChannel(
+      'com.polyjoe.diavetito/system',
+    );
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      systemChannel,
+      (MethodCall call) async {
+        if (call.method == 'isTv') {
+          return false;
+        }
+        return null;
+      },
+    );
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(systemChannel, null);
+    });
+
+    try {
+      await tester.pumpWidget(const DiaVetitoApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(GestureDetector).first);
+      await tester.pumpAndSettle();
+
+      final AppLocalizations hu = await AppLocalizations.delegate.load(
+        const Locale('hu'),
+      );
+      final AppLocalizations en = await AppLocalizations.delegate.load(
+        const Locale('en'),
+      );
+
+      expect(
+        find.text(hu.exit).evaluate().length +
+            find.text(en.exit).evaluate().length,
+        1,
+      );
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('OK (select) key opens settings on Android TV',
       (WidgetTester tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;

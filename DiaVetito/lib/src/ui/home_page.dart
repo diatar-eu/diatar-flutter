@@ -299,10 +299,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   bool get _supportsQuickExitOverlay {
-    if (kIsWeb) {
+    if (kIsWeb || _isTv) {
       return false;
     }
-    return defaultTargetPlatform == TargetPlatform.windows ||
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux;
   }
 
