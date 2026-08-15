@@ -4204,69 +4204,75 @@ class _DialistPanelState extends State<_DialistPanel> {
                   ),
                   child: entries.isEmpty
                       ? const SizedBox.shrink()
-                      : ListView.builder(
-                          controller: _scrollController,
-                          primary: false,
-                          itemCount: entries.length,
-                          itemExtent: _itemExtent,
-                          itemBuilder: (BuildContext context, int index) {
-                            final CustomOrderEntry entry = entries[index];
-                            final bool isSeparator = entry.isSeparator;
-                            final int normalizedIndex = controller
-                                .normalizeCustomOrderIndex(index);
-                            final bool selected =
-                                normalizedIndex == selectedCursor;
-                            return ListTile(
-                              dense: true,
-                              visualDensity: const VisualDensity(
-                                horizontal: 0,
-                                vertical: -2,
-                              ),
-                              minTileHeight: 38,
-                              leading: MergeIndicator(
-                                visual:
-                                    controller
-                                        .isCustomOrderEntryMergeFollowerAt(
-                                          index,
-                                        )
-                                    ? MergeIndicatorVisual.lowerBrace
-                                    : controller
-                                          .isCustomOrderEntryMergeLeaderAt(
-                                            index,
-                                          )
-                                    ? MergeIndicatorVisual.upperBrace
-                                    : MergeIndicatorVisual.hidden,
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                              ),
-                              title: _buildDialistTitle(
-                                context,
-                                theme: theme,
-                                entries: entries,
-                                index: index,
-                                selectedCursor: selectedCursor,
-                              ),
-                              selected: selected,
-                              selectedColor:
-                                  theme.colorScheme.onPrimaryContainer,
-                              selectedTileColor: theme
-                                  .colorScheme
-                                  .primaryContainer
-                                  .withValues(alpha: 0.55),
-                              onTap: isSeparator
-                                  ? null
-                                  : () {
-                                      controller.selectCustomOrderEntryAt(
-                                        normalizedIndex,
-                                      );
-                                      _ensureSelectedVisible(
-                                        normalizedIndex,
-                                        entries.length,
-                                      );
-                                    },
-                            );
-                          },
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            primary: false,
+                            clipBehavior: Clip.hardEdge,
+                            itemCount: entries.length,
+                            itemExtent: _itemExtent,
+                            itemBuilder: (BuildContext context, int index) {
+                              final CustomOrderEntry entry = entries[index];
+                              final bool isSeparator = entry.isSeparator;
+                              final int normalizedIndex = controller
+                                  .normalizeCustomOrderIndex(index);
+                              final bool selected =
+                                  normalizedIndex == selectedCursor;
+                              return Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? theme.colorScheme.primaryContainer
+                                            .withValues(alpha: 0.55)
+                                      : null,
+                                ),
+                                child: ListTile(
+                                  dense: true,
+                                  visualDensity: const VisualDensity(
+                                    horizontal: 0,
+                                    vertical: -2,
+                                  ),
+                                  minTileHeight: 38,
+                                  leading: MergeIndicator(
+                                    visual:
+                                        controller
+                                            .isCustomOrderEntryMergeFollowerAt(
+                                              index,
+                                            )
+                                        ? MergeIndicatorVisual.lowerBrace
+                                        : controller
+                                              .isCustomOrderEntryMergeLeaderAt(
+                                                index,
+                                              )
+                                          ? MergeIndicatorVisual.upperBrace
+                                          : MergeIndicatorVisual.hidden,
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                  title: _buildDialistTitle(
+                                    context,
+                                    theme: theme,
+                                    entries: entries,
+                                    index: index,
+                                    selectedCursor: selectedCursor,
+                                  ),
+                                  onTap: isSeparator
+                                      ? null
+                                      : () {
+                                          controller.selectCustomOrderEntryAt(
+                                            normalizedIndex,
+                                          );
+                                          _ensureSelectedVisible(
+                                            normalizedIndex,
+                                            entries.length,
+                                          );
+                                        },
+                                ),
+                              );
+                            },
+                          ),
                         ),
                 ),
               ),

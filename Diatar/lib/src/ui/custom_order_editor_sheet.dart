@@ -822,29 +822,38 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                         const SizedBox(height: 8),
                         SizedBox(
                           height: 200,
-                          child: ListView(
-                            children: filteredSongs.map((_SongOption option) {
-                              final bool isSelected =
-                                  option.songIndex == selectedSongIndex;
-                              final ColorScheme colorScheme =
-                                  Theme.of(innerContext).colorScheme;
-                              return ListTile(
-                                dense: true,
-                                title: Text(
-                                  option.songTitle,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                selected: isSelected,
-                                selectedColor: colorScheme.onPrimaryContainer,
-                                selectedTileColor: colorScheme.primaryContainer
-                                    .withValues(alpha: 0.55),
-                                onTap: () {
-                                  setDialogState(() {
-                                    selectedSongIndex = option.songIndex;
-                                  });
-                                },
-                              );
-                            }).toList(),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: ListView(
+                              clipBehavior: Clip.hardEdge,
+                              children: filteredSongs.map((_SongOption option) {
+                                final bool isSelected =
+                                    option.songIndex == selectedSongIndex;
+                                final ColorScheme colorScheme =
+                                    Theme.of(innerContext).colorScheme;
+                                return Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? colorScheme.primaryContainer
+                                              .withValues(alpha: 0.55)
+                                        : null,
+                                  ),
+                                  child: ListTile(
+                                    dense: true,
+                                    title: Text(
+                                      option.songTitle,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    onTap: () {
+                                      setDialogState(() {
+                                        selectedSongIndex = option.songIndex;
+                                      });
+                                    },
+                                  ),
+                                );
+                              }).toList(),
+                            ),
                           ),
                         ),
                       ],
@@ -1298,27 +1307,33 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                       ),
                       const Divider(height: 1),
                       Expanded(
-                        child: ListView.builder(
-                          itemCount: verses.length,
-                          itemBuilder: (BuildContext itemContext, int i) {
-                            final bool selected = selectedSet.contains(i);
-                            return CheckboxListTile(
-                              value: selected,
-                              title: _buildTitleWithFirstLine(
-                                title: verses[i].name,
-                                firstLine: firstMeaningfulLine(verses[i].lines),
-                              ),
-                              onChanged: (bool? value) {
-                                setModalState(() {
-                                  if (value == true) {
-                                    selectedSet.add(i);
-                                  } else {
-                                    selectedSet.remove(i);
-                                  }
-                                });
-                              },
-                            );
-                          },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: ListView.builder(
+                            itemCount: verses.length,
+                            clipBehavior: Clip.hardEdge,
+                            itemBuilder: (BuildContext itemContext, int i) {
+                              final bool selected = selectedSet.contains(i);
+                              return CheckboxListTile(
+                                value: selected,
+                                title: _buildTitleWithFirstLine(
+                                  title: verses[i].name,
+                                  firstLine: firstMeaningfulLine(
+                                    verses[i].lines,
+                                  ),
+                                ),
+                                onChanged: (bool? value) {
+                                  setModalState(() {
+                                    if (value == true) {
+                                      selectedSet.add(i);
+                                    } else {
+                                      selectedSet.remove(i);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
                         ),
                       ),
                       Padding(
@@ -2058,162 +2073,173 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       );
     }
 
-    return ReorderableListView.builder(
-      itemCount: _entries.length,
-      buildDefaultDragHandles: false,
-      onReorder: (int oldIndex, int newIndex) {
-        setState(() {
-          if (_groupReorder) {
-            final ({int start, int end}) group = _contiguousGroupRange(
-              oldIndex,
-            );
-            final int groupStart = group.start;
-            final int groupEnd = group.end;
-            // Dropping inside the same group is a no-op.
-            if (newIndex > groupStart && newIndex <= groupEnd) {
-              return;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: ReorderableListView.builder(
+        itemCount: _entries.length,
+        buildDefaultDragHandles: false,
+        clipBehavior: Clip.hardEdge,
+        onReorder: (int oldIndex, int newIndex) {
+          setState(() {
+            if (_groupReorder) {
+              final ({int start, int end}) group = _contiguousGroupRange(
+                oldIndex,
+              );
+              final int groupStart = group.start;
+              final int groupEnd = group.end;
+              // Dropping inside the same group is a no-op.
+              if (newIndex > groupStart && newIndex <= groupEnd) {
+                return;
+              }
+              final List<CustomOrderEntry> block = _entries.sublist(
+                groupStart,
+                groupEnd + 1,
+              );
+              _entries.removeRange(groupStart, groupEnd + 1);
+              final int insertAt = newIndex > groupEnd
+                  ? newIndex - block.length
+                  : newIndex;
+              _entries.insertAll(insertAt, block);
+            } else {
+              if (newIndex > oldIndex) {
+                newIndex -= 1;
+              }
+              final CustomOrderEntry entry = _entries.removeAt(oldIndex);
+              _entries.insert(newIndex, entry);
             }
-            final List<CustomOrderEntry> block = _entries.sublist(
-              groupStart,
-              groupEnd + 1,
+          });
+          unawaited(_commitEntries());
+        },
+        itemBuilder: (BuildContext context, int index) {
+          final CustomOrderEntry entry = _entries[index];
+          final bool isSongEntry = controller.isSongOrderEntry(entry);
+          final bool isContinuation = isSongEntry
+              ? (index > 0 &&
+                    _entries[index - 1].fileName == entry.fileName &&
+                    _entries[index - 1].songIndex == entry.songIndex)
+              : _isCustomTextContinuation(context.l10n, index, entry);
+          final List<DtxVerse> verses = isSongEntry
+              ? controller.versesForEntry(entry)
+              : const <DtxVerse>[];
+          final int verseIx = _safeEntryVerseIndex(entry);
+          final String rawVerseLabel = verses.isEmpty
+              ? '-'
+              : verses[verseIx.clamp(0, verses.length - 1)].name;
+          final String verseLabel = isSongEntry
+              ? _normalizeSlashSpacing(rawVerseLabel)
+              : rawVerseLabel;
+          final String fullLabel = isSongEntry
+              ? _normalizeSlashSpacing(entry.label)
+              : localizedCustomEntryLabel(context.l10n, entry);
+          final String firstLine = controller.firstTextLineForEntry(entry);
+          final Widget titleWidget;
+          if (isContinuation && isSongEntry) {
+            titleWidget = _buildTitleWithFirstLine(
+              title: verseLabel,
+              firstLine: firstLine,
             );
-            _entries.removeRange(groupStart, groupEnd + 1);
-            final int insertAt = newIndex > groupEnd
-                ? newIndex - block.length
-                : newIndex;
-            _entries.insertAll(insertAt, block);
+          } else if (isContinuation) {
+            final ({String prefix, String suffix}) split = _splitSlashLabel(
+              fullLabel,
+            )!;
+            titleWidget = _buildContinuationTitle(
+              prefix: split.prefix,
+              suffix: split.suffix,
+              firstLine: firstLine,
+            );
           } else {
-            if (newIndex > oldIndex) {
-              newIndex -= 1;
-            }
-            final CustomOrderEntry entry = _entries.removeAt(oldIndex);
-            _entries.insert(newIndex, entry);
+            titleWidget = _buildTitleWithFirstLine(
+              title: fullLabel,
+              firstLine: firstLine,
+            );
           }
-        });
-        unawaited(_commitEntries());
-      },
-      itemBuilder: (BuildContext context, int index) {
-        final CustomOrderEntry entry = _entries[index];
-        final bool isSongEntry = controller.isSongOrderEntry(entry);
-        final bool isContinuation = isSongEntry
-            ? (index > 0 &&
-                  _entries[index - 1].fileName == entry.fileName &&
-                  _entries[index - 1].songIndex == entry.songIndex)
-            : _isCustomTextContinuation(context.l10n, index, entry);
-        final List<DtxVerse> verses = isSongEntry
-            ? controller.versesForEntry(entry)
-            : const <DtxVerse>[];
-        final int verseIx = _safeEntryVerseIndex(entry);
-        final String rawVerseLabel = verses.isEmpty
-            ? '-'
-            : verses[verseIx.clamp(0, verses.length - 1)].name;
-        final String verseLabel = isSongEntry
-            ? _normalizeSlashSpacing(rawVerseLabel)
-            : rawVerseLabel;
-        final String fullLabel = isSongEntry
-            ? _normalizeSlashSpacing(entry.label)
-            : localizedCustomEntryLabel(context.l10n, entry);
-        final String firstLine = controller.firstTextLineForEntry(entry);
-        final Widget titleWidget;
-        if (isContinuation && isSongEntry) {
-          titleWidget = _buildTitleWithFirstLine(
-            title: verseLabel,
-            firstLine: firstLine,
-          );
-        } else if (isContinuation) {
-          final ({String prefix, String suffix}) split = _splitSlashLabel(
-            fullLabel,
-          )!;
-          titleWidget = _buildContinuationTitle(
-            prefix: split.prefix,
-            suffix: split.suffix,
-            firstLine: firstLine,
-          );
-        } else {
-          titleWidget = _buildTitleWithFirstLine(
-            title: fullLabel,
-            firstLine: firstLine,
-          );
-        }
-        final ColorScheme colorScheme = Theme.of(context).colorScheme;
-        return ListTile(
-          key: ValueKey<String>('${entry.fileName}_${entry.songIndex}_$index'),
-          dense: true,
-          visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
-          minVerticalPadding: 0,
-          minTileHeight: 30,
-          horizontalTitleGap: 0,
-          contentPadding: EdgeInsets.zero,
-          selected: controller.isCustomOrderIndexCurrent(index),
-          selectedColor: colorScheme.onPrimaryContainer,
-          selectedTileColor: colorScheme.primaryContainer.withValues(
-            alpha: 0.55,
-          ),
-          onTap: () => controller.selectCustomOrderEntryForEditing(index),
-          leading: SizedBox(
-            width: 50,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const SizedBox(width: 8),
-                MergeIndicator(
-                  visual: _isMergeFollower(index)
-                      ? MergeIndicatorVisual.lowerBrace
-                      : _isMergeLeader(index)
-                      ? MergeIndicatorVisual.upperBrace
-                      : _canMergeAt(index)
-                      ? MergeIndicatorVisual.circle
-                      : MergeIndicatorVisual.hidden,
-                  onTap: _canMergeAt(index)
-                      ? () => unawaited(_toggleMergeAt(index))
-                      : null,
-                ),
-                ReorderableDragStartListener(
-                  index: index,
-                  child: const Icon(Icons.drag_handle),
-                ),
-              ],
+          final bool selected = controller.isCustomOrderIndexCurrent(index);
+          final ColorScheme colorScheme = Theme.of(context).colorScheme;
+          return Container(
+            key: ValueKey<String>('${entry.fileName}_${entry.songIndex}_$index'),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: selected
+                  ? colorScheme.primaryContainer.withValues(alpha: 0.55)
+                  : null,
             ),
-          ),
-          title: Padding(
-            padding: EdgeInsets.only(left: isContinuation ? 70 : 16, right: 8),
-            child: titleWidget,
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              if (isSongEntry && !isContinuation)
-                IconButton(
-                  tooltip: context.l10n.versePicker,
-                  icon: const Icon(Icons.format_list_numbered),
-                  visualDensity: const VisualDensity(
-                    horizontal: -4,
-                    vertical: -4,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 28,
-                    minHeight: 28,
-                  ),
-                  onPressed: () => _pickVerse(index),
+            child: ListTile(
+              dense: true,
+              visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
+              minVerticalPadding: 0,
+              minTileHeight: 30,
+              horizontalTitleGap: 0,
+              contentPadding: EdgeInsets.zero,
+              onTap: () => controller.selectCustomOrderEntryForEditing(index),
+              leading: SizedBox(
+                width: 50,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const SizedBox(width: 8),
+                    MergeIndicator(
+                      visual: _isMergeFollower(index)
+                          ? MergeIndicatorVisual.lowerBrace
+                          : _isMergeLeader(index)
+                          ? MergeIndicatorVisual.upperBrace
+                          : _canMergeAt(index)
+                          ? MergeIndicatorVisual.circle
+                          : MergeIndicatorVisual.hidden,
+                      onTap: _canMergeAt(index)
+                          ? () => unawaited(_toggleMergeAt(index))
+                          : null,
+                    ),
+                    ReorderableDragStartListener(
+                      index: index,
+                      child: const Icon(Icons.drag_handle),
+                    ),
+                  ],
                 ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                visualDensity: const VisualDensity(
-                  horizontal: -4,
-                  vertical: -4,
-                ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                onPressed: () {
-                  setState(() => _entries.removeAt(index));
-                  unawaited(_commitEntries());
-                },
               ),
-            ],
-          ),
-        );
-      },
+              title: Padding(
+                padding: EdgeInsets.only(left: isContinuation ? 70 : 16, right: 8),
+                child: titleWidget,
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (isSongEntry && !isContinuation)
+                    IconButton(
+                      tooltip: context.l10n.versePicker,
+                      icon: const Icon(Icons.format_list_numbered),
+                      visualDensity: const VisualDensity(
+                        horizontal: -4,
+                        vertical: -4,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 28,
+                        minHeight: 28,
+                      ),
+                      onPressed: () => _pickVerse(index),
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    visualDensity: const VisualDensity(
+                      horizontal: -4,
+                      vertical: -4,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 28,
+                      minHeight: 28,
+                    ),
+                    onPressed: () {
+                      setState(() => _entries.removeAt(index));
+                      unawaited(_commitEntries());
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
