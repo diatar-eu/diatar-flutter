@@ -826,6 +826,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                             children: filteredSongs.map((_SongOption option) {
                               final bool isSelected =
                                   option.songIndex == selectedSongIndex;
+                              final ColorScheme colorScheme =
+                                  Theme.of(innerContext).colorScheme;
                               return ListTile(
                                 dense: true,
                                 title: Text(
@@ -833,9 +835,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 selected: isSelected,
-                                selectedTileColor: Colors.blue.withValues(
-                                  alpha: 0.12,
-                                ),
+                                selectedColor: colorScheme.onPrimaryContainer,
+                                selectedTileColor: colorScheme.primaryContainer
+                                    .withValues(alpha: 0.55),
                                 onTap: () {
                                   setDialogState(() {
                                     selectedSongIndex = option.songIndex;
@@ -2133,6 +2135,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
             firstLine: firstLine,
           );
         }
+        final ColorScheme colorScheme = Theme.of(context).colorScheme;
         return ListTile(
           key: ValueKey<String>('${entry.fileName}_${entry.songIndex}_$index'),
           dense: true,
@@ -2142,7 +2145,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           horizontalTitleGap: 0,
           contentPadding: EdgeInsets.zero,
           selected: controller.isCustomOrderIndexCurrent(index),
-          selectedTileColor: Colors.blue.withValues(alpha: 0.12),
+          selectedColor: colorScheme.onPrimaryContainer,
+          selectedTileColor: colorScheme.primaryContainer.withValues(
+            alpha: 0.55,
+          ),
           onTap: () => controller.selectCustomOrderEntryForEditing(index),
           leading: SizedBox(
             width: 50,
