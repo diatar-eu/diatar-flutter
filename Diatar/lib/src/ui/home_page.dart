@@ -317,6 +317,8 @@ int _selectedDiaSongGroupIndex(
 
 enum _TransportIndicatorState { off, connecting, connected, error }
 
+typedef TransportIndicatorState = _TransportIndicatorState;
+
 bool _isTransportErrorStatus(String code) {
   return _isMqttErrorStatus(code) || _isTcpErrorStatus(code);
 }
@@ -391,32 +393,56 @@ bool _isTcpErrorStatus(String code) {
       code == 'statusSenderError';
 }
 
+TransportIndicatorState resolveMqttIndicatorState({
+  required bool mqttActive,
+  required bool mqttConnected,
+  required bool mqttHasError,
+}) {
+  if (!mqttActive) {
+    return TransportIndicatorState.off;
+  }
+  if (mqttConnected) {
+    return TransportIndicatorState.connected;
+  }
+  if (mqttHasError) {
+    return TransportIndicatorState.error;
+  }
+  return TransportIndicatorState.connecting;
+}
+
+TransportIndicatorState resolveTcpIndicatorState({
+  required bool tcpActive,
+  required bool tcpConnected,
+  required bool tcpHasError,
+}) {
+  if (!tcpActive) {
+    return TransportIndicatorState.off;
+  }
+  if (tcpConnected) {
+    return TransportIndicatorState.connected;
+  }
+  if (tcpHasError) {
+    return TransportIndicatorState.error;
+  }
+  return TransportIndicatorState.connecting;
+}
+
 _TransportIndicatorState _mqttIndicatorState(DiatarMainController controller) {
-  if (!controller.mqttActive) {
-    return _TransportIndicatorState.off;
-  }
-  if (controller.mqttConnected) {
-    return _TransportIndicatorState.connected;
-  }
-  if (controller.mqttHasError) {
-    return _TransportIndicatorState.error;
-  }
-  return _TransportIndicatorState.connecting;
+  return resolveMqttIndicatorState(
+    mqttActive: controller.mqttActive,
+    mqttConnected: controller.mqttConnected,
+    mqttHasError: controller.mqttHasError,
+  );
 }
 
 _TransportIndicatorState _localNetworkIndicatorState(
   DiatarMainController controller,
 ) {
-  if (!controller.tcpActive) {
-    return _TransportIndicatorState.off;
-  }
-  if (controller.tcpHasError) {
-    return _TransportIndicatorState.error;
-  }
-  if (controller.tcpConnected) {
-    return _TransportIndicatorState.connected;
-  }
-  return _TransportIndicatorState.connecting;
+  return resolveTcpIndicatorState(
+    tcpActive: controller.tcpActive,
+    tcpConnected: controller.tcpConnected,
+    tcpHasError: controller.tcpHasError,
+  );
 }
 
 Color _statusColorFor(_TransportIndicatorState state, ThemeData theme) {

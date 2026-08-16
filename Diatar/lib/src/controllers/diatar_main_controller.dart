@@ -996,6 +996,7 @@ class DiatarMainController extends ChangeNotifier {
             _setStatus('statusTcpSending', <String, String>{
               'port': _transportSettingsPolicy.tcpTargetsStatusLabel(settings),
             });
+            unawaited(_syncCurrentDia(playSound: false));
           },
         );
     _sender.onError = _senderCallbackCoordinator.buildTcpErrorHandler(
@@ -1018,6 +1019,7 @@ class DiatarMainController extends ChangeNotifier {
               'user': _transportSettingsPolicy.normalizedMqttUser(settings),
               'channel': settings.mqttChannel,
             });
+            unawaited(_syncCurrentDia(playSound: false));
           },
         );
     _mqttSender.onError = _senderCallbackCoordinator.buildMqttErrorHandler(

@@ -19,34 +19,35 @@ class SenderTransportCoordinator {
     required int screenHeight,
   }) async {
     try {
-      if (runtime.mqttActive) {
-        await mqttSender
-            .open(
-              username: runtime.mqttUser,
-              password: mqttPassword,
-              channel: mqttChannel,
-            )
-            .timeout(_transportTimeout);
-      } else {
-        await mqttSender
-            .clearRetainedMessages()
-            .timeout(_transportTimeout);
-        await mqttSender.close().timeout(_transportTimeout);
-      }
+      final Future<void> mqttFuture = runtime.mqttActive
+          ? mqttSender
+                .open(
+                  username: runtime.mqttUser,
+                  password: mqttPassword,
+                  channel: mqttChannel,
+                )
+                .timeout(_transportTimeout)
+          : () async {
+              await mqttSender.clearRetainedMessages().timeout(_transportTimeout);
+              await mqttSender.close().timeout(_transportTimeout);
+            }();
 
-      if (!kIsWeb && runtime.tcpConfigured) {
-        await tcpSender
-            .restart(runtime.tcpTargets)
-            .timeout(_transportTimeout);
-        await tcpSender
-            .sendScreenSize(width: screenWidth, height: screenHeight)
-            .timeout(_transportTimeout);
-      } else {
-        await tcpSender.stop().timeout(_transportTimeout);
-      }
+      final Future<void> tcpFuture = (!kIsWeb && runtime.tcpConfigured)
+          ? () async {
+              await tcpSender.restart(runtime.tcpTargets).timeout(_transportTimeout);
+              await tcpSender
+                  .sendScreenSize(
+                    width: screenWidth,
+                    height: screenHeight,
+                  )
+                  .timeout(_transportTimeout);
+            }()
+          : tcpSender.stop().timeout(_transportTimeout);
+
+      await Future.wait(<Future<void>>[mqttFuture, tcpFuture], eagerError: false);
     } catch (e) {
-      // Egy elérhetetlen hálózati célpont soha nem akaszthatja meg az
-      // alkalmazás indítását vagy a beállítások alkalmazását.
+      // A két küldési csatorna független kell, hogy legyen: egyik hibája
+      // ne akadályozza meg a másik elkészülését, és ne torzítsa a jelzőállapotot.
       debugPrint('[transport] apply timeout/error: $e');
     }
   }
