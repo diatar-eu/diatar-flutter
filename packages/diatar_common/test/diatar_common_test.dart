@@ -87,6 +87,58 @@ void main() {
     expect(lines.last, r'\KkGu4;Aldd Uram');
   });
 
+  test('text layout reserves descent below its final line', () {
+    const double fontSize = 32;
+    const List<String> lines = <String>[
+      'Adj nekem, adj nekem,',
+      '',
+      'Irantad buzgó bensoséget,',
+      'Téged felismero világosságot!',
+    ];
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: const TextFrame(
+        record: RecTextRecord(scholaLine: '', title: '', lines: lines),
+      ),
+      globals: const ProjectionGlobals(
+        autoResize: false,
+        fontSize: 32,
+        hideTitle: true,
+        useAkkord: false,
+        useKotta: false,
+      ),
+      settings: const AppSettings(
+        receiverUseAkkord: false,
+        receiverUseKotta: false,
+      ),
+    );
+    final TextPainter finalLinePainter = TextPainter(
+      text: const TextSpan(
+        text: 'Téged felismero világosságot!',
+        style: TextStyle(fontSize: fontSize),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final double textHeight = lines
+        .where((String line) => line.isNotEmpty)
+        .map((String line) {
+          final TextPainter linePainter = TextPainter(
+            text: TextSpan(
+              text: line,
+              style: const TextStyle(fontSize: fontSize),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          return linePainter.height;
+        })
+        .fold(0, (double total, double height) => total + height);
+    final double descent = finalLinePainter.computeLineMetrics().single.descent;
+
+    expect(
+      painter.measureRequiredHeight(const Size(1000, 600)),
+      greaterThanOrEqualTo(textHeight + descent + 8),
+    );
+  });
+
   test('kotta rows repeat clef and key signature on every continuation row', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
@@ -489,6 +541,24 @@ void main() {
     expect(rows[1], startsWith('bb'));
   });
 
+  test('preferred break is ignored when it would leave the next line too wide', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: false, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: false),
+    );
+
+    final List<String> rows = painter.debugTextWrappedRowsForLine(
+      r'minekünk\.véghetetlen kegyességében',
+      fontSize: 24,
+      maxWidth: 120,
+    );
+
+    expect(rows.length, greaterThanOrEqualTo(2));
+    expect(rows.first, 'minekünk véghetetlen');
+    expect(rows[1], 'kegyességében');
+  });
+
   test('normal hyphen creates wrap opportunity like space', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
@@ -505,6 +575,24 @@ void main() {
     expect(rows.length, greaterThanOrEqualTo(2));
     expect(rows.first.endsWith('-'), true);
     expect(rows[1].startsWith('cd'), true);
+  });
+
+  test('fallback wrap breaks before the final word when no preferred break exists', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: false, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: false),
+    );
+
+    final List<String> rows = painter.debugTextWrappedRowsForLine(
+      'véghetetlen kegyességében',
+      fontSize: 24,
+      maxWidth: 110,
+    );
+
+    expect(rows.length, greaterThanOrEqualTo(2));
+    expect(rows.first, contains('véghetetlen'));
+    expect(rows[1], startsWith('kegyességében'));
   });
 
   test('logo background stays green between fade in and fade out', () {

@@ -605,6 +605,7 @@ class ProjectorPainter extends CustomPainter {
         }
       }
     }
+    totalHeight += prepared.bottomTextDescent;
     double y = globals.vCenter ? (size.height - totalHeight) / 2 : 8;
 
     for (int painterIndex = 0; painterIndex < painters.length; painterIndex++) {
@@ -955,6 +956,14 @@ class ProjectorPainter extends CustomPainter {
       lineHeightsByLine.add(_measureTextRowHeight(line, lineFontSize));
     }
 
+    final int lastLineIndex = allLines.length - 1;
+    final double bottomTextDescent =
+        lastLineIndex >= 0 &&
+            !hasKottaByLine[lastLineIndex] &&
+            !(hasTitleLine && lastLineIndex == 0)
+        ? _measureTextRowDescent(allLines[lastLineIndex], fontSize)
+        : 0;
+
     final _PreparedTextLayout prepared = _PreparedTextLayout(
       hasTitleLine: hasTitleLine,
       titleFontSize: titleFontSize,
@@ -968,6 +977,7 @@ class ProjectorPainter extends CustomPainter {
         kottaRowsByLine.map((rows) => List<_KottaRowLayout>.unmodifiable(rows)),
       ),
       lineHeightsByLine: List<double>.unmodifiable(lineHeightsByLine),
+      bottomTextDescent: bottomTextDescent,
     );
 
     _preparedLayoutCache[cacheKey] = prepared;
@@ -1043,6 +1053,7 @@ class ProjectorPainter extends CustomPainter {
       }
     }
 
+    totalHeight += prepared.bottomTextDescent;
     _textHeightCache[cacheKey] = totalHeight;
     while (_textHeightCache.length > _layoutCacheLimit) {
       _textHeightCache.remove(_textHeightCache.keys.first);
@@ -1092,6 +1103,16 @@ class ProjectorPainter extends CustomPainter {
   }
 
   double _measureTextRowHeight(_RenderLine line, double fontSize) {
+    return _buildTextRowMeasure(line, fontSize).height;
+  }
+
+  double _measureTextRowDescent(_RenderLine line, double fontSize) {
+    final TextPainter tp = _buildTextRowMeasure(line, fontSize);
+    final List<ui.LineMetrics> metrics = tp.computeLineMetrics();
+    return metrics.isEmpty ? 0 : metrics.last.descent;
+  }
+
+  TextPainter _buildTextRowMeasure(_RenderLine line, double fontSize) {
     final List<InlineSpan> spans = <InlineSpan>[];
     for (final _WordToken word in line.words) {
       final Color baseColor = word.color ?? globals.txtColor;
@@ -1118,7 +1139,7 @@ class ProjectorPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
       textAlign: globals.hCenter ? TextAlign.center : TextAlign.left,
     )..layout();
-    return tp.height;
+    return tp;
   }
 
   void _paintTextRow(
@@ -2492,25 +2513,71 @@ class ProjectorPainter extends CustomPainter {
       final double currentRowLimit = rows.isEmpty
           ? wrapWidth
           : math.max(8.0, wrapWidth - continuationIndent);
+
       if (currentWordIndices.isNotEmpty &&
           (currentWidth + pendingWordWidth) > currentRowLimit) {
-        int breakWordIndex = currentWordIndices.last;
+        final List<int> combinedWordIndices = <int>[]
+          ..addAll(currentWordIndices)
+          ..addAll(pendingWordIndices);
+
+        int breakWordIndex = combinedWordIndices.last;
+        int? preferredBreakIndex;
         if (preferPreferredBreaks) {
-          for (int j = currentWordIndices.length - 1; j >= 0; j--) {
-            final int candidateIndex = currentWordIndices[j];
-            if (line.words[candidateIndex].preferredBreakAfter) {
+          for (int j = combinedWordIndices.length - 1; j >= 0; j--) {
+            final int candidateIndex = combinedWordIndices[j];
+            if (!line.words[candidateIndex].preferredBreakAfter) {
+              continue;
+            }
+
+            double headWidth = 0;
+            for (int k = 0; k <= j; k++) {
+              headWidth += slotWidths[combinedWordIndices[k]];
+            }
+            double tailWidth = 0;
+            for (int k = j + 1; k < combinedWordIndices.length; k++) {
+              tailWidth += slotWidths[combinedWordIndices[k]];
+            }
+
+            if (headWidth <= currentRowLimit && tailWidth <= currentRowLimit) {
+              preferredBreakIndex = candidateIndex;
+              break;
+            }
+          }
+        }
+        if (preferredBreakIndex != null) {
+          breakWordIndex = preferredBreakIndex;
+        } else {
+          for (int j = combinedWordIndices.length - 1; j >= 0; j--) {
+            final int candidateIndex = combinedWordIndices[j];
+            final _WordToken candidate = line.words[candidateIndex];
+            final bool isRegularBreak =
+                candidate.breakAfter || candidate.softHyphenAfter;
+            if (!isRegularBreak && j != combinedWordIndices.length - 1) {
+              continue;
+            }
+
+            double headWidth = 0;
+            for (int k = 0; k <= j; k++) {
+              headWidth += slotWidths[combinedWordIndices[k]];
+            }
+            double tailWidth = 0;
+            for (int k = j + 1; k < combinedWordIndices.length; k++) {
+              tailWidth += slotWidths[combinedWordIndices[k]];
+            }
+
+            if (headWidth <= currentRowLimit && tailWidth <= currentRowLimit) {
               breakWordIndex = candidateIndex;
               break;
             }
           }
         }
 
-        final int breakPos = currentWordIndices.indexOf(breakWordIndex);
+        final int breakPos = combinedWordIndices.indexOf(breakWordIndex);
         final List<int> rowWordIndices = List<int>.from(
-          currentWordIndices.take(breakPos + 1),
+          combinedWordIndices.take(breakPos + 1),
         );
         final List<int> carryWordIndices = List<int>.from(
-          currentWordIndices.skip(breakPos + 1),
+          combinedWordIndices.skip(breakPos + 1),
         );
         double rowBaseWidth = 0;
         for (final int idx in rowWordIndices) {
@@ -2542,6 +2609,9 @@ class ProjectorPainter extends CustomPainter {
           ..clear()
           ..addAll(carryWordIndices);
         currentWidth = carryWordsWidth;
+        pendingWordIndices.clear();
+        pendingWordWidth = 0;
+        continue;
       }
 
       currentWordIndices.addAll(pendingWordIndices);
@@ -4629,6 +4699,7 @@ class _PreparedTextLayout {
     required this.chordBandByLine,
     required this.kottaRowsByLine,
     required this.lineHeightsByLine,
+    required this.bottomTextDescent,
   });
 
   final bool hasTitleLine;
@@ -4639,6 +4710,7 @@ class _PreparedTextLayout {
   final List<double> chordBandByLine;
   final List<List<_KottaRowLayout>> kottaRowsByLine;
   final List<double> lineHeightsByLine;
+  final double bottomTextDescent;
 }
 
 class _AutoSizeResult {
