@@ -71,8 +71,14 @@ class DtzManageItem {
 }
 
 class DtzDownloadService {
-  static const String _listUrl = 'https://diatar.eu/downloads/kottak/_list.php';
-  static const String _baseUrl = 'https://diatar.eu/downloads/kottak/';
+  DtzDownloadService({http.Client? client}) : _client = client ?? http.Client();
+
+  final http.Client _client;
+
+  static const String _dtzListUrl = 'https://diatar.eu/downloads/dtz/_list.php';
+  static const String _dtzBaseUrl = 'https://diatar.eu/downloads/dtz/';
+  static const String _zipListUrl = 'https://diatar.eu/downloads/kottak/_list.php';
+  static const String _zipBaseUrl = 'https://diatar.eu/downloads/kottak/';
   static const String _kottakTxtUrl =
       'https://diatar.eu/downloads/kottak/kottak.txt';
   static const String _stampPrefix = 'dtz_stamp_';
@@ -88,12 +94,14 @@ class DtzDownloadService {
   }) async {
     await targetDir.create(recursive: true);
 
-    final List<_RemoteEntry> remoteList = await _fetchRemoteList();
+    final List<_RemoteEntry> remoteDtzList = await _fetchRemoteList(_dtzListUrl);
+    final List<_RemoteEntry> remoteZipList = await _fetchRemoteList(_zipListUrl);
     final Map<String, List<String>> kottakMap = await _fetchKottakMap();
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     final Map<String, _RemoteEntry> remoteByName = <String, _RemoteEntry>{
-      for (final _RemoteEntry e in remoteList) e.fileName: e,
+      for (final _RemoteEntry e in <_RemoteEntry>[...remoteDtzList, ...remoteZipList])
+        e.fileName: e,
     };
 
     final List<DtzDownloadItem> items = <DtzDownloadItem>[];
@@ -164,8 +172,11 @@ class DtzDownloadService {
         .where((DtzDownloadItem i) => i.isOfficial)
         .toList();
 
+    final List<_RemoteEntry> remoteDtzList = await _fetchRemoteList(_dtzListUrl);
+    final List<_RemoteEntry> remoteZipList = await _fetchRemoteList(_zipListUrl);
     final Map<String, _RemoteEntry> remote = <String, _RemoteEntry>{
-      for (final _RemoteEntry e in await _fetchRemoteList()) e.fileName: e,
+      for (final _RemoteEntry e in <_RemoteEntry>[...remoteDtzList, ...remoteZipList])
+        e.fileName: e,
     };
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
@@ -185,6 +196,7 @@ class DtzDownloadService {
       if (await _needsDownload(dtzFile, item.fileName, item.timestamp, prefs)) {
         await _downloadOne(
           fileName: item.fileName,
+          baseUrl: _dtzBaseUrl,
           targetFile: dtzFile,
           currentFile: currentFile,
           totalFiles: total,
@@ -210,6 +222,7 @@ class DtzDownloadService {
         if (await _needsDownload(zipFile, zip, zipEntry.timestamp, prefs)) {
           await _downloadOne(
             fileName: zip,
+            baseUrl: _zipBaseUrl,
             targetFile: zipFile,
             currentFile: currentFile,
             totalFiles: total,
@@ -296,10 +309,10 @@ class DtzDownloadService {
     return !(await local.exists() && oldStamp == timestamp);
   }
 
-  Future<List<_RemoteEntry>> _fetchRemoteList() async {
-    final http.Response response = await http.get(Uri.parse(_listUrl));
+  Future<List<_RemoteEntry>> _fetchRemoteList(String url) async {
+    final http.Response response = await _client.get(Uri.parse(url));
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('HTTP ${response.statusCode} while loading DTZ list');
+      throw Exception('HTTP ${response.statusCode} while loading $url');
     }
 
     final String content = utf8.decode(response.bodyBytes);
@@ -338,7 +351,7 @@ class DtzDownloadService {
   }
 
   Future<Map<String, List<String>>> _fetchKottakMap() async {
-    final http.Response response = await http.get(Uri.parse(_kottakTxtUrl));
+    final http.Response response = await _client.get(Uri.parse(_kottakTxtUrl));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('HTTP ${response.statusCode} while loading kottak.txt');
     }
@@ -380,13 +393,14 @@ class DtzDownloadService {
 
   Future<void> _downloadOne({
     required String fileName,
+    required String baseUrl,
     required File targetFile,
     required int currentFile,
     required int totalFiles,
     void Function(DtzDownloadProgress progress)? onProgress,
   }) async {
-    final Uri uri = Uri.parse('$_baseUrl$fileName');
-    final http.Response response = await http.get(uri);
+    final Uri uri = Uri.parse('$baseUrl$fileName');
+    final http.Response response = await _client.get(uri);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
         'HTTP ${response.statusCode} while downloading $fileName',
