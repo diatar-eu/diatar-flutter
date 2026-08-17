@@ -2397,7 +2397,7 @@ class DiatarMainController extends ChangeNotifier {
     final Map<String, String> dtxTitles = <String, String>{};
     for (final DtxBook book in books) {
       final String base = book.fileName.replaceAll(RegExp(r'\.[^.]+$'), '');
-      dtxTitles[base] = book.displayName;
+      dtxTitles[base] = book.title;
     }
     try {
       final Map<String, String> remoteTitles = await _downloadService
@@ -2460,10 +2460,17 @@ class DiatarMainController extends ChangeNotifier {
       // hálózati/letöltési hiba esetén is érvényesül.
       _disabledDtzFiles = effectiveExcluded;
       await _saveDisabledDtzFiles(_disabledDtzFiles);
-      await _loadDtzPhotos();
 
       try {
         final Directory dtzDir = await _dtzDownloadService.resolveDirectory();
+        final int deleted = await _dtzDownloadService.deleteLocalFiles(
+          targetDir: dtzDir,
+          fileNames: effectiveExcluded,
+        );
+        if (deleted > 0) {
+          await reloadBooks();
+        }
+        await _loadDtzPhotos();
         final List<DtzDownloadItem> all = await _dtzDownloadService.listAll(
           targetDir: dtzDir,
         );
@@ -2642,7 +2649,9 @@ class DiatarMainController extends ChangeNotifier {
     }
     if (cleanName != null) {
       final String normalizedName = cleanName.trim();
-      _lastImportedCustomOrderBaseName = normalizedName.isEmpty ? null : normalizedName;
+      _lastImportedCustomOrderBaseName = normalizedName.isEmpty
+          ? null
+          : normalizedName;
       if (_activeOrderSetIndex >= 0 &&
           _activeOrderSetIndex < _customOrderSets.length) {
         _customOrderSets[_activeOrderSetIndex] =
@@ -2922,10 +2931,14 @@ class DiatarMainController extends ChangeNotifier {
       // hálózati/letöltési hiba esetén is érvényesül.
       _disabledSongbooks = effectiveExcluded;
       await _orderStore.saveDisabled(_disabledSongbooks);
-      await reloadBooks();
 
       try {
         final Directory dtxDir = await _resolveDtxDirectory();
+        await _downloadService.deleteLocalFiles(
+          targetDir: dtxDir,
+          fileNames: effectiveExcluded,
+        );
+        await reloadBooks();
         final List<DtxDownloadItem> all = await _downloadService.listAll(
           targetDir: dtxDir,
         );

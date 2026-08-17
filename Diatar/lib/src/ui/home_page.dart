@@ -1761,68 +1761,6 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
     });
   }
 
-  Future<void> _confirmDeleteDtx(
-    BuildContext context,
-    String fileName,
-    String title,
-  ) async {
-    final l10n = context.l10n;
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext dlgContext) => AlertDialog(
-        title: Text(l10n.deleteFilesTooltip),
-        content: Text(l10n.confirmDeleteDtxFiles(title)),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dlgContext).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dlgContext).pop(true),
-            child: Text(l10n.delete),
-          ),
-        ],
-      ),
-    );
-    if (confirmed ?? false) {
-      await widget.controller.deleteDtxFiles(<String>{fileName});
-      if (mounted) {
-        _reload();
-      }
-    }
-  }
-
-  Future<void> _confirmDeleteDtz(
-    BuildContext context,
-    String fileName,
-    String title,
-  ) async {
-    final l10n = context.l10n;
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext dlgContext) => AlertDialog(
-        title: Text(l10n.deleteFilesTooltip),
-        content: Text(l10n.confirmDeleteDtzFiles(title)),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dlgContext).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dlgContext).pop(true),
-            child: Text(l10n.delete),
-          ),
-        ],
-      ),
-    );
-    if (confirmed ?? false) {
-      await widget.controller.deleteDtzFiles(<String>{fileName});
-      if (mounted) {
-        _reload();
-      }
-    }
-  }
-
   String _displayGroup(DtxManageItem managed, BuildContext context) {
     final l10n = context.l10n;
     if (managed.item.isUserProvided) {
@@ -2473,22 +2411,6 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                     ),
                                   ),
                                 ),
-                                if (item.isInstalled)
-                                  IconButton(
-                                    tooltip: l10n.deleteFilesTooltip,
-                                    visualDensity: VisualDensity.compact,
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      size: 20,
-                                    ),
-                                    onPressed: () {
-                                      _confirmDeleteDtx(
-                                        context,
-                                        item.fileName,
-                                        item.longName,
-                                      );
-                                    },
-                                  ),
                               ],
                             ),
                           );
@@ -2519,24 +2441,11 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                 snapshot.data ?? const <DtzManageItem>[];
             _dtzAllItems = items;
             if (!_dtzSelectionInitialized) {
-              _dtzDownloadSelected
-                ..clear()
-                ..addAll(
-                  items
-                      .where(
-                        (DtzManageItem item) =>
-                            item.item.isOfficial &&
-                            item.item.updateAvailable &&
-                            !item.excluded,
-                      )
-                      .map((DtzManageItem item) => item.item.fileName),
-                );
+              _dtzDownloadSelected.clear();
               _dtzExcludedFiles
                 ..clear()
                 ..addAll(
-                  items
-                      .where((DtzManageItem item) => item.excluded)
-                      .map((DtzManageItem item) => item.item.fileName),
+                  items.map((DtzManageItem item) => item.item.fileName),
                 );
               _dtzSelectionInitialized = true;
             }
@@ -2782,22 +2691,6 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                     ),
                                   ),
                                 ),
-                                if (item.isInstalled)
-                                  IconButton(
-                                    tooltip: l10n.deleteFilesTooltip,
-                                    visualDensity: VisualDensity.compact,
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      size: 20,
-                                    ),
-                                    onPressed: () {
-                                      _confirmDeleteDtz(
-                                        context,
-                                        item.fileName,
-                                        displayTitle,
-                                      );
-                                    },
-                                  ),
                               ],
                             ),
                           );
