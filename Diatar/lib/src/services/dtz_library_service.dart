@@ -66,7 +66,7 @@ class DtzLibraryService {
       final String rest = raw.substring(1).trim();
 
       if (prefix == 'b' || prefix == 'B') {
-        baseDir = '$docsPath/diatar/DTZs/${rest.replaceAll('\\', '/')}';
+        // Ignoráljuk a base dirt, mert már automatikusan letölt, csak bonyodalmat okozna.
         continue;
       }
 
