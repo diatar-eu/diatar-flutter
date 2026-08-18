@@ -29,7 +29,6 @@ class TcpSenderService {
   Uint8List? _cachedPic;
   Uint8List? _cachedScrSize;
   bool _lastStatus = false;
-  bool _lastAllTargetsConnected = false;
 
   bool get running => _running;
   bool get hasClients => _clients.isNotEmpty;
@@ -296,12 +295,8 @@ class TcpSenderService {
 
   void _emitStatus({bool force = false}) {
     final bool connected = _clients.isNotEmpty;
-    final bool allConnected = allTargetsConnected;
-    if (force ||
-        connected != _lastStatus ||
-        allConnected != _lastAllTargetsConnected) {
+    if (force || connected != _lastStatus) {
       _lastStatus = connected;
-      _lastAllTargetsConnected = allConnected;
       onStatusChanged(connected);
     }
   }
