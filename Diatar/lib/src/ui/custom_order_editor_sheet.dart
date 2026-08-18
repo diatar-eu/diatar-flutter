@@ -958,7 +958,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     setState(() {
       final int insertIndex = _selectedInsertInsertionIndex();
       _entries.insertAll(insertIndex, toInsert);
-      lastInsertedIndex = insertIndex + toInsert.length - 1;
+      lastInsertedIndex = insertIndex;
     });
     await _commitEntries();
     if (mounted) {
@@ -1017,7 +1017,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     await _commitEntries();
     if (mounted && insertedCount > 0) {
       controller.selectCustomOrderEntryForEditing(
-        insertedStartIndex + insertedCount - 1,
+        insertedStartIndex,
       );
     }
   }
