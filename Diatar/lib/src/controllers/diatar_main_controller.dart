@@ -2988,6 +2988,7 @@ class DiatarMainController extends ChangeNotifier {
                   notifyListeners();
                 },
               );
+          await reloadBooks();
           _setStatus('statusDownloadSummary', <String, String>{
             'downloaded': '${summary.downloaded}',
             'skipped': '${summary.skipped}',
