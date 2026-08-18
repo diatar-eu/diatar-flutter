@@ -215,7 +215,6 @@ class DiatarMainController extends ChangeNotifier {
   int _screenHeight = 1080;
   Set<String> _disabledSongbooks = <String>{};
   Set<String> _disabledDtzFiles = <String>{};
-  bool _hasSavedDtzExclusions = false;
   List<CustomOrderEntry> _customOrder = <CustomOrderEntry>[];
   bool customOrderActive = false;
   int _customOrderCursor = -1;
@@ -936,7 +935,6 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<Set<String>> _loadDisabledDtzFiles() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    _hasSavedDtzExclusions = prefs.containsKey(_disabledDtzPrefsKey);
     return (prefs.getStringList(_disabledDtzPrefsKey) ?? const <String>[])
         .map((String name) => name.trim())
         .where((String name) => name.isNotEmpty)
@@ -953,7 +951,6 @@ class DiatarMainController extends ChangeNotifier {
             .toList()
           ..sort();
     await prefs.setStringList(_disabledDtzPrefsKey, normalized);
-    _hasSavedDtzExclusions = true;
   }
 
   Future<void> _checkStartupDtxUpdates() async {
@@ -2416,9 +2413,7 @@ class DiatarMainController extends ChangeNotifier {
         .map(
           (DtzDownloadItem item) => DtzManageItem(
             item: item,
-            excluded: _hasSavedDtzExclusions
-                ? _disabledDtzFiles.contains(item.fileName)
-                : true,
+            excluded: _disabledDtzFiles.contains(item.fileName),
           ),
         )
         .toList();
@@ -2451,10 +2446,15 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final Set<String> requestedDownloads = downloadSelected
+          .map((String name) => name.trim())
+          .where((String name) => name.isNotEmpty)
+          .toSet();
       final Set<String> effectiveExcluded = excludedSelected
           .map((String name) => name.trim())
           .where((String name) => name.isNotEmpty)
           .toSet();
+      effectiveExcluded.removeAll(requestedDownloads);
 
       // A mellőzés-módosítást mindenekelőtt mentjük, így az
       // hálózati/letöltési hiba esetén is érvényesül.
@@ -2463,14 +2463,6 @@ class DiatarMainController extends ChangeNotifier {
 
       try {
         final Directory dtzDir = await _dtzDownloadService.resolveDirectory();
-        final int deleted = await _dtzDownloadService.deleteLocalFiles(
-          targetDir: dtzDir,
-          fileNames: effectiveExcluded,
-        );
-        if (deleted > 0) {
-          await reloadBooks();
-        }
-        await _loadDtzPhotos();
         final List<DtzDownloadItem> all = await _dtzDownloadService.listAll(
           targetDir: dtzDir,
         );
@@ -2487,11 +2479,21 @@ class DiatarMainController extends ChangeNotifier {
             })
             .toSet();
 
-        if (_disabledDtzFiles.intersection(effectiveDownload).isNotEmpty) {
-          _disabledDtzFiles.removeAll(effectiveDownload);
-          await _saveDisabledDtzFiles(_disabledDtzFiles);
-          await _loadDtzPhotos();
+        final List<DtzDownloadItem> excludedPackages = all
+            .where(
+              (DtzDownloadItem item) =>
+                  effectiveExcluded.contains(item.fileName),
+            )
+            .toList();
+        final int deleted = await _dtzDownloadService.deletePackages(
+          targetDir: dtzDir,
+          itemsToDelete: excludedPackages,
+          allItems: all,
+        );
+        if (deleted > 0) {
+          await reloadBooks();
         }
+        await _loadDtzPhotos();
 
         downloadTotalFiles = effectiveDownload.length;
 
@@ -2520,6 +2522,9 @@ class DiatarMainController extends ChangeNotifier {
                   notifyListeners();
                 },
               );
+          if (summary.downloaded > 0) {
+            await reloadBooks();
+          }
           _setStatus('statusDownloadSummary', <String, String>{
             'downloaded': '${summary.downloaded}',
             'skipped': '${summary.skipped}',

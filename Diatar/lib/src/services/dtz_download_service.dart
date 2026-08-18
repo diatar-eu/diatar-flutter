@@ -77,11 +77,13 @@ class DtzDownloadService {
 
   static const String _dtzListUrl = 'https://diatar.eu/downloads/dtz/_list.php';
   static const String _dtzBaseUrl = 'https://diatar.eu/downloads/dtz/';
-  static const String _zipListUrl = 'https://diatar.eu/downloads/kottak/_list.php';
+  static const String _zipListUrl =
+      'https://diatar.eu/downloads/kottak/_list.php';
   static const String _zipBaseUrl = 'https://diatar.eu/downloads/kottak/';
   static const String _kottakTxtUrl =
       'https://diatar.eu/downloads/kottak/kottak.txt';
   static const String _stampPrefix = 'dtz_stamp_';
+  static const String _zipContentsPrefix = 'dtz_zip_contents_';
 
   Future<Directory> resolveDirectory() async {
     final String docsPath = await PathHelper.getDocumentsDirectoryPath();
@@ -94,13 +96,20 @@ class DtzDownloadService {
   }) async {
     await targetDir.create(recursive: true);
 
-    final List<_RemoteEntry> remoteDtzList = await _fetchRemoteList(_dtzListUrl);
-    final List<_RemoteEntry> remoteZipList = await _fetchRemoteList(_zipListUrl);
+    final List<_RemoteEntry> remoteDtzList = await _fetchRemoteList(
+      _dtzListUrl,
+    );
+    final List<_RemoteEntry> remoteZipList = await _fetchRemoteList(
+      _zipListUrl,
+    );
     final Map<String, List<String>> kottakMap = await _fetchKottakMap();
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     final Map<String, _RemoteEntry> remoteByName = <String, _RemoteEntry>{
-      for (final _RemoteEntry e in <_RemoteEntry>[...remoteDtzList, ...remoteZipList])
+      for (final _RemoteEntry e in <_RemoteEntry>[
+        ...remoteDtzList,
+        ...remoteZipList,
+      ])
         e.fileName: e,
     };
 
@@ -172,10 +181,17 @@ class DtzDownloadService {
         .where((DtzDownloadItem i) => i.isOfficial)
         .toList();
 
-    final List<_RemoteEntry> remoteDtzList = await _fetchRemoteList(_dtzListUrl);
-    final List<_RemoteEntry> remoteZipList = await _fetchRemoteList(_zipListUrl);
+    final List<_RemoteEntry> remoteDtzList = await _fetchRemoteList(
+      _dtzListUrl,
+    );
+    final List<_RemoteEntry> remoteZipList = await _fetchRemoteList(
+      _zipListUrl,
+    );
     final Map<String, _RemoteEntry> remote = <String, _RemoteEntry>{
-      for (final _RemoteEntry e in <_RemoteEntry>[...remoteDtzList, ...remoteZipList])
+      for (final _RemoteEntry e in <_RemoteEntry>[
+        ...remoteDtzList,
+        ...remoteZipList,
+      ])
         e.fileName: e,
     };
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -228,9 +244,13 @@ class DtzDownloadService {
             totalFiles: total,
             onProgress: onProgress,
           );
-          await _extractZip(zipFile, targetDir);
+          final List<String> extractedFiles = await _extractZip(
+            zipFile,
+            targetDir,
+          );
           await zipFile.delete();
           await prefs.setString('$_stampPrefix$zip', zipEntry.timestamp);
+          await prefs.setStringList('$_zipContentsPrefix$zip', extractedFiles);
           neededSomething = true;
         }
       }
@@ -296,6 +316,55 @@ class DtzDownloadService {
 
     await FileSystemProvider.persistWebFileSystem();
 
+    return deleted;
+  }
+
+  Future<int> deletePackages({
+    required Directory targetDir,
+    required Iterable<DtzDownloadItem> itemsToDelete,
+    required Iterable<DtzDownloadItem> allItems,
+  }) async {
+    await targetDir.create(recursive: true);
+    final Set<String> packageNames = itemsToDelete
+        .map((DtzDownloadItem item) => item.fileName.trim())
+        .where((String name) => name.isNotEmpty)
+        .toSet();
+    if (packageNames.isEmpty) {
+      return 0;
+    }
+
+    final List<DtzDownloadItem> packages = allItems.toList();
+    final Set<String> zipsStillUsed = packages
+        .where((DtzDownloadItem item) => !packageNames.contains(item.fileName))
+        .expand((DtzDownloadItem item) => item.zipNames)
+        .toSet();
+    final Set<String> zipsToDelete = packages
+        .where((DtzDownloadItem item) => packageNames.contains(item.fileName))
+        .expand((DtzDownloadItem item) => item.zipNames)
+        .where((String zip) => !zipsStillUsed.contains(zip))
+        .toSet();
+
+    int deleted = await deleteLocalFiles(
+      targetDir: targetDir,
+      fileNames: <String>[...packageNames, ...zipsToDelete],
+    );
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    for (final String zip in zipsToDelete) {
+      final List<String> extractedFiles =
+          prefs.getStringList('$_zipContentsPrefix$zip') ?? const <String>[];
+      for (final String relativePath in extractedFiles) {
+        final File local = FileSystemProvider.instance.file(
+          '${targetDir.path}/$relativePath',
+        );
+        if (await local.exists()) {
+          await local.delete();
+          deleted++;
+        }
+      }
+      await prefs.remove('$_zipContentsPrefix$zip');
+    }
+
+    await FileSystemProvider.persistWebFileSystem();
     return deleted;
   }
 
@@ -430,9 +499,10 @@ class DtzDownloadService {
     await targetFile.writeAsBytes(bytes);
   }
 
-  Future<void> _extractZip(File zipFile, Directory targetDir) async {
+  Future<List<String>> _extractZip(File zipFile, Directory targetDir) async {
     final List<int> bytes = await zipFile.readAsBytes();
     final Archive archive = ZipDecoder().decodeBytes(bytes);
+    final List<String> extractedFiles = <String>[];
     for (final ArchiveFile file in archive) {
       if (!file.isFile) {
         continue;
@@ -448,7 +518,9 @@ class DtzDownloadService {
       );
       await outFile.create(recursive: true);
       await outFile.writeAsBytes(file.content);
+      extractedFiles.add(normalized);
     }
+    return extractedFiles;
   }
 }
 

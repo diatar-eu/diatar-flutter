@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:archive/archive.dart';
 import 'package:file/file.dart';
 import 'package:file/local.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,24 +13,47 @@ void main() {
   SharedPreferences.setMockInitialValues(<String, Object>{});
 
   group('DtzDownloadService', () {
-    test('uses the dedicated DTZ list and still resolves zip dependencies', () async {
-      final Directory dir = await LocalFileSystem().systemTempDirectory.createTemp(
-        'dtz_service_test_',
-      );
+    test(
+      'uses the dedicated DTZ list and still resolves zip dependencies',
+      () async {
+        final Directory dir = await LocalFileSystem().systemTempDirectory
+            .createTemp('dtz_service_test_');
 
-      final List<DtzDownloadItem> items = await DtzDownloadService(
-        client: _FakeDtzHttpClient(),
-      ).listAll(
+        final List<DtzDownloadItem> items =
+            await DtzDownloadService(client: _FakeDtzHttpClient()).listAll(
+              targetDir: dir,
+              dtxTitles: const <String, String>{'song': 'Song title'},
+            );
+
+        expect(items, hasLength(1));
+        expect(items.first.fileName, 'song.dtz');
+        expect(items.first.timestamp, '20240101010101');
+        expect(items.first.size, 42);
+        expect(items.first.zips, <String>['cover.zip']);
+        expect(items.first.title, 'Song title');
+      },
+    );
+
+    test('deletes a package and its extracted score files', () async {
+      final Directory dir = await LocalFileSystem().systemTempDirectory
+          .createTemp('dtz_package_delete_test_');
+      final DtzDownloadService service = DtzDownloadService(
+        client: _DownloadingFakeDtzHttpClient(),
+      );
+      final List<DtzDownloadItem> items = await service.listAll(targetDir: dir);
+
+      await service.downloadUpdates(targetDir: dir, selected: items);
+      expect(dir.childFile('song.dtz').existsSync(), isTrue);
+      expect(dir.childFile('scores/song.png').existsSync(), isTrue);
+
+      await service.deletePackages(
         targetDir: dir,
-        dtxTitles: const <String, String>{'song': 'Song title'},
+        itemsToDelete: items,
+        allItems: items,
       );
 
-      expect(items, hasLength(1));
-      expect(items.first.fileName, 'song.dtz');
-      expect(items.first.timestamp, '20240101010101');
-      expect(items.first.size, 42);
-      expect(items.first.zips, <String>['cover.zip']);
-      expect(items.first.title, 'Song title');
+      expect(dir.childFile('song.dtz').existsSync(), isFalse);
+      expect(dir.childFile('scores/song.png').existsSync(), isFalse);
     });
   });
 }
@@ -57,4 +81,19 @@ class _FakeDtzHttpClient implements http.Client {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _DownloadingFakeDtzHttpClient extends _FakeDtzHttpClient {
+  @override
+  Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
+    if (url.toString() == 'https://diatar.eu/downloads/dtz/song.dtz') {
+      return http.Response.bytes(utf8.encode('song'), 200);
+    }
+    if (url.toString() == 'https://diatar.eu/downloads/kottak/cover.zip') {
+      final Archive archive = Archive()
+        ..addFile(ArchiveFile('scores/song.png', 4, <int>[1, 2, 3, 4]));
+      return http.Response.bytes(ZipEncoder().encodeBytes(archive), 200);
+    }
+    return super.get(url, headers: headers);
+  }
 }
