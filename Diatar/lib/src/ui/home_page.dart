@@ -2445,7 +2445,9 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
               _dtzExcludedFiles
                 ..clear()
                 ..addAll(
-                  items.map((DtzManageItem item) => item.item.fileName),
+                  items
+                      .where((DtzManageItem item) => item.excluded)
+                      .map((DtzManageItem item) => item.item.fileName),
                 );
               _dtzSelectionInitialized = true;
             }
@@ -2730,8 +2732,8 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
   Future<void> _importDtxFiles(BuildContext context) async {
     final List<XFile> files = await DesktopProjectorBridge.instance
         .runWithNativeDialog(
-      () => showFileOpenPanel(extensions: const <String>['dtx']),
-    );
+          () => showFileOpenPanel(extensions: const <String>['dtx']),
+        );
     if (files.isEmpty || !context.mounted) {
       return;
     }
@@ -2825,8 +2827,8 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
     if (_importing) return;
     final List<XFile> files = await DesktopProjectorBridge.instance
         .runWithNativeDialog(
-      () => showFileOpenPanel(extensions: const <String>['dtz']),
-    );
+          () => showFileOpenPanel(extensions: const <String>['dtz']),
+        );
     if (!mounted || files.isEmpty) return;
     setState(() {
       _dtzFile = files.first;
@@ -2838,8 +2840,8 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
     if (_importing) return;
     final List<XFile> files = await DesktopProjectorBridge.instance
         .runWithNativeDialog(
-      () => showFileOpenPanel(extensions: const <String>['zip']),
-    );
+          () => showFileOpenPanel(extensions: const <String>['zip']),
+        );
     if (!mounted || files.isEmpty) return;
     setState(() {
       _zipFiles.addAll(files);
@@ -3238,10 +3240,7 @@ class _PackageRowState extends State<_PackageRow> {
                       for (final String f in pkg.missingFiles.toList()..sort())
                         Padding(
                           padding: const EdgeInsets.only(left: 8, top: 1),
-                          child: Text(
-                            f,
-                            style: const TextStyle(fontSize: 12),
-                          ),
+                          child: Text(f, style: const TextStyle(fontSize: 12)),
                         ),
                     ],
                     if (pkg.missingDiaIds.isNotEmpty) ...<Widget>[
@@ -3253,13 +3252,11 @@ class _PackageRowState extends State<_PackageRow> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      for (final String id in pkg.missingDiaIds.toList()..sort())
+                      for (final String id
+                          in pkg.missingDiaIds.toList()..sort())
                         Padding(
                           padding: const EdgeInsets.only(left: 8, top: 1),
-                          child: Text(
-                            id,
-                            style: const TextStyle(fontSize: 12),
-                          ),
+                          child: Text(id, style: const TextStyle(fontSize: 12)),
                         ),
                     ],
                   ],
@@ -4164,8 +4161,8 @@ class _DialistPanelState extends State<_DialistPanel> {
                                               .isCustomOrderEntryMergeLeaderAt(
                                                 index,
                                               )
-                                          ? MergeIndicatorVisual.upperBrace
-                                          : MergeIndicatorVisual.hidden,
+                                        ? MergeIndicatorVisual.upperBrace
+                                        : MergeIndicatorVisual.hidden,
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 8,
