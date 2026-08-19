@@ -1597,6 +1597,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get useSound => 'Use sound';
 
   @override
+  String get liveSubtitlesOn => 'Enable live subtitles';
+
+  @override
+  String get liveSubtitlesOff => 'Disable live subtitles';
+
+  @override
+  String get liveSubtitlesDownloadTitle => 'Download speech model';
+
+  @override
+  String get liveSubtitlesDownloadMessage =>
+      'A ~650MB language model is required for live speech recognition. Download now?';
+
+  @override
+  String get liveSubtitlesDownloading => 'Downloading speech model...';
+
+  @override
+  String get liveSubtitlesError => 'Speech recognition error';
+
+  @override
+  String get liveSubtitlesMicDevice => 'Microphone';
+
+  @override
+  String get liveSubtitlesMicDeviceDefault => 'System default';
+
+  @override
   String get castSettingsTitle => 'Google Cast settings';
 
   @override

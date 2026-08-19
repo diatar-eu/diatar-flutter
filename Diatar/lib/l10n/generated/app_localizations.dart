@@ -2843,6 +2843,54 @@ abstract class AppLocalizations {
   /// **'Hang használata'**
   String get useSound;
 
+  /// No description provided for @liveSubtitlesOn.
+  ///
+  /// In hu, this message translates to:
+  /// **'Élő felirat bekapcsolása'**
+  String get liveSubtitlesOn;
+
+  /// No description provided for @liveSubtitlesOff.
+  ///
+  /// In hu, this message translates to:
+  /// **'Élő felirat kikapcsolása'**
+  String get liveSubtitlesOff;
+
+  /// No description provided for @liveSubtitlesDownloadTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beszédmodell letöltése'**
+  String get liveSubtitlesDownloadTitle;
+
+  /// No description provided for @liveSubtitlesDownloadMessage.
+  ///
+  /// In hu, this message translates to:
+  /// **'Az élő beszédfelismeréshez egy ~650MB-os nyelvi modell szükséges. Letöltjük most?'**
+  String get liveSubtitlesDownloadMessage;
+
+  /// No description provided for @liveSubtitlesDownloading.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beszédmodell letöltése folyamatban...'**
+  String get liveSubtitlesDownloading;
+
+  /// No description provided for @liveSubtitlesError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beszédfelismerési hiba'**
+  String get liveSubtitlesError;
+
+  /// No description provided for @liveSubtitlesMicDevice.
+  ///
+  /// In hu, this message translates to:
+  /// **'Mikrofon'**
+  String get liveSubtitlesMicDevice;
+
+  /// No description provided for @liveSubtitlesMicDeviceDefault.
+  ///
+  /// In hu, this message translates to:
+  /// **'Rendszer alapértelmezett'**
+  String get liveSubtitlesMicDeviceDefault;
+
   /// No description provided for @castSettingsTitle.
   ///
   /// In hu, this message translates to:

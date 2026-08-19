@@ -49,6 +49,8 @@ dependencies:
   html: ^0.15.6
   diatar_common:
     path: ../packages/diatar_common
+  diatar_speech:
+    path: ../packages/diatar_speech
   desktop_multi_window: ^0.3.0
   window_manager: ^0.5.2
   screen_retriever: ^0.2.2

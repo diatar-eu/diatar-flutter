@@ -1603,6 +1603,32 @@ class AppLocalizationsHu extends AppLocalizations {
   String get useSound => 'Hang használata';
 
   @override
+  String get liveSubtitlesOn => 'Élő felirat bekapcsolása';
+
+  @override
+  String get liveSubtitlesOff => 'Élő felirat kikapcsolása';
+
+  @override
+  String get liveSubtitlesDownloadTitle => 'Beszédmodell letöltése';
+
+  @override
+  String get liveSubtitlesDownloadMessage =>
+      'Az élő beszédfelismeréshez egy ~650MB-os nyelvi modell szükséges. Letöltjük most?';
+
+  @override
+  String get liveSubtitlesDownloading =>
+      'Beszédmodell letöltése folyamatban...';
+
+  @override
+  String get liveSubtitlesError => 'Beszédfelismerési hiba';
+
+  @override
+  String get liveSubtitlesMicDevice => 'Mikrofon';
+
+  @override
+  String get liveSubtitlesMicDeviceDefault => 'Rendszer alapértelmezett';
+
+  @override
   String get castSettingsTitle => 'Google Cast beállítások';
 
   @override

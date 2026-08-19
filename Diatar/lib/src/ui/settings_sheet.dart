@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:diatar_speech/diatar_speech.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -123,6 +124,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _localNetworkEnabled;
   late bool _castEnabled;
   late String _castDeviceId;
+  late String? _liveSubtitleDeviceId;
   late int _castPort;
   late bool _castAutoConnect;
   late Map<String, String> _desktopActionHotkeys;
@@ -204,6 +206,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _localNetworkEnabled = s.tcpClientEnabled;
     _castEnabled = s.castEnabled;
     _castDeviceId = s.castDeviceId;
+    _liveSubtitleDeviceId = s.liveSubtitleDeviceId;
     _castPort = s.castPort;
     _castAutoConnect = s.castAutoConnect;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
@@ -1601,6 +1604,19 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 setBoth(() => _homeShowHighlightControls = v),
             title: Text(l10n.wordHighlight),
           ),
+          const Divider(height: 1),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.mic),
+            title: Text(l10n.liveSubtitlesMicDevice),
+            subtitle: Text(
+              _liveSubtitleDeviceId == null
+                  ? l10n.liveSubtitlesMicDeviceDefault
+                  : _liveSubtitleDeviceId!,
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _openMicDeviceSelector(setBoth),
+          ),
         ];
       },
     );
@@ -1763,6 +1779,75 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
     // Start discovery when opening
     _castService?.startDiscovery();
+  }
+
+  Future<void> _openMicDeviceSelector(
+    void Function(void Function()) setBoth,
+  ) async {
+    final l10n = context.l10n;
+    final RecordAudioCapture capture = RecordAudioCapture();
+    try {
+      final bool hasPerm = await capture.hasPermission();
+      if (!hasPerm) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.liveSubtitlesError)),
+          );
+        }
+        return;
+      }
+      final List<InputDevice> devices = await capture.listInputDevices();
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return SimpleDialog(
+            title: Text(l10n.liveSubtitlesMicDevice),
+            children: <Widget>[
+              SimpleDialogOption(
+                onPressed: () {
+                  setBoth(() => _liveSubtitleDeviceId = null);
+                  Navigator.of(dialogContext).pop();
+                },
+                child: Row(
+                  children: <Widget>[
+                    Icon(
+                      _liveSubtitleDeviceId == null
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(l10n.liveSubtitlesMicDeviceDefault)),
+                  ],
+                ),
+              ),
+              for (final InputDevice device in devices)
+                SimpleDialogOption(
+                  onPressed: () {
+                    setBoth(() => _liveSubtitleDeviceId = device.id);
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Row(
+                    children: <Widget>[
+                      Icon(
+                        _liveSubtitleDeviceId == device.id
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(device.label)),
+                    ],
+                  ),
+                ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      debugPrint('[Settings] Failed to list mic devices: $e');
+    } finally {
+      await capture.dispose();
+    }
   }
 
   Future<void> _openFileSettings() {
@@ -3226,6 +3311,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       desktopOrderSetHotkeys: Map<String, String>.from(_desktopOrderSetHotkeys),
       projBoldText: _projBoldText,
       useSound: _useSound,
+      liveSubtitleDeviceId: _liveSubtitleDeviceId,
       castEnabled: _castEnabled,
       castDeviceId: _castDeviceId,
       castPort: _castPort,

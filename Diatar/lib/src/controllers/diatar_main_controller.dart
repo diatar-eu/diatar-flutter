@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:diatar_common/utils/transposition_utils.dart';
+import 'package:diatar_speech/diatar_speech.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -169,6 +170,10 @@ class DiatarMainController extends ChangeNotifier {
   final NapiLelkiBatyuService _napiLelkiBatyuService = NapiLelkiBatyuService();
   final SongSearchService _searchService = SongSearchService();
   final AudioService _audioService = AudioService();
+  final ModelManager _modelManager = ModelManager();
+  SpeechRecognizer? _speechRecognizer;
+  bool _liveSubtitlesActive = false;
+  String _liveSubtitleText = '';
   final TcpSenderService _sender = TcpSenderService(
     onStatusChanged: (bool connected) {},
     onError: (String code, Map<String, String> params) {},
@@ -3113,6 +3118,12 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   List<String> get projectionDisplayLines {
+    if (_liveSubtitlesActive && _liveSubtitleText.isNotEmpty) {
+      return _liveSubtitleText
+          .split('\n')
+          .where((String l) => l.trim().isNotEmpty)
+          .toList();
+    }
     if (!customOrderActive) return displayLines;
 
     if (_customOrderCursor >= 0 && _customOrderCursor < _customOrder.length) {
@@ -3636,6 +3647,86 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
     if (wasLocked && !settings.projectionLocked) {
       await _syncCurrentDia();
+    }
+  }
+
+  bool get liveSubtitlesActive => _liveSubtitlesActive;
+  String get liveSubtitleText => _liveSubtitleText;
+
+  Future<void> toggleLiveSubtitles() async {
+    if (_liveSubtitlesActive) {
+      await _stopLiveSubtitles();
+    } else {
+      await _startLiveSubtitles();
+    }
+  }
+
+  Future<void> _startLiveSubtitles() async {
+    if (!await _modelManager.isModelReady()) {
+      debugPrint('LiveSubtitles: model not ready');
+      return;
+    }
+    final String modelPath = await _modelManager.getModelPath();
+    debugPrint('LiveSubtitles: modelPath=$modelPath');
+    try {
+      _speechRecognizer = SherpaOnnxSpeechRecognizer(
+        config: SpeechRecognizerConfig(
+          language: 'auto',
+          modelPath: modelPath,
+          audioDeviceId: settings.liveSubtitleDeviceId,
+        ),
+      );
+      _speechRecognizer!.results.listen(
+        (SpeechResult result) {
+          debugPrint('LiveSubtitles: text="${result.text}" final=${result.isFinal}');
+          _liveSubtitleText = result.text;
+          notifyListeners();
+          _sendLiveSubtitle(result.text);
+        },
+        onError: (Object error) {
+          debugPrint('LiveSubtitles stream error: $error');
+        },
+      );
+      await _speechRecognizer!.start();
+      debugPrint('LiveSubtitles: started successfully');
+      _liveSubtitlesActive = true;
+      settings = settings.copyWith(liveSubtitlesEnabled: true);
+      await _settingsStore.save(settings);
+      notifyListeners();
+    } catch (e, st) {
+      debugPrint('LiveSubtitles start failed: $e\n$st');
+      await _speechRecognizer?.dispose();
+      _speechRecognizer = null;
+    }
+  }
+
+  Future<void> _stopLiveSubtitles() async {
+    await _speechRecognizer?.stop();
+    await _speechRecognizer?.dispose();
+    _speechRecognizer = null;
+    _liveSubtitlesActive = false;
+    _liveSubtitleText = '';
+    settings = settings.copyWith(liveSubtitlesEnabled: false);
+    await _settingsStore.save(settings);
+    await _sendLiveSubtitle('');
+    notifyListeners();
+  }
+
+  Future<void> _sendLiveSubtitle(String text) async {
+    final List<String> lines = text.isEmpty
+        ? <String>[]
+        : text.split('\n').where((String l) => l.trim().isNotEmpty).toList();
+    final String title = text.isEmpty ? '' : 'Felirat';
+    if (mqttActive) {
+      await _mqttSender.sendText(title: title, lines: lines);
+    }
+    await _desktopProjectorBridge.sendText(title: title, lines: lines);
+    if (tcpConfigured) {
+      await _sender.sendText(
+        title: title,
+        lines: lines,
+        wordToHighlight: 0,
+      );
     }
   }
 
@@ -4524,6 +4615,7 @@ class DiatarMainController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _speechRecognizer?.dispose();
     _sender.stop();
     _mqttSender.close();
     super.dispose();

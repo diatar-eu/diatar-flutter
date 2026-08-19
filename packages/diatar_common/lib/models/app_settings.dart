@@ -62,6 +62,8 @@ class AppSettings {
     this.receiverUseKotta = true,
     this.receiverKeepStartupLogo = true,
     this.useSound = false,
+    this.liveSubtitlesEnabled = false,
+    this.liveSubtitleDeviceId,
     this.castEnabled = false,
     this.castDeviceId = '',
     this.castPort = 1024,
@@ -136,6 +138,8 @@ class AppSettings {
   final bool receiverUseKotta;
   final bool receiverKeepStartupLogo;
   final bool useSound;
+  final bool liveSubtitlesEnabled;
+  final String? liveSubtitleDeviceId;
   final bool castEnabled;
   final String castDeviceId;
   final int castPort;
@@ -217,6 +221,8 @@ class AppSettings {
     bool? receiverUseKotta,
     bool? receiverKeepStartupLogo,
     bool? useSound,
+    bool? liveSubtitlesEnabled,
+    String? liveSubtitleDeviceId,
     bool? castEnabled,
     String? castDeviceId,
     int? castPort,
@@ -298,6 +304,8 @@ class AppSettings {
        receiverKeepStartupLogo:
            receiverKeepStartupLogo ?? this.receiverKeepStartupLogo,
        useSound: useSound ?? this.useSound,
+       liveSubtitlesEnabled: liveSubtitlesEnabled ?? this.liveSubtitlesEnabled,
+       liveSubtitleDeviceId: liveSubtitleDeviceId ?? this.liveSubtitleDeviceId,
        castEnabled: castEnabled ?? this.castEnabled,
        castDeviceId: castDeviceId ?? this.castDeviceId,
        castPort: castPort ?? this.castPort,
@@ -351,6 +359,8 @@ class AppSettings {
       'receiverUseKotta': receiverUseKotta,
        'receiverKeepStartupLogo': receiverKeepStartupLogo,
        'useSound': useSound,
+       'liveSubtitlesEnabled': liveSubtitlesEnabled,
+       'liveSubtitleDeviceId': liveSubtitleDeviceId,
        'castEnabled': castEnabled,
        'castDeviceId': castDeviceId,
        'castPort': castPort,
@@ -430,6 +440,8 @@ class AppSettings {
       receiverUseKotta: boolValue('receiverUseKotta', true),
        receiverKeepStartupLogo: boolValue('receiverKeepStartupLogo', true),
        useSound: boolValue('useSound', false),
+       liveSubtitlesEnabled: boolValue('liveSubtitlesEnabled', false),
+       liveSubtitleDeviceId: map['liveSubtitleDeviceId'] as String?,
        castEnabled: boolValue('castEnabled', false),
        castDeviceId: map['castDeviceId'] as String? ?? '',
        castPort: intValue('castPort', 1024),

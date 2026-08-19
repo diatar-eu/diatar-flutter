@@ -53,6 +53,8 @@ class SettingsStore {
   static const String _kDesktopSongHotkeys = 'DesktopSongHotkeys';
   static const String _kDesktopOrderSetHotkeys = 'DesktopOrderSetHotkeys';
   static const String _kUseSound = 'UseSound';
+  static const String _kLiveSubtitlesEnabled = 'LiveSubtitlesEnabled';
+  static const String _kLiveSubtitleDeviceId = 'LiveSubtitleDeviceId';
   static const String _kSzentirasApiKey = 'SzentirasApiKey';
   static const String _kTranspositions = 'Transpositions';
   static const String _kLastSongPerBook = 'LastSongPerBook';
@@ -221,7 +223,9 @@ desktopSongHotkeys: _decodeStringMap(
          prefs.getStringList(_kDesktopOrderSetHotkeys),
        ),
        useSound: prefs.getBool(_kUseSound) ?? false,
-      szentirasApiKey: prefs.getString(_kSzentirasApiKey) ?? '',
+       liveSubtitlesEnabled: prefs.getBool(_kLiveSubtitlesEnabled) ?? false,
+       liveSubtitleDeviceId: prefs.getString(_kLiveSubtitleDeviceId),
+       szentirasApiKey: prefs.getString(_kSzentirasApiKey) ?? '',
       bkColor: Color(prefs.getInt(_kBkColor) ?? 0xFF000000),
       txtColor: Color(prefs.getInt(_kTxColor) ?? 0xFFFFFFFF),
       blankColor: Color(prefs.getInt(_kBlankColor) ?? 0xFF000000),
@@ -308,7 +312,9 @@ await prefs.setStringList(
        _kDesktopOrderSetHotkeys,
        _encodeStringMap(settings.desktopOrderSetHotkeys),
      );
-     await prefs.setBool(_kUseSound, settings.useSound);
+      await prefs.setBool(_kUseSound, settings.useSound);
+      await prefs.setBool(_kLiveSubtitlesEnabled, settings.liveSubtitlesEnabled);
+      await prefs.setString(_kLiveSubtitleDeviceId, settings.liveSubtitleDeviceId ?? '');
     await prefs.setString(_kSzentirasApiKey, settings.szentirasApiKey);
     await prefs.setInt(_kBkColor, settings.bkColor.toARGB32());
     await prefs.setInt(_kTxColor, settings.txtColor.toARGB32());
