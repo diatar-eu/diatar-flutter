@@ -2891,6 +2891,18 @@ abstract class AppLocalizations {
   /// **'Rendszer alapértelmezett'**
   String get liveSubtitlesMicDeviceDefault;
 
+  /// No description provided for @speechSettingsTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beszédfelismerő'**
+  String get speechSettingsTitle;
+
+  /// No description provided for @speechSettingsSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Mikrofon'**
+  String get speechSettingsSummary;
+
   /// No description provided for @castSettingsTitle.
   ///
   /// In hu, this message translates to:

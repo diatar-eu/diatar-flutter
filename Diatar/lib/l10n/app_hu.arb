@@ -1076,6 +1076,8 @@
   "liveSubtitlesError": "Beszédfelismerési hiba",
   "liveSubtitlesMicDevice": "Mikrofon",
   "liveSubtitlesMicDeviceDefault": "Rendszer alapértelmezett",
+  "speechSettingsTitle": "Beszédfelismerő",
+  "speechSettingsSummary": "Mikrofon",
   "castSettingsTitle": "Google Cast beállítások",
   "castSettingsSummary": "Cast eszközök beállítása",
   "castEnabledTitle": "Cast használata",

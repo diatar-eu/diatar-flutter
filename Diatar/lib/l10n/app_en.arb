@@ -1075,6 +1075,8 @@
   "liveSubtitlesError": "Speech recognition error",
   "liveSubtitlesMicDevice": "Microphone",
   "liveSubtitlesMicDeviceDefault": "System default",
+  "speechSettingsTitle": "Speech recognition",
+  "speechSettingsSummary": "Microphone",
   "castSettingsTitle": "Google Cast settings",
   "castSettingsSummary": "Configure Cast devices",
   "castEnabledTitle": "Use Cast",

@@ -1629,6 +1629,12 @@ class AppLocalizationsHu extends AppLocalizations {
   String get liveSubtitlesMicDeviceDefault => 'Rendszer alapértelmezett';
 
   @override
+  String get speechSettingsTitle => 'Beszédfelismerő';
+
+  @override
+  String get speechSettingsSummary => 'Mikrofon';
+
+  @override
   String get castSettingsTitle => 'Google Cast beállítások';
 
   @override

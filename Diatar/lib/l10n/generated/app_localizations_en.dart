@@ -1622,6 +1622,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get liveSubtitlesMicDeviceDefault => 'System default';
 
   @override
+  String get speechSettingsTitle => 'Speech recognition';
+
+  @override
+  String get speechSettingsSummary => 'Microphone';
+
+  @override
   String get castSettingsTitle => 'Google Cast settings';
 
   @override

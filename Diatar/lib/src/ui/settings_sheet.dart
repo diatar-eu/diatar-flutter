@@ -346,6 +346,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       query,
       'altalanos tema nyelv language gorgetheto akkord kotta hatterkep szokiemeles',
     );
+    final bool showSpeech = _matches(
+      query,
+      'beszedfelismero speech recognition mikrofon',
+    );
     final bool showSystem = _matches(
       query,
       'rendszer kilepes leallas stop shutdown epstop epshutdown',
@@ -364,6 +368,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         showProjection ||
         showFiles ||
         showGeneral ||
+        showSpeech ||
         showSystem ||
         showHotkeys ||
         showApiKeys;
@@ -488,7 +493,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       description: l10n.projectionSettingsDescription,
                     ),
                   if (showProjection &&
-                      (showFiles || showGeneral || showHotkeys))
+                      (showFiles || showGeneral || showSpeech || showHotkeys))
                     const Divider(height: 1),
                   if (showFiles)
                     _settingsTile(
@@ -498,7 +503,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openFileSettings,
                       description: l10n.settingsFilesDescription,
                     ),
-                  if (showFiles && (showGeneral || showHotkeys))
+                  if (showFiles && (showGeneral || showSpeech || showHotkeys))
                     const Divider(height: 1),
                   if (showGeneral)
                     _settingsTile(
@@ -510,7 +515,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openGeneralSettings,
                       description: l10n.settingsGeneralDescription,
                     ),
-                  if (showGeneral && (showSystem || showHotkeys))
+                  if (showGeneral && (showSpeech || showSystem || showHotkeys))
+                    const Divider(height: 1),
+                  if (showSpeech)
+                    _settingsTile(
+                      leading: const Icon(Icons.mic),
+                      title: Text(l10n.speechSettingsTitle),
+                      subtitle: Text(l10n.speechSettingsSummary),
+                      onTap: _openSpeechSettings,
+                    ),
+                  if (showSpeech && (showSystem || showHotkeys))
                     const Divider(height: 1),
                   if (showSystem)
                     _settingsTile(
@@ -1604,19 +1618,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 setBoth(() => _homeShowHighlightControls = v),
             title: Text(l10n.wordHighlight),
           ),
-          const Divider(height: 1),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.mic),
-            title: Text(l10n.liveSubtitlesMicDevice),
-            subtitle: Text(
-              _liveSubtitleDeviceId == null
-                  ? l10n.liveSubtitlesMicDeviceDefault
-                  : _liveSubtitleDeviceId!,
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _openMicDeviceSelector(setBoth),
-          ),
         ];
       },
     );
@@ -1848,6 +1849,30 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     } finally {
       await capture.dispose();
     }
+  }
+
+  Future<void> _openSpeechSettings() {
+    return _openSectionSheet(
+      title: context.l10n.speechSettingsTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.mic),
+            title: Text(l10n.liveSubtitlesMicDevice),
+            subtitle: Text(
+              _liveSubtitleDeviceId == null
+                  ? l10n.liveSubtitlesMicDeviceDefault
+                  : _liveSubtitleDeviceId!,
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _openMicDeviceSelector(setBoth),
+          ),
+          const Divider(height: 1),
+        ];
+      },
+    );
   }
 
   Future<void> _openFileSettings() {

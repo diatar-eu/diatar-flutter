@@ -3118,7 +3118,8 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   List<String> get projectionDisplayLines {
-    if (_liveSubtitlesActive && _liveSubtitleText.isNotEmpty) {
+    if (_liveSubtitlesActive) {
+      if (_liveSubtitleText.isEmpty) return const <String>[];
       return _liveSubtitleText
           .split('\n')
           .where((String l) => l.trim().isNotEmpty)
