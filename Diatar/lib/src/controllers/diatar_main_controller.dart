@@ -3672,7 +3672,7 @@ class DiatarMainController extends ChangeNotifier {
     try {
       _speechRecognizer = SherpaOnnxSpeechRecognizer(
         config: SpeechRecognizerConfig(
-          language: 'auto',
+          language: settings.liveSubtitleLanguage,
           modelPath: modelPath,
           audioDeviceId: settings.liveSubtitleDeviceId,
         ),

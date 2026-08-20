@@ -64,6 +64,7 @@ class AppSettings {
     this.useSound = false,
     this.liveSubtitlesEnabled = false,
     this.liveSubtitleDeviceId,
+    this.liveSubtitleLanguage = 'auto',
     this.castEnabled = false,
     this.castDeviceId = '',
     this.castPort = 1024,
@@ -140,6 +141,7 @@ class AppSettings {
   final bool useSound;
   final bool liveSubtitlesEnabled;
   final String? liveSubtitleDeviceId;
+  final String liveSubtitleLanguage;
   final bool castEnabled;
   final String castDeviceId;
   final int castPort;
@@ -223,6 +225,7 @@ class AppSettings {
     bool? useSound,
     bool? liveSubtitlesEnabled,
     String? liveSubtitleDeviceId,
+    String? liveSubtitleLanguage,
     bool? castEnabled,
     String? castDeviceId,
     int? castPort,
@@ -306,6 +309,7 @@ class AppSettings {
        useSound: useSound ?? this.useSound,
        liveSubtitlesEnabled: liveSubtitlesEnabled ?? this.liveSubtitlesEnabled,
        liveSubtitleDeviceId: liveSubtitleDeviceId ?? this.liveSubtitleDeviceId,
+       liveSubtitleLanguage: liveSubtitleLanguage ?? this.liveSubtitleLanguage,
        castEnabled: castEnabled ?? this.castEnabled,
        castDeviceId: castDeviceId ?? this.castDeviceId,
        castPort: castPort ?? this.castPort,
@@ -361,6 +365,7 @@ class AppSettings {
        'useSound': useSound,
        'liveSubtitlesEnabled': liveSubtitlesEnabled,
        'liveSubtitleDeviceId': liveSubtitleDeviceId,
+       'liveSubtitleLanguage': liveSubtitleLanguage,
        'castEnabled': castEnabled,
        'castDeviceId': castDeviceId,
        'castPort': castPort,
@@ -442,6 +447,7 @@ class AppSettings {
        useSound: boolValue('useSound', false),
        liveSubtitlesEnabled: boolValue('liveSubtitlesEnabled', false),
        liveSubtitleDeviceId: map['liveSubtitleDeviceId'] as String?,
+       liveSubtitleLanguage: map['liveSubtitleLanguage'] as String? ?? 'auto',
        castEnabled: boolValue('castEnabled', false),
        castDeviceId: map['castDeviceId'] as String? ?? '',
        castPort: intValue('castPort', 1024),

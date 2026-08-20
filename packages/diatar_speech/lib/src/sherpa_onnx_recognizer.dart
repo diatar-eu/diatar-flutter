@@ -83,6 +83,16 @@ class SherpaOnnxSpeechRecognizer implements SpeechRecognizer {
 
     _isListening = true;
 
+    try {
+      final devices = await _audioCapture.listInputDevices();
+      debugPrint('[Speech] Available input devices: ${devices.length}');
+      for (final d in devices) {
+        debugPrint('[Speech]   - ${d.label} (id=${d.id})');
+      }
+    } catch (e) {
+      debugPrint('[Speech] Failed to list devices: $e');
+    }
+
     await _audioCapture.start(
       sampleRate: config.sampleRate,
       deviceId: config.audioDeviceId,
@@ -93,16 +103,6 @@ class SherpaOnnxSpeechRecognizer implements SpeechRecognizer {
     );
 
     debugPrint('[Speech] Audio capture started');
-
-    try {
-      final devices = await _audioCapture.listInputDevices();
-      debugPrint('[Speech] Available input devices: ${devices.length}');
-      for (final d in devices) {
-        debugPrint('[Speech]   - ${d.label} (id=${d.id})');
-      }
-    } catch (e) {
-      debugPrint('[Speech] Failed to list devices: $e');
-    }
   }
 
   int _audioChunkCount = 0;

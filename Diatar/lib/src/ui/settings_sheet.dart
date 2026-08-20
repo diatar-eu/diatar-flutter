@@ -125,6 +125,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _castEnabled;
   late String _castDeviceId;
   late String? _liveSubtitleDeviceId;
+  late String _liveSubtitleLanguage;
   late int _castPort;
   late bool _castAutoConnect;
   late Map<String, String> _desktopActionHotkeys;
@@ -207,6 +208,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _castEnabled = s.castEnabled;
     _castDeviceId = s.castDeviceId;
     _liveSubtitleDeviceId = s.liveSubtitleDeviceId;
+    _liveSubtitleLanguage = s.liveSubtitleLanguage;
     _castPort = s.castPort;
     _castAutoConnect = s.castAutoConnect;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
@@ -1884,6 +1886,101 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             onTap: () => _openMicDeviceSelector(setBoth),
           ),
           const Divider(height: 1),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.language),
+            title: Text(l10n.speechLanguageTitle),
+            subtitle: Text(_speechLanguageName(_liveSubtitleLanguage, l10n)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _openLanguageSelector(setBoth),
+          ),
+          const Divider(height: 1),
+        ];
+      },
+    );
+  }
+
+  static const _speechLanguageCodes = <String>[
+    'auto', 'es-US', 'es-ES', 'it-IT', 'pt-BR', 'pt-PT', 'hi-IN', 'ko-KR',
+    'en-US', 'en-GB', 'de-DE', 'fr-FR', 'fr-CA', 'ru-RU', 'tr-TR', 'vi-VN',
+    'nl-NL', 'ja-JP', 'ar-AR', 'uk-UA', 'pl-PL', 'nb-NO', 'fi-FI', 'zh-CN',
+    'cs-CZ', 'bg-BG', 'sk-SK', 'sv-SE', 'hr-HR', 'ro-RO', 'et-EE', 'da-DK',
+    'hu-HU',
+  ];
+
+  String _speechLanguageName(String code, AppLocalizations l10n) {
+    switch (code) {
+      case 'auto': return l10n.speechLangAuto;
+      case 'es-US': return l10n.speechLangEsUS;
+      case 'es-ES': return l10n.speechLangEsES;
+      case 'it-IT': return l10n.speechLangItIT;
+      case 'pt-BR': return l10n.speechLangPtBR;
+      case 'pt-PT': return l10n.speechLangPtPT;
+      case 'hi-IN': return l10n.speechLangHiIN;
+      case 'ko-KR': return l10n.speechLangKoKR;
+      case 'en-US': return l10n.speechLangEnUS;
+      case 'en-GB': return l10n.speechLangEnGB;
+      case 'de-DE': return l10n.speechLangDeDE;
+      case 'fr-FR': return l10n.speechLangFrFR;
+      case 'fr-CA': return l10n.speechLangFrCA;
+      case 'ru-RU': return l10n.speechLangRuRU;
+      case 'tr-TR': return l10n.speechLangTrTR;
+      case 'vi-VN': return l10n.speechLangViVN;
+      case 'nl-NL': return l10n.speechLangNlNL;
+      case 'ja-JP': return l10n.speechLangJaJP;
+      case 'ar-AR': return l10n.speechLangArAR;
+      case 'uk-UA': return l10n.speechLangUkUA;
+      case 'pl-PL': return l10n.speechLangPlPL;
+      case 'nb-NO': return l10n.speechLangNbNO;
+      case 'fi-FI': return l10n.speechLangFiFI;
+      case 'zh-CN': return l10n.speechLangZhCN;
+      case 'cs-CZ': return l10n.speechLangCsCZ;
+      case 'bg-BG': return l10n.speechLangBgBG;
+      case 'sk-SK': return l10n.speechLangSkSK;
+      case 'sv-SE': return l10n.speechLangSvSE;
+      case 'hr-HR': return l10n.speechLangHrHR;
+      case 'ro-RO': return l10n.speechLangRoRO;
+      case 'et-EE': return l10n.speechLangEtEE;
+      case 'da-DK': return l10n.speechLangDaDK;
+      case 'hu-HU': return l10n.speechLangHuHU;
+      default: return code;
+    }
+  }
+
+  Future<void> _openLanguageSelector(
+    void Function(void Function()) setBoth,
+  ) {
+    final l10n = context.l10n;
+    return _openSectionSheet(
+      title: l10n.speechLanguageTitle,
+      builder: (BuildContext context, void Function(void Function()) setModalBoth) {
+        return <Widget>[
+          RadioListTile<String>(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.speechLangAuto),
+            value: 'auto',
+            groupValue: _liveSubtitleLanguage,
+            onChanged: (String? v) {
+              if (v != null) {
+                setBoth(() => _liveSubtitleLanguage = v);
+                setModalBoth(() {});
+              }
+            },
+          ),
+          for (final code in _speechLanguageCodes)
+            if (code != 'auto')
+              RadioListTile<String>(
+                contentPadding: EdgeInsets.zero,
+                title: Text(_speechLanguageName(code, l10n)),
+                value: code,
+                groupValue: _liveSubtitleLanguage,
+                onChanged: (String? v) {
+                  if (v != null) {
+                    setBoth(() => _liveSubtitleLanguage = v);
+                    setModalBoth(() {});
+                  }
+                },
+              ),
         ];
       },
     );
@@ -3474,6 +3571,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       projBoldText: _projBoldText,
       useSound: _useSound,
       liveSubtitleDeviceId: _liveSubtitleDeviceId,
+      liveSubtitleLanguage: _liveSubtitleLanguage,
       castEnabled: _castEnabled,
       castDeviceId: _castDeviceId,
       castPort: _castPort,

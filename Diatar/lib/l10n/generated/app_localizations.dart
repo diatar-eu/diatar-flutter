@@ -3448,6 +3448,210 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'szentiras.eu'**
   String get impresszumSzentirasLink;
+
+  /// No description provided for @speechLanguageTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beszédfelismerő nyelve'**
+  String get speechLanguageTitle;
+
+  /// No description provided for @speechLangAuto.
+  ///
+  /// In hu, this message translates to:
+  /// **'Automatikus (minden nyelv)'**
+  String get speechLangAuto;
+
+  /// No description provided for @speechLangEsUS.
+  ///
+  /// In hu, this message translates to:
+  /// **'Spanyol (es-US)'**
+  String get speechLangEsUS;
+
+  /// No description provided for @speechLangEsES.
+  ///
+  /// In hu, this message translates to:
+  /// **'Spanyol (es-ES)'**
+  String get speechLangEsES;
+
+  /// No description provided for @speechLangItIT.
+  ///
+  /// In hu, this message translates to:
+  /// **'Olasz (it-IT)'**
+  String get speechLangItIT;
+
+  /// No description provided for @speechLangPtBR.
+  ///
+  /// In hu, this message translates to:
+  /// **'Portugál (pt-BR)'**
+  String get speechLangPtBR;
+
+  /// No description provided for @speechLangPtPT.
+  ///
+  /// In hu, this message translates to:
+  /// **'Portugál (pt-PT)'**
+  String get speechLangPtPT;
+
+  /// No description provided for @speechLangHiIN.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hindi (hi-IN)'**
+  String get speechLangHiIN;
+
+  /// No description provided for @speechLangKoKR.
+  ///
+  /// In hu, this message translates to:
+  /// **'Koreai (ko-KR)'**
+  String get speechLangKoKR;
+
+  /// No description provided for @speechLangEnUS.
+  ///
+  /// In hu, this message translates to:
+  /// **'Angol (en-US)'**
+  String get speechLangEnUS;
+
+  /// No description provided for @speechLangEnGB.
+  ///
+  /// In hu, this message translates to:
+  /// **'Angol (en-GB)'**
+  String get speechLangEnGB;
+
+  /// No description provided for @speechLangDeDE.
+  ///
+  /// In hu, this message translates to:
+  /// **'Német (de-DE)'**
+  String get speechLangDeDE;
+
+  /// No description provided for @speechLangFrFR.
+  ///
+  /// In hu, this message translates to:
+  /// **'Francia (fr-FR)'**
+  String get speechLangFrFR;
+
+  /// No description provided for @speechLangFrCA.
+  ///
+  /// In hu, this message translates to:
+  /// **'Francia (fr-CA)'**
+  String get speechLangFrCA;
+
+  /// No description provided for @speechLangRuRU.
+  ///
+  /// In hu, this message translates to:
+  /// **'Orosz (ru-RU)'**
+  String get speechLangRuRU;
+
+  /// No description provided for @speechLangTrTR.
+  ///
+  /// In hu, this message translates to:
+  /// **'Török (tr-TR)'**
+  String get speechLangTrTR;
+
+  /// No description provided for @speechLangViVN.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vietnami (vi-VN)'**
+  String get speechLangViVN;
+
+  /// No description provided for @speechLangNlNL.
+  ///
+  /// In hu, this message translates to:
+  /// **'Holland (nl-NL)'**
+  String get speechLangNlNL;
+
+  /// No description provided for @speechLangJaJP.
+  ///
+  /// In hu, this message translates to:
+  /// **'Japán (ja-JP)'**
+  String get speechLangJaJP;
+
+  /// No description provided for @speechLangArAR.
+  ///
+  /// In hu, this message translates to:
+  /// **'Arab (ar-AR)'**
+  String get speechLangArAR;
+
+  /// No description provided for @speechLangUkUA.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ukrán (uk-UA)'**
+  String get speechLangUkUA;
+
+  /// No description provided for @speechLangPlPL.
+  ///
+  /// In hu, this message translates to:
+  /// **'Lengyel (pl-PL)'**
+  String get speechLangPlPL;
+
+  /// No description provided for @speechLangNbNO.
+  ///
+  /// In hu, this message translates to:
+  /// **'Norvég bokmål (nb-NO)'**
+  String get speechLangNbNO;
+
+  /// No description provided for @speechLangFiFI.
+  ///
+  /// In hu, this message translates to:
+  /// **'Finn (fi-FI)'**
+  String get speechLangFiFI;
+
+  /// No description provided for @speechLangZhCN.
+  ///
+  /// In hu, this message translates to:
+  /// **'Mandarin (zh-CN)'**
+  String get speechLangZhCN;
+
+  /// No description provided for @speechLangCsCZ.
+  ///
+  /// In hu, this message translates to:
+  /// **'Cseh (cs-CZ)'**
+  String get speechLangCsCZ;
+
+  /// No description provided for @speechLangBgBG.
+  ///
+  /// In hu, this message translates to:
+  /// **'Bolgár (bg-BG)'**
+  String get speechLangBgBG;
+
+  /// No description provided for @speechLangSkSK.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szlovák (sk-SK)'**
+  String get speechLangSkSK;
+
+  /// No description provided for @speechLangSvSE.
+  ///
+  /// In hu, this message translates to:
+  /// **'Svéd (sv-SE)'**
+  String get speechLangSvSE;
+
+  /// No description provided for @speechLangHrHR.
+  ///
+  /// In hu, this message translates to:
+  /// **'Horvát (hr-HR)'**
+  String get speechLangHrHR;
+
+  /// No description provided for @speechLangRoRO.
+  ///
+  /// In hu, this message translates to:
+  /// **'Román (ro-RO)'**
+  String get speechLangRoRO;
+
+  /// No description provided for @speechLangEtEE.
+  ///
+  /// In hu, this message translates to:
+  /// **'Észt (et-EE)'**
+  String get speechLangEtEE;
+
+  /// No description provided for @speechLangDaDK.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dán (da-DK)'**
+  String get speechLangDaDK;
+
+  /// No description provided for @speechLangHuHU.
+  ///
+  /// In hu, this message translates to:
+  /// **'Magyar (hu-HU)'**
+  String get speechLangHuHU;
 }
 
 class _AppLocalizationsDelegate

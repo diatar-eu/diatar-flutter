@@ -1943,4 +1943,106 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get impresszumSzentirasLink => 'szentiras.eu';
+
+  @override
+  String get speechLanguageTitle => 'Beszédfelismerő nyelve';
+
+  @override
+  String get speechLangAuto => 'Automatikus (minden nyelv)';
+
+  @override
+  String get speechLangEsUS => 'Spanyol (es-US)';
+
+  @override
+  String get speechLangEsES => 'Spanyol (es-ES)';
+
+  @override
+  String get speechLangItIT => 'Olasz (it-IT)';
+
+  @override
+  String get speechLangPtBR => 'Portugál (pt-BR)';
+
+  @override
+  String get speechLangPtPT => 'Portugál (pt-PT)';
+
+  @override
+  String get speechLangHiIN => 'Hindi (hi-IN)';
+
+  @override
+  String get speechLangKoKR => 'Koreai (ko-KR)';
+
+  @override
+  String get speechLangEnUS => 'Angol (en-US)';
+
+  @override
+  String get speechLangEnGB => 'Angol (en-GB)';
+
+  @override
+  String get speechLangDeDE => 'Német (de-DE)';
+
+  @override
+  String get speechLangFrFR => 'Francia (fr-FR)';
+
+  @override
+  String get speechLangFrCA => 'Francia (fr-CA)';
+
+  @override
+  String get speechLangRuRU => 'Orosz (ru-RU)';
+
+  @override
+  String get speechLangTrTR => 'Török (tr-TR)';
+
+  @override
+  String get speechLangViVN => 'Vietnami (vi-VN)';
+
+  @override
+  String get speechLangNlNL => 'Holland (nl-NL)';
+
+  @override
+  String get speechLangJaJP => 'Japán (ja-JP)';
+
+  @override
+  String get speechLangArAR => 'Arab (ar-AR)';
+
+  @override
+  String get speechLangUkUA => 'Ukrán (uk-UA)';
+
+  @override
+  String get speechLangPlPL => 'Lengyel (pl-PL)';
+
+  @override
+  String get speechLangNbNO => 'Norvég bokmål (nb-NO)';
+
+  @override
+  String get speechLangFiFI => 'Finn (fi-FI)';
+
+  @override
+  String get speechLangZhCN => 'Mandarin (zh-CN)';
+
+  @override
+  String get speechLangCsCZ => 'Cseh (cs-CZ)';
+
+  @override
+  String get speechLangBgBG => 'Bolgár (bg-BG)';
+
+  @override
+  String get speechLangSkSK => 'Szlovák (sk-SK)';
+
+  @override
+  String get speechLangSvSE => 'Svéd (sv-SE)';
+
+  @override
+  String get speechLangHrHR => 'Horvát (hr-HR)';
+
+  @override
+  String get speechLangRoRO => 'Román (ro-RO)';
+
+  @override
+  String get speechLangEtEE => 'Észt (et-EE)';
+
+  @override
+  String get speechLangDaDK => 'Dán (da-DK)';
+
+  @override
+  String get speechLangHuHU => 'Magyar (hu-HU)';
 }

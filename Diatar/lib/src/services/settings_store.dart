@@ -55,6 +55,7 @@ class SettingsStore {
   static const String _kUseSound = 'UseSound';
   static const String _kLiveSubtitlesEnabled = 'LiveSubtitlesEnabled';
   static const String _kLiveSubtitleDeviceId = 'LiveSubtitleDeviceId';
+  static const String _kLiveSubtitleLanguage = 'LiveSubtitleLanguage';
   static const String _kSzentirasApiKey = 'SzentirasApiKey';
   static const String _kTranspositions = 'Transpositions';
   static const String _kLastSongPerBook = 'LastSongPerBook';
@@ -224,7 +225,8 @@ desktopSongHotkeys: _decodeStringMap(
        ),
        useSound: prefs.getBool(_kUseSound) ?? false,
        liveSubtitlesEnabled: prefs.getBool(_kLiveSubtitlesEnabled) ?? false,
-       liveSubtitleDeviceId: prefs.getString(_kLiveSubtitleDeviceId),
+        liveSubtitleDeviceId: prefs.getString(_kLiveSubtitleDeviceId),
+        liveSubtitleLanguage: prefs.getString(_kLiveSubtitleLanguage) ?? 'auto',
        szentirasApiKey: prefs.getString(_kSzentirasApiKey) ?? '',
       bkColor: Color(prefs.getInt(_kBkColor) ?? 0xFF000000),
       txtColor: Color(prefs.getInt(_kTxColor) ?? 0xFFFFFFFF),
@@ -315,6 +317,7 @@ await prefs.setStringList(
       await prefs.setBool(_kUseSound, settings.useSound);
       await prefs.setBool(_kLiveSubtitlesEnabled, settings.liveSubtitlesEnabled);
       await prefs.setString(_kLiveSubtitleDeviceId, settings.liveSubtitleDeviceId ?? '');
+      await prefs.setString(_kLiveSubtitleLanguage, settings.liveSubtitleLanguage);
     await prefs.setString(_kSzentirasApiKey, settings.szentirasApiKey);
     await prefs.setInt(_kBkColor, settings.bkColor.toARGB32());
     await prefs.setInt(_kTxColor, settings.txtColor.toARGB32());
