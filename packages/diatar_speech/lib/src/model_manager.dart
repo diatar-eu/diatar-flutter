@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -130,15 +131,7 @@ class ModelManager {
 
       onProgress?.call(0.9);
 
-      final ProcessResult result = await Process.run(
-        'tar',
-        ['-xjf', archivePath, '-C', tempPath],
-      );
-      if (result.exitCode != 0) {
-        throw Exception(
-          'tar extraction failed (exit ${result.exitCode}): ${result.stderr}',
-        );
-      }
+      await extractFileToDisk(archivePath, tempPath);
 
       final Directory finalDir = Directory(dirPath);
       if (finalDir.existsSync()) {
