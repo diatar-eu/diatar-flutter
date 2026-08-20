@@ -3334,6 +3334,120 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Kezdő lépések'**
   String get settingsOnboardingButton;
+
+  /// No description provided for @impresszumTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Impresszum'**
+  String get impresszumTitle;
+
+  /// No description provided for @impresszumSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Fejlesztők, licenszek és források'**
+  String get impresszumSummary;
+
+  /// No description provided for @impresszumDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'A Diatár fejlesztőinek és a felhasznált szoftvereknek a bemutatása.'**
+  String get impresszumDescription;
+
+  /// No description provided for @impresszumDevelopers.
+  ///
+  /// In hu, this message translates to:
+  /// **'Fejlesztők'**
+  String get impresszumDevelopers;
+
+  /// No description provided for @impresszumDevelopersBody.
+  ///
+  /// In hu, this message translates to:
+  /// **'A Diatár a Szent József Hackathon közösségének munkája.'**
+  String get impresszumDevelopersBody;
+
+  /// No description provided for @impresszumHackathonTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szent József Hackathon'**
+  String get impresszumHackathonTitle;
+
+  /// No description provided for @impresszumHackathonBody.
+  ///
+  /// In hu, this message translates to:
+  /// **'A Diatár a IV. Szent József Hackathon (2026, Szeged) keretében készült.'**
+  String get impresszumHackathonBody;
+
+  /// No description provided for @impresszumDataSources.
+  ///
+  /// In hu, this message translates to:
+  /// **'Adatforrások'**
+  String get impresszumDataSources;
+
+  /// No description provided for @impresszumSzentiras.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szentírás.eu — a bibliai szövegek forrása'**
+  String get impresszumSzentiras;
+
+  /// No description provided for @impresszumLicenses.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasznált szoftverek és licenek'**
+  String get impresszumLicenses;
+
+  /// No description provided for @impresszumNemotron.
+  ///
+  /// In hu, this message translates to:
+  /// **'NVIDIA Nemotron 3.5 ASR — OpenMDW-1.1 licensz'**
+  String get impresszumNemotron;
+
+  /// No description provided for @impresszumSherpaOnnx.
+  ///
+  /// In hu, this message translates to:
+  /// **'Sherpa-ONNX (k2-fsa) — Apache-2.0 licensz'**
+  String get impresszumSherpaOnnx;
+
+  /// No description provided for @impresszumFlutter.
+  ///
+  /// In hu, this message translates to:
+  /// **'Flutter — BSD-3 licensz'**
+  String get impresszumFlutter;
+
+  /// No description provided for @impresszumRecord.
+  ///
+  /// In hu, this message translates to:
+  /// **'Record (llfbandit) — MIT licensz'**
+  String get impresszumRecord;
+
+  /// No description provided for @impresszumLinks.
+  ///
+  /// In hu, this message translates to:
+  /// **'Linkek'**
+  String get impresszumLinks;
+
+  /// No description provided for @impresszumWebsite.
+  ///
+  /// In hu, this message translates to:
+  /// **'diatar.eu'**
+  String get impresszumWebsite;
+
+  /// No description provided for @impresszumGitHub.
+  ///
+  /// In hu, this message translates to:
+  /// **'GitHub'**
+  String get impresszumGitHub;
+
+  /// No description provided for @impresszumHackathonLink.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szent József Hackathon'**
+  String get impresszumHackathonLink;
+
+  /// No description provided for @impresszumSzentirasLink.
+  ///
+  /// In hu, this message translates to:
+  /// **'szentiras.eu'**
+  String get impresszumSzentirasLink;
 }
 
 class _AppLocalizationsDelegate

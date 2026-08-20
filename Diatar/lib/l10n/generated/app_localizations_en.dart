@@ -1874,4 +1874,66 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsOnboardingButton => 'Getting started';
+
+  @override
+  String get impresszumTitle => 'Imprint';
+
+  @override
+  String get impresszumSummary => 'Developers, licenses, and sources';
+
+  @override
+  String get impresszumDescription =>
+      'About the developers of Diatár and the software used.';
+
+  @override
+  String get impresszumDevelopers => 'Developers';
+
+  @override
+  String get impresszumDevelopersBody =>
+      'Diatár is built by the Szent József Hackathon community.';
+
+  @override
+  String get impresszumHackathonTitle => 'Szent József Hackathon';
+
+  @override
+  String get impresszumHackathonBody =>
+      'Diatár was created during the IV. Szent József Hackathon (2026, Szeged).';
+
+  @override
+  String get impresszumDataSources => 'Data sources';
+
+  @override
+  String get impresszumSzentiras => 'szentiras.eu — source of Bible texts';
+
+  @override
+  String get impresszumLicenses => 'Software and licenses';
+
+  @override
+  String get impresszumNemotron =>
+      'NVIDIA Nemotron 3.5 ASR — OpenMDW-1.1 license';
+
+  @override
+  String get impresszumSherpaOnnx =>
+      'Sherpa-ONNX (k2-fsa) — Apache-2.0 license';
+
+  @override
+  String get impresszumFlutter => 'Flutter — BSD-3 license';
+
+  @override
+  String get impresszumRecord => 'Record (llfbandit) — MIT license';
+
+  @override
+  String get impresszumLinks => 'Links';
+
+  @override
+  String get impresszumWebsite => 'diatar.eu';
+
+  @override
+  String get impresszumGitHub => 'GitHub';
+
+  @override
+  String get impresszumHackathonLink => 'Szent József Hackathon';
+
+  @override
+  String get impresszumSzentirasLink => 'szentiras.eu';
 }

@@ -361,6 +361,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           'gyorsbillentyu hotkey billentyu shortcut vezerles enek',
         );
     final bool showApiKeys = _matches(query, 'api kulcs key szentiras');
+    final bool showImpresszum = _matches(
+      query,
+      'impresszum impress imprint névjegy about verzió version licenc license',
+    );
     final bool anyVisible =
         showInternet ||
         showLan ||
@@ -371,7 +375,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         showSpeech ||
         showSystem ||
         showHotkeys ||
-        showApiKeys;
+        showApiKeys ||
+        showImpresszum;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -542,6 +547,15 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       subtitle: Text(l10n.settingsHotkeysSummary),
                       onTap: _openDesktopHotkeySettings,
                       description: l10n.settingsHotkeysDescription,
+                    ),
+                  if (showHotkeys && showImpresszum) const Divider(height: 1),
+                  if (showImpresszum)
+                    _settingsTile(
+                      leading: const Icon(Icons.info_outline),
+                      title: Text(l10n.impresszumTitle),
+                      subtitle: Text(l10n.impresszumSummary),
+                      onTap: _openImpresszumSheet,
+                      description: l10n.impresszumDescription,
                     ),
                   if (!anyVisible)
                     Padding(
@@ -1872,6 +1886,129 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           const Divider(height: 1),
         ];
       },
+    );
+  }
+
+  Future<void> _openImpresszumSheet() {
+    final l10n = context.l10n;
+    return _openSectionSheet(
+      title: l10n.impresszumTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        return <Widget>[
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Image.asset(
+                'assets/hackathon_logo.png',
+                height: 80,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _impresszumSection(
+            l10n.impresszumDevelopers,
+            l10n.impresszumDevelopersBody,
+          ),
+          _impresszumLink(
+            label: l10n.impresszumHackathonTitle,
+            subtitle: l10n.impresszumHackathonBody,
+            url: 'https://szentjozsef.jezsuita.hu/szent-jozsef-hackathon/',
+          ),
+          const Divider(height: 1),
+          _impresszumSection(
+            l10n.impresszumDataSources,
+            l10n.impresszumSzentiras,
+          ),
+          _impresszumLink(
+            label: l10n.impresszumSzentirasLink,
+            subtitle: 'szentiras.eu',
+            url: 'https://szentiras.eu',
+          ),
+          const Divider(height: 1),
+          _impresszumSection(
+            l10n.impresszumLicenses,
+            null,
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: Text(l10n.impresszumNemotron),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: Text(l10n.impresszumSherpaOnnx),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: Text(l10n.impresszumFlutter),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: Text(l10n.impresszumRecord),
+          ),
+          const Divider(height: 1),
+          _impresszumSection(
+            l10n.impresszumLinks,
+            null,
+          ),
+          _impresszumLink(
+            label: l10n.impresszumWebsite,
+            subtitle: 'diatar.eu',
+            url: 'https://www.diatar.eu',
+          ),
+          _impresszumLink(
+            label: l10n.impresszumGitHub,
+            subtitle: 'github.com/diatar-eu/diatar-flutter',
+            url: 'https://github.com/diatar-eu/diatar-flutter',
+          ),
+          _impresszumLink(
+            label: l10n.impresszumHackathonLink,
+            subtitle: 'szentjozsef.jezsuita.hu',
+            url: 'https://szentjozsef.jezsuita.hu/szent-jozsef-hackathon/',
+          ),
+        ];
+      },
+    );
+  }
+
+  Widget _impresszumSection(String title, String? body) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (body != null) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(body, style: Theme.of(context).textTheme.bodyMedium),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _impresszumLink({
+    required String label,
+    required String subtitle,
+    required String url,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      title: Text(label),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.open_in_new, size: 18),
+      onTap: () => launchUrl(Uri.parse(url)),
     );
   }
 
