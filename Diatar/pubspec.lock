@@ -756,12 +756,11 @@ packages:
     source: hosted
     version: "0.2.2"
   screen_retriever_macos:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: screen_retriever_macos
-      sha256: a1489b99cce597c45a54b9aae1cd94c8d4705353b7e0bb2457a6e4de44e0ad8a
-      url: "https://pub.dev"
-    source: hosted
+      path: "patches/screen_retriever_macos"
+      relative: true
+    source: path
     version: "0.2.2"
   screen_retriever_platform_interface:
     dependency: transitive
