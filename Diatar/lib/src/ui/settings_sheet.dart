@@ -348,7 +348,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       query,
       'altalanos tema nyelv language gorgetheto akkord kotta hatterkep szokiemeles',
     );
-    final bool showSpeech = _matches(
+    final bool showSpeech = !kIsWeb && _matches(
       query,
       'beszedfelismero speech recognition mikrofon',
     );

@@ -662,20 +662,21 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         onPressed: () => _openSearchSheet(context),
         icon: const Icon(Icons.search),
       ),
-      IconButton(
-        tooltip: controller.liveSubtitlesActive
-            ? l10n.liveSubtitlesOff
-            : l10n.liveSubtitlesOn,
-        onPressed: () => _toggleLiveSubtitles(context),
-        icon: Icon(
-          controller.liveSubtitlesActive
-              ? Icons.closed_caption
-              : Icons.closed_caption_disabled,
-          color: controller.liveSubtitlesActive
-              ? const Color(0xFF388E3C)
-              : null,
+      if (!kIsWeb)
+        IconButton(
+          tooltip: controller.liveSubtitlesActive
+              ? l10n.liveSubtitlesOff
+              : l10n.liveSubtitlesOn,
+          onPressed: () => _toggleLiveSubtitles(context),
+          icon: Icon(
+            controller.liveSubtitlesActive
+                ? Icons.closed_caption
+                : Icons.closed_caption_disabled,
+            color: controller.liveSubtitlesActive
+                ? const Color(0xFF388E3C)
+                : null,
+          ),
         ),
-      ),
       IconButton(
         tooltip: l10n.settingsTooltip,
         onPressed: () => _openSettings(context),
