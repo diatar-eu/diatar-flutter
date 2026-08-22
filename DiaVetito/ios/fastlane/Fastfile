@@ -22,7 +22,7 @@ platform :ios do
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
       export_method: "app-store",
-      xcargs: "OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -disable-autolink-framework -Xfrontend AppIntents'",
+      xcargs: "ENABLE_APP_INTENTS=NO",
       export_options: {
         signingStyle: "manual",
         provisioningProfiles: {
@@ -64,7 +64,7 @@ platform :ios do
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
       export_method: "app-store",
-      xcargs: "OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -disable-autolink-framework -Xfrontend AppIntents'",
+      xcargs: "ENABLE_APP_INTENTS=NO",
       export_options: {
         signingStyle: "manual",
         provisioningProfiles: {
