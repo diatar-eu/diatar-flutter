@@ -1,11 +1,11 @@
 name: Build & Publish Flatpak
 
 on:
-  # Only run after the "Deploy to Stores" workflow has completed (it performs the
-  # version bump on the default branch). This guarantees the Flatpak build picks
-  # up the bumped pubspec version.
+  # Only run after the "Deploy" workflow has completed (it performs the version
+  # bump on the default branch). This guarantees the Flatpak build picks up
+  # the bumped pubspec version.
   workflow_run:
-    workflows: ["Deploy to Stores"]
+    workflows: ["Deploy"]
     types:
       - completed
   workflow_dispatch:
@@ -18,13 +18,14 @@ permissions:
 jobs:
   flatpak:
     name: Flatpak (${{ matrix.app }})
-    # Run on manual dispatch, or after a successful "Deploy to Stores" run that
-    # was triggered by a tag starting with 'v'.
+    # Run on manual dispatch, or after a successful "Deploy" run that was
+    # triggered by a release tag starting with 'v' (excludes rc/beta tags).
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success' &&
-       startsWith(github.event.workflow_run.head_branch, 'v'))
+       startsWith(github.event.workflow_run.head_branch, 'v') &&
+       !contains(github.event.workflow_run.head_branch, 'rc'))
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
