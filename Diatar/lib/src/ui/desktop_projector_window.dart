@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'dart:ui' as ui;
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
@@ -95,17 +96,25 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     await _registerControlChannelWithRetry();
     await windowManager.ensureInitialized();
     windowManager.addListener(this);
+    // macOS-en a `setSkipTaskbar(true)` az NSApplication activation policy-ját
+    // `.accessory`-ra állítja, ami az EGÉSZ alkalmazást eltünteti a Dock-ból.
+    // Mivel a vetítőablak amúgy sem jelenik meg külön a Dock-ban (egy app = egy
+    // dock ikon), macOS-en nem használjuk a skipTaskbar-t.
+    final bool useSkipTaskbar =
+        !Platform.isMacOS;
     await windowManager.waitUntilReadyToShow(
-      const WindowOptions(
+      WindowOptions(
         titleBarStyle: TitleBarStyle.hidden,
         backgroundColor: Colors.black,
         alwaysOnTop: true,
-        skipTaskbar: true,
+        skipTaskbar: useSkipTaskbar,
         windowButtonVisibility: false,
       ),
       () async {
         await windowManager.setAsFrameless();
-        await windowManager.setSkipTaskbar(true);
+        if (useSkipTaskbar) {
+          await windowManager.setSkipTaskbar(true);
+        }
         await windowManager.setPreventClose(true);
         await _applyWindowPlacement(requestedMonitor);
         _windowReady = true;
