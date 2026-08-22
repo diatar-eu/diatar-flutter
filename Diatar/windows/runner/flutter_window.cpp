@@ -18,8 +18,6 @@ void RegisterSecondaryWindowPlugins(flutter::PluginRegistry* registry) {
     registry->GetRegistrarForPlugin("DesktopMultiWindowPlugin"));
   FileSelectorWindowsRegisterWithRegistrar(
     registry->GetRegistrarForPlugin("FileSelectorWindows"));
-  PermissionHandlerWindowsPluginRegisterWithRegistrar(
-    registry->GetRegistrarForPlugin("PermissionHandlerWindowsPlugin"));
   ScreenRetrieverWindowsPluginCApiRegisterWithRegistrar(
     registry->GetRegistrarForPlugin("ScreenRetrieverWindowsPluginCApi"));
   UrlLauncherWindowsRegisterWithRegistrar(

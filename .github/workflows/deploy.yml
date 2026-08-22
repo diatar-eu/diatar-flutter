@@ -448,7 +448,8 @@ jobs:
 
   deploy-ios:
     name: Deploy iOS (${{ matrix.app }})
-    needs: [detect, bump]
+    needs: [detect, bump, build-ios]
+    if: always() && needs.build-ios.result == 'success'
     runs-on: macos-latest
     strategy:
       fail-fast: false
@@ -463,12 +464,6 @@ jobs:
           fetch-depth: 0
           ref: ${{ startsWith(github.ref, 'refs/tags/') && (github.event.repository.default_branch || 'main') || github.ref_name }}
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: false
-
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -476,12 +471,14 @@ jobs:
           bundler-cache: true
           working-directory: ${{ matrix.app }}/ios
 
-      - name: Install CocoaPods and fastlane
-        run: |
-          sudo gem uninstall cocoapods -x || true
-          sudo gem install cocoapods
-          sudo gem install fastlane
-          pod --version
+      - name: Install fastlane
+        run: sudo gem install fastlane
+
+      - name: Download unsigned iOS build
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.app }}-ios-nosign
+          path: ${{ matrix.app }}/ios/
 
       - name: Decode App Store Connect API key
         run: |
