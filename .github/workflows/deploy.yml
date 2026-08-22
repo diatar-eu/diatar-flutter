@@ -449,7 +449,7 @@ jobs:
   deploy-ios:
     name: Deploy iOS (${{ matrix.app }})
     needs: [detect, bump, build-ios]
-    if: always() && needs.build-ios.result == 'success'
+    if: always() && needs.build-ios.result == 'success' && needs.detect.outputs.channel != 'ci'
     runs-on: macos-latest
     strategy:
       fail-fast: false
