@@ -3,9 +3,9 @@ default_platform(:ios)
 platform :ios do
   def signing_identity
     @signing_identity ||= begin
-      output = `security find-identity -v -p codesigning 2>/dev/null`
-      match = output.match(/"([^"]*iPhone[^"]*)"/)
-      UI.user_error!("No iPhone signing identity found in keychain") unless match
+      output = `security find-identity -v -p codesigning`
+      match = output.match(/"([^"]*Apple Distribution[^"]*)"/)
+      UI.user_error!("No Apple Distribution signing identity found in keychain") unless match
       match[1]
     end
   end
@@ -26,7 +26,9 @@ platform :ios do
       verbose: true
     )
 
-    sh("unzip", "-o", Dir.glob("*-ios-nosign.zip").first, "-d", "build/ios/iphoneos")
+    zip = Dir.glob("**/*-ios-nosign.zip").first
+    UI.user_error!("No *-ios-nosign.zip artifact found") unless zip
+    sh("unzip", "-o", zip, "-d", "build/ios/iphoneos")
     sh("mkdir", "-p", "Payload")
     sh("cp", "-r", "build/ios/iphoneos/Runner.app", "Payload/")
     sh("zip", "-r", "unsigned.ipa", "Payload")
@@ -67,7 +69,9 @@ platform :ios do
       verbose: true
     )
 
-    sh("unzip", "-o", Dir.glob("*-ios-nosign.zip").first, "-d", "build/ios/iphoneos")
+    zip = Dir.glob("**/*-ios-nosign.zip").first
+    UI.user_error!("No *-ios-nosign.zip artifact found") unless zip
+    sh("unzip", "-o", zip, "-d", "build/ios/iphoneos")
     sh("mkdir", "-p", "Payload")
     sh("cp", "-r", "build/ios/iphoneos/Runner.app", "Payload/")
     sh("zip", "-r", "unsigned.ipa", "Payload")

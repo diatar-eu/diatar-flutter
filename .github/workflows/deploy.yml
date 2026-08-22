@@ -336,14 +336,14 @@ jobs:
         shell: pwsh
         run: |
           $appPath = "${{ matrix.app }}/build/ios/iphoneos"
-          $zipPath = "${{ matrix.app }}/${{ matrix.app }}-ios-nosign.zip"
+          $zipPath = "${{ matrix.app }}-ios-nosign.zip"
           Compress-Archive -Path "$appPath/*" -DestinationPath $zipPath -Force
 
       - name: Upload iOS Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.app }}-ios-nosign
-          path: ${{ matrix.app }}/${{ matrix.app }}-ios-nosign.zip
+          path: ${{ matrix.app }}-ios-nosign.zip
           if-no-files-found: error
 
   build-macos:
