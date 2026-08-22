@@ -1628,33 +1628,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get speechSettingsSummary => 'Microphone';
 
   @override
-  String get castSettingsTitle => 'Google Cast settings';
-
-  @override
-  String get castSettingsSummary => 'Configure Cast devices';
-
-  @override
-  String get castEnabledTitle => 'Use Cast';
-
-  @override
-  String get castDeviceIdLabel => 'Cast device ID';
-
-  @override
-  String get castPortLabel => 'Cast port';
-
-  @override
-  String get castAutoConnectTitle => 'Auto-connect';
-
-  @override
-  String get castSelectDeviceTitle => 'Select Cast Device';
-
-  @override
-  String get castNoDevicesFound => 'No Cast devices found';
-
-  @override
-  String get castConnecting => 'Connecting...';
-
-  @override
   String get transposeDown => 'Transpose down';
 
   @override
@@ -1843,10 +1816,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsLocalNetworkDescription =>
       'TCP/IP connection over your local network. Enter the projector\'s IP address and port.';
-
-  @override
-  String get castSettingsDescription =>
-      'Send slides to a Google Cast device (Chromecast).';
 
   @override
   String get colorsDescription =>

@@ -26,15 +26,8 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Diatár uses the local network to discover Cast-enabled devices on your WiFi network.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>A prédikáció élő feliratozásához szükséges a mikrofon használata.</string>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_CC1AD845._googlecast._tcp</string>
-		<string>_googlecast._tcp</string>
-	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

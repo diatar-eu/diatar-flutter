@@ -1635,33 +1635,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get speechSettingsSummary => 'Mikrofon';
 
   @override
-  String get castSettingsTitle => 'Google Cast beállítások';
-
-  @override
-  String get castSettingsSummary => 'Cast eszközök beállítása';
-
-  @override
-  String get castEnabledTitle => 'Cast használata';
-
-  @override
-  String get castDeviceIdLabel => 'Cast eszköz azonosító';
-
-  @override
-  String get castPortLabel => 'Cast port';
-
-  @override
-  String get castAutoConnectTitle => 'Automatikus csatlakozás';
-
-  @override
-  String get castSelectDeviceTitle => 'Cast eszköz kiválasztása';
-
-  @override
-  String get castNoDevicesFound => 'Nem található Cast eszköz';
-
-  @override
-  String get castConnecting => 'Csatlakozás...';
-
-  @override
   String get transposeDown => 'Transzpozíció le';
 
   @override
@@ -1850,10 +1823,6 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get settingsLocalNetworkDescription =>
       'TCP/IP kapcsolat helyi hálózaton. Add meg a vetítő IP-címét és portját.';
-
-  @override
-  String get castSettingsDescription =>
-      'Google Cast eszközre (Chromecast) küldheted a diákat.';
 
   @override
   String get colorsDescription =>

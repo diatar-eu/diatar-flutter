@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform, exit;
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:diatar_common/utils/transposition_utils.dart';
@@ -45,7 +44,6 @@ import '../services/sender_transport_coordinator.dart';
 import '../services/song_search_service.dart';
 import '../services/settings_store.dart';
 import '../services/audio_service.dart';
-import '../services/cast_service.dart';
 import '../services/tcp_sender_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
 import '../services/zsolozsma_service.dart';
@@ -184,7 +182,6 @@ class DiatarMainController extends ChangeNotifier {
   );
   final DesktopProjectorBridge _desktopProjectorBridge =
       DesktopProjectorBridge.instance;
-  CastService? _castService;
 
   List<DtxBook> books = <DtxBook>[];
   int bookIndex = 0;
@@ -860,10 +857,6 @@ class DiatarMainController extends ChangeNotifier {
     };
     _configureSender();
     await _applyTransport();
-    if (settings.castEnabled && !kIsWeb) {
-      _castService ??= CastService();
-      await _castService!.initialize();
-    }
     unawaited(_checkStartupDtxUpdates());
     await _tryAutoLoadTodayDia();
     if (customOrderActive &&
@@ -3864,144 +3857,10 @@ class DiatarMainController extends ChangeNotifier {
     }
     await _desktopProjectorBridge.sendIdle();
     _refreshSenderFlags();
-    unawaited(_castCurrentSlide(title: title, lines: lines));
     notifyListeners();
     if (playSound) {
       _playCurrentVerseSound();
     }
-  }
-
-  /// Előkészíti és elküldi az aktuális vetítési állapotot a Cast eszközre.
-  Future<void> _castCurrentSlide({
-    required String title,
-    required List<String> lines,
-  }) async {
-    if (!settings.castEnabled) {
-      return;
-    }
-
-    // Instead of sending text data, we render the current frame to an image
-    // and send it to Cast. This ensures the receiver displays exactly what is projected.
-    await renderCurrentFrameToImage();
-  }
-
-  /// Renders the current projection frame to an image and sends it to the Cast device.
-  /// This method captures the current projection state using ProjectorPainter and converts
-  /// it to a PNG image that can be sent via Cast.
-  Future<void> renderCurrentFrameToImage() async {
-    if (!settings.castEnabled) return;
-
-    try {
-      // Get the current projection state
-      final ProjectionFrame? frame = _buildCurrentFrame();
-      if (frame == null) return;
-
-      // Create a picture recorder to capture the rendering
-      final ui.PictureRecorder recorder = ui.PictureRecorder();
-      final ui.Canvas canvas = ui.Canvas(recorder);
-
-      // Get screen dimensions from settings or use defaults
-      final double width = _screenWidth.toDouble();
-      final double height = _screenHeight.toDouble();
-      final Size size = Size(width, height);
-
-      // Create and paint the projector painter
-      final ProjectorPainter painter = ProjectorPainter(
-        frame: frame,
-        globals: globals,
-        settings: settings,
-        logoTitle: '',
-        logoSubtitle: '',
-      );
-
-      painter.paint(canvas, size);
-
-      // End recording and get the picture
-      final ui.Picture picture = recorder.endRecording();
-
-      // Convert picture to image
-      final ui.Image image = await picture.toImage(width.ceil(), height.ceil());
-
-      // Convert image to PNG bytes
-      final ByteData? byteData = await image.toByteData(
-        format: ui.ImageByteFormat.png,
-      );
-      if (byteData == null) return;
-      final Uint8List pngBytes = byteData.buffer.asUint8List();
-
-      // Send the image via Cast service
-      await _castService?.sendCastImage(pngBytes, 'image/png');
-    } catch (e) {
-      debugPrint('Error rendering frame to image for Cast: $e');
-    }
-  }
-
-  /// Builds the current projection frame based on the controller's state.
-  /// This method determines which type of frame to render (text, image, etc.)
-  /// and returns the appropriate ProjectionFrame instance.
-  ProjectionFrame? _buildCurrentFrame() {
-    // Default to showing nothing
-    if (!showing) {
-      return const LogoFrame(0);
-    }
-
-    // Handle custom order entries that are images or text
-    if (customOrderActive &&
-        _projectedCustomCursor >= 0 &&
-        _projectedCustomCursor < _customOrder.length) {
-      final CustomOrderEntry entry = _customOrder[_projectedCustomCursor];
-      if (entry.isCustomImage) {
-        // For custom images, we would need to load the image as an ImageFrame
-        // For now, we'll fall back to text rendering or handle it elsewhere
-        return null;
-      } else if (entry.isCustomText) {
-        final bool isMergeLeader = isCustomOrderEntryMergeLeaderAt(
-          _projectedCustomCursor,
-        );
-        final String title = isMergeLeader
-            ? customOrderProjectionTitleAt(_projectedCustomCursor)
-            : (entry.customTextTitle ?? '').trim().isEmpty
-            ? 'Dia'
-            : (entry.customTextTitle ?? '').trim();
-        final List<String> lines = () {
-          final String body =
-              isMergeLeader && _projectedCustomCursor + 1 < _customOrder.length
-              ? '${entry.customTextBody ?? ''}\n${_customOrder[_projectedCustomCursor + 1].customTextBody ?? ''}'
-              : (entry.customTextBody ?? '');
-          return body
-              .split(RegExp(r'\r?\n'))
-              .map((String line) => line.trimRight())
-              .where((String line) => line.trim().isNotEmpty)
-              .toList();
-        }();
-        final RecTextRecord record = RecTextRecord(
-          scholaLine: '',
-          title: title,
-          lines: lines,
-        );
-        return TextFrame(record: record);
-      }
-    }
-
-    // Default to showing the current verse/projection
-    final DtxBook? book = currentBook;
-    final DtxSong? song = currentSong;
-    final DtxVerse? verse = currentVerse;
-
-    if (book == null || song == null || verse == null) {
-      return const LogoFrame(0);
-    }
-
-    // Create a TextFrame with the current book, song, and verse information
-    final String title =
-        '${book.displayName}: ${song.title}/${verse.name ?? ''}'.trim();
-    final List<String> lines = displayLines;
-    final RecTextRecord record = RecTextRecord(
-      scholaLine: '',
-      title: title,
-      lines: lines,
-    );
-    return TextFrame(record: record);
   }
 
   Future<void> _projectCustomOrderEntry(
@@ -4078,57 +3937,6 @@ class DiatarMainController extends ChangeNotifier {
 
     if (entry.isCustomImage) {
       await sendPicFromPath(entry.customImagePath ?? '');
-    }
-    if (settings.castEnabled && !kIsWeb) {
-      _castService ??= CastService();
-      await _castService!.initialize();
-    }
-    if (settings.castEnabled) {
-      await _castCurrentImage(entry.customImagePath ?? '');
-    }
-  }
-
-  Future<void> _castCurrentImage(String path) async {
-    if (!settings.castEnabled) return;
-    final String normalized = path.trim();
-    if (normalized.isEmpty) return;
-
-    try {
-      final File file = FileSystemProvider.instance.file(normalized);
-      if (await file.exists()) {
-        final Uint8List bytes = await file.readAsBytes();
-        final String ext = _fileExtension(normalized);
-        await _castService?.sendCastData(<String, dynamic>{
-          'type': 'image',
-          'path': normalized,
-          'ext': ext,
-          'bytes': base64Encode(bytes),
-        });
-      }
-    } catch (e) {
-      debugPrint('Cast image error: $e');
-    }
-  }
-
-  Future<void> _castCurrentBlank(String path) async {
-    if (!settings.castEnabled) return;
-    final String normalized = path.trim();
-    if (normalized.isEmpty) return;
-
-    try {
-      final File file = FileSystemProvider.instance.file(normalized);
-      if (await file.exists()) {
-        final Uint8List bytes = await file.readAsBytes();
-        final String ext = _fileExtension(normalized);
-        await _castService?.sendCastData(<String, dynamic>{
-          'type': 'blank',
-          'path': normalized,
-          'ext': ext,
-          'bytes': base64Encode(bytes),
-        });
-      }
-    } catch (e) {
-      debugPrint('Cast blank error: $e');
     }
   }
 
@@ -4383,7 +4191,6 @@ class DiatarMainController extends ChangeNotifier {
             : normalized,
       });
       notifyListeners();
-      unawaited(_castCurrentImage(normalized));
     } catch (e) {
       _setStatus('statusImageSendError', <String, String>{'error': '$e'});
       notifyListeners();
@@ -4462,7 +4269,6 @@ class DiatarMainController extends ChangeNotifier {
         });
         notifyListeners();
       }
-      unawaited(_castCurrentBlank(normalized));
     } catch (e) {
       if (updateStatus) {
         _setStatus('statusBlankSendError', <String, String>{'error': '$e'});

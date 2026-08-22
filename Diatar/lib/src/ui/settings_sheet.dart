@@ -8,7 +8,6 @@ import 'package:diatar_speech/diatar_speech.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -19,7 +18,6 @@ import 'package:screen_retriever/screen_retriever.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
 import '../services/mqtt_user_api_service.dart';
-import '../services/cast_service.dart';
 import '../services/export_import_service.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/macos_file_panels.dart';
@@ -122,12 +120,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _desktopProjectorEnabled;
   late bool _internetRelayEnabled;
   late bool _localNetworkEnabled;
-  late bool _castEnabled;
-  late String _castDeviceId;
   late String? _liveSubtitleDeviceId;
   late String _liveSubtitleLanguage;
-  late int _castPort;
-  late bool _castAutoConnect;
   late Map<String, String> _desktopActionHotkeys;
   late Map<String, String> _desktopSongHotkeys;
   late Map<String, String> _desktopOrderSetHotkeys;
@@ -142,7 +136,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _szentirasApiKey;
   void Function(void Function())? _setInternetSectionState;
   late final MqttUserApiService _userApi;
-  CastService? _castService;
   late Color _bkColor;
   late Color _txtColor;
   late Color _blankColor;
@@ -163,10 +156,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _userApi = MqttUserApiService(
       acceptLanguageProvider: _currentAcceptLanguage,
     );
-    if (!kIsWeb) {
-      _castService = CastService();
-      unawaited(_castService!.initialize());
-    }
     _loadAppVersion();
     final AppSettings s = widget.initialSettings;
     _search = TextEditingController();
@@ -205,12 +194,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _desktopProjectorEnabled = s.desktopProjectorEnabled;
     _internetRelayEnabled = s.internetRelayEnabled;
     _localNetworkEnabled = s.tcpClientEnabled;
-    _castEnabled = s.castEnabled;
-    _castDeviceId = s.castDeviceId;
     _liveSubtitleDeviceId = s.liveSubtitleDeviceId;
     _liveSubtitleLanguage = s.liveSubtitleLanguage;
-    _castPort = s.castPort;
-    _castAutoConnect = s.castAutoConnect;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
     _desktopSongHotkeys = Map<String, String>.from(s.desktopSongHotkeys);
     _desktopOrderSetHotkeys = Map<String, String>.from(
@@ -282,7 +267,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   @override
   void dispose() {
-    _castService?.dispose();
     _search.dispose();
     _tcpTargets.dispose();
     _mqttUser.dispose();
@@ -333,9 +317,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
     final bool showLan =
         !kIsWeb && _matches(query, 'helyi halozat tcp ip port');
-    final bool showCast =
-        (_castService?.isSupported ?? false) &&
-        _matches(query, 'cast google cast');
     final bool showProjection = _matches(
       query,
       'vetites betu meret cim hatter opacity szinek szin',
@@ -370,7 +351,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final bool anyVisible =
         showInternet ||
         showLan ||
-        showCast ||
         showProjection ||
         showFiles ||
         showGeneral ||
@@ -471,20 +451,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openLocalNetworkSettings,
                       description: l10n.settingsLocalNetworkDescription,
                     ),
-                  if (showLan &&
-                      (showCast || showProjection || showFiles || showGeneral))
-                    const Divider(height: 1),
-                  if (showCast && (_castService?.isSupported ?? false))
-                    _settingsTile(
-                      leading: const Icon(Icons.cast),
-                      title: Text(l10n.castSettingsTitle),
-                      subtitle: Text(l10n.castSettingsSummary),
-                      onTap: _openCastSettings,
-                      description: l10n.castSettingsDescription,
-                    ),
-                  if (showCast &&
-                      (_castService?.isSupported ?? false) &&
-                      (showProjection || showFiles || showGeneral))
+                  if (showLan && (showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
                   if (showProjection)
                     _settingsTile(
@@ -1677,125 +1644,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ];
       },
     );
-  }
-
-  Future<void> _openCastSettings() {
-    return _openSectionSheet(
-      title: context.l10n.castSettingsTitle,
-      builder: (BuildContext context, void Function(void Function()) setBoth) {
-        final l10n = context.l10n;
-        return <Widget>[
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _castEnabled,
-            onChanged: (bool v) => setBoth(() => _castEnabled = v),
-            title: Text(l10n.castEnabledTitle),
-          ),
-          if (_castEnabled) ...<Widget>[
-            const Divider(height: 1),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.search),
-              title: Text(l10n.castSelectDeviceTitle),
-              subtitle: Text(
-                _castDeviceId.isEmpty ? l10n.valueNotSet : 'ID: $_castDeviceId',
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _openCastDeviceSelector(setBoth),
-            ),
-            const Divider(height: 1),
-            TextField(
-              controller: TextEditingController(text: _castDeviceId),
-              decoration: InputDecoration(labelText: l10n.castDeviceIdLabel),
-              onChanged: (v) => setBoth(() => _castDeviceId = v),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: TextEditingController(text: _castPort.toString()),
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: l10n.castPortLabel),
-              onChanged: (v) =>
-                  setBoth(() => _castPort = int.tryParse(v) ?? 1024),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _castAutoConnect,
-              onChanged: (bool v) => setBoth(() => _castAutoConnect = v),
-              title: Text(l10n.castAutoConnectTitle),
-            ),
-          ],
-        ];
-      },
-    );
-  }
-
-  Future<void> _openCastDeviceSelector(
-    void Function(void Function()) setBoth,
-  ) async {
-    final l10n = context.l10n;
-
-    await _openSectionSheet(
-      title: l10n.castSelectDeviceTitle,
-      builder:
-          (BuildContext context, void Function(void Function()) setModalState) {
-            return [
-              AnimatedBuilder(
-                animation: _castService ?? ValueNotifier<bool>(false),
-                builder: (context, _) {
-                  final devices =
-                      _castService?.discoveredDevices ?? <GoogleCastDevice>[];
-                  if (devices.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 16),
-                          Text(l10n.castNoDevicesFound),
-                          TextButton(
-                            onPressed: () => _castService?.startDiscovery(),
-                            child: Text(l10n.refreshTooltip),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: devices.length,
-                    itemBuilder: (context, index) {
-                      final device = devices[index];
-                      return ListTile(
-                        leading: const Icon(Icons.cast),
-                        title: Text(device.friendlyName),
-                        subtitle: Text(device.deviceID),
-                        onTap: () async {
-                          setBoth(() {}); // Update main sheet
-                          try {
-                            await _castService?.connectToDevice(device);
-                            setBoth(() {
-                              _castDeviceId = device.deviceID;
-                            });
-                            Navigator.of(context).pop(true);
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Connection failed: $e')),
-                            );
-                          }
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ];
-          },
-    ).then((_) {
-      _castService?.stopDiscovery();
-    });
-
-    // Start discovery when opening
-    _castService?.startDiscovery();
   }
 
   Future<void> _openMicDeviceSelector(
@@ -3574,10 +3422,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       useSound: _useSound,
       liveSubtitleDeviceId: _liveSubtitleDeviceId,
       liveSubtitleLanguage: _liveSubtitleLanguage,
-      castEnabled: _castEnabled,
-      castDeviceId: _castDeviceId,
-      castPort: _castPort,
-      castAutoConnect: _castAutoConnect,
       bkColor: _bkColor,
       txtColor: _txtColor,
       blankColor: _blankColor,

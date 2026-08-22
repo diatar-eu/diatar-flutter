@@ -2903,60 +2903,6 @@ abstract class AppLocalizations {
   /// **'Mikrofon'**
   String get speechSettingsSummary;
 
-  /// No description provided for @castSettingsTitle.
-  ///
-  /// In hu, this message translates to:
-  /// **'Google Cast beállítások'**
-  String get castSettingsTitle;
-
-  /// No description provided for @castSettingsSummary.
-  ///
-  /// In hu, this message translates to:
-  /// **'Cast eszközök beállítása'**
-  String get castSettingsSummary;
-
-  /// No description provided for @castEnabledTitle.
-  ///
-  /// In hu, this message translates to:
-  /// **'Cast használata'**
-  String get castEnabledTitle;
-
-  /// No description provided for @castDeviceIdLabel.
-  ///
-  /// In hu, this message translates to:
-  /// **'Cast eszköz azonosító'**
-  String get castDeviceIdLabel;
-
-  /// No description provided for @castPortLabel.
-  ///
-  /// In hu, this message translates to:
-  /// **'Cast port'**
-  String get castPortLabel;
-
-  /// No description provided for @castAutoConnectTitle.
-  ///
-  /// In hu, this message translates to:
-  /// **'Automatikus csatlakozás'**
-  String get castAutoConnectTitle;
-
-  /// No description provided for @castSelectDeviceTitle.
-  ///
-  /// In hu, this message translates to:
-  /// **'Cast eszköz kiválasztása'**
-  String get castSelectDeviceTitle;
-
-  /// No description provided for @castNoDevicesFound.
-  ///
-  /// In hu, this message translates to:
-  /// **'Nem található Cast eszköz'**
-  String get castNoDevicesFound;
-
-  /// No description provided for @castConnecting.
-  ///
-  /// In hu, this message translates to:
-  /// **'Csatlakozás...'**
-  String get castConnecting;
-
   /// No description provided for @transposeDown.
   ///
   /// In hu, this message translates to:
@@ -3286,12 +3232,6 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'TCP/IP kapcsolat helyi hálózaton. Add meg a vetítő IP-címét és portját.'**
   String get settingsLocalNetworkDescription;
-
-  /// No description provided for @castSettingsDescription.
-  ///
-  /// In hu, this message translates to:
-  /// **'Google Cast eszközre (Chromecast) küldheted a diákat.'**
-  String get castSettingsDescription;
 
   /// No description provided for @colorsDescription.
   ///

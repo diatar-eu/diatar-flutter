@@ -65,10 +65,6 @@ class AppSettings {
     this.liveSubtitlesEnabled = false,
     this.liveSubtitleDeviceId,
     this.liveSubtitleLanguage = 'auto',
-    this.castEnabled = false,
-    this.castDeviceId = '',
-    this.castPort = 1024,
-    this.castAutoConnect = false,
     this.szentirasApiKey = '',
     Color? bkColor,
     Color? txtColor,
@@ -142,10 +138,6 @@ class AppSettings {
   final bool liveSubtitlesEnabled;
   final String? liveSubtitleDeviceId;
   final String liveSubtitleLanguage;
-  final bool castEnabled;
-  final String castDeviceId;
-  final int castPort;
-  final bool castAutoConnect;
   final String szentirasApiKey;
   final Color? _bkColor;
   final Color? _txtColor;
@@ -226,10 +218,6 @@ class AppSettings {
     bool? liveSubtitlesEnabled,
     String? liveSubtitleDeviceId,
     String? liveSubtitleLanguage,
-    bool? castEnabled,
-    String? castDeviceId,
-    int? castPort,
-    bool? castAutoConnect,
     String? szentirasApiKey,
     Color? bkColor,
     Color? txtColor,
@@ -310,10 +298,6 @@ class AppSettings {
        liveSubtitlesEnabled: liveSubtitlesEnabled ?? this.liveSubtitlesEnabled,
        liveSubtitleDeviceId: liveSubtitleDeviceId ?? this.liveSubtitleDeviceId,
        liveSubtitleLanguage: liveSubtitleLanguage ?? this.liveSubtitleLanguage,
-       castEnabled: castEnabled ?? this.castEnabled,
-       castDeviceId: castDeviceId ?? this.castDeviceId,
-       castPort: castPort ?? this.castPort,
-       castAutoConnect: castAutoConnect ?? this.castAutoConnect,
        szentirasApiKey: szentirasApiKey ?? this.szentirasApiKey,
        bkColor: bkColor ?? this.bkColor,
       txtColor: txtColor ?? this.txtColor,
@@ -366,10 +350,6 @@ class AppSettings {
        'liveSubtitlesEnabled': liveSubtitlesEnabled,
        'liveSubtitleDeviceId': liveSubtitleDeviceId,
        'liveSubtitleLanguage': liveSubtitleLanguage,
-       'castEnabled': castEnabled,
-       'castDeviceId': castDeviceId,
-       'castPort': castPort,
-       'castAutoConnect': castAutoConnect,
        'szentirasApiKey': szentirasApiKey,
      };
   }
@@ -448,10 +428,6 @@ class AppSettings {
        liveSubtitlesEnabled: boolValue('liveSubtitlesEnabled', false),
        liveSubtitleDeviceId: map['liveSubtitleDeviceId'] as String?,
        liveSubtitleLanguage: map['liveSubtitleLanguage'] as String? ?? 'auto',
-       castEnabled: boolValue('castEnabled', false),
-       castDeviceId: map['castDeviceId'] as String? ?? '',
-       castPort: intValue('castPort', 1024),
-       castAutoConnect: boolValue('castAutoConnect', false),
        szentirasApiKey: map['szentirasApiKey'] as String? ?? '',
      );
   }
