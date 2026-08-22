@@ -18,4 +18,18 @@ platform :android do
       skip_upload_screenshots: true
     )
   end
+
+  desc "Build and deploy to the Play Store beta track"
+  lane :beta do
+    sh("flutter", "clean")
+    sh("flutter", "pub", "get")
+    sh("flutter", "build", "appbundle", "--release")
+    upload_to_play_store(
+      track: 'beta',
+      aab: '../build/app/outputs/bundle/release/app-release.aab',
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
 end

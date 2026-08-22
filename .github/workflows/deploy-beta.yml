@@ -1,0 +1,171 @@
+name: Deploy Beta
+
+on:
+  push:
+    tags:
+      - 'v*-rc*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    name: Bump build number (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - Diatar
+          - DiaVetito
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump build number and push
+        env:
+          PUSH_BRANCH: ${{ startsWith(github.ref, 'refs/tags/') && (github.event.repository.default_branch || 'main') || github.ref_name }}
+        run: |
+          set -euo pipefail
+          APP_DIR="${{ matrix.app }}"
+          PUBSEC="$APP_DIR/pubspec.yaml"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          max_retries=10
+          success=0
+          for i in $(seq 1 $max_retries); do
+            line=$(grep -E '^version:' "$PUBSEC")
+            base=$(echo "$line" | sed -E 's/^version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+).*/\1/')
+            current=$(echo "$line" | sed -E 's/^version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+).*/\2/')
+            new=$((current + 1))
+            sed -E "s/^version:.*/version: $base+$new/" "$PUBSEC" > "$PUBSEC.tmp" && mv "$PUBSEC.tmp" "$PUBSEC"
+            git add "$PUBSEC"
+            git commit -m "ci: bump build number to $new [skip ci]"
+            if git push origin "HEAD:$PUSH_BRANCH"; then
+              echo "Pushed build number bump to $new on $PUSH_BRANCH"
+              success=1
+              break
+            fi
+            echo "Push failed (attempt $i/$max_retries), syncing and retrying..."
+            git fetch origin "$PUSH_BRANCH"
+            git reset --hard "origin/$PUSH_BRANCH"
+          done
+
+          if [ "$success" -ne 1 ]; then
+            echo "Failed to push the build number bump after $max_retries attempts"
+            exit 1
+          fi
+
+  android:
+    name: Deploy Android Beta (${{ matrix.app }})
+    needs: bump
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - Diatar
+          - DiaVetito
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ startsWith(github.ref, 'refs/tags/') && (github.event.repository.default_branch || 'main') || github.ref_name }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ${{ matrix.app }}/android
+
+      - name: Decode Android keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > ${{ matrix.app }}/android/app/keystore.jks
+          cd ${{ matrix.app }}/android
+          echo "storeFile=keystore.jks" > key.properties
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> key.properties
+          echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> key.properties
+          echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> key.properties
+
+      - name: Decode Play Store JSON key
+        run: |
+          echo '${{ secrets.PLAY_STORE_JSON_KEY }}' > ${{ matrix.app }}/android/play_store_key.json
+
+      - name: Fastlane Deploy Beta
+        working-directory: ${{ matrix.app }}/android
+        env:
+          PLAY_STORE_JSON_KEY_FILE: play_store_key.json
+        run: bundle exec fastlane beta
+
+  ios:
+    name: Deploy iOS Beta (${{ matrix.app }})
+    needs: bump
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - Diatar
+          - DiaVetito
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ startsWith(github.ref, 'refs/tags/') && (github.event.repository.default_branch || 'main') || github.ref_name }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: false
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ${{ matrix.app }}/ios
+
+      - name: Install CocoaPods and fastlane
+        run: |
+          sudo gem uninstall cocoapods -x || true
+          sudo gem install cocoapods
+          sudo gem install fastlane
+          pod --version
+
+      - name: Decode App Store Connect API key
+        run: |
+          echo "${{ secrets.APPLE_API_KEY_BASE64 }}" | base64 -d > ${{ matrix.app }}/ios/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+
+      - name: Fastlane Deploy Beta
+        working-directory: ${{ matrix.app }}/ios
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_KEY_FILEPATH: AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: fastlane beta
