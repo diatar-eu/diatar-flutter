@@ -32,6 +32,7 @@ platform :ios do
     zip_name = Dir.glob("*-ios-nosign.zip", base: ios_dir).first
     UI.user_error!("No *-ios-nosign.zip artifact found in #{ios_dir}") unless zip_name
     zip = File.join(ios_dir, zip_name)
+    sh("mkdir", "-p", build_dir)
     sh("unzip", "-o", zip, "-d", build_dir)
     sh("mkdir", "-p", payload_dir)
     sh("cp", "-r", File.join(build_dir, "Runner.app"), payload_dir + "/")
@@ -79,6 +80,7 @@ platform :ios do
     zip_name = Dir.glob("*-ios-nosign.zip", base: ios_dir).first
     UI.user_error!("No *-ios-nosign.zip artifact found in #{ios_dir}") unless zip_name
     zip = File.join(ios_dir, zip_name)
+    sh("mkdir", "-p", build_dir)
     sh("unzip", "-o", zip, "-d", build_dir)
     sh("mkdir", "-p", payload_dir)
     sh("cp", "-r", File.join(build_dir, "Runner.app"), payload_dir + "/")
