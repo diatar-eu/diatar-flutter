@@ -40,8 +40,7 @@ platform :ios do
 
     resign(
       ipa: File.join(ios_dir, "unsigned.ipa"),
-      signing_identity: signing_identity,
-      provisioning_profile: ENV["MATCH_PROVISIONING_PROFILE_NAME"] || "match AppStore eu.diatar.vetito"
+      signing_identity: signing_identity
     )
 
     upload_to_app_store(
@@ -88,8 +87,7 @@ platform :ios do
 
     resign(
       ipa: File.join(ios_dir, "unsigned.ipa"),
-      signing_identity: signing_identity,
-      provisioning_profile: ENV["MATCH_PROVISIONING_PROFILE_NAME"] || "match AppStore eu.diatar.vetito"
+      signing_identity: signing_identity
     )
 
     upload_to_testflight(
