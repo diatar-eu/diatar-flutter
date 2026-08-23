@@ -264,12 +264,26 @@ class _SettingsSheetState extends State<SettingsSheet> {
               ],
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _search,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.search),
-                labelText: l10n.settingsSearchLabel,
+            Focus(
+              onKeyEvent: (FocusNode node, KeyEvent event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                  node.nextFocus();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                  node.previousFocus();
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
+              },
+              child: TextField(
+                controller: _search,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  labelText: l10n.settingsSearchLabel,
+                ),
               ),
             ),
             const SizedBox(height: 10),
