@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show ProcessException;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -20,6 +21,7 @@ import '../l10n/l10n.dart';
 import '../services/mqtt_user_api_service.dart';
 import '../services/export_import_service.dart';
 import '../services/desktop_projector_bridge.dart';
+import '../services/external_command_service.dart';
 import '../services/macos_file_panels.dart';
 import '../services/blank_image_storage.dart';
 import '../services/web_diavetito_url.dart';
@@ -91,6 +93,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _blankPicPath;
   late final TextEditingController _diaExportPath;
   final BlankImageStore _blankImageStore = BlankImageStore();
+  final ExternalCommandService _externalCommandService =
+      const ExternalCommandService();
   late final TextEditingController _projFontSize;
   late final TextEditingController _projTitleSize;
   late final TextEditingController _projLeftIndent;
@@ -98,6 +102,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _projBorderT;
   late final TextEditingController _projBorderR;
   late final TextEditingController _projBorderB;
+  late final TextEditingController _externalCommandOnStart;
+  late final TextEditingController _externalCommandOnExit;
+  late final TextEditingController _externalCommandOnProjectionOn;
+  late final TextEditingController _externalCommandOnProjectionOff;
   late int _projSpacingStep;
   late int _projKottaArany;
   late int _projAkkordArany;
@@ -172,6 +180,18 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projBorderT = TextEditingController(text: s.projBorderT.toString());
     _projBorderR = TextEditingController(text: s.projBorderR.toString());
     _projBorderB = TextEditingController(text: s.projBorderB.toString());
+    _externalCommandOnStart = TextEditingController(
+      text: s.externalCommandOnStart,
+    );
+    _externalCommandOnExit = TextEditingController(
+      text: s.externalCommandOnExit,
+    );
+    _externalCommandOnProjectionOn = TextEditingController(
+      text: s.externalCommandOnProjectionOn,
+    );
+    _externalCommandOnProjectionOff = TextEditingController(
+      text: s.externalCommandOnProjectionOff,
+    );
     _projSpacingStep = s.projSpacingStep.clamp(0, 10);
     _projKottaArany = s.projKottaArany.clamp(10, 200);
     _projAkkordArany = s.projAkkordArany.clamp(10, 200);
@@ -281,6 +301,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projBorderT.dispose();
     _projBorderR.dispose();
     _projBorderB.dispose();
+    _externalCommandOnStart.dispose();
+    _externalCommandOnExit.dispose();
+    _externalCommandOnProjectionOn.dispose();
+    _externalCommandOnProjectionOff.dispose();
     super.dispose();
   }
 
@@ -329,14 +353,19 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       query,
       'altalanos tema nyelv language gorgetheto akkord kotta hatterkep szokiemeles',
     );
-    final bool showSpeech = !kIsWeb && _matches(
-      query,
-      'beszedfelismero speech recognition mikrofon',
-    );
+    final bool showSpeech =
+        !kIsWeb &&
+        _matches(query, 'beszedfelismero speech recognition mikrofon');
     final bool showSystem = _matches(
       query,
       'rendszer kilepes leallas stop shutdown epstop epshutdown',
     );
+    final bool showExternalCommands =
+        _supportsExternalCommandsPlatform() &&
+        _matches(
+          query,
+          'kulso vezerles parancs shell command inditas kilepes vetites',
+        );
     final bool showHotkeys =
         desktopHotkeysAvailable &&
         _matches(
@@ -356,6 +385,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         showGeneral ||
         showSpeech ||
         showSystem ||
+        showExternalCommands ||
         showHotkeys ||
         showApiKeys ||
         showImpresszum;
@@ -489,7 +519,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openGeneralSettings,
                       description: l10n.settingsGeneralDescription,
                     ),
-                  if (showGeneral && (showSpeech || showSystem || showHotkeys))
+                  if (showGeneral &&
+                      (showSpeech ||
+                          showExternalCommands ||
+                          showSystem ||
+                          showHotkeys))
                     const Divider(height: 1),
                   if (showSpeech)
                     _settingsTile(
@@ -498,7 +532,18 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       subtitle: Text(l10n.speechSettingsSummary),
                       onTap: _openSpeechSettings,
                     ),
-                  if (showSpeech && (showSystem || showHotkeys))
+                  if (showSpeech &&
+                      (showExternalCommands || showSystem || showHotkeys))
+                    const Divider(height: 1),
+                  if (showExternalCommands)
+                    _settingsTile(
+                      leading: const Icon(Icons.terminal),
+                      title: Text(l10n.externalCommandsTitle),
+                      subtitle: Text(l10n.externalCommandsSummary),
+                      onTap: _openExternalCommandSettings,
+                      description: l10n.externalCommandsDescription,
+                    ),
+                  if (showExternalCommands && (showSystem || showHotkeys))
                     const Divider(height: 1),
                   if (showSystem)
                     _settingsTile(
@@ -1281,13 +1326,13 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           bytes: png,
         );
       } else {
-        final FileSaveLocation? location =
-            await DesktopProjectorBridge.instance.runWithNativeDialog(
-          () => showFileSavePanel(
-            suggestedName: fileName,
-            extensions: const <String>['png'],
-          ),
-        );
+        final FileSaveLocation? location = await DesktopProjectorBridge.instance
+            .runWithNativeDialog(
+              () => showFileSavePanel(
+                suggestedName: fileName,
+                extensions: const <String>['png'],
+              ),
+            );
         if (location == null) {
           return;
         }
@@ -1606,6 +1651,158 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
+  Future<void> _openExternalCommandSettings() {
+    final String originalOnStart = _externalCommandOnStart.text;
+    final String originalOnExit = _externalCommandOnExit.text;
+    final String originalOnProjectionOn = _externalCommandOnProjectionOn.text;
+    final String originalOnProjectionOff = _externalCommandOnProjectionOff.text;
+
+    return _openSectionSheet(
+      title: context.l10n.externalCommandsTitle,
+      showCancelButton: true,
+      onConfirmClose: _applyExternalCommandSettings,
+      onCancel: () {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _externalCommandOnStart.text = originalOnStart;
+          _externalCommandOnExit.text = originalOnExit;
+          _externalCommandOnProjectionOn.text = originalOnProjectionOn;
+          _externalCommandOnProjectionOff.text = originalOnProjectionOff;
+        });
+      },
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          Text(l10n.externalCommandsHint),
+          const SizedBox(height: 8),
+          _externalCommandField(
+            controller: _externalCommandOnStart,
+            label: l10n.externalCommandOnStart,
+            setBoth: setBoth,
+          ),
+          const SizedBox(height: 8),
+          _externalCommandField(
+            controller: _externalCommandOnExit,
+            label: l10n.externalCommandOnExit,
+            setBoth: setBoth,
+          ),
+          const SizedBox(height: 8),
+          _externalCommandField(
+            controller: _externalCommandOnProjectionOn,
+            label: l10n.externalCommandOnProjectionOn,
+            setBoth: setBoth,
+          ),
+          const SizedBox(height: 8),
+          _externalCommandField(
+            controller: _externalCommandOnProjectionOff,
+            label: l10n.externalCommandOnProjectionOff,
+            setBoth: setBoth,
+          ),
+        ];
+      },
+    );
+  }
+
+  Widget _externalCommandField({
+    required TextEditingController controller,
+    required String label,
+    required void Function(void Function()) setBoth,
+  }) {
+    final bool hasCommand = controller.text.trim().isNotEmpty;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Expanded(
+          child: TextField(
+            controller: controller,
+            onChanged: (_) => setBoth(() {}),
+            decoration: InputDecoration(labelText: label),
+          ),
+        ),
+        IconButton(
+          tooltip: context.l10n.externalCommandClear,
+          onPressed: hasCommand ? () => setBoth(controller.clear) : null,
+          icon: const Icon(Icons.delete_outline),
+        ),
+        OutlinedButton(
+          onPressed: hasCommand
+              ? () => unawaited(_testExternalCommand(controller.text))
+              : null,
+          child: Text(context.l10n.externalCommandTest),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _testExternalCommand(String command) async {
+    try {
+      final ExternalCommandTestResult result = await _externalCommandService
+          .test(command);
+      if (!mounted) {
+        return;
+      }
+      final l10n = context.l10n;
+      final String message;
+      if (result.succeeded) {
+        message = l10n.externalCommandTestStarted;
+      } else {
+        final String error = result.errorOutput.trim().isEmpty
+            ? l10n.externalCommandTestExitCode(result.exitCode!)
+            : result.errorOutput.trim();
+        message = l10n.externalCommandTestFailed(error);
+      }
+      await _showExternalCommandTestDialog(
+        title: result.succeeded
+            ? l10n.externalCommandTestSucceededTitle
+            : l10n.externalCommandTestFailedTitle,
+        message: message,
+      );
+    } on ProcessException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      await _showExternalCommandTestDialog(
+        title: context.l10n.externalCommandTestFailedTitle,
+        message: context.l10n.externalCommandTestFailed('$error'),
+      );
+    }
+  }
+
+  Future<void> _showExternalCommandTestDialog({
+    required String title,
+    required String message,
+  }) {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(context.l10n.ok),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  bool _applyExternalCommandSettings() {
+    final AppSettings updated = widget.initialSettings.copyWith(
+      externalCommandOnStart: _externalCommandOnStart.text.trim(),
+      externalCommandOnExit: _externalCommandOnExit.text.trim(),
+      externalCommandOnProjectionOn: _externalCommandOnProjectionOn.text.trim(),
+      externalCommandOnProjectionOff: _externalCommandOnProjectionOff.text
+          .trim(),
+    );
+    unawaited(_applySettingsSafely(updated));
+    return true;
+  }
+
   Future<void> _openSystemActions() {
     return _openSectionSheet(
       title: context.l10n.systemActionsTitle,
@@ -1655,9 +1852,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       final bool hasPerm = await capture.hasPermission();
       if (!hasPerm) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.liveSubtitlesError)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.liveSubtitlesError)));
         }
         return;
       }
@@ -1749,78 +1946,125 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 
   static const _speechLanguageCodes = <String>[
-    'auto', 'es-US', 'es-ES', 'it-IT', 'pt-BR', 'pt-PT', 'hi-IN', 'ko-KR',
-    'en-US', 'en-GB', 'de-DE', 'fr-FR', 'fr-CA', 'ru-RU', 'tr-TR', 'vi-VN',
-    'nl-NL', 'ja-JP', 'ar-AR', 'uk-UA', 'pl-PL', 'nb-NO', 'fi-FI', 'zh-CN',
-    'cs-CZ', 'bg-BG', 'sk-SK', 'sv-SE', 'hr-HR', 'ro-RO', 'et-EE', 'da-DK',
+    'auto',
+    'es-US',
+    'es-ES',
+    'it-IT',
+    'pt-BR',
+    'pt-PT',
+    'hi-IN',
+    'ko-KR',
+    'en-US',
+    'en-GB',
+    'de-DE',
+    'fr-FR',
+    'fr-CA',
+    'ru-RU',
+    'tr-TR',
+    'vi-VN',
+    'nl-NL',
+    'ja-JP',
+    'ar-AR',
+    'uk-UA',
+    'pl-PL',
+    'nb-NO',
+    'fi-FI',
+    'zh-CN',
+    'cs-CZ',
+    'bg-BG',
+    'sk-SK',
+    'sv-SE',
+    'hr-HR',
+    'ro-RO',
+    'et-EE',
+    'da-DK',
     'hu-HU',
   ];
 
   String _speechLanguageName(String code, AppLocalizations l10n) {
     switch (code) {
-      case 'auto': return l10n.speechLangAuto;
-      case 'es-US': return l10n.speechLangEsUS;
-      case 'es-ES': return l10n.speechLangEsES;
-      case 'it-IT': return l10n.speechLangItIT;
-      case 'pt-BR': return l10n.speechLangPtBR;
-      case 'pt-PT': return l10n.speechLangPtPT;
-      case 'hi-IN': return l10n.speechLangHiIN;
-      case 'ko-KR': return l10n.speechLangKoKR;
-      case 'en-US': return l10n.speechLangEnUS;
-      case 'en-GB': return l10n.speechLangEnGB;
-      case 'de-DE': return l10n.speechLangDeDE;
-      case 'fr-FR': return l10n.speechLangFrFR;
-      case 'fr-CA': return l10n.speechLangFrCA;
-      case 'ru-RU': return l10n.speechLangRuRU;
-      case 'tr-TR': return l10n.speechLangTrTR;
-      case 'vi-VN': return l10n.speechLangViVN;
-      case 'nl-NL': return l10n.speechLangNlNL;
-      case 'ja-JP': return l10n.speechLangJaJP;
-      case 'ar-AR': return l10n.speechLangArAR;
-      case 'uk-UA': return l10n.speechLangUkUA;
-      case 'pl-PL': return l10n.speechLangPlPL;
-      case 'nb-NO': return l10n.speechLangNbNO;
-      case 'fi-FI': return l10n.speechLangFiFI;
-      case 'zh-CN': return l10n.speechLangZhCN;
-      case 'cs-CZ': return l10n.speechLangCsCZ;
-      case 'bg-BG': return l10n.speechLangBgBG;
-      case 'sk-SK': return l10n.speechLangSkSK;
-      case 'sv-SE': return l10n.speechLangSvSE;
-      case 'hr-HR': return l10n.speechLangHrHR;
-      case 'ro-RO': return l10n.speechLangRoRO;
-      case 'et-EE': return l10n.speechLangEtEE;
-      case 'da-DK': return l10n.speechLangDaDK;
-      case 'hu-HU': return l10n.speechLangHuHU;
-      default: return code;
+      case 'auto':
+        return l10n.speechLangAuto;
+      case 'es-US':
+        return l10n.speechLangEsUS;
+      case 'es-ES':
+        return l10n.speechLangEsES;
+      case 'it-IT':
+        return l10n.speechLangItIT;
+      case 'pt-BR':
+        return l10n.speechLangPtBR;
+      case 'pt-PT':
+        return l10n.speechLangPtPT;
+      case 'hi-IN':
+        return l10n.speechLangHiIN;
+      case 'ko-KR':
+        return l10n.speechLangKoKR;
+      case 'en-US':
+        return l10n.speechLangEnUS;
+      case 'en-GB':
+        return l10n.speechLangEnGB;
+      case 'de-DE':
+        return l10n.speechLangDeDE;
+      case 'fr-FR':
+        return l10n.speechLangFrFR;
+      case 'fr-CA':
+        return l10n.speechLangFrCA;
+      case 'ru-RU':
+        return l10n.speechLangRuRU;
+      case 'tr-TR':
+        return l10n.speechLangTrTR;
+      case 'vi-VN':
+        return l10n.speechLangViVN;
+      case 'nl-NL':
+        return l10n.speechLangNlNL;
+      case 'ja-JP':
+        return l10n.speechLangJaJP;
+      case 'ar-AR':
+        return l10n.speechLangArAR;
+      case 'uk-UA':
+        return l10n.speechLangUkUA;
+      case 'pl-PL':
+        return l10n.speechLangPlPL;
+      case 'nb-NO':
+        return l10n.speechLangNbNO;
+      case 'fi-FI':
+        return l10n.speechLangFiFI;
+      case 'zh-CN':
+        return l10n.speechLangZhCN;
+      case 'cs-CZ':
+        return l10n.speechLangCsCZ;
+      case 'bg-BG':
+        return l10n.speechLangBgBG;
+      case 'sk-SK':
+        return l10n.speechLangSkSK;
+      case 'sv-SE':
+        return l10n.speechLangSvSE;
+      case 'hr-HR':
+        return l10n.speechLangHrHR;
+      case 'ro-RO':
+        return l10n.speechLangRoRO;
+      case 'et-EE':
+        return l10n.speechLangEtEE;
+      case 'da-DK':
+        return l10n.speechLangDaDK;
+      case 'hu-HU':
+        return l10n.speechLangHuHU;
+      default:
+        return code;
     }
   }
 
-  Future<void> _openLanguageSelector(
-    void Function(void Function()) setBoth,
-  ) {
+  Future<void> _openLanguageSelector(void Function(void Function()) setBoth) {
     final l10n = context.l10n;
     return _openSectionSheet(
       title: l10n.speechLanguageTitle,
-      builder: (BuildContext context, void Function(void Function()) setModalBoth) {
-        return <Widget>[
-          RadioListTile<String>(
-            contentPadding: EdgeInsets.zero,
-            title: Text(l10n.speechLangAuto),
-            value: 'auto',
-            groupValue: _liveSubtitleLanguage,
-            onChanged: (String? v) {
-              if (v != null) {
-                setBoth(() => _liveSubtitleLanguage = v);
-                setModalBoth(() {});
-              }
-            },
-          ),
-          for (final code in _speechLanguageCodes)
-            if (code != 'auto')
+      builder:
+          (BuildContext context, void Function(void Function()) setModalBoth) {
+            return <Widget>[
               RadioListTile<String>(
                 contentPadding: EdgeInsets.zero,
-                title: Text(_speechLanguageName(code, l10n)),
-                value: code,
+                title: Text(l10n.speechLangAuto),
+                value: 'auto',
                 groupValue: _liveSubtitleLanguage,
                 onChanged: (String? v) {
                   if (v != null) {
@@ -1829,8 +2073,22 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                   }
                 },
               ),
-        ];
-      },
+              for (final code in _speechLanguageCodes)
+                if (code != 'auto')
+                  RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(_speechLanguageName(code, l10n)),
+                    value: code,
+                    groupValue: _liveSubtitleLanguage,
+                    onChanged: (String? v) {
+                      if (v != null) {
+                        setBoth(() => _liveSubtitleLanguage = v);
+                        setModalBoth(() {});
+                      }
+                    },
+                  ),
+            ];
+          },
     );
   }
 
@@ -1871,10 +2129,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             url: 'https://szentiras.eu',
           ),
           const Divider(height: 1),
-          _impresszumSection(
-            l10n.impresszumLicenses,
-            null,
-          ),
+          _impresszumSection(l10n.impresszumLicenses, null),
           ListTile(
             contentPadding: EdgeInsets.zero,
             dense: true,
@@ -1896,10 +2151,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             title: Text(l10n.impresszumRecord),
           ),
           const Divider(height: 1),
-          _impresszumSection(
-            l10n.impresszumLinks,
-            null,
-          ),
+          _impresszumSection(l10n.impresszumLinks, null),
           _impresszumLink(
             label: l10n.impresszumWebsite,
             subtitle: 'diatar.eu',
@@ -1928,10 +2180,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         children: <Widget>[
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
           if (body != null) ...<Widget>[
             const SizedBox(height: 4),
@@ -2051,7 +2300,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       final String fileName = _backupFileName(DateTime.now());
 
       if (kIsWeb) {
-        final Uint8List zipData = await _exportImportService.createExportArchive();
+        final Uint8List zipData = await _exportImportService
+            .createExportArchive();
         final XFile exportFile = XFile.fromData(
           zipData,
           mimeType: 'application/zip',
@@ -2059,8 +2309,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         );
         await exportFile.saveTo(fileName);
       } else {
-        final String zipPath =
-            await _exportImportService.createExportArchiveFile();
+        final String zipPath = await _exportImportService
+            .createExportArchiveFile();
         tempExportDir = FileSystemProvider.instance.file(zipPath).parent.path;
         if (defaultTargetPlatform == TargetPlatform.android) {
           try {
@@ -2104,8 +2354,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     } finally {
       if (tempExportDir != null) {
         try {
-          final Directory tempDir =
-              FileSystemProvider.instance.directory(tempExportDir);
+          final Directory tempDir = FileSystemProvider.instance.directory(
+            tempExportDir,
+          );
           if (await tempDir.exists()) {
             await tempDir.delete(recursive: true);
           }
@@ -2148,14 +2399,13 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     String? tempArchivePath;
     setBoth(() => _fileTransferRunning = true);
     try {
-      final List<XFile> selectedFiles =
-          await DesktopProjectorBridge.instance.runWithNativeDialog(
-        () => showFileOpenPanel(
-          extensions: const <String>['zip'],
-        ),
-      );
-      final XFile? selectedFile =
-          selectedFiles.isEmpty ? null : selectedFiles.first;
+      final List<XFile> selectedFiles = await DesktopProjectorBridge.instance
+          .runWithNativeDialog(
+            () => showFileOpenPanel(extensions: const <String>['zip']),
+          );
+      final XFile? selectedFile = selectedFiles.isEmpty
+          ? null
+          : selectedFiles.first;
       if (selectedFile == null) {
         return;
       }
@@ -2851,6 +3101,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     return kIsWeb || _isDesktopPlatform();
   }
 
+  bool _supportsExternalCommandsPlatform() {
+    if (kIsWeb) {
+      return false;
+    }
+    return defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
+  }
+
   String _eventToCombo(KeyEvent event) {
     final LogicalKeyboardKey key = event.logicalKey;
     if (_isModifierKey(key)) {
@@ -3543,10 +3801,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   Future<void> _pickBlankFile() async {
     final List<XFile> files = await DesktopProjectorBridge.instance
         .runWithNativeDialog(
-      () => showFileOpenPanel(
-        extensions: const <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
-      ),
-    );
+          () => showFileOpenPanel(
+            extensions: const <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
+          ),
+        );
     final XFile? file = files.isEmpty ? null : files.first;
     if (!mounted || file == null) {
       return;
@@ -3580,10 +3838,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   }
 
   Future<void> _pickDiaExportFolder() async {
-    final String? folderPath =
-        await DesktopProjectorBridge.instance.runWithNativeDialog(
-      showDirectoryPicker,
-    );
+    final String? folderPath = await DesktopProjectorBridge.instance
+        .runWithNativeDialog(showDirectoryPicker);
     if (!mounted || folderPath == null) {
       return;
     }

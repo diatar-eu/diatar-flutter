@@ -1279,6 +1279,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get systemActionsBack => 'Back';
 
   @override
+  String get externalCommandsTitle => 'External commands';
+
+  @override
+  String get externalCommandsSummary =>
+      'Run shell commands for application and projection events';
+
+  @override
+  String get externalCommandsDescription =>
+      'Configure shell commands that run on Windows and Linux when the application or projection state changes.';
+
+  @override
+  String get externalCommandsHint =>
+      'Leave a field empty to skip that event. Commands run through the operating system shell.';
+
+  @override
+  String get externalCommandOnStart => 'When the application starts';
+
+  @override
+  String get externalCommandOnExit => 'When the application exits';
+
+  @override
+  String get externalCommandOnProjectionOn => 'When projection turns on';
+
+  @override
+  String get externalCommandOnProjectionOff => 'When projection turns off';
+
+  @override
+  String get externalCommandClear => 'Clear command';
+
+  @override
+  String get externalCommandTest => 'Test';
+
+  @override
+  String get externalCommandTestStarted => 'Command started.';
+
+  @override
+  String get externalCommandTestSucceededTitle => 'Test successful';
+
+  @override
+  String get externalCommandTestFailedTitle => 'Test failed';
+
+  @override
+  String externalCommandTestFailed(Object error) {
+    return 'Could not start command: $error';
+  }
+
+  @override
+  String externalCommandTestExitCode(int code) {
+    return 'The command exited with code $code.';
+  }
+
+  @override
   String get localExit => 'Exit';
 
   @override

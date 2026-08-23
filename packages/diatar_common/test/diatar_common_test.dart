@@ -10,7 +10,27 @@ void main() {
     const AppSettings s = AppSettings();
     expect(s.port, 1024);
     expect(s.tcpEnabled, false);
-    expect(s.copyWith(tcpTargets: const <String>['127.0.0.1']).tcpEnabled, true);
+    expect(
+      s.copyWith(tcpTargets: const <String>['127.0.0.1']).tcpEnabled,
+      true,
+    );
+  });
+
+  test('external command settings survive copy and map conversions', () {
+    const AppSettings settings = AppSettings(
+      externalCommandOnStart: 'start-command',
+      externalCommandOnExit: 'exit-command',
+      externalCommandOnProjectionOn: 'projection-on-command',
+      externalCommandOnProjectionOff: 'projection-off-command',
+    );
+
+    final AppSettings copied = settings.copyWith();
+    final AppSettings restored = AppSettings.fromMap(settings.toMap());
+
+    expect(copied.externalCommandOnStart, 'start-command');
+    expect(copied.externalCommandOnExit, 'exit-command');
+    expect(restored.externalCommandOnProjectionOn, 'projection-on-command');
+    expect(restored.externalCommandOnProjectionOff, 'projection-off-command');
   });
 
   test('packet parser rebuilds records from split chunks', () {
@@ -346,12 +366,12 @@ void main() {
       settings: const AppSettings(),
     );
 
-    final List<List<bool>> continuations =
-        painter.debugTieUnderlineRowContinuationsForLine(
-      r'pre \(aa bb cc dd ee ff gg hh ii jj kk ll\) post',
-      fontSize: 24,
-      maxWidth: 90,
-    );
+    final List<List<bool>> continuations = painter
+        .debugTieUnderlineRowContinuationsForLine(
+          r'pre \(aa bb cc dd ee ff gg hh ii jj kk ll\) post',
+          fontSize: 24,
+          maxWidth: 90,
+        );
 
     expect(continuations.length, greaterThan(2));
     expect(continuations.first.first, false);
@@ -372,11 +392,7 @@ void main() {
       lineGap: 4,
     );
     final Offset apexWithMiddle = painter.debugSlurApexForPoints(
-      <Offset>[
-        const Offset(0, 10),
-        const Offset(10, 4),
-        const Offset(20, 10),
-      ],
+      <Offset>[const Offset(0, 10), const Offset(10, 4), const Offset(20, 10)],
       down: false,
       lineGap: 4,
     );
@@ -393,14 +409,8 @@ void main() {
       settings: const AppSettings(),
     );
 
-    expect(
-      painter.debugSlurYOffsetForDirection(down: false, lineGap: 4),
-      -4,
-    );
-    expect(
-      painter.debugSlurYOffsetForDirection(down: true, lineGap: 4),
-      4,
-    );
+    expect(painter.debugSlurYOffsetForDirection(down: false, lineGap: 4), -4);
+    expect(painter.debugSlurYOffsetForDirection(down: true, lineGap: 4), 4);
   });
 
   test('kotta control sequences do not create intra-word wrap points', () {
@@ -418,7 +428,8 @@ void main() {
 
     bool hasBadSplit(String leftSuffix, String rightPrefix) {
       for (int i = 0; i + 1 < rows.length; i++) {
-        if (rows[i].endsWith(leftSuffix) && rows[i + 1].startsWith(rightPrefix)) {
+        if (rows[i].endsWith(leftSuffix) &&
+            rows[i + 1].startsWith(rightPrefix)) {
           return true;
         }
       }
@@ -541,23 +552,26 @@ void main() {
     expect(rows[1], startsWith('bb'));
   });
 
-  test('preferred break is ignored when it would leave the next line too wide', () {
-    final ProjectorPainter painter = ProjectorPainter(
-      frame: null,
-      globals: const ProjectionGlobals(useKotta: false, hCenter: false),
-      settings: const AppSettings(receiverUseKotta: false),
-    );
+  test(
+    'preferred break is ignored when it would leave the next line too wide',
+    () {
+      final ProjectorPainter painter = ProjectorPainter(
+        frame: null,
+        globals: const ProjectionGlobals(useKotta: false, hCenter: false),
+        settings: const AppSettings(receiverUseKotta: false),
+      );
 
-    final List<String> rows = painter.debugTextWrappedRowsForLine(
-      r'minekünk\.véghetetlen kegyességében',
-      fontSize: 24,
-      maxWidth: 120,
-    );
+      final List<String> rows = painter.debugTextWrappedRowsForLine(
+        r'minekünk\.véghetetlen kegyességében',
+        fontSize: 24,
+        maxWidth: 120,
+      );
 
-    expect(rows.length, greaterThanOrEqualTo(2));
-    expect(rows.first, 'minekünk véghetetlen');
-    expect(rows[1], 'kegyességében');
-  });
+      expect(rows.length, greaterThanOrEqualTo(2));
+      expect(rows.first, 'minekünk véghetetlen');
+      expect(rows[1], 'kegyességében');
+    },
+  );
 
   test('normal hyphen creates wrap opportunity like space', () {
     final ProjectorPainter painter = ProjectorPainter(
@@ -577,23 +591,26 @@ void main() {
     expect(rows[1].startsWith('cd'), true);
   });
 
-  test('fallback wrap breaks before the final word when no preferred break exists', () {
-    final ProjectorPainter painter = ProjectorPainter(
-      frame: null,
-      globals: const ProjectionGlobals(useKotta: false, hCenter: false),
-      settings: const AppSettings(receiverUseKotta: false),
-    );
+  test(
+    'fallback wrap breaks before the final word when no preferred break exists',
+    () {
+      final ProjectorPainter painter = ProjectorPainter(
+        frame: null,
+        globals: const ProjectionGlobals(useKotta: false, hCenter: false),
+        settings: const AppSettings(receiverUseKotta: false),
+      );
 
-    final List<String> rows = painter.debugTextWrappedRowsForLine(
-      'véghetetlen kegyességében',
-      fontSize: 24,
-      maxWidth: 110,
-    );
+      final List<String> rows = painter.debugTextWrappedRowsForLine(
+        'véghetetlen kegyességében',
+        fontSize: 24,
+        maxWidth: 110,
+      );
 
-    expect(rows.length, greaterThanOrEqualTo(2));
-    expect(rows.first, contains('véghetetlen'));
-    expect(rows[1], startsWith('kegyességében'));
-  });
+      expect(rows.length, greaterThanOrEqualTo(2));
+      expect(rows.first, contains('véghetetlen'));
+      expect(rows[1], startsWith('kegyességében'));
+    },
+  );
 
   test('logo background stays green between fade in and fade out', () {
     final ProjectorPainter painter = ProjectorPainter(

@@ -940,6 +940,33 @@
   "systemActionsTitle": "System actions",
   "systemActionsSummary": "Exit, refresh, remote program stop, remote machine stop",
   "systemActionsBack": "Back",
+  "externalCommandsTitle": "External commands",
+  "externalCommandsSummary": "Run shell commands for application and projection events",
+  "externalCommandsDescription": "Configure shell commands that run on Windows and Linux when the application or projection state changes.",
+  "externalCommandsHint": "Leave a field empty to skip that event. Commands run through the operating system shell.",
+  "externalCommandOnStart": "When the application starts",
+  "externalCommandOnExit": "When the application exits",
+  "externalCommandOnProjectionOn": "When projection turns on",
+  "externalCommandOnProjectionOff": "When projection turns off",
+  "externalCommandClear": "Clear command",
+  "externalCommandTest": "Test",
+  "externalCommandTestStarted": "Command started.",
+  "externalCommandTestSucceededTitle": "Test successful",
+  "externalCommandTestFailedTitle": "Test failed",
+  "externalCommandTestFailed": "Could not start command: {error}",
+  "@externalCommandTestFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "externalCommandTestExitCode": "The command exited with code {code}.",
+  "@externalCommandTestExitCode": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
   "localExit": "Exit",
   "remoteProgramStop": "Remote program stop",
   "remoteMachineStop": "Remote machine stop",

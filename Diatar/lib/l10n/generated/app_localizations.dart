@@ -2261,6 +2261,96 @@ abstract class AppLocalizations {
   /// **'Vissza'**
   String get systemActionsBack;
 
+  /// No description provided for @externalCommandsTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Külső parancsok'**
+  String get externalCommandsTitle;
+
+  /// No description provided for @externalCommandsSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Shell parancsok futtatása program- és vetítési eseményekkor'**
+  String get externalCommandsSummary;
+
+  /// No description provided for @externalCommandsDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'Windows és Linux rendszeren a program vagy a vetítés állapotának változásakor futó shell parancsok beállítása.'**
+  String get externalCommandsDescription;
+
+  /// No description provided for @externalCommandsHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Az üresen hagyott eseményhez nem fut parancs. A parancsokat az operációs rendszer parancsértelmezője indítja.'**
+  String get externalCommandsHint;
+
+  /// No description provided for @externalCommandOnStart.
+  ///
+  /// In hu, this message translates to:
+  /// **'A program indulásakor'**
+  String get externalCommandOnStart;
+
+  /// No description provided for @externalCommandOnExit.
+  ///
+  /// In hu, this message translates to:
+  /// **'A program kilépésekor'**
+  String get externalCommandOnExit;
+
+  /// No description provided for @externalCommandOnProjectionOn.
+  ///
+  /// In hu, this message translates to:
+  /// **'A vetítés bekapcsolásakor'**
+  String get externalCommandOnProjectionOn;
+
+  /// No description provided for @externalCommandOnProjectionOff.
+  ///
+  /// In hu, this message translates to:
+  /// **'A vetítés kikapcsolásakor'**
+  String get externalCommandOnProjectionOff;
+
+  /// No description provided for @externalCommandClear.
+  ///
+  /// In hu, this message translates to:
+  /// **'Parancs törlése'**
+  String get externalCommandClear;
+
+  /// No description provided for @externalCommandTest.
+  ///
+  /// In hu, this message translates to:
+  /// **'Teszt'**
+  String get externalCommandTest;
+
+  /// No description provided for @externalCommandTestStarted.
+  ///
+  /// In hu, this message translates to:
+  /// **'A parancs elindult.'**
+  String get externalCommandTestStarted;
+
+  /// No description provided for @externalCommandTestSucceededTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Teszt sikeres'**
+  String get externalCommandTestSucceededTitle;
+
+  /// No description provided for @externalCommandTestFailedTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Teszt sikertelen'**
+  String get externalCommandTestFailedTitle;
+
+  /// No description provided for @externalCommandTestFailed.
+  ///
+  /// In hu, this message translates to:
+  /// **'A parancs indítása sikertelen: {error}'**
+  String externalCommandTestFailed(Object error);
+
+  /// No description provided for @externalCommandTestExitCode.
+  ///
+  /// In hu, this message translates to:
+  /// **'A parancs {code} hibakóddal fejeződött be.'**
+  String externalCommandTestExitCode(int code);
+
   /// No description provided for @localExit.
   ///
   /// In hu, this message translates to:

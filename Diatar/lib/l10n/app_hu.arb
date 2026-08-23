@@ -940,6 +940,33 @@
   "systemActionsTitle": "Rendszer műveletek",
   "systemActionsSummary": "Kilépés, frissítés, távoli program leállítása, távoli gép leállítása",
   "systemActionsBack": "Vissza",
+  "externalCommandsTitle": "Külső parancsok",
+  "externalCommandsSummary": "Shell parancsok futtatása program- és vetítési eseményekkor",
+  "externalCommandsDescription": "Windows és Linux rendszeren a program vagy a vetítés állapotának változásakor futó shell parancsok beállítása.",
+  "externalCommandsHint": "Az üresen hagyott eseményhez nem fut parancs. A parancsokat az operációs rendszer parancsértelmezője indítja.",
+  "externalCommandOnStart": "A program indulásakor",
+  "externalCommandOnExit": "A program kilépésekor",
+  "externalCommandOnProjectionOn": "A vetítés bekapcsolásakor",
+  "externalCommandOnProjectionOff": "A vetítés kikapcsolásakor",
+  "externalCommandClear": "Parancs törlése",
+  "externalCommandTest": "Teszt",
+  "externalCommandTestStarted": "A parancs elindult.",
+  "externalCommandTestSucceededTitle": "Teszt sikeres",
+  "externalCommandTestFailedTitle": "Teszt sikertelen",
+  "externalCommandTestFailed": "A parancs indítása sikertelen: {error}",
+  "@externalCommandTestFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "externalCommandTestExitCode": "A parancs {code} hibakóddal fejeződött be.",
+  "@externalCommandTestExitCode": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
   "localExit": "Kilépés",
   "remoteProgramStop": "Távoli program leállítása",
   "remoteMachineStop": "Távoli gép leállítása",

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform, exit;
+import 'dart:io' show Platform, ProcessException, exit;
 import 'dart:math' as math;
 
 import 'package:diatar_common/diatar_common.dart';
@@ -33,6 +33,7 @@ import '../models/custom_order_entry.dart';
 import '../models/custom_order_set.dart';
 import '../services/mqtt_sender_service.dart';
 import '../services/desktop_projector_bridge.dart';
+import '../services/external_command_service.dart';
 import '../services/dtx_download_service.dart';
 import '../services/dtz_download_service.dart';
 import '../services/dtx_library_service.dart';
@@ -182,6 +183,8 @@ class DiatarMainController extends ChangeNotifier {
   );
   final DesktopProjectorBridge _desktopProjectorBridge =
       DesktopProjectorBridge.instance;
+  final ExternalCommandService _externalCommandService =
+      const ExternalCommandService();
 
   List<DtxBook> books = <DtxBook>[];
   int bookIndex = 0;
@@ -191,6 +194,7 @@ class DiatarMainController extends ChangeNotifier {
   int _renderedHighlightWordCount = -1;
   bool _highlightFullyRendered = false;
   bool showing = false;
+  bool _exitRequested = false;
   bool loading = false;
   bool pendingOnboarding = false;
   AppSettings settings = const AppSettings();
@@ -830,6 +834,7 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<void> init() async {
     settings = await _settingsStore.load();
+    unawaited(_runExternalCommand(settings.externalCommandOnStart));
     _transpositions = await _settingsStore.loadTranspositions();
     _lastSongPerBook = await _settingsStore.loadLastSongPerBook();
     _lastVersePerBook = await _settingsStore.loadLastVersePerBook();
@@ -3610,6 +3615,13 @@ class DiatarMainController extends ChangeNotifier {
 
   void toggleShowing() {
     showing = !showing;
+    unawaited(
+      _runExternalCommand(
+        showing
+            ? settings.externalCommandOnProjectionOn
+            : settings.externalCommandOnProjectionOff,
+      ),
+    );
     _setStatus(showing ? 'statusProjectionOn' : 'statusProjectionOff');
     notifyListeners();
     _syncProjectionOnly();
@@ -4386,6 +4398,11 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> requestExit() async {
+    if (_exitRequested) {
+      return;
+    }
+    _exitRequested = true;
+    await _runExternalCommand(settings.externalCommandOnExit);
     try {
       await _mqttSender.clearRetainedMessages();
     } catch (_) {
@@ -4410,6 +4427,14 @@ class DiatarMainController extends ChangeNotifier {
     try {
       await _mqttSender.clearRetainedMessages();
     } catch (_) {}
+  }
+
+  Future<void> _runExternalCommand(String command) async {
+    try {
+      await _externalCommandService.run(command);
+    } on ProcessException catch (error) {
+      debugPrint('External command failed: $error');
+    }
   }
 
   String _fileExtension(String path) {

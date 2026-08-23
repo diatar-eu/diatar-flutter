@@ -43,7 +43,8 @@ class SettingsStore {
   static const String _kHomeViewMode = 'HomeViewMode';
   static const String _kHomeShowHighlightControls = 'HomeShowHighlightControls';
   static const String _kHomeLayoutMode = 'HomeLayoutMode';
-  static const String _kPresentationControlsVisible = 'PresentationControlsVisible';
+  static const String _kPresentationControlsVisible =
+      'PresentationControlsVisible';
   static const String _kAppThemeMode = 'AppThemeMode';
   static const String _kAppLanguage = 'AppLanguage';
   static const String _kProjectionLocked = 'ProjectionLocked';
@@ -52,6 +53,12 @@ class SettingsStore {
   static const String _kDesktopActionHotkeys = 'DesktopActionHotkeys';
   static const String _kDesktopSongHotkeys = 'DesktopSongHotkeys';
   static const String _kDesktopOrderSetHotkeys = 'DesktopOrderSetHotkeys';
+  static const String _kExternalCommandOnStart = 'ExternalCommandOnStart';
+  static const String _kExternalCommandOnExit = 'ExternalCommandOnExit';
+  static const String _kExternalCommandOnProjectionOn =
+      'ExternalCommandOnProjectionOn';
+  static const String _kExternalCommandOnProjectionOff =
+      'ExternalCommandOnProjectionOff';
   static const String _kUseSound = 'UseSound';
   static const String _kLiveSubtitlesEnabled = 'LiveSubtitlesEnabled';
   static const String _kLiveSubtitleDeviceId = 'LiveSubtitleDeviceId';
@@ -138,10 +145,10 @@ class SettingsStore {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String mqttUser = prefs.getString(_kUser) ?? '';
     final bool internetRelayEnabled =
-      prefs.getBool(_kInternetRelayEnabled) ?? mqttUser.trim().isNotEmpty;
+        prefs.getBool(_kInternetRelayEnabled) ?? mqttUser.trim().isNotEmpty;
     final String mqttPassword = !internetRelayEnabled
-      ? ''
-      : mqttUser.trim().isEmpty
+        ? ''
+        : mqttUser.trim().isEmpty
         ? ''
         : (prefs.getString(_kPassword) ?? '');
     final int legacyPort = prefs.getInt(_kPort) ?? 1024;
@@ -199,10 +206,9 @@ class SettingsStore {
       projBgMode: prefs.getInt(_kProjBgMode) ?? 1,
       projBackTrans: prefs.getInt(_kProjBackTrans) ?? 0,
       projBlankTrans: prefs.getInt(_kProjBlankTrans) ?? 0,
-        projShowBackgroundImage:
-          prefs.getBool(_kProjShowBackgroundImage) ?? true,
+      projShowBackgroundImage: prefs.getBool(_kProjShowBackgroundImage) ?? true,
       homeViewMode: prefs.getInt(_kHomeViewMode) ?? 0,
-        homeShowHighlightControls:
+      homeShowHighlightControls:
           prefs.getBool(_kHomeShowHighlightControls) ?? false,
       homeLayoutMode: prefs.getInt(_kHomeLayoutMode) ?? 0,
       presentationControlsVisible:
@@ -210,24 +216,28 @@ class SettingsStore {
       appThemeMode: prefs.getInt(_kAppThemeMode) ?? 0,
       appLanguage: prefs.getString(_kAppLanguage) ?? '',
       projectionLocked: prefs.getBool(_kProjectionLocked) ?? false,
-      desktopProjectorEnabled:
-          prefs.getBool(_kDesktopProjectorEnabled) ?? true,
-      desktopProjectorMonitor:
-          prefs.getInt(_kDesktopProjectorMonitor) ?? -1,
+      desktopProjectorEnabled: prefs.getBool(_kDesktopProjectorEnabled) ?? true,
+      desktopProjectorMonitor: prefs.getInt(_kDesktopProjectorMonitor) ?? -1,
       desktopActionHotkeys: hasDesktopActionHotkeys
           ? desktopActionHotkeys
           : _defaultDesktopActionHotkeys,
-desktopSongHotkeys: _decodeStringMap(
-         prefs.getStringList(_kDesktopSongHotkeys),
-       ),
-       desktopOrderSetHotkeys: _decodeStringMap(
-         prefs.getStringList(_kDesktopOrderSetHotkeys),
-       ),
-       useSound: prefs.getBool(_kUseSound) ?? false,
-       liveSubtitlesEnabled: prefs.getBool(_kLiveSubtitlesEnabled) ?? false,
-        liveSubtitleDeviceId: prefs.getString(_kLiveSubtitleDeviceId),
-        liveSubtitleLanguage: prefs.getString(_kLiveSubtitleLanguage) ?? 'auto',
-       szentirasApiKey: prefs.getString(_kSzentirasApiKey) ?? '',
+      desktopSongHotkeys: _decodeStringMap(
+        prefs.getStringList(_kDesktopSongHotkeys),
+      ),
+      desktopOrderSetHotkeys: _decodeStringMap(
+        prefs.getStringList(_kDesktopOrderSetHotkeys),
+      ),
+      externalCommandOnStart: prefs.getString(_kExternalCommandOnStart) ?? '',
+      externalCommandOnExit: prefs.getString(_kExternalCommandOnExit) ?? '',
+      externalCommandOnProjectionOn:
+          prefs.getString(_kExternalCommandOnProjectionOn) ?? '',
+      externalCommandOnProjectionOff:
+          prefs.getString(_kExternalCommandOnProjectionOff) ?? '',
+      useSound: prefs.getBool(_kUseSound) ?? false,
+      liveSubtitlesEnabled: prefs.getBool(_kLiveSubtitlesEnabled) ?? false,
+      liveSubtitleDeviceId: prefs.getString(_kLiveSubtitleDeviceId),
+      liveSubtitleLanguage: prefs.getString(_kLiveSubtitleLanguage) ?? 'auto',
+      szentirasApiKey: prefs.getString(_kSzentirasApiKey) ?? '',
       bkColor: Color(prefs.getInt(_kBkColor) ?? 0xFF000000),
       txtColor: Color(prefs.getInt(_kTxColor) ?? 0xFFFFFFFF),
       blankColor: Color(prefs.getInt(_kBlankColor) ?? 0xFF000000),
@@ -306,18 +316,40 @@ desktopSongHotkeys: _decodeStringMap(
       _kDesktopActionHotkeys,
       _encodeStringMap(settings.desktopActionHotkeys),
     );
-await prefs.setStringList(
-       _kDesktopSongHotkeys,
-       _encodeStringMap(settings.desktopSongHotkeys),
-     );
-     await prefs.setStringList(
-       _kDesktopOrderSetHotkeys,
-       _encodeStringMap(settings.desktopOrderSetHotkeys),
-     );
-      await prefs.setBool(_kUseSound, settings.useSound);
-      await prefs.setBool(_kLiveSubtitlesEnabled, settings.liveSubtitlesEnabled);
-      await prefs.setString(_kLiveSubtitleDeviceId, settings.liveSubtitleDeviceId ?? '');
-      await prefs.setString(_kLiveSubtitleLanguage, settings.liveSubtitleLanguage);
+    await prefs.setStringList(
+      _kDesktopSongHotkeys,
+      _encodeStringMap(settings.desktopSongHotkeys),
+    );
+    await prefs.setStringList(
+      _kDesktopOrderSetHotkeys,
+      _encodeStringMap(settings.desktopOrderSetHotkeys),
+    );
+    await prefs.setString(
+      _kExternalCommandOnStart,
+      settings.externalCommandOnStart,
+    );
+    await prefs.setString(
+      _kExternalCommandOnExit,
+      settings.externalCommandOnExit,
+    );
+    await prefs.setString(
+      _kExternalCommandOnProjectionOn,
+      settings.externalCommandOnProjectionOn,
+    );
+    await prefs.setString(
+      _kExternalCommandOnProjectionOff,
+      settings.externalCommandOnProjectionOff,
+    );
+    await prefs.setBool(_kUseSound, settings.useSound);
+    await prefs.setBool(_kLiveSubtitlesEnabled, settings.liveSubtitlesEnabled);
+    await prefs.setString(
+      _kLiveSubtitleDeviceId,
+      settings.liveSubtitleDeviceId ?? '',
+    );
+    await prefs.setString(
+      _kLiveSubtitleLanguage,
+      settings.liveSubtitleLanguage,
+    );
     await prefs.setString(_kSzentirasApiKey, settings.szentirasApiKey);
     await prefs.setInt(_kBkColor, settings.bkColor.toARGB32());
     await prefs.setInt(_kTxColor, settings.txtColor.toARGB32());

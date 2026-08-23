@@ -1285,6 +1285,58 @@ class AppLocalizationsHu extends AppLocalizations {
   String get systemActionsBack => 'Vissza';
 
   @override
+  String get externalCommandsTitle => 'Külső parancsok';
+
+  @override
+  String get externalCommandsSummary =>
+      'Shell parancsok futtatása program- és vetítési eseményekkor';
+
+  @override
+  String get externalCommandsDescription =>
+      'Windows és Linux rendszeren a program vagy a vetítés állapotának változásakor futó shell parancsok beállítása.';
+
+  @override
+  String get externalCommandsHint =>
+      'Az üresen hagyott eseményhez nem fut parancs. A parancsokat az operációs rendszer parancsértelmezője indítja.';
+
+  @override
+  String get externalCommandOnStart => 'A program indulásakor';
+
+  @override
+  String get externalCommandOnExit => 'A program kilépésekor';
+
+  @override
+  String get externalCommandOnProjectionOn => 'A vetítés bekapcsolásakor';
+
+  @override
+  String get externalCommandOnProjectionOff => 'A vetítés kikapcsolásakor';
+
+  @override
+  String get externalCommandClear => 'Parancs törlése';
+
+  @override
+  String get externalCommandTest => 'Teszt';
+
+  @override
+  String get externalCommandTestStarted => 'A parancs elindult.';
+
+  @override
+  String get externalCommandTestSucceededTitle => 'Teszt sikeres';
+
+  @override
+  String get externalCommandTestFailedTitle => 'Teszt sikertelen';
+
+  @override
+  String externalCommandTestFailed(Object error) {
+    return 'A parancs indítása sikertelen: $error';
+  }
+
+  @override
+  String externalCommandTestExitCode(int code) {
+    return 'A parancs $code hibakóddal fejeződött be.';
+  }
+
+  @override
   String get localExit => 'Kilépés';
 
   @override

@@ -56,6 +56,10 @@ class AppSettings {
     this.desktopActionHotkeys = const <String, String>{},
     this.desktopSongHotkeys = const <String, String>{},
     this.desktopOrderSetHotkeys = const <String, String>{},
+    this.externalCommandOnStart = '',
+    this.externalCommandOnExit = '',
+    this.externalCommandOnProjectionOn = '',
+    this.externalCommandOnProjectionOff = '',
     this.receiverUseServerColors = true,
     this.receiverShowHighlight = true,
     this.receiverUseAkkord = true,
@@ -129,6 +133,10 @@ class AppSettings {
   final Map<String, String> desktopActionHotkeys;
   final Map<String, String> desktopSongHotkeys;
   final Map<String, String> desktopOrderSetHotkeys;
+  final String externalCommandOnStart;
+  final String externalCommandOnExit;
+  final String externalCommandOnProjectionOn;
+  final String externalCommandOnProjectionOff;
   final bool receiverUseServerColors;
   final bool receiverShowHighlight;
   final bool receiverUseAkkord;
@@ -209,6 +217,10 @@ class AppSettings {
     Map<String, String>? desktopActionHotkeys,
     Map<String, String>? desktopSongHotkeys,
     Map<String, String>? desktopOrderSetHotkeys,
+    String? externalCommandOnStart,
+    String? externalCommandOnExit,
+    String? externalCommandOnProjectionOn,
+    String? externalCommandOnProjectionOff,
     bool? receiverUseServerColors,
     bool? receiverShowHighlight,
     bool? receiverUseAkkord,
@@ -280,26 +292,34 @@ class AppSettings {
       projectionLocked: projectionLocked ?? this.projectionLocked,
       desktopProjectorEnabled:
           desktopProjectorEnabled ?? this.desktopProjectorEnabled,
-        desktopProjectorMonitor:
-            desktopProjectorMonitor ?? this.desktopProjectorMonitor,
+      desktopProjectorMonitor:
+          desktopProjectorMonitor ?? this.desktopProjectorMonitor,
       desktopActionHotkeys: desktopActionHotkeys ?? this.desktopActionHotkeys,
       desktopSongHotkeys: desktopSongHotkeys ?? this.desktopSongHotkeys,
       desktopOrderSetHotkeys:
           desktopOrderSetHotkeys ?? this.desktopOrderSetHotkeys,
+      externalCommandOnStart:
+          externalCommandOnStart ?? this.externalCommandOnStart,
+      externalCommandOnExit:
+          externalCommandOnExit ?? this.externalCommandOnExit,
+      externalCommandOnProjectionOn:
+          externalCommandOnProjectionOn ?? this.externalCommandOnProjectionOn,
+      externalCommandOnProjectionOff:
+          externalCommandOnProjectionOff ?? this.externalCommandOnProjectionOff,
       receiverUseServerColors:
           receiverUseServerColors ?? this.receiverUseServerColors,
       receiverShowHighlight:
           receiverShowHighlight ?? this.receiverShowHighlight,
       receiverUseAkkord: receiverUseAkkord ?? this.receiverUseAkkord,
       receiverUseKotta: receiverUseKotta ?? this.receiverUseKotta,
-       receiverKeepStartupLogo:
-           receiverKeepStartupLogo ?? this.receiverKeepStartupLogo,
-       useSound: useSound ?? this.useSound,
-       liveSubtitlesEnabled: liveSubtitlesEnabled ?? this.liveSubtitlesEnabled,
-       liveSubtitleDeviceId: liveSubtitleDeviceId ?? this.liveSubtitleDeviceId,
-       liveSubtitleLanguage: liveSubtitleLanguage ?? this.liveSubtitleLanguage,
-       szentirasApiKey: szentirasApiKey ?? this.szentirasApiKey,
-       bkColor: bkColor ?? this.bkColor,
+      receiverKeepStartupLogo:
+          receiverKeepStartupLogo ?? this.receiverKeepStartupLogo,
+      useSound: useSound ?? this.useSound,
+      liveSubtitlesEnabled: liveSubtitlesEnabled ?? this.liveSubtitlesEnabled,
+      liveSubtitleDeviceId: liveSubtitleDeviceId ?? this.liveSubtitleDeviceId,
+      liveSubtitleLanguage: liveSubtitleLanguage ?? this.liveSubtitleLanguage,
+      szentirasApiKey: szentirasApiKey ?? this.szentirasApiKey,
+      bkColor: bkColor ?? this.bkColor,
       txtColor: txtColor ?? this.txtColor,
       blankColor: blankColor ?? this.blankColor,
       hiColor: hiColor ?? this.hiColor,
@@ -337,6 +357,10 @@ class AppSettings {
       'projShowBackgroundImage': projShowBackgroundImage,
       'desktopProjectorEnabled': desktopProjectorEnabled,
       'desktopProjectorMonitor': desktopProjectorMonitor,
+      'externalCommandOnStart': externalCommandOnStart,
+      'externalCommandOnExit': externalCommandOnExit,
+      'externalCommandOnProjectionOn': externalCommandOnProjectionOn,
+      'externalCommandOnProjectionOff': externalCommandOnProjectionOff,
       'bkColor': bkColor.toARGB32(),
       'txtColor': txtColor.toARGB32(),
       'blankColor': blankColor.toARGB32(),
@@ -345,13 +369,13 @@ class AppSettings {
       'receiverShowHighlight': receiverShowHighlight,
       'receiverUseAkkord': receiverUseAkkord,
       'receiverUseKotta': receiverUseKotta,
-       'receiverKeepStartupLogo': receiverKeepStartupLogo,
-       'useSound': useSound,
-       'liveSubtitlesEnabled': liveSubtitlesEnabled,
-       'liveSubtitleDeviceId': liveSubtitleDeviceId,
-       'liveSubtitleLanguage': liveSubtitleLanguage,
-       'szentirasApiKey': szentirasApiKey,
-     };
+      'receiverKeepStartupLogo': receiverKeepStartupLogo,
+      'useSound': useSound,
+      'liveSubtitlesEnabled': liveSubtitlesEnabled,
+      'liveSubtitleDeviceId': liveSubtitleDeviceId,
+      'liveSubtitleLanguage': liveSubtitleLanguage,
+      'szentirasApiKey': szentirasApiKey,
+    };
   }
 
   factory AppSettings.fromMap(Map<String, dynamic> map) {
@@ -415,6 +439,12 @@ class AppSettings {
       projShowBackgroundImage: boolValue('projShowBackgroundImage', true),
       desktopProjectorEnabled: boolValue('desktopProjectorEnabled', false),
       desktopProjectorMonitor: intValue('desktopProjectorMonitor', -1),
+      externalCommandOnStart: map['externalCommandOnStart'] as String? ?? '',
+      externalCommandOnExit: map['externalCommandOnExit'] as String? ?? '',
+      externalCommandOnProjectionOn:
+          map['externalCommandOnProjectionOn'] as String? ?? '',
+      externalCommandOnProjectionOff:
+          map['externalCommandOnProjectionOff'] as String? ?? '',
       bkColor: colorValue('bkColor', const Color(0xFF000000)),
       txtColor: colorValue('txtColor', const Color(0xFFFFFFFF)),
       blankColor: colorValue('blankColor', const Color(0xFF000000)),
@@ -423,12 +453,12 @@ class AppSettings {
       receiverShowHighlight: boolValue('receiverShowHighlight', true),
       receiverUseAkkord: boolValue('receiverUseAkkord', true),
       receiverUseKotta: boolValue('receiverUseKotta', true),
-       receiverKeepStartupLogo: boolValue('receiverKeepStartupLogo', true),
-       useSound: boolValue('useSound', false),
-       liveSubtitlesEnabled: boolValue('liveSubtitlesEnabled', false),
-       liveSubtitleDeviceId: map['liveSubtitleDeviceId'] as String?,
-       liveSubtitleLanguage: map['liveSubtitleLanguage'] as String? ?? 'auto',
-       szentirasApiKey: map['szentirasApiKey'] as String? ?? '',
-     );
+      receiverKeepStartupLogo: boolValue('receiverKeepStartupLogo', true),
+      useSound: boolValue('useSound', false),
+      liveSubtitlesEnabled: boolValue('liveSubtitlesEnabled', false),
+      liveSubtitleDeviceId: map['liveSubtitleDeviceId'] as String?,
+      liveSubtitleLanguage: map['liveSubtitleLanguage'] as String? ?? 'auto',
+      szentirasApiKey: map['szentirasApiKey'] as String? ?? '',
+    );
   }
 }
