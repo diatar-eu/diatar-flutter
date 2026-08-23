@@ -96,8 +96,7 @@ platform :ios do
       skip_waiting_for_build_processing: true,
       distribute_external: true,
       groups: ["Bárki"],
-      notify_external_testers: true,
-      submission_information: { export_compliance_uses_encryption: false }
+      notify_external_testers: true
     )
   end
 end
