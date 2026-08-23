@@ -530,7 +530,7 @@ class DesktopProjectorBridge {
       for (int i = 0; i < sorted.length; i++) {
         final Display d = sorted[i];
         final ui.Offset pos = d.visiblePosition ?? ui.Offset.zero;
-        final ui.Size size = d.visibleSize ?? d.size;
+        final ui.Size size = d.size;
         if (centerX >= pos.dx &&
             centerX < pos.dx + size.width &&
             centerY >= pos.dy &&

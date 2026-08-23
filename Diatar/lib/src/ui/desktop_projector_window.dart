@@ -177,21 +177,24 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
       // Ha a vetítő ablak a vezérlő ablakkal azonos monitoron van, akkor
       // ne legyen mindig felül, hogy a vezérlő ablak kerülhessen a tetejére.
       await windowManager.setAlwaysOnTop(!sameMonitor);
-      // Teljes képernyőre helyezzük a kiválasztott kijelzőn a bounds
-      // beállításával (a natív macOS fullscreen helyett), így futás
-      // közbeni monitorváltáskor is megbízhatóan kitölti a kijelzőt.
+      // A kijelző teljes fizikai területére helyezzük az ablakot. A
+      // visibleSize csak a munkaterületet adja vissza, ezért a tálca vagy
+      // panel mellett fekete sávot hagyna.
       await windowManager.setFullScreen(false);
       final ui.Rect displayRect = await _displayRect(targetIndex);
       await windowManager.setBounds(displayRect, animate: false);
+      final bool useNativeFullscreen = Platform.isWindows || Platform.isLinux;
+      if (useNativeFullscreen) {
+        await windowManager.setFullScreen(true);
+      }
       await windowManager.show(inactive: true);
       if (!sameMonitor) {
         await windowManager.focus();
       }
       // Biztonsági újraalkalmazás: futás közbeni monitorváltáskor a
-      // window_manager néha nem érvényesíti azonnal a bounds/alwaysOnTop
-      // beállításokat.
+      // window_manager néha nem érvényesíti azonnal az alwaysOnTop
+      // beállítást.
       await Future<void>.delayed(const Duration(milliseconds: 120));
-      await windowManager.setBounds(displayRect, animate: false);
       await windowManager.setAlwaysOnTop(!sameMonitor);
       if (!sameMonitor) {
         await windowManager.focus();
@@ -248,7 +251,7 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
         : sorted.length - 1;
     final Display selected = sorted[index];
     final ui.Offset position = selected.visiblePosition ?? ui.Offset.zero;
-    final ui.Size size = selected.visibleSize ?? selected.size;
+    final ui.Size size = selected.size;
     await windowManager.setBounds(
       ui.Rect.fromLTWH(position.dx, position.dy, size.width, size.height),
     );
@@ -275,7 +278,7 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
         : sorted.length - 1;
     final Display d = sorted[i];
     final ui.Offset position = d.visiblePosition ?? ui.Offset.zero;
-    final ui.Size size = d.visibleSize ?? d.size;
+    final ui.Size size = d.size;
     return ui.Rect.fromLTWH(position.dx, position.dy, size.width, size.height);
   }
 
