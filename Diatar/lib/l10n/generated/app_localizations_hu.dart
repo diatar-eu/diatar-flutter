@@ -1603,31 +1603,36 @@ class AppLocalizationsHu extends AppLocalizations {
   String get useSound => 'Hang használata';
 
   @override
-  String get castSettingsTitle => 'Google Cast beállítások';
+  String get liveSubtitlesOn => 'Élő felirat bekapcsolása';
 
   @override
-  String get castSettingsSummary => 'Cast eszközök beállítása';
+  String get liveSubtitlesOff => 'Élő felirat kikapcsolása';
 
   @override
-  String get castEnabledTitle => 'Cast használata';
+  String get liveSubtitlesDownloadTitle => 'Beszédmodell letöltése';
 
   @override
-  String get castDeviceIdLabel => 'Cast eszköz azonosító';
+  String get liveSubtitlesDownloadMessage =>
+      'Az élő beszédfelismeréshez egy ~650MB-os nyelvi modell szükséges. Letöltjük most?';
 
   @override
-  String get castPortLabel => 'Cast port';
+  String get liveSubtitlesDownloading =>
+      'Beszédmodell letöltése folyamatban...';
 
   @override
-  String get castAutoConnectTitle => 'Automatikus csatlakozás';
+  String get liveSubtitlesError => 'Beszédfelismerési hiba';
 
   @override
-  String get castSelectDeviceTitle => 'Cast eszköz kiválasztása';
+  String get liveSubtitlesMicDevice => 'Mikrofon';
 
   @override
-  String get castNoDevicesFound => 'Nem található Cast eszköz';
+  String get liveSubtitlesMicDeviceDefault => 'Rendszer alapértelmezett';
 
   @override
-  String get castConnecting => 'Csatlakozás...';
+  String get speechSettingsTitle => 'Beszédfelismerő';
+
+  @override
+  String get speechSettingsSummary => 'Mikrofon';
 
   @override
   String get transposeDown => 'Transzpozíció le';
@@ -1820,10 +1825,6 @@ class AppLocalizationsHu extends AppLocalizations {
       'TCP/IP kapcsolat helyi hálózaton. Add meg a vetítő IP-címét és portját.';
 
   @override
-  String get castSettingsDescription =>
-      'Google Cast eszközre (Chromecast) küldheted a diákat.';
-
-  @override
   String get colorsDescription =>
       'A vetített diák színeinek testreszabása: háttér, szöveg, üres dia és kiemelés.';
 
@@ -1849,4 +1850,168 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get settingsOnboardingButton => 'Kezdő lépések';
+
+  @override
+  String get impresszumTitle => 'Impresszum';
+
+  @override
+  String get impresszumSummary => 'Fejlesztők, licenszek és források';
+
+  @override
+  String get impresszumDescription =>
+      'A Diatár fejlesztőinek és a felhasznált szoftvereknek a bemutatása.';
+
+  @override
+  String get impresszumDevelopers => 'Fejlesztők';
+
+  @override
+  String get impresszumDevelopersBody =>
+      'A Diatár a Szent József Hackathon közösségének munkája.';
+
+  @override
+  String get impresszumHackathonTitle => 'Szent József Hackathon';
+
+  @override
+  String get impresszumHackathonBody =>
+      'A Diatár a IV. Szent József Hackathon (2026, Szeged) keretében készült.';
+
+  @override
+  String get impresszumDataSources => 'Adatforrások';
+
+  @override
+  String get impresszumSzentiras => 'Szentírás.eu — a bibliai szövegek forrása';
+
+  @override
+  String get impresszumLicenses => 'Felhasznált szoftverek és licenek';
+
+  @override
+  String get impresszumNemotron =>
+      'NVIDIA Nemotron 3.5 ASR — OpenMDW-1.1 licensz';
+
+  @override
+  String get impresszumSherpaOnnx =>
+      'Sherpa-ONNX (k2-fsa) — Apache-2.0 licensz';
+
+  @override
+  String get impresszumFlutter => 'Flutter — BSD-3 licensz';
+
+  @override
+  String get impresszumRecord => 'Record (llfbandit) — MIT licensz';
+
+  @override
+  String get impresszumLinks => 'Linkek';
+
+  @override
+  String get impresszumWebsite => 'diatar.eu';
+
+  @override
+  String get impresszumGitHub => 'GitHub';
+
+  @override
+  String get impresszumHackathonLink => 'Szent József Hackathon';
+
+  @override
+  String get impresszumSzentirasLink => 'szentiras.eu';
+
+  @override
+  String get speechLanguageTitle => 'Beszédfelismerő nyelve';
+
+  @override
+  String get speechLangAuto => 'Automatikus (minden nyelv)';
+
+  @override
+  String get speechLangEsUS => 'Spanyol (es-US)';
+
+  @override
+  String get speechLangEsES => 'Spanyol (es-ES)';
+
+  @override
+  String get speechLangItIT => 'Olasz (it-IT)';
+
+  @override
+  String get speechLangPtBR => 'Portugál (pt-BR)';
+
+  @override
+  String get speechLangPtPT => 'Portugál (pt-PT)';
+
+  @override
+  String get speechLangHiIN => 'Hindi (hi-IN)';
+
+  @override
+  String get speechLangKoKR => 'Koreai (ko-KR)';
+
+  @override
+  String get speechLangEnUS => 'Angol (en-US)';
+
+  @override
+  String get speechLangEnGB => 'Angol (en-GB)';
+
+  @override
+  String get speechLangDeDE => 'Német (de-DE)';
+
+  @override
+  String get speechLangFrFR => 'Francia (fr-FR)';
+
+  @override
+  String get speechLangFrCA => 'Francia (fr-CA)';
+
+  @override
+  String get speechLangRuRU => 'Orosz (ru-RU)';
+
+  @override
+  String get speechLangTrTR => 'Török (tr-TR)';
+
+  @override
+  String get speechLangViVN => 'Vietnami (vi-VN)';
+
+  @override
+  String get speechLangNlNL => 'Holland (nl-NL)';
+
+  @override
+  String get speechLangJaJP => 'Japán (ja-JP)';
+
+  @override
+  String get speechLangArAR => 'Arab (ar-AR)';
+
+  @override
+  String get speechLangUkUA => 'Ukrán (uk-UA)';
+
+  @override
+  String get speechLangPlPL => 'Lengyel (pl-PL)';
+
+  @override
+  String get speechLangNbNO => 'Norvég bokmål (nb-NO)';
+
+  @override
+  String get speechLangFiFI => 'Finn (fi-FI)';
+
+  @override
+  String get speechLangZhCN => 'Mandarin (zh-CN)';
+
+  @override
+  String get speechLangCsCZ => 'Cseh (cs-CZ)';
+
+  @override
+  String get speechLangBgBG => 'Bolgár (bg-BG)';
+
+  @override
+  String get speechLangSkSK => 'Szlovák (sk-SK)';
+
+  @override
+  String get speechLangSvSE => 'Svéd (sv-SE)';
+
+  @override
+  String get speechLangHrHR => 'Horvát (hr-HR)';
+
+  @override
+  String get speechLangRoRO => 'Román (ro-RO)';
+
+  @override
+  String get speechLangEtEE => 'Észt (et-EE)';
+
+  @override
+  String get speechLangDaDK => 'Dán (da-DK)';
+
+  @override
+  String get speechLangHuHU => 'Magyar (hu-HU)';
 }

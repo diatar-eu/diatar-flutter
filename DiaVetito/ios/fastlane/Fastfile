@@ -1,7 +1,16 @@
 default_platform(:ios)
 
 platform :ios do
-  desc "Build and deploy to the App Store"
+  def signing_identity
+    @signing_identity ||= begin
+      output = `security find-identity -v -p codesigning`
+      match = output.match(/"([^"]*Apple Distribution[^"]*)"/)
+      UI.user_error!("No Apple Distribution signing identity found in keychain") unless match
+      match[1]
+    end
+  end
+
+  desc "Deploy to the App Store"
   lane :deploy do
     setup_ci
     api_key = app_store_connect_api_key(
@@ -16,29 +25,78 @@ platform :ios do
       api_key: api_key,
       verbose: true
     )
-    sh("flutter", "pub", "get")
-    sh("pod", "install", "--repo-update")
-    build_app(
-      workspace: "Runner.xcworkspace",
-      scheme: "Runner",
-      export_method: "app-store",
-      export_options: {
-        signingStyle: "manual",
-        provisioningProfiles: {
-          "eu.diatar.vetito" => ENV["MATCH_PROVISIONING_PROFILE_NAME"] || "match AppStore eu.diatar.vetito"
-        }
-      }
-    )
+
+    ios_dir = File.expand_path("..", __dir__)
+    zip_name = Dir.glob("*-ios-nosign.zip", base: ios_dir).first
+    UI.user_error!("No *-ios-nosign.zip artifact found in #{ios_dir}") unless zip_name
+
+    Dir.chdir(ios_dir) do
+      sh("mkdir", "-p", "build/ios/iphoneos")
+      sh("unzip", "-o", zip_name, "-d", "build/ios/iphoneos")
+      sh("mkdir", "-p", "Payload")
+      sh("cp", "-r", "build/ios/iphoneos/Runner.app", "Payload/")
+      sh("zip", "-r", "unsigned.ipa", "Payload")
+
+      require "sigh"
+      resign_script = File.join(Sigh::ROOT, "lib", "assets", "resign.sh")
+      resign_cmd = "bash #{resign_script.shellescape} unsigned.ipa #{signing_identity.shellescape} -p #{ENV["sigh_eu.diatar.vetito_appstore_profile-path"].shellescape} -v unsigned.ipa"
+      sh(resign_cmd)
+    end
+
     upload_to_app_store(
       api_key: api_key,
+      ipa: File.join(ios_dir, "unsigned.ipa"),
       skip_screenshots: true,
       skip_metadata: false,
-      metadata_path: "../../release-notes/DiaVetito",
+      metadata_path: File.join(ios_dir, "..", "..", "release-notes", "DiaVetito"),
       submission_information: { export_compliance_uses_encryption: false },
       submit_for_review: true,
       automatic_release: true,
       force: true,
       precheck_include_in_app_purchases: false
+    )
+  end
+
+  desc "Deploy to TestFlight (beta)"
+  lane :beta do
+    setup_ci
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APPLE_API_KEY_ID"],
+      issuer_id: ENV["APPLE_API_ISSUER_ID"],
+      key_filepath: ENV["APPLE_API_KEY_FILEPATH"]
+    )
+    match(
+      type: "appstore",
+      readonly: true,
+      team_id: ENV["APPLE_TEAM_ID"],
+      api_key: api_key,
+      verbose: true
+    )
+
+    ios_dir = File.expand_path("..", __dir__)
+    zip_name = Dir.glob("*-ios-nosign.zip", base: ios_dir).first
+    UI.user_error!("No *-ios-nosign.zip artifact found in #{ios_dir}") unless zip_name
+
+    Dir.chdir(ios_dir) do
+      sh("mkdir", "-p", "build/ios/iphoneos")
+      sh("unzip", "-o", zip_name, "-d", "build/ios/iphoneos")
+      sh("mkdir", "-p", "Payload")
+      sh("cp", "-r", "build/ios/iphoneos/Runner.app", "Payload/")
+      sh("zip", "-r", "unsigned.ipa", "Payload")
+
+      require "sigh"
+      resign_script = File.join(Sigh::ROOT, "lib", "assets", "resign.sh")
+      resign_cmd = "bash #{resign_script.shellescape} unsigned.ipa #{signing_identity.shellescape} -p #{ENV["sigh_eu.diatar.vetito_appstore_profile-path"].shellescape} -v unsigned.ipa"
+      sh(resign_cmd)
+    end
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: File.join(ios_dir, "unsigned.ipa"),
+      skip_waiting_for_build_processing: true,
+      distribute_external: true,
+      groups: ["Bárki"],
+      notify_external_testers: true
     )
   end
 end

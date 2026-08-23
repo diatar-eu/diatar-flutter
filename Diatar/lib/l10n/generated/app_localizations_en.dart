@@ -1597,31 +1597,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get useSound => 'Use sound';
 
   @override
-  String get castSettingsTitle => 'Google Cast settings';
+  String get liveSubtitlesOn => 'Enable live subtitles';
 
   @override
-  String get castSettingsSummary => 'Configure Cast devices';
+  String get liveSubtitlesOff => 'Disable live subtitles';
 
   @override
-  String get castEnabledTitle => 'Use Cast';
+  String get liveSubtitlesDownloadTitle => 'Download speech model';
 
   @override
-  String get castDeviceIdLabel => 'Cast device ID';
+  String get liveSubtitlesDownloadMessage =>
+      'A ~650MB language model is required for live speech recognition. Download now?';
 
   @override
-  String get castPortLabel => 'Cast port';
+  String get liveSubtitlesDownloading => 'Downloading speech model...';
 
   @override
-  String get castAutoConnectTitle => 'Auto-connect';
+  String get liveSubtitlesError => 'Speech recognition error';
 
   @override
-  String get castSelectDeviceTitle => 'Select Cast Device';
+  String get liveSubtitlesMicDevice => 'Microphone';
 
   @override
-  String get castNoDevicesFound => 'No Cast devices found';
+  String get liveSubtitlesMicDeviceDefault => 'System default';
 
   @override
-  String get castConnecting => 'Connecting...';
+  String get speechSettingsTitle => 'Speech recognition';
+
+  @override
+  String get speechSettingsSummary => 'Microphone';
 
   @override
   String get transposeDown => 'Transpose down';
@@ -1814,10 +1818,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'TCP/IP connection over your local network. Enter the projector\'s IP address and port.';
 
   @override
-  String get castSettingsDescription =>
-      'Send slides to a Google Cast device (Chromecast).';
-
-  @override
   String get colorsDescription =>
       'Customize projection colors: background, text, empty slide, and highlight.';
 
@@ -1843,4 +1843,168 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsOnboardingButton => 'Getting started';
+
+  @override
+  String get impresszumTitle => 'Imprint';
+
+  @override
+  String get impresszumSummary => 'Developers, licenses, and sources';
+
+  @override
+  String get impresszumDescription =>
+      'About the developers of Diatár and the software used.';
+
+  @override
+  String get impresszumDevelopers => 'Developers';
+
+  @override
+  String get impresszumDevelopersBody =>
+      'Diatár is built by the Szent József Hackathon community.';
+
+  @override
+  String get impresszumHackathonTitle => 'Szent József Hackathon';
+
+  @override
+  String get impresszumHackathonBody =>
+      'Diatár was created during the IV. Szent József Hackathon (2026, Szeged).';
+
+  @override
+  String get impresszumDataSources => 'Data sources';
+
+  @override
+  String get impresszumSzentiras => 'szentiras.eu — source of Bible texts';
+
+  @override
+  String get impresszumLicenses => 'Software and licenses';
+
+  @override
+  String get impresszumNemotron =>
+      'NVIDIA Nemotron 3.5 ASR — OpenMDW-1.1 license';
+
+  @override
+  String get impresszumSherpaOnnx =>
+      'Sherpa-ONNX (k2-fsa) — Apache-2.0 license';
+
+  @override
+  String get impresszumFlutter => 'Flutter — BSD-3 license';
+
+  @override
+  String get impresszumRecord => 'Record (llfbandit) — MIT license';
+
+  @override
+  String get impresszumLinks => 'Links';
+
+  @override
+  String get impresszumWebsite => 'diatar.eu';
+
+  @override
+  String get impresszumGitHub => 'GitHub';
+
+  @override
+  String get impresszumHackathonLink => 'Szent József Hackathon';
+
+  @override
+  String get impresszumSzentirasLink => 'szentiras.eu';
+
+  @override
+  String get speechLanguageTitle => 'Speech recognition language';
+
+  @override
+  String get speechLangAuto => 'Automatic (all languages)';
+
+  @override
+  String get speechLangEsUS => 'Spanish (es-US)';
+
+  @override
+  String get speechLangEsES => 'Spanish (es-ES)';
+
+  @override
+  String get speechLangItIT => 'Italian (it-IT)';
+
+  @override
+  String get speechLangPtBR => 'Portuguese (pt-BR)';
+
+  @override
+  String get speechLangPtPT => 'Portuguese (pt-PT)';
+
+  @override
+  String get speechLangHiIN => 'Hindi (hi-IN)';
+
+  @override
+  String get speechLangKoKR => 'Korean (ko-KR)';
+
+  @override
+  String get speechLangEnUS => 'English (en-US)';
+
+  @override
+  String get speechLangEnGB => 'English (en-GB)';
+
+  @override
+  String get speechLangDeDE => 'German (de-DE)';
+
+  @override
+  String get speechLangFrFR => 'French (fr-FR)';
+
+  @override
+  String get speechLangFrCA => 'French (fr-CA)';
+
+  @override
+  String get speechLangRuRU => 'Russian (ru-RU)';
+
+  @override
+  String get speechLangTrTR => 'Turkish (tr-TR)';
+
+  @override
+  String get speechLangViVN => 'Vietnamese (vi-VN)';
+
+  @override
+  String get speechLangNlNL => 'Dutch (nl-NL)';
+
+  @override
+  String get speechLangJaJP => 'Japanese (ja-JP)';
+
+  @override
+  String get speechLangArAR => 'Arabic (ar-AR)';
+
+  @override
+  String get speechLangUkUA => 'Ukrainian (uk-UA)';
+
+  @override
+  String get speechLangPlPL => 'Polish (pl-PL)';
+
+  @override
+  String get speechLangNbNO => 'Norwegian Bokmål (nb-NO)';
+
+  @override
+  String get speechLangFiFI => 'Finnish (fi-FI)';
+
+  @override
+  String get speechLangZhCN => 'Mandarin (zh-CN)';
+
+  @override
+  String get speechLangCsCZ => 'Czech (cs-CZ)';
+
+  @override
+  String get speechLangBgBG => 'Bulgarian (bg-BG)';
+
+  @override
+  String get speechLangSkSK => 'Slovak (sk-SK)';
+
+  @override
+  String get speechLangSvSE => 'Swedish (sv-SE)';
+
+  @override
+  String get speechLangHrHR => 'Croatian (hr-HR)';
+
+  @override
+  String get speechLangRoRO => 'Romanian (ro-RO)';
+
+  @override
+  String get speechLangEtEE => 'Estonian (et-EE)';
+
+  @override
+  String get speechLangDaDK => 'Danish (da-DK)';
+
+  @override
+  String get speechLangHuHU => 'Hungarian (hu-HU)';
 }

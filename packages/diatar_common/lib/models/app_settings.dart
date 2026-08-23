@@ -62,10 +62,9 @@ class AppSettings {
     this.receiverUseKotta = true,
     this.receiverKeepStartupLogo = true,
     this.useSound = false,
-    this.castEnabled = false,
-    this.castDeviceId = '',
-    this.castPort = 1024,
-    this.castAutoConnect = false,
+    this.liveSubtitlesEnabled = false,
+    this.liveSubtitleDeviceId,
+    this.liveSubtitleLanguage = 'auto',
     this.szentirasApiKey = '',
     Color? bkColor,
     Color? txtColor,
@@ -136,10 +135,9 @@ class AppSettings {
   final bool receiverUseKotta;
   final bool receiverKeepStartupLogo;
   final bool useSound;
-  final bool castEnabled;
-  final String castDeviceId;
-  final int castPort;
-  final bool castAutoConnect;
+  final bool liveSubtitlesEnabled;
+  final String? liveSubtitleDeviceId;
+  final String liveSubtitleLanguage;
   final String szentirasApiKey;
   final Color? _bkColor;
   final Color? _txtColor;
@@ -217,10 +215,9 @@ class AppSettings {
     bool? receiverUseKotta,
     bool? receiverKeepStartupLogo,
     bool? useSound,
-    bool? castEnabled,
-    String? castDeviceId,
-    int? castPort,
-    bool? castAutoConnect,
+    bool? liveSubtitlesEnabled,
+    String? liveSubtitleDeviceId,
+    String? liveSubtitleLanguage,
     String? szentirasApiKey,
     Color? bkColor,
     Color? txtColor,
@@ -298,10 +295,9 @@ class AppSettings {
        receiverKeepStartupLogo:
            receiverKeepStartupLogo ?? this.receiverKeepStartupLogo,
        useSound: useSound ?? this.useSound,
-       castEnabled: castEnabled ?? this.castEnabled,
-       castDeviceId: castDeviceId ?? this.castDeviceId,
-       castPort: castPort ?? this.castPort,
-       castAutoConnect: castAutoConnect ?? this.castAutoConnect,
+       liveSubtitlesEnabled: liveSubtitlesEnabled ?? this.liveSubtitlesEnabled,
+       liveSubtitleDeviceId: liveSubtitleDeviceId ?? this.liveSubtitleDeviceId,
+       liveSubtitleLanguage: liveSubtitleLanguage ?? this.liveSubtitleLanguage,
        szentirasApiKey: szentirasApiKey ?? this.szentirasApiKey,
        bkColor: bkColor ?? this.bkColor,
       txtColor: txtColor ?? this.txtColor,
@@ -351,10 +347,9 @@ class AppSettings {
       'receiverUseKotta': receiverUseKotta,
        'receiverKeepStartupLogo': receiverKeepStartupLogo,
        'useSound': useSound,
-       'castEnabled': castEnabled,
-       'castDeviceId': castDeviceId,
-       'castPort': castPort,
-       'castAutoConnect': castAutoConnect,
+       'liveSubtitlesEnabled': liveSubtitlesEnabled,
+       'liveSubtitleDeviceId': liveSubtitleDeviceId,
+       'liveSubtitleLanguage': liveSubtitleLanguage,
        'szentirasApiKey': szentirasApiKey,
      };
   }
@@ -430,10 +425,9 @@ class AppSettings {
       receiverUseKotta: boolValue('receiverUseKotta', true),
        receiverKeepStartupLogo: boolValue('receiverKeepStartupLogo', true),
        useSound: boolValue('useSound', false),
-       castEnabled: boolValue('castEnabled', false),
-       castDeviceId: map['castDeviceId'] as String? ?? '',
-       castPort: intValue('castPort', 1024),
-       castAutoConnect: boolValue('castAutoConnect', false),
+       liveSubtitlesEnabled: boolValue('liveSubtitlesEnabled', false),
+       liveSubtitleDeviceId: map['liveSubtitleDeviceId'] as String?,
+       liveSubtitleLanguage: map['liveSubtitleLanguage'] as String? ?? 'auto',
        szentirasApiKey: map['szentirasApiKey'] as String? ?? '',
      );
   }

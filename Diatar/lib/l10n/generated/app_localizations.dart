@@ -2843,59 +2843,65 @@ abstract class AppLocalizations {
   /// **'Hang használata'**
   String get useSound;
 
-  /// No description provided for @castSettingsTitle.
+  /// No description provided for @liveSubtitlesOn.
   ///
   /// In hu, this message translates to:
-  /// **'Google Cast beállítások'**
-  String get castSettingsTitle;
+  /// **'Élő felirat bekapcsolása'**
+  String get liveSubtitlesOn;
 
-  /// No description provided for @castSettingsSummary.
+  /// No description provided for @liveSubtitlesOff.
   ///
   /// In hu, this message translates to:
-  /// **'Cast eszközök beállítása'**
-  String get castSettingsSummary;
+  /// **'Élő felirat kikapcsolása'**
+  String get liveSubtitlesOff;
 
-  /// No description provided for @castEnabledTitle.
+  /// No description provided for @liveSubtitlesDownloadTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Cast használata'**
-  String get castEnabledTitle;
+  /// **'Beszédmodell letöltése'**
+  String get liveSubtitlesDownloadTitle;
 
-  /// No description provided for @castDeviceIdLabel.
+  /// No description provided for @liveSubtitlesDownloadMessage.
   ///
   /// In hu, this message translates to:
-  /// **'Cast eszköz azonosító'**
-  String get castDeviceIdLabel;
+  /// **'Az élő beszédfelismeréshez egy ~650MB-os nyelvi modell szükséges. Letöltjük most?'**
+  String get liveSubtitlesDownloadMessage;
 
-  /// No description provided for @castPortLabel.
+  /// No description provided for @liveSubtitlesDownloading.
   ///
   /// In hu, this message translates to:
-  /// **'Cast port'**
-  String get castPortLabel;
+  /// **'Beszédmodell letöltése folyamatban...'**
+  String get liveSubtitlesDownloading;
 
-  /// No description provided for @castAutoConnectTitle.
+  /// No description provided for @liveSubtitlesError.
   ///
   /// In hu, this message translates to:
-  /// **'Automatikus csatlakozás'**
-  String get castAutoConnectTitle;
+  /// **'Beszédfelismerési hiba'**
+  String get liveSubtitlesError;
 
-  /// No description provided for @castSelectDeviceTitle.
+  /// No description provided for @liveSubtitlesMicDevice.
   ///
   /// In hu, this message translates to:
-  /// **'Cast eszköz kiválasztása'**
-  String get castSelectDeviceTitle;
+  /// **'Mikrofon'**
+  String get liveSubtitlesMicDevice;
 
-  /// No description provided for @castNoDevicesFound.
+  /// No description provided for @liveSubtitlesMicDeviceDefault.
   ///
   /// In hu, this message translates to:
-  /// **'Nem található Cast eszköz'**
-  String get castNoDevicesFound;
+  /// **'Rendszer alapértelmezett'**
+  String get liveSubtitlesMicDeviceDefault;
 
-  /// No description provided for @castConnecting.
+  /// No description provided for @speechSettingsTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Csatlakozás...'**
-  String get castConnecting;
+  /// **'Beszédfelismerő'**
+  String get speechSettingsTitle;
+
+  /// No description provided for @speechSettingsSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Mikrofon'**
+  String get speechSettingsSummary;
 
   /// No description provided for @transposeDown.
   ///
@@ -3227,12 +3233,6 @@ abstract class AppLocalizations {
   /// **'TCP/IP kapcsolat helyi hálózaton. Add meg a vetítő IP-címét és portját.'**
   String get settingsLocalNetworkDescription;
 
-  /// No description provided for @castSettingsDescription.
-  ///
-  /// In hu, this message translates to:
-  /// **'Google Cast eszközre (Chromecast) küldheted a diákat.'**
-  String get castSettingsDescription;
-
   /// No description provided for @colorsDescription.
   ///
   /// In hu, this message translates to:
@@ -3274,6 +3274,324 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Kezdő lépések'**
   String get settingsOnboardingButton;
+
+  /// No description provided for @impresszumTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Impresszum'**
+  String get impresszumTitle;
+
+  /// No description provided for @impresszumSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Fejlesztők, licenszek és források'**
+  String get impresszumSummary;
+
+  /// No description provided for @impresszumDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'A Diatár fejlesztőinek és a felhasznált szoftvereknek a bemutatása.'**
+  String get impresszumDescription;
+
+  /// No description provided for @impresszumDevelopers.
+  ///
+  /// In hu, this message translates to:
+  /// **'Fejlesztők'**
+  String get impresszumDevelopers;
+
+  /// No description provided for @impresszumDevelopersBody.
+  ///
+  /// In hu, this message translates to:
+  /// **'A Diatár a Szent József Hackathon közösségének munkája.'**
+  String get impresszumDevelopersBody;
+
+  /// No description provided for @impresszumHackathonTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szent József Hackathon'**
+  String get impresszumHackathonTitle;
+
+  /// No description provided for @impresszumHackathonBody.
+  ///
+  /// In hu, this message translates to:
+  /// **'A Diatár a IV. Szent József Hackathon (2026, Szeged) keretében készült.'**
+  String get impresszumHackathonBody;
+
+  /// No description provided for @impresszumDataSources.
+  ///
+  /// In hu, this message translates to:
+  /// **'Adatforrások'**
+  String get impresszumDataSources;
+
+  /// No description provided for @impresszumSzentiras.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szentírás.eu — a bibliai szövegek forrása'**
+  String get impresszumSzentiras;
+
+  /// No description provided for @impresszumLicenses.
+  ///
+  /// In hu, this message translates to:
+  /// **'Felhasznált szoftverek és licenek'**
+  String get impresszumLicenses;
+
+  /// No description provided for @impresszumNemotron.
+  ///
+  /// In hu, this message translates to:
+  /// **'NVIDIA Nemotron 3.5 ASR — OpenMDW-1.1 licensz'**
+  String get impresszumNemotron;
+
+  /// No description provided for @impresszumSherpaOnnx.
+  ///
+  /// In hu, this message translates to:
+  /// **'Sherpa-ONNX (k2-fsa) — Apache-2.0 licensz'**
+  String get impresszumSherpaOnnx;
+
+  /// No description provided for @impresszumFlutter.
+  ///
+  /// In hu, this message translates to:
+  /// **'Flutter — BSD-3 licensz'**
+  String get impresszumFlutter;
+
+  /// No description provided for @impresszumRecord.
+  ///
+  /// In hu, this message translates to:
+  /// **'Record (llfbandit) — MIT licensz'**
+  String get impresszumRecord;
+
+  /// No description provided for @impresszumLinks.
+  ///
+  /// In hu, this message translates to:
+  /// **'Linkek'**
+  String get impresszumLinks;
+
+  /// No description provided for @impresszumWebsite.
+  ///
+  /// In hu, this message translates to:
+  /// **'diatar.eu'**
+  String get impresszumWebsite;
+
+  /// No description provided for @impresszumGitHub.
+  ///
+  /// In hu, this message translates to:
+  /// **'GitHub'**
+  String get impresszumGitHub;
+
+  /// No description provided for @impresszumHackathonLink.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szent József Hackathon'**
+  String get impresszumHackathonLink;
+
+  /// No description provided for @impresszumSzentirasLink.
+  ///
+  /// In hu, this message translates to:
+  /// **'szentiras.eu'**
+  String get impresszumSzentirasLink;
+
+  /// No description provided for @speechLanguageTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beszédfelismerő nyelve'**
+  String get speechLanguageTitle;
+
+  /// No description provided for @speechLangAuto.
+  ///
+  /// In hu, this message translates to:
+  /// **'Automatikus (minden nyelv)'**
+  String get speechLangAuto;
+
+  /// No description provided for @speechLangEsUS.
+  ///
+  /// In hu, this message translates to:
+  /// **'Spanyol (es-US)'**
+  String get speechLangEsUS;
+
+  /// No description provided for @speechLangEsES.
+  ///
+  /// In hu, this message translates to:
+  /// **'Spanyol (es-ES)'**
+  String get speechLangEsES;
+
+  /// No description provided for @speechLangItIT.
+  ///
+  /// In hu, this message translates to:
+  /// **'Olasz (it-IT)'**
+  String get speechLangItIT;
+
+  /// No description provided for @speechLangPtBR.
+  ///
+  /// In hu, this message translates to:
+  /// **'Portugál (pt-BR)'**
+  String get speechLangPtBR;
+
+  /// No description provided for @speechLangPtPT.
+  ///
+  /// In hu, this message translates to:
+  /// **'Portugál (pt-PT)'**
+  String get speechLangPtPT;
+
+  /// No description provided for @speechLangHiIN.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hindi (hi-IN)'**
+  String get speechLangHiIN;
+
+  /// No description provided for @speechLangKoKR.
+  ///
+  /// In hu, this message translates to:
+  /// **'Koreai (ko-KR)'**
+  String get speechLangKoKR;
+
+  /// No description provided for @speechLangEnUS.
+  ///
+  /// In hu, this message translates to:
+  /// **'Angol (en-US)'**
+  String get speechLangEnUS;
+
+  /// No description provided for @speechLangEnGB.
+  ///
+  /// In hu, this message translates to:
+  /// **'Angol (en-GB)'**
+  String get speechLangEnGB;
+
+  /// No description provided for @speechLangDeDE.
+  ///
+  /// In hu, this message translates to:
+  /// **'Német (de-DE)'**
+  String get speechLangDeDE;
+
+  /// No description provided for @speechLangFrFR.
+  ///
+  /// In hu, this message translates to:
+  /// **'Francia (fr-FR)'**
+  String get speechLangFrFR;
+
+  /// No description provided for @speechLangFrCA.
+  ///
+  /// In hu, this message translates to:
+  /// **'Francia (fr-CA)'**
+  String get speechLangFrCA;
+
+  /// No description provided for @speechLangRuRU.
+  ///
+  /// In hu, this message translates to:
+  /// **'Orosz (ru-RU)'**
+  String get speechLangRuRU;
+
+  /// No description provided for @speechLangTrTR.
+  ///
+  /// In hu, this message translates to:
+  /// **'Török (tr-TR)'**
+  String get speechLangTrTR;
+
+  /// No description provided for @speechLangViVN.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vietnami (vi-VN)'**
+  String get speechLangViVN;
+
+  /// No description provided for @speechLangNlNL.
+  ///
+  /// In hu, this message translates to:
+  /// **'Holland (nl-NL)'**
+  String get speechLangNlNL;
+
+  /// No description provided for @speechLangJaJP.
+  ///
+  /// In hu, this message translates to:
+  /// **'Japán (ja-JP)'**
+  String get speechLangJaJP;
+
+  /// No description provided for @speechLangArAR.
+  ///
+  /// In hu, this message translates to:
+  /// **'Arab (ar-AR)'**
+  String get speechLangArAR;
+
+  /// No description provided for @speechLangUkUA.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ukrán (uk-UA)'**
+  String get speechLangUkUA;
+
+  /// No description provided for @speechLangPlPL.
+  ///
+  /// In hu, this message translates to:
+  /// **'Lengyel (pl-PL)'**
+  String get speechLangPlPL;
+
+  /// No description provided for @speechLangNbNO.
+  ///
+  /// In hu, this message translates to:
+  /// **'Norvég bokmål (nb-NO)'**
+  String get speechLangNbNO;
+
+  /// No description provided for @speechLangFiFI.
+  ///
+  /// In hu, this message translates to:
+  /// **'Finn (fi-FI)'**
+  String get speechLangFiFI;
+
+  /// No description provided for @speechLangZhCN.
+  ///
+  /// In hu, this message translates to:
+  /// **'Mandarin (zh-CN)'**
+  String get speechLangZhCN;
+
+  /// No description provided for @speechLangCsCZ.
+  ///
+  /// In hu, this message translates to:
+  /// **'Cseh (cs-CZ)'**
+  String get speechLangCsCZ;
+
+  /// No description provided for @speechLangBgBG.
+  ///
+  /// In hu, this message translates to:
+  /// **'Bolgár (bg-BG)'**
+  String get speechLangBgBG;
+
+  /// No description provided for @speechLangSkSK.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szlovák (sk-SK)'**
+  String get speechLangSkSK;
+
+  /// No description provided for @speechLangSvSE.
+  ///
+  /// In hu, this message translates to:
+  /// **'Svéd (sv-SE)'**
+  String get speechLangSvSE;
+
+  /// No description provided for @speechLangHrHR.
+  ///
+  /// In hu, this message translates to:
+  /// **'Horvát (hr-HR)'**
+  String get speechLangHrHR;
+
+  /// No description provided for @speechLangRoRO.
+  ///
+  /// In hu, this message translates to:
+  /// **'Román (ro-RO)'**
+  String get speechLangRoRO;
+
+  /// No description provided for @speechLangEtEE.
+  ///
+  /// In hu, this message translates to:
+  /// **'Észt (et-EE)'**
+  String get speechLangEtEE;
+
+  /// No description provided for @speechLangDaDK.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dán (da-DK)'**
+  String get speechLangDaDK;
+
+  /// No description provided for @speechLangHuHU.
+  ///
+  /// In hu, this message translates to:
+  /// **'Magyar (hu-HU)'**
+  String get speechLangHuHU;
 }
 
 class _AppLocalizationsDelegate

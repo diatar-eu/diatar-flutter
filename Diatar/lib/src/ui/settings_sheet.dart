@@ -4,10 +4,10 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:diatar_speech/diatar_speech.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -18,7 +18,6 @@ import 'package:screen_retriever/screen_retriever.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
 import '../services/mqtt_user_api_service.dart';
-import '../services/cast_service.dart';
 import '../services/export_import_service.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/macos_file_panels.dart';
@@ -121,10 +120,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _desktopProjectorEnabled;
   late bool _internetRelayEnabled;
   late bool _localNetworkEnabled;
-  late bool _castEnabled;
-  late String _castDeviceId;
-  late int _castPort;
-  late bool _castAutoConnect;
+  late String? _liveSubtitleDeviceId;
+  late String _liveSubtitleLanguage;
   late Map<String, String> _desktopActionHotkeys;
   late Map<String, String> _desktopSongHotkeys;
   late Map<String, String> _desktopOrderSetHotkeys;
@@ -139,7 +136,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _szentirasApiKey;
   void Function(void Function())? _setInternetSectionState;
   late final MqttUserApiService _userApi;
-  CastService? _castService;
   late Color _bkColor;
   late Color _txtColor;
   late Color _blankColor;
@@ -160,10 +156,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _userApi = MqttUserApiService(
       acceptLanguageProvider: _currentAcceptLanguage,
     );
-    if (!kIsWeb) {
-      _castService = CastService();
-      unawaited(_castService!.initialize());
-    }
     _loadAppVersion();
     final AppSettings s = widget.initialSettings;
     _search = TextEditingController();
@@ -202,10 +194,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _desktopProjectorEnabled = s.desktopProjectorEnabled;
     _internetRelayEnabled = s.internetRelayEnabled;
     _localNetworkEnabled = s.tcpClientEnabled;
-    _castEnabled = s.castEnabled;
-    _castDeviceId = s.castDeviceId;
-    _castPort = s.castPort;
-    _castAutoConnect = s.castAutoConnect;
+    _liveSubtitleDeviceId = s.liveSubtitleDeviceId;
+    _liveSubtitleLanguage = s.liveSubtitleLanguage;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
     _desktopSongHotkeys = Map<String, String>.from(s.desktopSongHotkeys);
     _desktopOrderSetHotkeys = Map<String, String>.from(
@@ -277,7 +267,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   @override
   void dispose() {
-    _castService?.dispose();
     _search.dispose();
     _tcpTargets.dispose();
     _mqttUser.dispose();
@@ -328,9 +317,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
     final bool showLan =
         !kIsWeb && _matches(query, 'helyi halozat tcp ip port');
-    final bool showCast =
-        (_castService?.isSupported ?? false) &&
-        _matches(query, 'cast google cast');
     final bool showProjection = _matches(
       query,
       'vetites betu meret cim hatter opacity szinek szin',
@@ -343,6 +329,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       query,
       'altalanos tema nyelv language gorgetheto akkord kotta hatterkep szokiemeles',
     );
+    final bool showSpeech = !kIsWeb && _matches(
+      query,
+      'beszedfelismero speech recognition mikrofon',
+    );
     final bool showSystem = _matches(
       query,
       'rendszer kilepes leallas stop shutdown epstop epshutdown',
@@ -354,16 +344,21 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           'gyorsbillentyu hotkey billentyu shortcut vezerles enek',
         );
     final bool showApiKeys = _matches(query, 'api kulcs key szentiras');
+    final bool showImpresszum = _matches(
+      query,
+      'impresszum impress imprint névjegy about verzió version licenc license',
+    );
     final bool anyVisible =
         showInternet ||
         showLan ||
-        showCast ||
         showProjection ||
         showFiles ||
         showGeneral ||
+        showSpeech ||
         showSystem ||
         showHotkeys ||
-        showApiKeys;
+        showApiKeys ||
+        showImpresszum;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -456,20 +451,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openLocalNetworkSettings,
                       description: l10n.settingsLocalNetworkDescription,
                     ),
-                  if (showLan &&
-                      (showCast || showProjection || showFiles || showGeneral))
-                    const Divider(height: 1),
-                  if (showCast && (_castService?.isSupported ?? false))
-                    _settingsTile(
-                      leading: const Icon(Icons.cast),
-                      title: Text(l10n.castSettingsTitle),
-                      subtitle: Text(l10n.castSettingsSummary),
-                      onTap: _openCastSettings,
-                      description: l10n.castSettingsDescription,
-                    ),
-                  if (showCast &&
-                      (_castService?.isSupported ?? false) &&
-                      (showProjection || showFiles || showGeneral))
+                  if (showLan && (showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
                   if (showProjection)
                     _settingsTile(
@@ -485,7 +467,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       description: l10n.projectionSettingsDescription,
                     ),
                   if (showProjection &&
-                      (showFiles || showGeneral || showHotkeys))
+                      (showFiles || showGeneral || showSpeech || showHotkeys))
                     const Divider(height: 1),
                   if (showFiles)
                     _settingsTile(
@@ -495,7 +477,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openFileSettings,
                       description: l10n.settingsFilesDescription,
                     ),
-                  if (showFiles && (showGeneral || showHotkeys))
+                  if (showFiles && (showGeneral || showSpeech || showHotkeys))
                     const Divider(height: 1),
                   if (showGeneral)
                     _settingsTile(
@@ -507,7 +489,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openGeneralSettings,
                       description: l10n.settingsGeneralDescription,
                     ),
-                  if (showGeneral && (showSystem || showHotkeys))
+                  if (showGeneral && (showSpeech || showSystem || showHotkeys))
+                    const Divider(height: 1),
+                  if (showSpeech)
+                    _settingsTile(
+                      leading: const Icon(Icons.mic),
+                      title: Text(l10n.speechSettingsTitle),
+                      subtitle: Text(l10n.speechSettingsSummary),
+                      onTap: _openSpeechSettings,
+                    ),
+                  if (showSpeech && (showSystem || showHotkeys))
                     const Divider(height: 1),
                   if (showSystem)
                     _settingsTile(
@@ -525,6 +516,15 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       subtitle: Text(l10n.settingsHotkeysSummary),
                       onTap: _openDesktopHotkeySettings,
                       description: l10n.settingsHotkeysDescription,
+                    ),
+                  if (showHotkeys && showImpresszum) const Divider(height: 1),
+                  if (showImpresszum)
+                    _settingsTile(
+                      leading: const Icon(Icons.info_outline),
+                      title: Text(l10n.impresszumTitle),
+                      subtitle: Text(l10n.impresszumSummary),
+                      onTap: _openImpresszumSheet,
+                      description: l10n.impresszumDescription,
                     ),
                   if (!anyVisible)
                     Padding(
@@ -1646,123 +1646,315 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
-  Future<void> _openCastSettings() {
+  Future<void> _openMicDeviceSelector(
+    void Function(void Function()) setBoth,
+  ) async {
+    final l10n = context.l10n;
+    final RecordAudioCapture capture = RecordAudioCapture();
+    try {
+      final bool hasPerm = await capture.hasPermission();
+      if (!hasPerm) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.liveSubtitlesError)),
+          );
+        }
+        return;
+      }
+      final List<InputDevice> devices = await capture.listInputDevices();
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return SimpleDialog(
+            title: Text(l10n.liveSubtitlesMicDevice),
+            children: <Widget>[
+              SimpleDialogOption(
+                onPressed: () {
+                  setBoth(() => _liveSubtitleDeviceId = null);
+                  Navigator.of(dialogContext).pop();
+                },
+                child: Row(
+                  children: <Widget>[
+                    Icon(
+                      _liveSubtitleDeviceId == null
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(l10n.liveSubtitlesMicDeviceDefault)),
+                  ],
+                ),
+              ),
+              for (final InputDevice device in devices)
+                SimpleDialogOption(
+                  onPressed: () {
+                    setBoth(() => _liveSubtitleDeviceId = device.id);
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Row(
+                    children: <Widget>[
+                      Icon(
+                        _liveSubtitleDeviceId == device.id
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(device.label)),
+                    ],
+                  ),
+                ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      debugPrint('[Settings] Failed to list mic devices: $e');
+    } finally {
+      await capture.dispose();
+    }
+  }
+
+  Future<void> _openSpeechSettings() {
     return _openSectionSheet(
-      title: context.l10n.castSettingsTitle,
+      title: context.l10n.speechSettingsTitle,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         return <Widget>[
-          SwitchListTile(
+          ListTile(
             contentPadding: EdgeInsets.zero,
-            value: _castEnabled,
-            onChanged: (bool v) => setBoth(() => _castEnabled = v),
-            title: Text(l10n.castEnabledTitle),
+            leading: const Icon(Icons.mic),
+            title: Text(l10n.liveSubtitlesMicDevice),
+            subtitle: Text(
+              _liveSubtitleDeviceId == null
+                  ? l10n.liveSubtitlesMicDeviceDefault
+                  : _liveSubtitleDeviceId!,
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _openMicDeviceSelector(setBoth),
           ),
-          if (_castEnabled) ...<Widget>[
-            const Divider(height: 1),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.search),
-              title: Text(l10n.castSelectDeviceTitle),
-              subtitle: Text(
-                _castDeviceId.isEmpty ? l10n.valueNotSet : 'ID: $_castDeviceId',
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _openCastDeviceSelector(setBoth),
-            ),
-            const Divider(height: 1),
-            TextField(
-              controller: TextEditingController(text: _castDeviceId),
-              decoration: InputDecoration(labelText: l10n.castDeviceIdLabel),
-              onChanged: (v) => setBoth(() => _castDeviceId = v),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: TextEditingController(text: _castPort.toString()),
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: l10n.castPortLabel),
-              onChanged: (v) =>
-                  setBoth(() => _castPort = int.tryParse(v) ?? 1024),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _castAutoConnect,
-              onChanged: (bool v) => setBoth(() => _castAutoConnect = v),
-              title: Text(l10n.castAutoConnectTitle),
-            ),
-          ],
+          const Divider(height: 1),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.language),
+            title: Text(l10n.speechLanguageTitle),
+            subtitle: Text(_speechLanguageName(_liveSubtitleLanguage, l10n)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _openLanguageSelector(setBoth),
+          ),
+          const Divider(height: 1),
         ];
       },
     );
   }
 
-  Future<void> _openCastDeviceSelector(
-    void Function(void Function()) setBoth,
-  ) async {
-    final l10n = context.l10n;
+  static const _speechLanguageCodes = <String>[
+    'auto', 'es-US', 'es-ES', 'it-IT', 'pt-BR', 'pt-PT', 'hi-IN', 'ko-KR',
+    'en-US', 'en-GB', 'de-DE', 'fr-FR', 'fr-CA', 'ru-RU', 'tr-TR', 'vi-VN',
+    'nl-NL', 'ja-JP', 'ar-AR', 'uk-UA', 'pl-PL', 'nb-NO', 'fi-FI', 'zh-CN',
+    'cs-CZ', 'bg-BG', 'sk-SK', 'sv-SE', 'hr-HR', 'ro-RO', 'et-EE', 'da-DK',
+    'hu-HU',
+  ];
 
-    await _openSectionSheet(
-      title: l10n.castSelectDeviceTitle,
-      builder:
-          (BuildContext context, void Function(void Function()) setModalState) {
-            return [
-              AnimatedBuilder(
-                animation: _castService ?? ValueNotifier<bool>(false),
-                builder: (context, _) {
-                  final devices =
-                      _castService?.discoveredDevices ?? <GoogleCastDevice>[];
-                  if (devices.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 16),
-                          Text(l10n.castNoDevicesFound),
-                          TextButton(
-                            onPressed: () => _castService?.startDiscovery(),
-                            child: Text(l10n.refreshTooltip),
-                          ),
-                        ],
-                      ),
-                    );
+  String _speechLanguageName(String code, AppLocalizations l10n) {
+    switch (code) {
+      case 'auto': return l10n.speechLangAuto;
+      case 'es-US': return l10n.speechLangEsUS;
+      case 'es-ES': return l10n.speechLangEsES;
+      case 'it-IT': return l10n.speechLangItIT;
+      case 'pt-BR': return l10n.speechLangPtBR;
+      case 'pt-PT': return l10n.speechLangPtPT;
+      case 'hi-IN': return l10n.speechLangHiIN;
+      case 'ko-KR': return l10n.speechLangKoKR;
+      case 'en-US': return l10n.speechLangEnUS;
+      case 'en-GB': return l10n.speechLangEnGB;
+      case 'de-DE': return l10n.speechLangDeDE;
+      case 'fr-FR': return l10n.speechLangFrFR;
+      case 'fr-CA': return l10n.speechLangFrCA;
+      case 'ru-RU': return l10n.speechLangRuRU;
+      case 'tr-TR': return l10n.speechLangTrTR;
+      case 'vi-VN': return l10n.speechLangViVN;
+      case 'nl-NL': return l10n.speechLangNlNL;
+      case 'ja-JP': return l10n.speechLangJaJP;
+      case 'ar-AR': return l10n.speechLangArAR;
+      case 'uk-UA': return l10n.speechLangUkUA;
+      case 'pl-PL': return l10n.speechLangPlPL;
+      case 'nb-NO': return l10n.speechLangNbNO;
+      case 'fi-FI': return l10n.speechLangFiFI;
+      case 'zh-CN': return l10n.speechLangZhCN;
+      case 'cs-CZ': return l10n.speechLangCsCZ;
+      case 'bg-BG': return l10n.speechLangBgBG;
+      case 'sk-SK': return l10n.speechLangSkSK;
+      case 'sv-SE': return l10n.speechLangSvSE;
+      case 'hr-HR': return l10n.speechLangHrHR;
+      case 'ro-RO': return l10n.speechLangRoRO;
+      case 'et-EE': return l10n.speechLangEtEE;
+      case 'da-DK': return l10n.speechLangDaDK;
+      case 'hu-HU': return l10n.speechLangHuHU;
+      default: return code;
+    }
+  }
+
+  Future<void> _openLanguageSelector(
+    void Function(void Function()) setBoth,
+  ) {
+    final l10n = context.l10n;
+    return _openSectionSheet(
+      title: l10n.speechLanguageTitle,
+      builder: (BuildContext context, void Function(void Function()) setModalBoth) {
+        return <Widget>[
+          RadioListTile<String>(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.speechLangAuto),
+            value: 'auto',
+            groupValue: _liveSubtitleLanguage,
+            onChanged: (String? v) {
+              if (v != null) {
+                setBoth(() => _liveSubtitleLanguage = v);
+                setModalBoth(() {});
+              }
+            },
+          ),
+          for (final code in _speechLanguageCodes)
+            if (code != 'auto')
+              RadioListTile<String>(
+                contentPadding: EdgeInsets.zero,
+                title: Text(_speechLanguageName(code, l10n)),
+                value: code,
+                groupValue: _liveSubtitleLanguage,
+                onChanged: (String? v) {
+                  if (v != null) {
+                    setBoth(() => _liveSubtitleLanguage = v);
+                    setModalBoth(() {});
                   }
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: devices.length,
-                    itemBuilder: (context, index) {
-                      final device = devices[index];
-                      return ListTile(
-                        leading: const Icon(Icons.cast),
-                        title: Text(device.friendlyName),
-                        subtitle: Text(device.deviceID),
-                        onTap: () async {
-                          setBoth(() {}); // Update main sheet
-                          try {
-                            await _castService?.connectToDevice(device);
-                            setBoth(() {
-                              _castDeviceId = device.deviceID;
-                            });
-                            Navigator.of(context).pop(true);
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Connection failed: $e')),
-                            );
-                          }
-                        },
-                      );
-                    },
-                  );
                 },
               ),
-            ];
-          },
-    ).then((_) {
-      _castService?.stopDiscovery();
-    });
+        ];
+      },
+    );
+  }
 
-    // Start discovery when opening
-    _castService?.startDiscovery();
+  Future<void> _openImpresszumSheet() {
+    final l10n = context.l10n;
+    return _openSectionSheet(
+      title: l10n.impresszumTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        return <Widget>[
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Image.asset(
+                'assets/hackathon_logo.png',
+                height: 80,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _impresszumSection(
+            l10n.impresszumDevelopers,
+            l10n.impresszumDevelopersBody,
+          ),
+          _impresszumLink(
+            label: l10n.impresszumHackathonTitle,
+            subtitle: l10n.impresszumHackathonBody,
+            url: 'https://szentjozsef.jezsuita.hu/szent-jozsef-hackathon/',
+          ),
+          const Divider(height: 1),
+          _impresszumSection(
+            l10n.impresszumDataSources,
+            l10n.impresszumSzentiras,
+          ),
+          _impresszumLink(
+            label: l10n.impresszumSzentirasLink,
+            subtitle: 'szentiras.eu',
+            url: 'https://szentiras.eu',
+          ),
+          const Divider(height: 1),
+          _impresszumSection(
+            l10n.impresszumLicenses,
+            null,
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: Text(l10n.impresszumNemotron),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: Text(l10n.impresszumSherpaOnnx),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: Text(l10n.impresszumFlutter),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: Text(l10n.impresszumRecord),
+          ),
+          const Divider(height: 1),
+          _impresszumSection(
+            l10n.impresszumLinks,
+            null,
+          ),
+          _impresszumLink(
+            label: l10n.impresszumWebsite,
+            subtitle: 'diatar.eu',
+            url: 'https://www.diatar.eu',
+          ),
+          _impresszumLink(
+            label: l10n.impresszumGitHub,
+            subtitle: 'github.com/diatar-eu/diatar-flutter',
+            url: 'https://github.com/diatar-eu/diatar-flutter',
+          ),
+          _impresszumLink(
+            label: l10n.impresszumHackathonLink,
+            subtitle: 'szentjozsef.jezsuita.hu',
+            url: 'https://szentjozsef.jezsuita.hu/szent-jozsef-hackathon/',
+          ),
+        ];
+      },
+    );
+  }
+
+  Widget _impresszumSection(String title, String? body) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (body != null) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(body, style: Theme.of(context).textTheme.bodyMedium),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _impresszumLink({
+    required String label,
+    required String subtitle,
+    required String url,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      title: Text(label),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.open_in_new, size: 18),
+      onTap: () => launchUrl(Uri.parse(url)),
+    );
   }
 
   Future<void> _openFileSettings() {
@@ -2700,18 +2892,20 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   String _normalizeKeyPart(LogicalKeyboardKey key) {
     final String label = key.keyLabel.trim();
-    if (label.isNotEmpty) {
-      if (label.length == 1) {
+    if (label.isNotEmpty && label.length == 1) {
+      final int code = label.codeUnitAt(0);
+      if ((code >= 0x41 && code <= 0x5A) ||
+          (code >= 0x61 && code <= 0x7A) ||
+          (code >= 0x30 && code <= 0x39)) {
         return label.toUpperCase();
       }
-      return _capitalize(label);
     }
 
     final String debugName = key.debugName ?? '';
     if (debugName.isEmpty) {
-      return '';
+      return label.isNotEmpty ? _capitalize(label) : '';
     }
-    if (debugName.startsWith('F')) {
+    if (debugName.startsWith('F') && debugName.length <= 3) {
       return debugName.toUpperCase();
     }
     return _capitalize(debugName.replaceAll(' ', ''));
@@ -3226,10 +3420,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       desktopOrderSetHotkeys: Map<String, String>.from(_desktopOrderSetHotkeys),
       projBoldText: _projBoldText,
       useSound: _useSound,
-      castEnabled: _castEnabled,
-      castDeviceId: _castDeviceId,
-      castPort: _castPort,
-      castAutoConnect: _castAutoConnect,
+      liveSubtitleDeviceId: _liveSubtitleDeviceId,
+      liveSubtitleLanguage: _liveSubtitleLanguage,
       bkColor: _bkColor,
       txtColor: _txtColor,
       blankColor: _blankColor,

@@ -198,18 +198,20 @@ final Map<String, String> songHotkeys =
 
   String _normalizeKeyPart(LogicalKeyboardKey key) {
     final String label = key.keyLabel.trim();
-    if (label.isNotEmpty) {
-      if (label.length == 1) {
+    if (label.isNotEmpty && label.length == 1) {
+      final int code = label.codeUnitAt(0);
+      if ((code >= 0x41 && code <= 0x5A) ||
+          (code >= 0x61 && code <= 0x7A) ||
+          (code >= 0x30 && code <= 0x39)) {
         return label.toUpperCase();
       }
-      return _capitalize(label);
     }
 
     final String debugName = key.debugName ?? '';
     if (debugName.isEmpty) {
-      return '';
+      return label.isNotEmpty ? _capitalize(label) : '';
     }
-    if (debugName.startsWith('F')) {
+    if (debugName.startsWith('F') && debugName.length <= 3) {
       return debugName.toUpperCase();
     }
     return _capitalize(debugName.replaceAll(' ', ''));
