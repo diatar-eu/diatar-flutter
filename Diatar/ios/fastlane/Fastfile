@@ -27,22 +27,21 @@ platform :ios do
     )
 
     ios_dir = File.expand_path("..", __dir__)
-    build_dir = File.join(ios_dir, "build", "ios", "iphoneos")
-    payload_dir = File.join(ios_dir, "Payload")
     zip_name = Dir.glob("*-ios-nosign.zip", base: ios_dir).first
     UI.user_error!("No *-ios-nosign.zip artifact found in #{ios_dir}") unless zip_name
-    zip = File.join(ios_dir, zip_name)
-    sh("mkdir", "-p", build_dir)
-    sh("unzip", "-o", zip, "-d", build_dir)
-    sh("mkdir", "-p", payload_dir)
-    sh("cp", "-r", File.join(build_dir, "Runner.app"), payload_dir + "/")
-    sh("zip", "-r", File.join(ios_dir, "unsigned.ipa"), payload_dir)
 
-    require "sigh"
-    resign_script = File.join(Sigh::ROOT, "lib", "assets", "resign.sh")
-    resign_ipa = File.join(ios_dir, "unsigned.ipa")
-    resign_cmd = "cd #{ios_dir.shellescape} && bash #{resign_script.shellescape} #{resign_ipa.shellescape} #{signing_identity.shellescape} -p #{ENV["sigh_eu.diatar.diatar_appstore_profile-path"].shellescape} -v #{resign_ipa.shellescape}"
-    sh(resign_cmd)
+    Dir.chdir(ios_dir) do
+      sh("mkdir", "-p", "build/ios/iphoneos")
+      sh("unzip", "-o", zip_name, "-d", "build/ios/iphoneos")
+      sh("mkdir", "-p", "Payload")
+      sh("cp", "-r", "build/ios/iphoneos/Runner.app", "Payload/")
+      sh("zip", "-r", "unsigned.ipa", "Payload")
+
+      require "sigh"
+      resign_script = File.join(Sigh::ROOT, "lib", "assets", "resign.sh")
+      resign_cmd = "bash #{resign_script.shellescape} unsigned.ipa #{signing_identity.shellescape} -p #{ENV["sigh_eu.diatar.diatar_appstore_profile-path"].shellescape} -v unsigned.ipa"
+      sh(resign_cmd)
+    end
 
     upload_to_app_store(
       api_key: api_key,
@@ -75,22 +74,21 @@ platform :ios do
     )
 
     ios_dir = File.expand_path("..", __dir__)
-    build_dir = File.join(ios_dir, "build", "ios", "iphoneos")
-    payload_dir = File.join(ios_dir, "Payload")
     zip_name = Dir.glob("*-ios-nosign.zip", base: ios_dir).first
     UI.user_error!("No *-ios-nosign.zip artifact found in #{ios_dir}") unless zip_name
-    zip = File.join(ios_dir, zip_name)
-    sh("mkdir", "-p", build_dir)
-    sh("unzip", "-o", zip, "-d", build_dir)
-    sh("mkdir", "-p", payload_dir)
-    sh("cp", "-r", File.join(build_dir, "Runner.app"), payload_dir + "/")
-    sh("zip", "-r", File.join(ios_dir, "unsigned.ipa"), payload_dir)
 
-    require "sigh"
-    resign_script = File.join(Sigh::ROOT, "lib", "assets", "resign.sh")
-    resign_ipa = File.join(ios_dir, "unsigned.ipa")
-    resign_cmd = "cd #{ios_dir.shellescape} && bash #{resign_script.shellescape} #{resign_ipa.shellescape} #{signing_identity.shellescape} -p #{ENV["sigh_eu.diatar.diatar_appstore_profile-path"].shellescape} -v #{resign_ipa.shellescape}"
-    sh(resign_cmd)
+    Dir.chdir(ios_dir) do
+      sh("mkdir", "-p", "build/ios/iphoneos")
+      sh("unzip", "-o", zip_name, "-d", "build/ios/iphoneos")
+      sh("mkdir", "-p", "Payload")
+      sh("cp", "-r", "build/ios/iphoneos/Runner.app", "Payload/")
+      sh("zip", "-r", "unsigned.ipa", "Payload")
+
+      require "sigh"
+      resign_script = File.join(Sigh::ROOT, "lib", "assets", "resign.sh")
+      resign_cmd = "bash #{resign_script.shellescape} unsigned.ipa #{signing_identity.shellescape} -p #{ENV["sigh_eu.diatar.diatar_appstore_profile-path"].shellescape} -v unsigned.ipa"
+      sh(resign_cmd)
+    end
 
     upload_to_testflight(
       api_key: api_key,
