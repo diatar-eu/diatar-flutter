@@ -100,7 +100,6 @@ platform :ios do
       distribute_external: true,
       groups: ["Bárki"],
       notify_external_testers: true,
-      submission_information: { export_compliance_uses_encryption: false },
       changelog: changelog
     )
   end
