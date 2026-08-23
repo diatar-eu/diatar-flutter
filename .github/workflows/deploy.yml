@@ -480,6 +480,19 @@ jobs:
           name: ${{ matrix.app }}-ios-nosign
           path: ${{ matrix.app }}/ios/
 
+      - name: Debug - list downloaded files
+        run: |
+          echo "=== Working directory ==="
+          pwd
+          echo "=== Contents of ${{ matrix.app }}/ios/ ==="
+          ls -laR ${{ matrix.app }}/ios/ | head -80
+          echo "=== Files matching *nosign* ==="
+          find ${{ matrix.app }}/ios -type f -name "*nosign*" 2>/dev/null || echo "No nosign files found"
+          echo "=== Files matching *.zip ==="
+          find ${{ matrix.app }}/ios -type f -name "*.zip" 2>/dev/null || echo "No zip files found"
+          echo "=== Ruby Dir.glob test ==="
+          ruby -e "puts Dir.glob('**/*-ios-nosign.zip', base: '${{ matrix.app }}/ios')"
+
       - name: Decode App Store Connect API key
         run: |
           echo "${{ secrets.APPLE_API_KEY_BASE64 }}" | base64 -d > ${{ matrix.app }}/ios/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
