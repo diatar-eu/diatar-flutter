@@ -26,8 +26,9 @@ platform :ios do
       verbose: true
     )
 
-    zip = Dir.glob("**/*-ios-nosign.zip").first
-    UI.user_error!("No *-ios-nosign.zip artifact found") unless zip
+    ios_dir = File.expand_path("..", __dir__)
+    zip = Dir.glob("*-ios-nosign.zip", base: ios_dir).first
+    UI.user_error!("No *-ios-nosign.zip artifact found in #{ios_dir}") unless zip
     sh("unzip", "-o", zip, "-d", "build/ios/iphoneos")
     sh("mkdir", "-p", "Payload")
     sh("cp", "-r", "build/ios/iphoneos/Runner.app", "Payload/")
@@ -69,8 +70,9 @@ platform :ios do
       verbose: true
     )
 
-    zip = Dir.glob("**/*-ios-nosign.zip").first
-    UI.user_error!("No *-ios-nosign.zip artifact found") unless zip
+    ios_dir = File.expand_path("..", __dir__)
+    zip = Dir.glob("*-ios-nosign.zip", base: ios_dir).first
+    UI.user_error!("No *-ios-nosign.zip artifact found in #{ios_dir}") unless zip
     sh("unzip", "-o", zip, "-d", "build/ios/iphoneos")
     sh("mkdir", "-p", "Payload")
     sh("cp", "-r", "build/ios/iphoneos/Runner.app", "Payload/")
