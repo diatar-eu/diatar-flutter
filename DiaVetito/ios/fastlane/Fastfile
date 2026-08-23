@@ -38,11 +38,13 @@ platform :ios do
     sh("cp", "-r", File.join(build_dir, "Runner.app"), payload_dir + "/")
     sh("zip", "-r", File.join(ios_dir, "unsigned.ipa"), payload_dir)
 
-    resign(
-      ipa: File.join(ios_dir, "unsigned.ipa"),
-      signing_identity: signing_identity,
-      provisioning_profile: ENV["sigh_eu.diatar.vetito_appstore_profile-path"]
-    )
+    Dir.chdir(ios_dir) do
+      resign(
+        ipa: File.join(ios_dir, "unsigned.ipa"),
+        signing_identity: signing_identity,
+        provisioning_profile: ENV["sigh_eu.diatar.vetito_appstore_profile-path"]
+      )
+    end
 
     upload_to_app_store(
       api_key: api_key,
@@ -86,11 +88,13 @@ platform :ios do
     sh("cp", "-r", File.join(build_dir, "Runner.app"), payload_dir + "/")
     sh("zip", "-r", File.join(ios_dir, "unsigned.ipa"), payload_dir)
 
-    resign(
-      ipa: File.join(ios_dir, "unsigned.ipa"),
-      signing_identity: signing_identity,
-      provisioning_profile: ENV["sigh_eu.diatar.vetito_appstore_profile-path"]
-    )
+    Dir.chdir(ios_dir) do
+      resign(
+        ipa: File.join(ios_dir, "unsigned.ipa"),
+        signing_identity: signing_identity,
+        provisioning_profile: ENV["sigh_eu.diatar.vetito_appstore_profile-path"]
+      )
+    end
 
     upload_to_testflight(
       api_key: api_key,
