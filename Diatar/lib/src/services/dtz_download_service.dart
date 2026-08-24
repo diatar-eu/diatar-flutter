@@ -71,23 +71,47 @@ class DtzManageItem {
 }
 
 class DtzDownloadService {
-  DtzDownloadService({http.Client? client}) : _client = client ?? http.Client();
+  DtzDownloadService({http.Client? client})
+    : _client = client ?? http.Client(),
+      _zipListUrl = _scoreZipListUrl,
+      _mediaMapUrl = _scoreMediaMapUrl,
+      _directoryName = '',
+      _stampPrefix = 'dtz_stamp_',
+      _zipContentsPrefix = 'dtz_zip_contents_';
+
+  DtzDownloadService.music({http.Client? client})
+    : _client = client ?? http.Client(),
+      _zipListUrl = _musicZipListUrl,
+      _mediaMapUrl = _musicMediaMapUrl,
+      _directoryName = 'Music',
+      _stampPrefix = 'music_stamp_',
+      _zipContentsPrefix = 'music_zip_contents_';
 
   final http.Client _client;
 
   static const String _dtzListUrl = 'https://diatar.eu/downloads/dtz/_list.php';
   static const String _dtzBaseUrl = 'https://diatar.eu/downloads/dtz/';
-  static const String _zipListUrl =
+  static const String _scoreZipListUrl =
       'https://diatar.eu/downloads/kottak/_list.php';
-  static const String _zipBaseUrl = 'https://diatar.eu/downloads/kottak/';
-  static const String _kottakTxtUrl =
+  static const String _scoreZipBaseUrl = 'https://diatar.eu/downloads/kottak/';
+  static const String _scoreMediaMapUrl =
       'https://diatar.eu/downloads/kottak/kottak.txt';
-  static const String _stampPrefix = 'dtz_stamp_';
-  static const String _zipContentsPrefix = 'dtz_zip_contents_';
+  static const String _musicZipListUrl =
+      'https://diatar.eu/downloads/zene/_list.php';
+  static const String _musicMediaMapUrl =
+      'https://diatar.eu/downloads/zene/zenek.txt';
+  final String _zipListUrl;
+  final String _mediaMapUrl;
+  final String _directoryName;
+  final String _stampPrefix;
+  final String _zipContentsPrefix;
 
   Future<Directory> resolveDirectory() async {
     final String docsPath = await PathHelper.getDocumentsDirectoryPath();
-    return FileSystemProvider.instance.directory('$docsPath/diatar/DTZs');
+    final String basePath = '$docsPath/diatar/DTZs';
+    return FileSystemProvider.instance.directory(
+      _directoryName.isEmpty ? basePath : '$basePath/$_directoryName',
+    );
   }
 
   Future<List<DtzDownloadItem>> listAll({
@@ -102,7 +126,7 @@ class DtzDownloadService {
     final List<_RemoteEntry> remoteZipList = await _fetchRemoteList(
       _zipListUrl,
     );
-    final Map<String, List<String>> kottakMap = await _fetchKottakMap();
+    final Map<String, List<String>> kottakMap = await _fetchMediaMap();
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     final Map<String, _RemoteEntry> remoteByName = <String, _RemoteEntry>{
@@ -211,8 +235,8 @@ class DtzDownloadService {
       );
       if (await _needsDownload(dtzFile, item.fileName, item.timestamp, prefs)) {
         await _downloadOne(
+          url: Uri.parse('$_dtzBaseUrl${item.fileName}'),
           fileName: item.fileName,
-          baseUrl: _dtzBaseUrl,
           targetFile: dtzFile,
           currentFile: currentFile,
           totalFiles: total,
@@ -237,8 +261,10 @@ class DtzDownloadService {
         );
         if (await _needsDownload(zipFile, zip, zipEntry.timestamp, prefs)) {
           await _downloadOne(
+            url: zipEntry.url == null
+                ? Uri.parse('$_scoreZipBaseUrl$zip')
+                : Uri.parse(zipEntry.url!),
             fileName: zip,
-            baseUrl: _zipBaseUrl,
             targetFile: zipFile,
             currentFile: currentFile,
             totalFiles: total,
@@ -404,7 +430,11 @@ class DtzDownloadService {
       return null;
     }
 
-    final String fileName = cells[0].trim();
+    final String source = cells[0].trim();
+    final Uri? sourceUri = Uri.tryParse(source);
+    final String fileName = sourceUri != null && sourceUri.hasScheme
+        ? sourceUri.pathSegments.lastOrNull ?? ''
+        : source;
     if (!fileName.toLowerCase().endsWith('.dtz') &&
         !fileName.toLowerCase().endsWith('.zip')) {
       return null;
@@ -416,13 +446,20 @@ class DtzDownloadService {
       return null;
     }
 
-    return _RemoteEntry(fileName: fileName, size: size, timestamp: timestamp);
+    return _RemoteEntry(
+      fileName: fileName,
+      size: size,
+      timestamp: timestamp,
+      url: sourceUri != null && sourceUri.hasScheme ? source : null,
+    );
   }
 
-  Future<Map<String, List<String>>> _fetchKottakMap() async {
-    final http.Response response = await _client.get(Uri.parse(_kottakTxtUrl));
+  Future<Map<String, List<String>>> _fetchMediaMap() async {
+    final http.Response response = await _client.get(Uri.parse(_mediaMapUrl));
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('HTTP ${response.statusCode} while loading kottak.txt');
+      throw Exception(
+        'HTTP ${response.statusCode} while loading $_mediaMapUrl',
+      );
     }
 
     final String content = utf8.decode(response.bodyBytes);
@@ -461,15 +498,14 @@ class DtzDownloadService {
   }
 
   Future<void> _downloadOne({
+    required Uri url,
     required String fileName,
-    required String baseUrl,
     required File targetFile,
     required int currentFile,
     required int totalFiles,
     void Function(DtzDownloadProgress progress)? onProgress,
   }) async {
-    final Uri uri = Uri.parse('$baseUrl$fileName');
-    final http.Response response = await _client.get(uri);
+    final http.Response response = await _client.get(url);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
         'HTTP ${response.statusCode} while downloading $fileName',
@@ -529,9 +565,11 @@ class _RemoteEntry {
     required this.fileName,
     required this.size,
     required this.timestamp,
+    this.url,
   });
 
   final String fileName;
   final int size;
   final String timestamp;
+  final String? url;
 }

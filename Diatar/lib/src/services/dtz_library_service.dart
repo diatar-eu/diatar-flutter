@@ -22,13 +22,11 @@ class DtzLibraryService {
   Future<Map<String, DtxVerse>> loadLibrary() async {
     final Directory dtzDir = await resolveDirectory();
     final Map<String, DtxVerse> entries = <String, DtxVerse>{};
-    final String docsPath = await PathHelper.getDocumentsDirectoryPath();
-
     if (!await dtzDir.exists()) {
       return entries;
     }
 
-    final List<FileSystemEntity> children = dtzDir.listSync();
+    final List<FileSystemEntity> children = dtzDir.listSync(recursive: true);
     children.sort(
       (FileSystemEntity a, FileSystemEntity b) => a.path.compareTo(b.path),
     );
@@ -39,7 +37,7 @@ class DtzLibraryService {
       }
       try {
         final String content = await child.readAsString();
-        _parseFile(content, entries, docsPath);
+        _parseFile(content, entries, child.parent.path);
       } catch (_) {
         // Hibas dtz fajlokat atugrunk, hogy az app hasznalhato maradjon.
       }
@@ -51,11 +49,15 @@ class DtzLibraryService {
   void _parseFile(
     String content,
     Map<String, DtxVerse> entries,
-    String docsPath,
+    String mediaDirectory,
   ) {
     final List<String> lines = content.replaceAll('\r\n', '\n').split('\n');
 
-    String baseDir = '$docsPath/diatar/DTZs';
+    String baseDir = mediaDirectory;
+    final bool isMusicDirectory = mediaDirectory
+        .replaceAll('\\', '/')
+        .toLowerCase()
+        .endsWith('/music');
 
     for (final String raw in lines) {
       if (raw.isEmpty) {
@@ -66,7 +68,17 @@ class DtzLibraryService {
       final String rest = raw.substring(1).trim();
 
       if (prefix == 'b' || prefix == 'B') {
-        // Ignoráljuk a base dirt, mert már automatikusan letölt, csak bonyodalmat okozna.
+        if (isMusicDirectory) {
+          final String relativeBase = rest
+              .replaceAll('\\', '/')
+              .replaceAll(RegExp(r'^/+|/+$'), '');
+          if (relativeBase.isNotEmpty &&
+              !relativeBase.startsWith('../') &&
+              !relativeBase.contains('/../')) {
+            baseDir =
+                '${mediaDirectory.endsWith('/') ? mediaDirectory : '$mediaDirectory/'}$relativeBase';
+          }
+        }
         continue;
       }
 
@@ -76,15 +88,17 @@ class DtzLibraryService {
         continue;
       }
       final String diaId = rest.substring(0, spaceIndex).trim();
-      final String value =
-          rest.substring(spaceIndex + 1).trim().replaceAll('\\', '/');
+      final String value = rest
+          .substring(spaceIndex + 1)
+          .trim()
+          .replaceAll('\\', '/');
       if (diaId.isEmpty) {
         continue;
       }
 
       // Meglévő vagy új bejegyzés lekérése
-      DtxVerse verse = entries[diaId] ??
-          DtxVerse(name: diaId, lines: const <String>[]);
+      DtxVerse verse =
+          entries[diaId] ?? DtxVerse(name: diaId, lines: const <String>[]);
 
       switch (prefix) {
         case 'f':
@@ -98,6 +112,7 @@ class DtzLibraryService {
             lines: verse.lines,
             diaId: diaId,
             soundFilePath: verse.soundFilePath,
+            soundForSong: verse.soundForSong,
             fotoFilePath: fullPath,
             forwardMS: verse.forwardMS,
           );
@@ -113,6 +128,7 @@ class DtzLibraryService {
             lines: verse.lines,
             diaId: diaId,
             soundFilePath: fullPath,
+            soundForSong: prefix == 'Z',
             fotoFilePath: verse.fotoFilePath,
             forwardMS: verse.forwardMS,
           );
@@ -126,6 +142,7 @@ class DtzLibraryService {
             lines: verse.lines,
             diaId: diaId,
             soundFilePath: verse.soundFilePath,
+            soundForSong: verse.soundForSong,
             fotoFilePath: verse.fotoFilePath,
             forwardMS: forwardMS,
           );

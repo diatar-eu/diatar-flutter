@@ -290,6 +290,12 @@ abstract class AppLocalizations {
   /// **'Kották'**
   String get downloadTabDtz;
 
+  /// No description provided for @downloadTabMusic.
+  ///
+  /// In hu, this message translates to:
+  /// **'Zenék'**
+  String get downloadTabMusic;
+
   /// No description provided for @downloadTitle.
   ///
   /// In hu, this message translates to:
@@ -636,6 +642,30 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Vetítés: BE'**
   String get statusProjectionOn;
+
+  /// No description provided for @statusDebugAudioStarted.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hang elindítva: {path}'**
+  String statusDebugAudioStarted(String path);
+
+  /// No description provided for @statusDebugAudioStopped.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hang leállítva'**
+  String get statusDebugAudioStopped;
+
+  /// No description provided for @statusDebugAudioNoFile.
+  ///
+  /// In hu, this message translates to:
+  /// **'A hang nem indult el: {reason}'**
+  String statusDebugAudioNoFile(String reason);
+
+  /// No description provided for @statusDebugAudioError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hanghiba itt: {path}: {error}'**
+  String statusDebugAudioError(String path, String error);
 
   /// No description provided for @statusProjectionOff.
   ///
@@ -2062,6 +2092,18 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Kotta importálás'**
   String get importDtzFilesButton;
+
+  /// No description provided for @importMusicFilesButton.
+  ///
+  /// In hu, this message translates to:
+  /// **'Zene importálás'**
+  String get importMusicFilesButton;
+
+  /// No description provided for @importMusicNotImplemented.
+  ///
+  /// In hu, this message translates to:
+  /// **'A zeneimport még nincs implementálva.'**
+  String get importMusicNotImplemented;
 
   /// No description provided for @importDtzPreviewTitle.
   ///

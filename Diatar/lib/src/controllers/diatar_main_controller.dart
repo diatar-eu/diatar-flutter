@@ -54,6 +54,13 @@ import '../utils/text_chunking.dart';
 
 export '../models/custom_order_entry.dart';
 
+class _AudioPathResolution {
+  const _AudioPathResolution({this.path, this.reason = ''});
+
+  final String? path;
+  final String reason;
+}
+
 class SongbookOrderItem {
   const SongbookOrderItem({
     required this.fileName,
@@ -157,6 +164,7 @@ class DiatarMainController extends ChangeNotifier {
   final SettingsStore _settingsStore = SettingsStore();
   final DtxDownloadService _downloadService = DtxDownloadService();
   final DtzDownloadService _dtzDownloadService = DtzDownloadService();
+  final DtzDownloadService _musicDownloadService = DtzDownloadService.music();
   late final DtxLibraryService _dtxLibraryService = DtxLibraryService(
     parser: _parser,
   );
@@ -221,6 +229,8 @@ class DiatarMainController extends ChangeNotifier {
   int _screenHeight = 1080;
   Set<String> _disabledSongbooks = <String>{};
   Set<String> _disabledDtzFiles = <String>{};
+  Set<String> _disabledMusicFiles = <String>{};
+  bool _musicSelectionConfigured = false;
   List<CustomOrderEntry> _customOrder = <CustomOrderEntry>[];
   bool customOrderActive = false;
   int _customOrderCursor = -1;
@@ -234,6 +244,9 @@ class DiatarMainController extends ChangeNotifier {
   String _zsolozsmaLastDiagnostics = '';
   String? _customOrderSourceType;
   static const String _disabledDtzPrefsKey = 'disabled_dtz_files';
+  static const String _disabledMusicPrefsKey = 'disabled_music_files';
+  static const String _musicSelectionConfiguredPrefsKey =
+      'music_selection_configured';
 
   /// A párhuzamosan betöltött diasorok (saját diasorok) listája.
   List<CustomOrderSet> _customOrderSets = <CustomOrderSet>[];
@@ -806,10 +819,79 @@ class DiatarMainController extends ChangeNotifier {
 
   void _playCurrentVerseSound() {
     if (!settings.useSound || !showing) {
-      _audioService.stop();
+      unawaited(_reportAudioPlayback(_audioService.stop()));
       return;
     }
-    _audioService.playSound(currentVerse?.soundFilePath);
+    final _AudioPathResolution resolution = _resolveSoundPathForCurrentVerse();
+    if (resolution.path == null) {
+      if (kDebugMode) {
+        _setStatus('statusDebugAudioNoFile', <String, String>{
+          'reason': resolution.reason,
+        });
+        notifyListeners();
+      }
+      unawaited(_audioService.stop());
+      return;
+    }
+    unawaited(_reportAudioPlayback(_audioService.playSound(resolution.path)));
+  }
+
+  Future<void> _reportAudioPlayback(
+    Future<AudioPlaybackResult> playback,
+  ) async {
+    final AudioPlaybackResult result = await playback;
+    if (!kDebugMode) {
+      return;
+    }
+    switch (result.state) {
+      case AudioPlaybackState.started:
+        _setStatus('statusDebugAudioStarted', <String, String>{
+          'path': result.path ?? '',
+        });
+        break;
+      case AudioPlaybackState.stopped:
+        _setStatus('statusDebugAudioStopped');
+        break;
+      case AudioPlaybackState.failed:
+        _setStatus('statusDebugAudioError', <String, String>{
+          'path': result.path ?? '',
+          'error': '${result.error}',
+        });
+        break;
+    }
+    notifyListeners();
+  }
+
+  _AudioPathResolution _resolveSoundPathForCurrentVerse() {
+    final DtxVerse? verse = currentVerse;
+    final String? diaId = verse?.diaId;
+    if (diaId == null || diaId.isEmpty) {
+      return const _AudioPathResolution(reason: 'missing-dia-id');
+    }
+    final DtxVerse? direct = _dtzLibrary[diaId];
+    if (direct?.soundFilePath?.isNotEmpty ?? false) {
+      return _AudioPathResolution(path: direct!.soundFilePath);
+    }
+
+    // An uppercase Z record attaches one sound to every verse of its song.
+    final DtxSong? song = currentSong;
+    if (song == null) {
+      return const _AudioPathResolution(reason: 'missing-song');
+    }
+    for (final DtxVerse songVerse in song.verses) {
+      final String? songDiaId = songVerse.diaId;
+      if (songDiaId == null || songDiaId.isEmpty) {
+        continue;
+      }
+      final DtxVerse? mapped = _dtzLibrary[songDiaId];
+      if (mapped?.soundForSong == true &&
+          (mapped?.soundFilePath?.isNotEmpty ?? false)) {
+        return _AudioPathResolution(path: mapped!.soundFilePath);
+      }
+    }
+    return _AudioPathResolution(
+      reason: direct == null ? 'no-dtz-entry' : 'no-sound-entry',
+    );
   }
 
   void markStartupDownloadDialogHandled() {
@@ -841,6 +923,8 @@ class DiatarMainController extends ChangeNotifier {
     lastBlankPath = settings.blankPicPath;
     _disabledSongbooks = await _orderStore.loadDisabled();
     _disabledDtzFiles = await _loadDisabledDtzFiles();
+    _disabledMusicFiles = await _loadDisabledMusicFiles();
+    _musicSelectionConfigured = await _loadMusicSelectionConfigured();
     await _loadCustomOrderSets();
     globals = _projectionGlobalsPolicy.fromSettings(
       settings,
@@ -945,6 +1029,30 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> _saveDisabledDtzFiles(Set<String> files) async {
+    await _saveDisabledFiles(_disabledDtzPrefsKey, files);
+  }
+
+  Future<Set<String>> _loadDisabledMusicFiles() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(_disabledMusicPrefsKey) ?? const <String>[])
+        .map((String name) => name.trim())
+        .where((String name) => name.isNotEmpty)
+        .toSet();
+  }
+
+  Future<void> _saveDisabledMusicFiles(Set<String> files) async {
+    await _saveDisabledFiles(_disabledMusicPrefsKey, files);
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_musicSelectionConfiguredPrefsKey, true);
+    _musicSelectionConfigured = true;
+  }
+
+  Future<bool> _loadMusicSelectionConfigured() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_musicSelectionConfiguredPrefsKey) ?? false;
+  }
+
+  Future<void> _saveDisabledFiles(String key, Set<String> files) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final List<String> normalized =
         files
@@ -953,7 +1061,7 @@ class DiatarMainController extends ChangeNotifier {
             .toSet()
             .toList()
           ..sort();
-    await prefs.setStringList(_disabledDtzPrefsKey, normalized);
+    await prefs.setStringList(key, normalized);
   }
 
   Future<void> _checkStartupDtxUpdates() async {
@@ -2422,6 +2530,136 @@ class DiatarMainController extends ChangeNotifier {
         .toList();
   }
 
+  Future<List<DtzManageItem>> loadMusicManagerItems() async {
+    final Directory musicDir = await _musicDownloadService.resolveDirectory();
+    final Map<String, String> dtxTitles = <String, String>{
+      for (final DtxBook book in books)
+        book.fileName.replaceAll(RegExp(r'\.[^.]+$'), ''): book.title,
+    };
+    try {
+      final Map<String, String> remoteTitles = await _downloadService
+          .loadRemoteTitleMap();
+      for (final MapEntry<String, String> entry in remoteTitles.entries) {
+        dtxTitles.putIfAbsent(entry.key, () => entry.value);
+      }
+    } catch (_) {
+      // Local titles and DTZ base names remain usable offline.
+    }
+    final List<DtzDownloadItem> all = await _musicDownloadService.listAll(
+      targetDir: musicDir,
+      dtxTitles: dtxTitles,
+    );
+    return all
+        .map(
+          (DtzDownloadItem item) => DtzManageItem(
+            item: item,
+            excluded:
+                !_musicSelectionConfigured ||
+                _disabledMusicFiles.contains(item.fileName),
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> applyMusicManagerSelection({
+    required Set<String> downloadSelected,
+    required Set<String> excludedSelected,
+  }) async {
+    loading = true;
+    downloadInProgress = true;
+    downloadCurrentFile = 0;
+    downloadTotalFiles = 0;
+    downloadCurrentName = '';
+    downloadCurrentFraction = 0;
+    _setStatus('statusDownloadListLoading');
+    notifyListeners();
+
+    try {
+      final Set<String> requestedDownloads = downloadSelected
+          .map((String name) => name.trim())
+          .where((String name) => name.isNotEmpty)
+          .toSet();
+      final Set<String> effectiveExcluded =
+          excludedSelected
+              .map((String name) => name.trim())
+              .where((String name) => name.isNotEmpty)
+              .toSet()
+            ..removeAll(requestedDownloads);
+      final Directory musicDir = await _musicDownloadService.resolveDirectory();
+      final List<DtzDownloadItem> all = await _musicDownloadService.listAll(
+        targetDir: musicDir,
+      );
+      final Map<String, DtzDownloadItem> byFile = <String, DtzDownloadItem>{
+        for (final DtzDownloadItem item in all) item.fileName: item,
+      };
+      if (!_musicSelectionConfigured) {
+        effectiveExcluded.addAll(byFile.keys);
+        effectiveExcluded.removeAll(requestedDownloads);
+      }
+      _disabledMusicFiles = effectiveExcluded;
+      await _saveDisabledMusicFiles(_disabledMusicFiles);
+      final Set<String> effectiveDownload = requestedDownloads.where((
+        String name,
+      ) {
+        final DtzDownloadItem? item = byFile[name];
+        return item != null && item.isOfficial && item.updateAvailable;
+      }).toSet();
+      final int deleted = await _musicDownloadService.deletePackages(
+        targetDir: musicDir,
+        itemsToDelete: all
+            .where(
+              (DtzDownloadItem item) =>
+                  effectiveExcluded.contains(item.fileName),
+            )
+            .toList(),
+        allItems: all,
+      );
+      if (deleted > 0) {
+        await _loadDtzPhotos();
+      }
+
+      final List<DtzDownloadItem> selected = effectiveDownload
+          .map((String name) => byFile[name]!)
+          .toList();
+      if (selected.isEmpty) {
+        _setStatus('statusDownloadSummaryNone');
+      } else {
+        final DtzDownloadSummary summary = await _musicDownloadService
+            .downloadUpdates(
+              targetDir: musicDir,
+              selected: selected,
+              onProgress: (DtzDownloadProgress progress) {
+                downloadCurrentFile = progress.currentFile;
+                downloadTotalFiles = progress.totalFiles;
+                downloadCurrentName = progress.fileName;
+                downloadCurrentFraction = progress.fraction;
+                _setStatus('statusDownloadProgress', <String, String>{
+                  'current': '${progress.currentFile}',
+                  'total': '${progress.totalFiles}',
+                  'name': progress.fileName,
+                  'percent': (progress.fraction * 100).toStringAsFixed(0),
+                });
+                notifyListeners();
+              },
+            );
+        await _loadDtzPhotos();
+        if (summary.downloaded > 0 && !settings.useSound) {
+          await applySettings(settings.copyWith(useSound: true));
+        }
+        _setStatus('statusDownloadSummary', <String, String>{
+          'downloaded': '${summary.downloaded}',
+          'skipped': '${summary.skipped}',
+        });
+      }
+    } catch (e) {
+      _setStatus('statusDownloadError', <String, String>{'error': '$e'});
+    } finally {
+      downloadInProgress = false;
+      loading = false;
+      notifyListeners();
+    }
+  }
+
   Future<int> deleteDtzFiles(Set<String> fileNames) async {
     final Directory dtzDir = await _dtzDownloadService.resolveDirectory();
     final int deleted = await _dtzDownloadService.deleteLocalFiles(
@@ -3625,6 +3863,7 @@ class DiatarMainController extends ChangeNotifier {
     _setStatus(showing ? 'statusProjectionOn' : 'statusProjectionOff');
     notifyListeners();
     _syncProjectionOnly();
+    _playCurrentVerseSound();
   }
 
   /// Elrejti a vezérlő (fő) ablakot, ha a vetítő ablakkal azonos
@@ -3684,7 +3923,9 @@ class DiatarMainController extends ChangeNotifier {
       );
       _speechRecognizer!.results.listen(
         (SpeechResult result) {
-          debugPrint('LiveSubtitles: text="${result.text}" final=${result.isFinal}');
+          debugPrint(
+            'LiveSubtitles: text="${result.text}" final=${result.isFinal}',
+          );
           _liveSubtitleText = result.text;
           notifyListeners();
           _sendLiveSubtitle(result.text);
@@ -3728,11 +3969,7 @@ class DiatarMainController extends ChangeNotifier {
     }
     await _desktopProjectorBridge.sendText(title: title, lines: lines);
     if (tcpConfigured) {
-      await _sender.sendText(
-        title: title,
-        lines: lines,
-        wordToHighlight: 0,
-      );
+      await _sender.sendText(title: title, lines: lines, wordToHighlight: 0);
     }
   }
 

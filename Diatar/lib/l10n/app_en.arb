@@ -39,6 +39,7 @@
   "downloadDtzNoItems": "No downloadable DTZ files.",
   "downloadTabDtx": "Volumes",
   "downloadTabDtz": "Scores",
+  "downloadTabMusic": "Music",
   "downloadTitle": "Download",
   "downloadManagerNameColumn": "Volumes",
   "downloadManagerUpdateColumn": "Update",
@@ -294,6 +295,34 @@
     }
   },
   "statusProjectionOn": "Projection: ON",
+  "statusDebugAudioStarted": "Audio started: {path}",
+  "@statusDebugAudioStarted": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "statusDebugAudioStopped": "Audio stopped",
+  "statusDebugAudioNoFile": "Audio was not started: {reason}",
+  "@statusDebugAudioNoFile": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "statusDebugAudioError": "Audio error at {path}: {error}",
+  "@statusDebugAudioError": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "statusProjectionOff": "Projection: OFF",
   "statusImagePathEmpty": "Image file path is empty.",
   "statusCustomTextEmpty": "Provide a title or at least one line.",
@@ -808,6 +837,8 @@
   },
   "importDtxFilesButton": "Import from file",
   "importDtzFilesButton": "Import scores",
+  "importMusicFilesButton": "Import music",
+  "importMusicNotImplemented": "Music import is not implemented yet.",
   "importDtzPreviewTitle": "Import scores",
   "importDtzDtzSection": "DTZ file",
   "importDtzZipSection": "ZIP files (images, sounds)",

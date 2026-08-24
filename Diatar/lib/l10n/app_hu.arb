@@ -39,6 +39,7 @@
   "downloadDtzNoItems": "Nincs letölthető DTZ fájl.",
   "downloadTabDtx": "Kötetek",
   "downloadTabDtz": "Kották",
+  "downloadTabMusic": "Zenék",
   "downloadTitle": "Letöltés",
   "downloadManagerNameColumn": "Kötetek",
   "downloadManagerUpdateColumn": "Frissítés",
@@ -294,6 +295,34 @@
     }
   },
   "statusProjectionOn": "Vetítés: BE",
+  "statusDebugAudioStarted": "Hang elindítva: {path}",
+  "@statusDebugAudioStarted": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "statusDebugAudioStopped": "Hang leállítva",
+  "statusDebugAudioNoFile": "A hang nem indult el: {reason}",
+  "@statusDebugAudioNoFile": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "statusDebugAudioError": "Hanghiba itt: {path}: {error}",
+  "@statusDebugAudioError": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "statusProjectionOff": "Vetítés: KI",
   "statusImagePathEmpty": "A kép fájl útvonala üres.",
   "statusCustomTextEmpty": "Adj meg címet vagy legalább egy sort.",
@@ -808,6 +837,8 @@
   },
   "importDtxFilesButton": "Importálás fájlból",
   "importDtzFilesButton": "Kotta importálás",
+  "importMusicFilesButton": "Zene importálás",
+  "importMusicNotImplemented": "A zeneimport még nincs implementálva.",
   "importDtzPreviewTitle": "Kotta importálás",
   "importDtzDtzSection": "DTZ fájl",
   "importDtzZipSection": "ZIP fájlok (képek, hangok)",

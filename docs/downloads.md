@@ -13,6 +13,13 @@
 2. Jelöld ki a DTZ fájlokat és a hozzájuk tartozó képeket (ZIP)
 3. Nyomj a **Letöltés** gombra
 
+## Zenék letöltése
+
+1. Válts a **Letöltés** ablak **Zenék** lapjára
+2. A kötetek alapértelmezetten mellőzöttek; a frissítés jelölésével válaszd ki a letöltendő zenéket
+3. Nyomj a **Letöltés** gombra
+4. A zenék a hozzájuk tartozó DTZ- és ZIP-csomagból kerülnek kibontásra; a mellőzött csomagok helyi fájljai törlődnek
+
 ## Felhasználói import
 
 - **DTX importálás fájlból** — saját `dtx` fájlok importálása

@@ -55,6 +55,26 @@ void main() {
       expect(dir.childFile('song.dtz').existsSync(), isFalse);
       expect(dir.childFile('scores/song.png').existsSync(), isFalse);
     });
+
+    test('uses full GitHub URLs for music ZIP downloads', () async {
+      final Directory dir = await LocalFileSystem().systemTempDirectory
+          .createTemp('music_service_test_');
+      final DtzDownloadService service = DtzDownloadService.music(
+        client: _MusicHttpClient(),
+      );
+
+      final List<DtzDownloadItem> items = await service.listAll(
+        targetDir: dir,
+        dtxTitles: const <String, String>{'song': 'Song title'},
+      );
+      expect(items, hasLength(1));
+      expect(items.first.zips, <String>['song.zip']);
+
+      await service.downloadUpdates(targetDir: dir, selected: items);
+      expect(dir.childFile('song.dtz').existsSync(), isTrue);
+      expect(dir.childFile('music/song.mp3').existsSync(), isTrue);
+      expect(dir.childFile('song.zip').existsSync(), isFalse);
+    });
   });
 }
 
@@ -89,6 +109,7 @@ class _DownloadingFakeDtzHttpClient extends _FakeDtzHttpClient {
     if (url.toString() == 'https://diatar.eu/downloads/dtz/song.dtz') {
       return http.Response.bytes(utf8.encode('song'), 200);
     }
+
     if (url.toString() == 'https://diatar.eu/downloads/kottak/cover.zip') {
       final Archive archive = Archive()
         ..addFile(ArchiveFile('scores/song.png', 4, <int>[1, 2, 3, 4]));
@@ -96,4 +117,41 @@ class _DownloadingFakeDtzHttpClient extends _FakeDtzHttpClient {
     }
     return super.get(url, headers: headers);
   }
+}
+
+class _MusicHttpClient implements http.Client {
+  @override
+  Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
+    switch (url.toString()) {
+      case 'https://diatar.eu/downloads/dtz/_list.php':
+        return http.Response.bytes(
+          utf8.encode('song.dtz,42,20240101010101\n'),
+          200,
+        );
+      case 'https://diatar.eu/downloads/zene/_list.php':
+        return http.Response.bytes(
+          utf8.encode(
+            'https://github.com/diatar-eu/diatar-web/releases/download/zene/song.zip,111,20240101010102\n'
+            'zenek.txt,1,20240101010102\n',
+          ),
+          200,
+        );
+      case 'https://diatar.eu/downloads/zene/zenek.txt':
+        return http.Response.bytes(utf8.encode('song.dtz=song.zip\n'), 200);
+      case 'https://diatar.eu/downloads/dtz/song.dtz':
+        return http.Response.bytes(
+          utf8.encode('Z00000001 music/song.mp3'),
+          200,
+        );
+      case 'https://github.com/diatar-eu/diatar-web/releases/download/zene/song.zip':
+        final Archive archive = Archive()
+          ..addFile(ArchiveFile('music/song.mp3', 4, <int>[1, 2, 3, 4]));
+        return http.Response.bytes(ZipEncoder().encodeBytes(archive), 200);
+      default:
+        throw UnsupportedError('Unexpected URL: $url');
+    }
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

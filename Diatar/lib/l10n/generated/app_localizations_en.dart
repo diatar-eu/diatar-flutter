@@ -111,6 +111,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadTabDtz => 'Scores';
 
   @override
+  String get downloadTabMusic => 'Music';
+
+  @override
   String get downloadTitle => 'Download';
 
   @override
@@ -348,6 +351,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statusProjectionOn => 'Projection: ON';
+
+  @override
+  String statusDebugAudioStarted(String path) {
+    return 'Audio started: $path';
+  }
+
+  @override
+  String get statusDebugAudioStopped => 'Audio stopped';
+
+  @override
+  String statusDebugAudioNoFile(String reason) {
+    return 'Audio was not started: $reason';
+  }
+
+  @override
+  String statusDebugAudioError(String path, String error) {
+    return 'Audio error at $path: $error';
+  }
 
   @override
   String get statusProjectionOff => 'Projection: OFF';
@@ -1150,6 +1171,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get importDtzFilesButton => 'Import scores';
+
+  @override
+  String get importMusicFilesButton => 'Import music';
+
+  @override
+  String get importMusicNotImplemented =>
+      'Music import is not implemented yet.';
 
   @override
   String get importDtzPreviewTitle => 'Import scores';

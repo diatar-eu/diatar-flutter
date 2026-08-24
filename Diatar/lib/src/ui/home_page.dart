@@ -42,12 +42,23 @@ class _DownloadDialogResult {
     required this.dtxExcludedSelected,
     required this.dtzDownloadSelected,
     required this.dtzExcludedSelected,
+    required this.musicDownloadSelected,
+    required this.musicExcludedSelected,
   });
 
   final Set<String> dtxDownloadSelected;
   final Set<String> dtxExcludedSelected;
   final Set<String> dtzDownloadSelected;
   final Set<String> dtzExcludedSelected;
+  final Set<String> musicDownloadSelected;
+  final Set<String> musicExcludedSelected;
+}
+
+class _MediaTabSelections {
+  final Set<String> downloadSelected = <String>{};
+  final Set<String> excludedFiles = <String>{};
+  List<DtzManageItem> allItems = const <DtzManageItem>[];
+  bool initialized = false;
 }
 
 class _DtxManagerListEntry {
@@ -1029,6 +1040,8 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
               child: Column(
                 children: <Widget>[
                   _TransportErrorSnackListener(controller: controller),
+                  if (kDebugMode)
+                    _DebugAudioSnackListener(controller: controller),
                   if (_homeControlMode == _HomeControlMode.dialist) ...<Widget>[
                     const SizedBox(height: 4),
                     Expanded(
@@ -1075,6 +1088,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           child: Column(
             children: <Widget>[
               _TransportErrorSnackListener(controller: controller),
+              if (kDebugMode) _DebugAudioSnackListener(controller: controller),
               if (_homeControlMode == _HomeControlMode.dialist) ...<Widget>[
                 const SizedBox(height: 4),
                 SizedBox(
@@ -1662,6 +1676,10 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       downloadSelected: selected.dtzDownloadSelected,
       excludedSelected: selected.dtzExcludedSelected,
     );
+    await controller.applyMusicManagerSelection(
+      downloadSelected: selected.musicDownloadSelected,
+      excludedSelected: selected.musicExcludedSelected,
+    );
   }
 
   void _openSearchSheet(BuildContext context) {
@@ -1724,10 +1742,8 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext ctx) => _ModelDownloadDialog(
-        modelManager: modelManager,
-        l10n: l10n,
-      ),
+      builder: (BuildContext ctx) =>
+          _ModelDownloadDialog(modelManager: modelManager, l10n: l10n),
     );
   }
 }
@@ -1778,6 +1794,64 @@ class _TransportErrorSnackListenerState
   }
 }
 
+class _DebugAudioSnackListener extends StatefulWidget {
+  const _DebugAudioSnackListener({required this.controller});
+
+  final DiatarMainController controller;
+
+  @override
+  State<_DebugAudioSnackListener> createState() =>
+      _DebugAudioSnackListenerState();
+}
+
+class _DebugAudioSnackListenerState extends State<_DebugAudioSnackListener> {
+  String _lastSignature = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final DiatarMainController controller = widget.controller;
+    final String code = controller.statusCode;
+    if (code != 'statusDebugAudioStarted' &&
+        code != 'statusDebugAudioStopped' &&
+        code != 'statusDebugAudioError' &&
+        code != 'statusDebugAudioNoFile') {
+      _lastSignature = '';
+      return const SizedBox.shrink();
+    }
+
+    final String signature =
+        '$code|${controller.statusParams.entries.map((MapEntry<String, String> entry) => '${entry.key}=${entry.value}').join(';')}';
+    if (signature == _lastSignature) {
+      return const SizedBox.shrink();
+    }
+    _lastSignature = signature;
+    final Map<String, String> params = controller.statusParams;
+    final AppLocalizations l10n = context.l10n;
+    final String message = switch (code) {
+      'statusDebugAudioStarted' => l10n.statusDebugAudioStarted(
+        _statusParam(params, 'path'),
+      ),
+      'statusDebugAudioStopped' => l10n.statusDebugAudioStopped,
+      'statusDebugAudioNoFile' => l10n.statusDebugAudioNoFile(
+        _statusParam(params, 'reason'),
+      ),
+      _ => l10n.statusDebugAudioError(
+        _statusParam(params, 'path'),
+        _statusParam(params, 'error'),
+      ),
+    };
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(
+          context,
+        )?.showSnackBar(SnackBar(content: Text(message)));
+      }
+    });
+    return const SizedBox.shrink();
+  }
+}
+
 class _DownloadSongbooksDialog extends StatefulWidget {
   const _DownloadSongbooksDialog({required this.controller});
 
@@ -1793,6 +1867,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
   late TabController _tabController;
   late Future<List<DtxManageItem>> _dtxItemsFuture;
   late Future<List<DtzManageItem>> _dtzItemsFuture;
+  late Future<List<DtzManageItem>> _musicItemsFuture;
 
   final Set<String> _downloadSelected = <String>{};
   final Set<String> _excludedFiles = <String>{};
@@ -1800,20 +1875,19 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
   bool _dtxCollapsedGroupsInitialized = false;
   bool _dtxSelectionInitialized = false;
 
-  final Set<String> _dtzDownloadSelected = <String>{};
-  final Set<String> _dtzExcludedFiles = <String>{};
-  List<DtzManageItem> _dtzAllItems = const <DtzManageItem>[];
-  bool _dtzSelectionInitialized = false;
+  final _MediaTabSelections _dtzSelections = _MediaTabSelections();
+  final _MediaTabSelections _musicSelections = _MediaTabSelections();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) setState(() {});
     });
     _dtxItemsFuture = widget.controller.loadDtxManagerItems();
     _dtzItemsFuture = widget.controller.loadDtzManagerItems();
+    _musicItemsFuture = widget.controller.loadMusicManagerItems();
   }
 
   @override
@@ -1831,11 +1905,16 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
       _dtxCollapsedGroupsInitialized = false;
       _dtxItemsFuture = widget.controller.loadDtxManagerItems();
 
-      _dtzSelectionInitialized = false;
-      _dtzDownloadSelected.clear();
-      _dtzExcludedFiles.clear();
-      _dtzAllItems = const <DtzManageItem>[];
+      _dtzSelections.initialized = false;
+      _dtzSelections.downloadSelected.clear();
+      _dtzSelections.excludedFiles.clear();
+      _dtzSelections.allItems = const <DtzManageItem>[];
       _dtzItemsFuture = widget.controller.loadDtzManagerItems();
+      _musicSelections.initialized = false;
+      _musicSelections.downloadSelected.clear();
+      _musicSelections.excludedFiles.clear();
+      _musicSelections.allItems = const <DtzManageItem>[];
+      _musicItemsFuture = widget.controller.loadMusicManagerItems();
     });
   }
 
@@ -1934,8 +2013,8 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
     return l10n.downloadManagerUpToDate;
   }
 
-  bool? _dtzUpdateValue() {
-    final List<DtzManageItem> eligible = _dtzAllItems
+  bool? _mediaUpdateValue(_MediaTabSelections selections) {
+    final List<DtzManageItem> eligible = selections.allItems
         .where(
           (DtzManageItem item) =>
               item.item.isOfficial && item.item.updateAvailable,
@@ -1947,7 +2026,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
     final int selected = eligible
         .where(
           (DtzManageItem item) =>
-              _dtzDownloadSelected.contains(item.item.fileName),
+              selections.downloadSelected.contains(item.item.fileName),
         )
         .length;
     if (selected == 0) {
@@ -1959,20 +2038,20 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
     return null;
   }
 
-  bool? _dtzExcludedValue() {
-    if (_dtzAllItems.isEmpty) {
+  bool? _mediaExcludedValue(_MediaTabSelections selections) {
+    if (selections.allItems.isEmpty) {
       return false;
     }
-    final int selected = _dtzAllItems
+    final int selected = selections.allItems
         .where(
           (DtzManageItem item) =>
-              _dtzExcludedFiles.contains(item.item.fileName),
+              selections.excludedFiles.contains(item.item.fileName),
         )
         .length;
     if (selected == 0) {
       return false;
     }
-    if (selected == _dtzAllItems.length) {
+    if (selected == selections.allItems.length) {
       return true;
     }
     return null;
@@ -2002,12 +2081,17 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
               tabs: <Widget>[
                 Tab(text: l10n.downloadTabDtx),
                 Tab(text: l10n.downloadTabDtz),
+                Tab(text: l10n.downloadTabMusic),
               ],
             ),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: <Widget>[_buildDtxTab(l10n), _buildDtzTab(l10n)],
+                children: <Widget>[
+                  _buildDtxTab(l10n),
+                  _buildDtzTab(l10n),
+                  _buildDtzTab(l10n, music: true),
+                ],
               ),
             ),
           ],
@@ -2021,11 +2105,15 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
         OutlinedButton(
           onPressed: _tabController.index == 0
               ? () => _importDtxFiles(context)
-              : () => _importDtzFiles(context),
+              : _tabController.index == 1
+              ? () => _importDtzFiles(context)
+              : () => _showMusicImportNotImplemented(context),
           child: Text(
             _tabController.index == 0
                 ? l10n.importDtxFilesButton
-                : l10n.importDtzFilesButton,
+                : _tabController.index == 1
+                ? l10n.importDtzFilesButton
+                : l10n.importMusicFilesButton,
           ),
         ),
         FilledButton(
@@ -2035,8 +2123,18 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                   _DownloadDialogResult(
                     dtxDownloadSelected: Set<String>.from(_downloadSelected),
                     dtxExcludedSelected: Set<String>.from(_excludedFiles),
-                    dtzDownloadSelected: Set<String>.from(_dtzDownloadSelected),
-                    dtzExcludedSelected: Set<String>.from(_dtzExcludedFiles),
+                    dtzDownloadSelected: Set<String>.from(
+                      _dtzSelections.downloadSelected,
+                    ),
+                    dtzExcludedSelected: Set<String>.from(
+                      _dtzSelections.excludedFiles,
+                    ),
+                    musicDownloadSelected: Set<String>.from(
+                      _musicSelections.downloadSelected,
+                    ),
+                    musicExcludedSelected: Set<String>.from(
+                      _musicSelections.excludedFiles,
+                    ),
                   ),
                 ),
           child: Text(l10n.apply),
@@ -2503,9 +2601,12 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
     );
   }
 
-  Widget _buildDtzTab(AppLocalizations l10n) {
+  Widget _buildDtzTab(AppLocalizations l10n, {bool music = false}) {
+    final _MediaTabSelections selections = music
+        ? _musicSelections
+        : _dtzSelections;
     return FutureBuilder<List<DtzManageItem>>(
-      future: _dtzItemsFuture,
+      future: music ? _musicItemsFuture : _dtzItemsFuture,
       builder:
           (BuildContext context, AsyncSnapshot<List<DtzManageItem>> snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -2517,17 +2618,17 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
 
             final List<DtzManageItem> items =
                 snapshot.data ?? const <DtzManageItem>[];
-            _dtzAllItems = items;
-            if (!_dtzSelectionInitialized) {
-              _dtzDownloadSelected.clear();
-              _dtzExcludedFiles
+            selections.allItems = items;
+            if (!selections.initialized) {
+              selections.downloadSelected.clear();
+              selections.excludedFiles
                 ..clear()
                 ..addAll(
                   items
                       .where((DtzManageItem item) => item.excluded)
                       .map((DtzManageItem item) => item.item.fileName),
                 );
-              _dtzSelectionInitialized = true;
+              selections.initialized = true;
             }
 
             if (items.isEmpty) {
@@ -2604,15 +2705,17 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                     child: Center(
                                       child: Checkbox(
                                         tristate: true,
-                                        value: _dtzUpdateValue(),
+                                        value: _mediaUpdateValue(selections),
                                         onChanged: canToggleUpdates
                                             ? (bool? checked) {
                                                 setState(() {
                                                   final bool clearColumn =
-                                                      _dtzUpdateValue() !=
+                                                      _mediaUpdateValue(
+                                                        selections,
+                                                      ) !=
                                                       false;
                                                   for (final DtzManageItem item
-                                                      in _dtzAllItems) {
+                                                      in selections.allItems) {
                                                     if (!item.item.isOfficial ||
                                                         !item
                                                             .item
@@ -2620,14 +2723,18 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                       continue;
                                                     }
                                                     if (!clearColumn) {
-                                                      _dtzDownloadSelected.add(
-                                                        item.item.fileName,
-                                                      );
-                                                      _dtzExcludedFiles.remove(
-                                                        item.item.fileName,
-                                                      );
+                                                      selections
+                                                          .downloadSelected
+                                                          .add(
+                                                            item.item.fileName,
+                                                          );
+                                                      selections.excludedFiles
+                                                          .remove(
+                                                            item.item.fileName,
+                                                          );
                                                     } else {
-                                                      _dtzDownloadSelected
+                                                      selections
+                                                          .downloadSelected
                                                           .remove(
                                                             item.item.fileName,
                                                           );
@@ -2644,29 +2751,30 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                     child: Center(
                                       child: Checkbox(
                                         tristate: true,
-                                        value: _dtzExcludedValue(),
+                                        value: _mediaExcludedValue(selections),
                                         onChanged: (bool? checked) {
                                           setState(() {
                                             final bool clearColumn =
-                                                _dtzExcludedValue() != false;
+                                                _mediaExcludedValue(
+                                                  selections,
+                                                ) !=
+                                                false;
                                             for (final DtzManageItem item
-                                                in _dtzAllItems) {
+                                                in selections.allItems) {
                                               if (!clearColumn) {
-                                                _dtzExcludedFiles.add(
+                                                selections.excludedFiles.add(
                                                   item.item.fileName,
                                                 );
-                                                _dtzDownloadSelected.remove(
-                                                  item.item.fileName,
-                                                );
+                                                selections.downloadSelected
+                                                    .remove(item.item.fileName);
                                               } else {
-                                                _dtzExcludedFiles.remove(
+                                                selections.excludedFiles.remove(
                                                   item.item.fileName,
                                                 );
                                                 if (item.item.isOfficial &&
                                                     item.item.updateAvailable) {
-                                                  _dtzDownloadSelected.add(
-                                                    item.item.fileName,
-                                                  );
+                                                  selections.downloadSelected
+                                                      .add(item.item.fileName);
                                                 }
                                               }
                                             }
@@ -2711,21 +2819,18 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                   child: Center(
                                     child: canUpdate
                                         ? Checkbox(
-                                            value: _dtzDownloadSelected
+                                            value: selections.downloadSelected
                                                 .contains(item.fileName),
                                             onChanged: (bool? checked) {
                                               setState(() {
                                                 if (checked ?? false) {
-                                                  _dtzDownloadSelected.add(
-                                                    item.fileName,
-                                                  );
-                                                  _dtzExcludedFiles.remove(
-                                                    item.fileName,
-                                                  );
+                                                  selections.downloadSelected
+                                                      .add(item.fileName);
+                                                  selections.excludedFiles
+                                                      .remove(item.fileName);
                                                 } else {
-                                                  _dtzDownloadSelected.remove(
-                                                    item.fileName,
-                                                  );
+                                                  selections.downloadSelected
+                                                      .remove(item.fileName);
                                                 }
                                               });
                                             },
@@ -2744,24 +2849,24 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                   width: actionColumnWidth,
                                   child: Center(
                                     child: Checkbox(
-                                      value: _dtzExcludedFiles.contains(
+                                      value: selections.excludedFiles.contains(
                                         item.fileName,
                                       ),
                                       onChanged: (bool? checked) {
                                         setState(() {
                                           if (checked ?? false) {
-                                            _dtzExcludedFiles.add(
+                                            selections.excludedFiles.add(
                                               item.fileName,
                                             );
-                                            _dtzDownloadSelected.remove(
+                                            selections.downloadSelected.remove(
                                               item.fileName,
                                             );
                                           } else {
-                                            _dtzExcludedFiles.remove(
+                                            selections.excludedFiles.remove(
                                               item.fileName,
                                             );
                                             if (canUpdate) {
-                                              _dtzDownloadSelected.add(
+                                              selections.downloadSelected.add(
                                                 item.fileName,
                                               );
                                             }
@@ -2805,6 +2910,12 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
     if ((didImport ?? false) && context.mounted) {
       _reload();
     }
+  }
+
+  void _showMusicImportNotImplemented(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.importMusicNotImplemented)),
+    );
   }
 
   Future<void> _importDtxFiles(BuildContext context) async {
@@ -5284,10 +5395,7 @@ class _ModelDownloadDialog extends StatefulWidget {
   final ModelManager modelManager;
   final AppLocalizations l10n;
 
-  const _ModelDownloadDialog({
-    required this.modelManager,
-    required this.l10n,
-  });
+  const _ModelDownloadDialog({required this.modelManager, required this.l10n});
 
   @override
   State<_ModelDownloadDialog> createState() => _ModelDownloadDialogState();
@@ -5334,7 +5442,9 @@ class _ModelDownloadDialogState extends State<_ModelDownloadDialog> {
           : Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                LinearProgressIndicator(value: _progress > 0 ? _progress : null),
+                LinearProgressIndicator(
+                  value: _progress > 0 ? _progress : null,
+                ),
                 const SizedBox(height: 12),
                 Text('${(_progress * 100).toStringAsFixed(0)}%'),
               ],

@@ -42,6 +42,7 @@ class DtxVerse {
     required this.lines,
     this.diaId,
     this.soundFilePath,
+    this.soundForSong = false,
     this.fotoFilePath,
     this.forwardMS = 0,
   });
@@ -50,6 +51,7 @@ class DtxVerse {
   final List<String> lines;
   final String? diaId;
   final String? soundFilePath;
+  final bool soundForSong;
   final String? fotoFilePath;
   final int forwardMS;
 }
