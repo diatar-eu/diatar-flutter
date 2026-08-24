@@ -7,6 +7,7 @@
       "name": "diatar_speech",
       "version": "0.0.1",
       "dependencies": [
+        "archive",
         "flutter",
         "http",
         "path",
@@ -614,6 +615,23 @@
       "version": "3.0.7",
       "dependencies": [
         "typed_data"
+      ]
+    },
+    {
+      "name": "archive",
+      "version": "4.2.0",
+      "dependencies": [
+        "path",
+        "posix"
+      ]
+    },
+    {
+      "name": "posix",
+      "version": "6.5.2",
+      "dependencies": [
+        "ffi",
+        "meta",
+        "path"
       ]
     }
   ],

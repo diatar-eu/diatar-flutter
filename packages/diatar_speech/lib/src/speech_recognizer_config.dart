@@ -1,3 +1,5 @@
+import 'model_registry.dart';
+
 class SpeechRecognizerConfig {
   final String language;
   final String modelPath;
@@ -7,6 +9,9 @@ class SpeechRecognizerConfig {
   final double endpointRule1;
   final double endpointRule2;
   final double endpointRule3;
+  final SpeechModelType modelType;
+  final String whisperLanguage;
+  final String vadModelPath;
 
   const SpeechRecognizerConfig({
     this.language = 'auto',
@@ -17,5 +22,8 @@ class SpeechRecognizerConfig {
     this.endpointRule1 = 2.4,
     this.endpointRule2 = 1.2,
     this.endpointRule3 = 20,
+    this.modelType = SpeechModelType.nemotron35_560ms,
+    this.whisperLanguage = 'auto',
+    required this.vadModelPath,
   });
 }

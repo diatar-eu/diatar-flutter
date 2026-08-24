@@ -1688,14 +1688,23 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       return;
     }
     final ModelManager modelManager = ModelManager();
-    final bool modelReady = await modelManager.isModelReady();
+    final SpeechModelType modelType =
+        SpeechModelType.values.firstWhere(
+          (e) => e.name == controller.settings.liveSubtitleModel,
+          orElse: () => SpeechModelType.nemotron35_560ms,
+        );
+    final SpeechModelInfo modelInfo = getSpeechModel(modelType);
+    final bool modelReady = await modelManager.isModelReady(modelType);
     if (!modelReady && context.mounted) {
       final l10n = context.l10n;
+      final String sizeStr = await _fetchModelSize(modelInfo);
       final bool? confirmed = await showDialog<bool>(
         context: context,
         builder: (BuildContext ctx) => AlertDialog(
           title: Text(l10n.liveSubtitlesDownloadTitle),
-          content: Text(l10n.liveSubtitlesDownloadMessage),
+          content: Text(
+            '${l10n.liveSubtitlesDownloadMessage}\n\n${modelInfo.displayName}${sizeStr.isNotEmpty ? ' ($sizeStr)' : ''}',
+          ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
@@ -1710,14 +1719,35 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       );
       if (confirmed != true || !context.mounted) return;
       if (!context.mounted) return;
-      await _downloadModelWithProgress(context, modelManager);
+      await _downloadModelWithProgress(context, modelManager, modelType);
     }
     await controller.toggleLiveSubtitles();
+    if (!context.mounted) return;
+    final String? error = controller.liveSubtitleError;
+    if (error != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${context.l10n.liveSubtitlesError}: $error'),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    }
+  }
+
+  Future<String> _fetchModelSize(SpeechModelInfo modelInfo) async {
+    try {
+      final String fileName = modelInfo.downloadUrl.split('/').last;
+      final int bytes = await GitHubReleaseSizeCache.getFileSize(fileName);
+      return GitHubReleaseSizeCache.formatSize(bytes);
+    } catch (e) {
+      return '';
+    }
   }
 
   Future<void> _downloadModelWithProgress(
     BuildContext context,
     ModelManager modelManager,
+    SpeechModelType modelType,
   ) async {
     final l10n = context.l10n;
     if (!context.mounted) return;
@@ -1726,6 +1756,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       barrierDismissible: false,
       builder: (BuildContext ctx) => _ModelDownloadDialog(
         modelManager: modelManager,
+        modelType: modelType,
         l10n: l10n,
       ),
     );
@@ -5282,10 +5313,12 @@ Widget _actionIconButton(
 
 class _ModelDownloadDialog extends StatefulWidget {
   final ModelManager modelManager;
+  final SpeechModelType modelType;
   final AppLocalizations l10n;
 
   const _ModelDownloadDialog({
     required this.modelManager,
+    required this.modelType,
     required this.l10n,
   });
 
@@ -5307,6 +5340,7 @@ class _ModelDownloadDialogState extends State<_ModelDownloadDialog> {
   Future<void> _startDownload() async {
     try {
       await widget.modelManager.downloadModel(
+        widget.modelType,
         onProgress: (double p) {
           if (mounted) setState(() => _progress = p);
         },

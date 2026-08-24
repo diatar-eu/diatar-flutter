@@ -173,6 +173,7 @@ class DiatarMainController extends ChangeNotifier {
   SpeechRecognizer? _speechRecognizer;
   bool _liveSubtitlesActive = false;
   String _liveSubtitleText = '';
+  String? _liveSubtitleError;
   final TcpSenderService _sender = TcpSenderService(
     onStatusChanged: (bool connected) {},
     onError: (String code, Map<String, String> params) {},
@@ -3658,6 +3659,7 @@ class DiatarMainController extends ChangeNotifier {
 
   bool get liveSubtitlesActive => _liveSubtitlesActive;
   String get liveSubtitleText => _liveSubtitleText;
+  String? get liveSubtitleError => _liveSubtitleError;
 
   Future<void> toggleLiveSubtitles() async {
     if (_liveSubtitlesActive) {
@@ -3668,20 +3670,50 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> _startLiveSubtitles() async {
-    if (!await _modelManager.isModelReady()) {
-      debugPrint('LiveSubtitles: model not ready');
+    final SpeechModelType modelType =
+        SpeechModelType.values.firstWhere(
+          (e) => e.name == settings.liveSubtitleModel,
+          orElse: () => SpeechModelType.nemotron35_560ms,
+        );
+    final SpeechModelInfo modelInfo = getSpeechModel(modelType);
+
+    if (!await _modelManager.isModelReady(modelType)) {
+      debugPrint('LiveSubtitles: model ${modelInfo.displayName} not ready');
       return;
     }
-    final String modelPath = await _modelManager.getModelPath();
-    debugPrint('LiveSubtitles: modelPath=$modelPath');
+    final String modelPath = await _modelManager.getModelPath(modelType);
+
+    if (!modelInfo.isStreaming && !await _modelManager.isVadModelReady()) {
+      debugPrint('LiveSubtitles: VAD model not ready, downloading...');
+      await _modelManager.downloadVadModel();
+    }
+    final String vadModelPath = await _modelManager.getVadModelPath();
+
+    debugPrint('LiveSubtitles: model=${modelInfo.displayName} path=$modelPath');
+    _liveSubtitleError = null;
     try {
-      _speechRecognizer = SherpaOnnxSpeechRecognizer(
-        config: SpeechRecognizerConfig(
-          language: settings.liveSubtitleLanguage,
-          modelPath: modelPath,
-          audioDeviceId: settings.liveSubtitleDeviceId,
-        ),
-      );
+      if (modelInfo.isStreaming) {
+        _speechRecognizer = SherpaOnnxSpeechRecognizer(
+          config: SpeechRecognizerConfig(
+            language: settings.liveSubtitleLanguage,
+            modelPath: modelPath,
+            audioDeviceId: settings.liveSubtitleDeviceId,
+            modelType: modelType,
+            vadModelPath: vadModelPath,
+          ),
+        );
+      } else {
+        _speechRecognizer = SherpaOnnxOfflineRecognizer(
+          config: SpeechRecognizerConfig(
+            language: settings.liveSubtitleLanguage,
+            modelPath: modelPath,
+            audioDeviceId: settings.liveSubtitleDeviceId,
+            modelType: modelType,
+            whisperLanguage: settings.liveSubtitleLanguage,
+            vadModelPath: vadModelPath,
+          ),
+        );
+      }
       _speechRecognizer!.results.listen(
         (SpeechResult result) {
           debugPrint('LiveSubtitles: text="${result.text}" final=${result.isFinal}');
@@ -3701,8 +3733,10 @@ class DiatarMainController extends ChangeNotifier {
       notifyListeners();
     } catch (e, st) {
       debugPrint('LiveSubtitles start failed: $e\n$st');
+      _liveSubtitleError = e.toString();
       await _speechRecognizer?.dispose();
       _speechRecognizer = null;
+      notifyListeners();
     }
   }
 
