@@ -356,24 +356,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get statusProjectionOn => 'Vetítés: BE';
 
   @override
-  String statusDebugAudioStarted(String path) {
-    return 'Hang elindítva: $path';
-  }
-
-  @override
-  String get statusDebugAudioStopped => 'Hang leállítva';
-
-  @override
-  String statusDebugAudioNoFile(String reason) {
-    return 'A hang nem indult el: $reason';
-  }
-
-  @override
-  String statusDebugAudioError(String path, String error) {
-    return 'Hanghiba itt: $path: $error';
-  }
-
-  @override
   String get statusProjectionOff => 'Vetítés: KI';
 
   @override
@@ -1680,7 +1662,10 @@ class AppLocalizationsHu extends AppLocalizations {
   String get controlPhotoViewPreview => 'Vetítés előnézet';
 
   @override
-  String get useSound => 'Hang használata';
+  String get useSound => 'Zene lejátszása';
+
+  @override
+  String get advanceAfterMusic => 'Továbbítás a zene végén';
 
   @override
   String get liveSubtitlesOn => 'Élő felirat bekapcsolása';

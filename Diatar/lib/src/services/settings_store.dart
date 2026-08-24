@@ -60,6 +60,7 @@ class SettingsStore {
   static const String _kExternalCommandOnProjectionOff =
       'ExternalCommandOnProjectionOff';
   static const String _kUseSound = 'UseSound';
+  static const String _kAdvanceAfterMusic = 'AdvanceAfterMusic';
   static const String _kLiveSubtitlesEnabled = 'LiveSubtitlesEnabled';
   static const String _kLiveSubtitleDeviceId = 'LiveSubtitleDeviceId';
   static const String _kLiveSubtitleLanguage = 'LiveSubtitleLanguage';
@@ -234,6 +235,7 @@ class SettingsStore {
       externalCommandOnProjectionOff:
           prefs.getString(_kExternalCommandOnProjectionOff) ?? '',
       useSound: prefs.getBool(_kUseSound) ?? false,
+      advanceAfterMusic: prefs.getBool(_kAdvanceAfterMusic) ?? false,
       liveSubtitlesEnabled: prefs.getBool(_kLiveSubtitlesEnabled) ?? false,
       liveSubtitleDeviceId: prefs.getString(_kLiveSubtitleDeviceId),
       liveSubtitleLanguage: prefs.getString(_kLiveSubtitleLanguage) ?? 'auto',
@@ -341,6 +343,7 @@ class SettingsStore {
       settings.externalCommandOnProjectionOff,
     );
     await prefs.setBool(_kUseSound, settings.useSound);
+    await prefs.setBool(_kAdvanceAfterMusic, settings.advanceAfterMusic);
     await prefs.setBool(_kLiveSubtitlesEnabled, settings.liveSubtitlesEnabled);
     await prefs.setString(
       _kLiveSubtitleDeviceId,

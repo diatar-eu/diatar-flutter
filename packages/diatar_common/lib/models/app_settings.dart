@@ -66,6 +66,7 @@ class AppSettings {
     this.receiverUseKotta = true,
     this.receiverKeepStartupLogo = true,
     this.useSound = false,
+    this.advanceAfterMusic = false,
     this.liveSubtitlesEnabled = false,
     this.liveSubtitleDeviceId,
     this.liveSubtitleLanguage = 'auto',
@@ -144,6 +145,7 @@ class AppSettings {
   final bool receiverUseKotta;
   final bool receiverKeepStartupLogo;
   final bool useSound;
+  final bool advanceAfterMusic;
   final bool liveSubtitlesEnabled;
   final String? liveSubtitleDeviceId;
   final String liveSubtitleLanguage;
@@ -229,6 +231,7 @@ class AppSettings {
     bool? receiverUseKotta,
     bool? receiverKeepStartupLogo,
     bool? useSound,
+    bool? advanceAfterMusic,
     bool? liveSubtitlesEnabled,
     String? liveSubtitleDeviceId,
     String? liveSubtitleLanguage,
@@ -318,6 +321,7 @@ class AppSettings {
       receiverKeepStartupLogo:
           receiverKeepStartupLogo ?? this.receiverKeepStartupLogo,
       useSound: useSound ?? this.useSound,
+      advanceAfterMusic: advanceAfterMusic ?? this.advanceAfterMusic,
       liveSubtitlesEnabled: liveSubtitlesEnabled ?? this.liveSubtitlesEnabled,
       liveSubtitleDeviceId: liveSubtitleDeviceId ?? this.liveSubtitleDeviceId,
       liveSubtitleLanguage: liveSubtitleLanguage ?? this.liveSubtitleLanguage,
@@ -375,6 +379,7 @@ class AppSettings {
       'receiverUseKotta': receiverUseKotta,
       'receiverKeepStartupLogo': receiverKeepStartupLogo,
       'useSound': useSound,
+      'advanceAfterMusic': advanceAfterMusic,
       'liveSubtitlesEnabled': liveSubtitlesEnabled,
       'liveSubtitleDeviceId': liveSubtitleDeviceId,
       'liveSubtitleLanguage': liveSubtitleLanguage,
@@ -460,10 +465,12 @@ class AppSettings {
       receiverUseKotta: boolValue('receiverUseKotta', true),
       receiverKeepStartupLogo: boolValue('receiverKeepStartupLogo', true),
       useSound: boolValue('useSound', false),
+      advanceAfterMusic: boolValue('advanceAfterMusic', false),
       liveSubtitlesEnabled: boolValue('liveSubtitlesEnabled', false),
       liveSubtitleDeviceId: map['liveSubtitleDeviceId'] as String?,
       liveSubtitleLanguage: map['liveSubtitleLanguage'] as String? ?? 'auto',
-      liveSubtitleModel: map['liveSubtitleModel'] as String? ?? 'nemotron35_560ms',
+      liveSubtitleModel:
+          map['liveSubtitleModel'] as String? ?? 'nemotron35_560ms',
       szentirasApiKey: map['szentirasApiKey'] as String? ?? '',
     );
   }

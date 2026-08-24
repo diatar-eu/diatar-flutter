@@ -17,6 +17,8 @@ class AudioPlaybackResult {
 class AudioService {
   final AudioPlayer _player = AudioPlayer();
 
+  Stream<void> get onPlaybackComplete => _player.onPlayerComplete;
+
   /// Plays the audio file at the given [path].
   /// If [path] is null or empty, it stops any current playback.
   Future<AudioPlaybackResult> playSound(String? path) async {

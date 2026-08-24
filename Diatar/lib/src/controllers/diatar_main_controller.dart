@@ -55,10 +55,9 @@ import '../utils/text_chunking.dart';
 export '../models/custom_order_entry.dart';
 
 class _AudioPathResolution {
-  const _AudioPathResolution({this.path, this.reason = ''});
+  const _AudioPathResolution({this.path});
 
   final String? path;
-  final String reason;
 }
 
 class SongbookOrderItem {
@@ -177,6 +176,7 @@ class DiatarMainController extends ChangeNotifier {
   final NapiLelkiBatyuService _napiLelkiBatyuService = NapiLelkiBatyuService();
   final SongSearchService _searchService = SongSearchService();
   final AudioService _audioService = AudioService();
+  late final StreamSubscription<void> _audioPlaybackCompletionSubscription;
   final ModelManager _modelManager = ModelManager();
   SpeechRecognizer? _speechRecognizer;
   bool _liveSubtitlesActive = false;
@@ -218,6 +218,15 @@ class DiatarMainController extends ChangeNotifier {
   bool mqttHasError = false;
   bool tcpHasError = false;
   DateTime? mqttConnectAttemptAt;
+
+  DiatarMainController() {
+    _audioPlaybackCompletionSubscription = _audioService.onPlaybackComplete
+        .listen((_) {
+          if (settings.useSound && settings.advanceAfterMusic && showing) {
+            nextVerse();
+          }
+        });
+  }
   DateTime? tcpConnectAttemptAt;
   String statusCode = 'statusStarting';
   Map<String, String> _statusParams = <String, String>{};
@@ -699,6 +708,17 @@ class DiatarMainController extends ChangeNotifier {
     await applySettings(newSettings);
   }
 
+  Future<void> toggleMusicPlayback() async {
+    await applySettings(settings.copyWith(useSound: !settings.useSound));
+    _playCurrentVerseSound();
+  }
+
+  Future<void> toggleAdvanceAfterMusic() async {
+    await applySettings(
+      settings.copyWith(advanceAfterMusic: !settings.advanceAfterMusic),
+    );
+  }
+
   /// Az aktualis versszak dia-id-jehez tartozo foto utvonala, vagy null ha
   /// nincs hozzarendelve foto.
   String? get currentPhotoPath {
@@ -822,54 +842,22 @@ class DiatarMainController extends ChangeNotifier {
 
   void _playCurrentVerseSound() {
     if (!settings.useSound || !showing) {
-      unawaited(_reportAudioPlayback(_audioService.stop()));
+      unawaited(_audioService.stop());
       return;
     }
     final _AudioPathResolution resolution = _resolveSoundPathForCurrentVerse();
     if (resolution.path == null) {
-      if (kDebugMode) {
-        _setStatus('statusDebugAudioNoFile', <String, String>{
-          'reason': resolution.reason,
-        });
-        notifyListeners();
-      }
       unawaited(_audioService.stop());
       return;
     }
-    unawaited(_reportAudioPlayback(_audioService.playSound(resolution.path)));
-  }
-
-  Future<void> _reportAudioPlayback(
-    Future<AudioPlaybackResult> playback,
-  ) async {
-    final AudioPlaybackResult result = await playback;
-    if (!kDebugMode) {
-      return;
-    }
-    switch (result.state) {
-      case AudioPlaybackState.started:
-        _setStatus('statusDebugAudioStarted', <String, String>{
-          'path': result.path ?? '',
-        });
-        break;
-      case AudioPlaybackState.stopped:
-        _setStatus('statusDebugAudioStopped');
-        break;
-      case AudioPlaybackState.failed:
-        _setStatus('statusDebugAudioError', <String, String>{
-          'path': result.path ?? '',
-          'error': '${result.error}',
-        });
-        break;
-    }
-    notifyListeners();
+    unawaited(_audioService.playSound(resolution.path));
   }
 
   _AudioPathResolution _resolveSoundPathForCurrentVerse() {
     final DtxVerse? verse = currentVerse;
     final String? diaId = verse?.diaId;
     if (diaId == null || diaId.isEmpty) {
-      return const _AudioPathResolution(reason: 'missing-dia-id');
+      return const _AudioPathResolution();
     }
     final DtxVerse? direct = _dtzLibrary[diaId];
     if (direct?.soundFilePath?.isNotEmpty ?? false) {
@@ -879,7 +867,7 @@ class DiatarMainController extends ChangeNotifier {
     // An uppercase Z record attaches one sound to every verse of its song.
     final DtxSong? song = currentSong;
     if (song == null) {
-      return const _AudioPathResolution(reason: 'missing-song');
+      return const _AudioPathResolution();
     }
     for (final DtxVerse songVerse in song.verses) {
       final String? songDiaId = songVerse.diaId;
@@ -892,9 +880,7 @@ class DiatarMainController extends ChangeNotifier {
         return _AudioPathResolution(path: mapped!.soundFilePath);
       }
     }
-    return _AudioPathResolution(
-      reason: direct == null ? 'no-dtz-entry' : 'no-sound-entry',
-    );
+    return const _AudioPathResolution();
   }
 
   void markStartupDownloadDialogHandled() {
@@ -4729,6 +4715,7 @@ class DiatarMainController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _audioPlaybackCompletionSubscription.cancel();
     _speechRecognizer?.dispose();
     _sender.stop();
     _mqttSender.close();

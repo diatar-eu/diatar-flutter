@@ -295,34 +295,6 @@
     }
   },
   "statusProjectionOn": "Projection: ON",
-  "statusDebugAudioStarted": "Audio started: {path}",
-  "@statusDebugAudioStarted": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      }
-    }
-  },
-  "statusDebugAudioStopped": "Audio stopped",
-  "statusDebugAudioNoFile": "Audio was not started: {reason}",
-  "@statusDebugAudioNoFile": {
-    "placeholders": {
-      "reason": {
-        "type": "String"
-      }
-    }
-  },
-  "statusDebugAudioError": "Audio error at {path}: {error}",
-  "@statusDebugAudioError": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      },
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "statusProjectionOff": "Projection: OFF",
   "statusImagePathEmpty": "Image file path is empty.",
   "statusCustomTextEmpty": "Provide a title or at least one line.",
@@ -1124,7 +1096,8 @@
   "controlPhotoView": "Toggle photo / projection",
   "controlPhotoViewPhoto": "Photo view",
   "controlPhotoViewPreview": "Projection preview",
-  "useSound": "Use sound",
+  "useSound": "Play music",
+  "advanceAfterMusic": "Advance after music",
   "liveSubtitlesOn": "Enable live subtitles",
   "liveSubtitlesOff": "Disable live subtitles",
   "liveSubtitlesDownloadTitle": "Download speech model",

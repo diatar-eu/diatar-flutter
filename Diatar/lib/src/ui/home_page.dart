@@ -103,7 +103,13 @@ const int _diaVirtualBookValue = -1000000;
 const int _customOrderSetHeaderValue = -3000000;
 const int _customOrderSetValueBase = -2000000;
 
-enum _ProjectionDisplayToggle { kotta, chords, backgroundImage }
+enum _ProjectionDisplayToggle {
+  musicPlayback,
+  advanceAfterMusic,
+  kotta,
+  chords,
+  backgroundImage,
+}
 
 enum _HomeControlMode { books, dialist }
 
@@ -1040,8 +1046,6 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
               child: Column(
                 children: <Widget>[
                   _TransportErrorSnackListener(controller: controller),
-                  if (kDebugMode)
-                    _DebugAudioSnackListener(controller: controller),
                   if (_homeControlMode == _HomeControlMode.dialist) ...<Widget>[
                     const SizedBox(height: 4),
                     Expanded(
@@ -1088,7 +1092,6 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           child: Column(
             children: <Widget>[
               _TransportErrorSnackListener(controller: controller),
-              if (kDebugMode) _DebugAudioSnackListener(controller: controller),
               if (_homeControlMode == _HomeControlMode.dialist) ...<Widget>[
                 const SizedBox(height: 4),
                 SizedBox(
@@ -1164,7 +1167,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             : theme.colorScheme.onSurfaceVariant;
         return Tooltip(
           message:
-              '${menuContext.l10n.showKotta} / ${menuContext.l10n.showChords} / ${menuContext.l10n.showBackgroundImage}',
+              '${menuContext.l10n.useSound} / ${menuContext.l10n.advanceAfterMusic} / ${menuContext.l10n.showKotta} / ${menuContext.l10n.showChords} / ${menuContext.l10n.showBackgroundImage}',
           child: InkResponse(
             radius: 20,
             onTap: () => unawaited(_showProjectionDisplayMenu(menuContext)),
@@ -1363,6 +1366,18 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           ),
           items: <PopupMenuEntry<_ProjectionDisplayToggle>>[
             CheckedPopupMenuItem<_ProjectionDisplayToggle>(
+              value: _ProjectionDisplayToggle.musicPlayback,
+              checked: controller.settings.useSound,
+              child: Text(buttonContext.l10n.useSound),
+            ),
+            CheckedPopupMenuItem<_ProjectionDisplayToggle>(
+              value: _ProjectionDisplayToggle.advanceAfterMusic,
+              checked: controller.settings.advanceAfterMusic,
+              enabled: controller.settings.useSound,
+              child: Text(buttonContext.l10n.advanceAfterMusic),
+            ),
+            const PopupMenuDivider(),
+            CheckedPopupMenuItem<_ProjectionDisplayToggle>(
               value: _ProjectionDisplayToggle.kotta,
               checked: controller.settings.projUseKotta,
               child: Text(buttonContext.l10n.showKotta),
@@ -1385,6 +1400,10 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     }
 
     switch (selected) {
+      case _ProjectionDisplayToggle.musicPlayback:
+        await controller.toggleMusicPlayback();
+      case _ProjectionDisplayToggle.advanceAfterMusic:
+        await controller.toggleAdvanceAfterMusic();
       case _ProjectionDisplayToggle.kotta:
         await controller.applySettings(
           controller.settings.copyWith(
@@ -1822,64 +1841,6 @@ class _TransportErrorSnackListenerState
       });
     }
 
-    return const SizedBox.shrink();
-  }
-}
-
-class _DebugAudioSnackListener extends StatefulWidget {
-  const _DebugAudioSnackListener({required this.controller});
-
-  final DiatarMainController controller;
-
-  @override
-  State<_DebugAudioSnackListener> createState() =>
-      _DebugAudioSnackListenerState();
-}
-
-class _DebugAudioSnackListenerState extends State<_DebugAudioSnackListener> {
-  String _lastSignature = '';
-
-  @override
-  Widget build(BuildContext context) {
-    final DiatarMainController controller = widget.controller;
-    final String code = controller.statusCode;
-    if (code != 'statusDebugAudioStarted' &&
-        code != 'statusDebugAudioStopped' &&
-        code != 'statusDebugAudioError' &&
-        code != 'statusDebugAudioNoFile') {
-      _lastSignature = '';
-      return const SizedBox.shrink();
-    }
-
-    final String signature =
-        '$code|${controller.statusParams.entries.map((MapEntry<String, String> entry) => '${entry.key}=${entry.value}').join(';')}';
-    if (signature == _lastSignature) {
-      return const SizedBox.shrink();
-    }
-    _lastSignature = signature;
-    final Map<String, String> params = controller.statusParams;
-    final AppLocalizations l10n = context.l10n;
-    final String message = switch (code) {
-      'statusDebugAudioStarted' => l10n.statusDebugAudioStarted(
-        _statusParam(params, 'path'),
-      ),
-      'statusDebugAudioStopped' => l10n.statusDebugAudioStopped,
-      'statusDebugAudioNoFile' => l10n.statusDebugAudioNoFile(
-        _statusParam(params, 'reason'),
-      ),
-      _ => l10n.statusDebugAudioError(
-        _statusParam(params, 'path'),
-        _statusParam(params, 'error'),
-      ),
-    };
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ScaffoldMessenger.maybeOf(
-          context,
-        )?.showSnackBar(SnackBar(content: Text(message)));
-      }
-    });
     return const SizedBox.shrink();
   }
 }

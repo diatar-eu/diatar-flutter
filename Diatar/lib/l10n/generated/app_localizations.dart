@@ -643,30 +643,6 @@ abstract class AppLocalizations {
   /// **'Vetítés: BE'**
   String get statusProjectionOn;
 
-  /// No description provided for @statusDebugAudioStarted.
-  ///
-  /// In hu, this message translates to:
-  /// **'Hang elindítva: {path}'**
-  String statusDebugAudioStarted(String path);
-
-  /// No description provided for @statusDebugAudioStopped.
-  ///
-  /// In hu, this message translates to:
-  /// **'Hang leállítva'**
-  String get statusDebugAudioStopped;
-
-  /// No description provided for @statusDebugAudioNoFile.
-  ///
-  /// In hu, this message translates to:
-  /// **'A hang nem indult el: {reason}'**
-  String statusDebugAudioNoFile(String reason);
-
-  /// No description provided for @statusDebugAudioError.
-  ///
-  /// In hu, this message translates to:
-  /// **'Hanghiba itt: {path}: {error}'**
-  String statusDebugAudioError(String path, String error);
-
   /// No description provided for @statusProjectionOff.
   ///
   /// In hu, this message translates to:
@@ -2972,8 +2948,14 @@ abstract class AppLocalizations {
   /// No description provided for @useSound.
   ///
   /// In hu, this message translates to:
-  /// **'Hang használata'**
+  /// **'Zene lejátszása'**
   String get useSound;
+
+  /// No description provided for @advanceAfterMusic.
+  ///
+  /// In hu, this message translates to:
+  /// **'Továbbítás a zene végén'**
+  String get advanceAfterMusic;
 
   /// No description provided for @liveSubtitlesOn.
   ///

@@ -353,24 +353,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusProjectionOn => 'Projection: ON';
 
   @override
-  String statusDebugAudioStarted(String path) {
-    return 'Audio started: $path';
-  }
-
-  @override
-  String get statusDebugAudioStopped => 'Audio stopped';
-
-  @override
-  String statusDebugAudioNoFile(String reason) {
-    return 'Audio was not started: $reason';
-  }
-
-  @override
-  String statusDebugAudioError(String path, String error) {
-    return 'Audio error at $path: $error';
-  }
-
-  @override
   String get statusProjectionOff => 'Projection: OFF';
 
   @override
@@ -1674,7 +1656,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get controlPhotoViewPreview => 'Projection preview';
 
   @override
-  String get useSound => 'Use sound';
+  String get useSound => 'Play music';
+
+  @override
+  String get advanceAfterMusic => 'Advance after music';
 
   @override
   String get liveSubtitlesOn => 'Enable live subtitles';

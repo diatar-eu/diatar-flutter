@@ -295,34 +295,6 @@
     }
   },
   "statusProjectionOn": "Vetítés: BE",
-  "statusDebugAudioStarted": "Hang elindítva: {path}",
-  "@statusDebugAudioStarted": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      }
-    }
-  },
-  "statusDebugAudioStopped": "Hang leállítva",
-  "statusDebugAudioNoFile": "A hang nem indult el: {reason}",
-  "@statusDebugAudioNoFile": {
-    "placeholders": {
-      "reason": {
-        "type": "String"
-      }
-    }
-  },
-  "statusDebugAudioError": "Hanghiba itt: {path}: {error}",
-  "@statusDebugAudioError": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      },
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "statusProjectionOff": "Vetítés: KI",
   "statusImagePathEmpty": "A kép fájl útvonala üres.",
   "statusCustomTextEmpty": "Adj meg címet vagy legalább egy sort.",
@@ -1125,7 +1097,8 @@
   "controlPhotoView": "Fénykép / vetítés váltása",
   "controlPhotoViewPhoto": "Fénykép nézet",
   "controlPhotoViewPreview": "Vetítés előnézet",
-  "useSound": "Hang használata",
+  "useSound": "Zene lejátszása",
+  "advanceAfterMusic": "Továbbítás a zene végén",
   "liveSubtitlesOn": "Élő felirat bekapcsolása",
   "liveSubtitlesOff": "Élő felirat kikapcsolása",
   "liveSubtitlesDownloadTitle": "Beszédmodell letöltése",

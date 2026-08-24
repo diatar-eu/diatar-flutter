@@ -122,6 +122,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _projUseKotta;
   late bool _projShowBackgroundImage;
   late bool _useSound;
+  late bool _advanceAfterMusic;
   late bool _projUseTitle;
   late bool _projBoldText;
   late int _desktopProjectorMonitor;
@@ -209,6 +210,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projUseKotta = s.projUseKotta;
     _projShowBackgroundImage = s.projShowBackgroundImage;
     _useSound = s.useSound;
+    _advanceAfterMusic = s.advanceAfterMusic;
     _projUseTitle = s.projUseTitle;
     _projBoldText = s.projBoldText;
     _desktopProjectorMonitor = s.desktopProjectorMonitor;
@@ -1615,6 +1617,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             value: _useSound,
             onChanged: (bool v) => setBoth(() => _useSound = v),
             title: Text(l10n.useSound),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _advanceAfterMusic,
+            onChanged: _useSound
+                ? (bool v) => setBoth(() => _advanceAfterMusic = v)
+                : null,
+            title: Text(l10n.advanceAfterMusic),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -3727,6 +3737,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       desktopOrderSetHotkeys: Map<String, String>.from(_desktopOrderSetHotkeys),
       projBoldText: _projBoldText,
       useSound: _useSound,
+      advanceAfterMusic: _advanceAfterMusic,
       liveSubtitleDeviceId: _liveSubtitleDeviceId,
       liveSubtitleLanguage: _liveSubtitleLanguage,
       liveSubtitleModel: _liveSubtitleModel,

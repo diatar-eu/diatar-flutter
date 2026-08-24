@@ -33,6 +33,13 @@ void main() {
     expect(restored.externalCommandOnProjectionOff, 'projection-off-command');
   });
 
+  test('music advance setting survives copy and map conversions', () {
+    const AppSettings settings = AppSettings(advanceAfterMusic: true);
+
+    expect(settings.copyWith().advanceAfterMusic, isTrue);
+    expect(AppSettings.fromMap(settings.toMap()).advanceAfterMusic, isTrue);
+  });
+
   test('packet parser rebuilds records from split chunks', () {
     final ProjectionPacketParser parser = ProjectionPacketParser();
     final Uint8List payload = Uint8List.fromList(
