@@ -69,6 +69,7 @@ class AppSettings {
     this.liveSubtitlesEnabled = false,
     this.liveSubtitleDeviceId,
     this.liveSubtitleLanguage = 'auto',
+    this.liveSubtitleModel = 'nemotron35_560ms',
     this.szentirasApiKey = '',
     Color? bkColor,
     Color? txtColor,
@@ -146,6 +147,7 @@ class AppSettings {
   final bool liveSubtitlesEnabled;
   final String? liveSubtitleDeviceId;
   final String liveSubtitleLanguage;
+  final String liveSubtitleModel;
   final String szentirasApiKey;
   final Color? _bkColor;
   final Color? _txtColor;
@@ -230,6 +232,7 @@ class AppSettings {
     bool? liveSubtitlesEnabled,
     String? liveSubtitleDeviceId,
     String? liveSubtitleLanguage,
+    String? liveSubtitleModel,
     String? szentirasApiKey,
     Color? bkColor,
     Color? txtColor,
@@ -318,6 +321,7 @@ class AppSettings {
       liveSubtitlesEnabled: liveSubtitlesEnabled ?? this.liveSubtitlesEnabled,
       liveSubtitleDeviceId: liveSubtitleDeviceId ?? this.liveSubtitleDeviceId,
       liveSubtitleLanguage: liveSubtitleLanguage ?? this.liveSubtitleLanguage,
+      liveSubtitleModel: liveSubtitleModel ?? this.liveSubtitleModel,
       szentirasApiKey: szentirasApiKey ?? this.szentirasApiKey,
       bkColor: bkColor ?? this.bkColor,
       txtColor: txtColor ?? this.txtColor,
@@ -374,6 +378,7 @@ class AppSettings {
       'liveSubtitlesEnabled': liveSubtitlesEnabled,
       'liveSubtitleDeviceId': liveSubtitleDeviceId,
       'liveSubtitleLanguage': liveSubtitleLanguage,
+      'liveSubtitleModel': liveSubtitleModel,
       'szentirasApiKey': szentirasApiKey,
     };
   }
@@ -458,6 +463,7 @@ class AppSettings {
       liveSubtitlesEnabled: boolValue('liveSubtitlesEnabled', false),
       liveSubtitleDeviceId: map['liveSubtitleDeviceId'] as String?,
       liveSubtitleLanguage: map['liveSubtitleLanguage'] as String? ?? 'auto',
+      liveSubtitleModel: map['liveSubtitleModel'] as String? ?? 'nemotron35_560ms',
       szentirasApiKey: map['szentirasApiKey'] as String? ?? '',
     );
   }

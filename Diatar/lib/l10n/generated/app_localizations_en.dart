@@ -1687,7 +1687,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get liveSubtitlesDownloadMessage =>
-      'A ~650MB language model is required for live speech recognition. Download now?';
+      'A speech recognition model is required. Download now?';
 
   @override
   String get liveSubtitlesDownloading => 'Downloading speech model...';
@@ -1706,6 +1706,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get speechSettingsSummary => 'Microphone';
+
+  @override
+  String get speechModelTitle => 'Speech model';
+
+  @override
+  String get speechModelStreaming => 'Streaming (low latency)';
+
+  @override
+  String get speechModelOffline => 'Offline (higher accuracy)';
 
   @override
   String get transposeDown => 'Transpose down';

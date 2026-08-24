@@ -130,6 +130,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _localNetworkEnabled;
   late String? _liveSubtitleDeviceId;
   late String _liveSubtitleLanguage;
+  late String _liveSubtitleModel;
   late Map<String, String> _desktopActionHotkeys;
   late Map<String, String> _desktopSongHotkeys;
   late Map<String, String> _desktopOrderSetHotkeys;
@@ -216,6 +217,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _localNetworkEnabled = s.tcpClientEnabled;
     _liveSubtitleDeviceId = s.liveSubtitleDeviceId;
     _liveSubtitleLanguage = s.liveSubtitleLanguage;
+    _liveSubtitleModel = s.liveSubtitleModel;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
     _desktopSongHotkeys = Map<String, String>.from(s.desktopSongHotkeys);
     _desktopOrderSetHotkeys = Map<String, String>.from(
@@ -1917,7 +1919,22 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       title: context.l10n.speechSettingsTitle,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
+        final SpeechModelInfo currentModel = getSpeechModel(
+          SpeechModelType.values.firstWhere(
+            (e) => e.name == _liveSubtitleModel,
+            orElse: () => SpeechModelType.nemotron35_560ms,
+          ),
+        );
         return <Widget>[
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.record_voice_over),
+            title: Text(l10n.speechModelTitle),
+            subtitle: Text(currentModel.displayName),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _openModelSelector(setBoth),
+          ),
+          const Divider(height: 1),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.mic),
@@ -2089,6 +2106,38 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                   ),
             ];
           },
+    );
+  }
+
+  Future<void> _openModelSelector(void Function(void Function()) setBoth) {
+    final l10n = context.l10n;
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (BuildContext ctx, StateSetter setModalState) {
+            return AlertDialog(
+              title: Text(l10n.speechModelTitle),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: _ModelSelectorContent(
+                  liveSubtitleModel: _liveSubtitleModel,
+                  onChanged: (String v) {
+                    setBoth(() => _liveSubtitleModel = v);
+                    setModalState(() {});
+                  },
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -3680,6 +3729,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       useSound: _useSound,
       liveSubtitleDeviceId: _liveSubtitleDeviceId,
       liveSubtitleLanguage: _liveSubtitleLanguage,
+      liveSubtitleModel: _liveSubtitleModel,
       bkColor: _bkColor,
       txtColor: _txtColor,
       blankColor: _blankColor,
@@ -4821,6 +4871,95 @@ class _ChangePasswordInputDialogState
           child: Text(l10n.cancel),
         ),
         FilledButton(onPressed: _submit, child: Text(l10n.ok)),
+      ],
+    );
+  }
+}
+
+class _ModelSelectorContent extends StatefulWidget {
+  final String liveSubtitleModel;
+  final ValueChanged<String> onChanged;
+
+  const _ModelSelectorContent({
+    required this.liveSubtitleModel,
+    required this.onChanged,
+  });
+
+  @override
+  State<_ModelSelectorContent> createState() => _ModelSelectorContentState();
+}
+
+class _ModelSelectorContentState extends State<_ModelSelectorContent> {
+  Map<String, int> _fileSizes = {};
+  bool _loadingSizes = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSizes();
+  }
+
+  Future<void> _loadSizes() async {
+    final Map<String, int> sizes = await GitHubReleaseSizeCache.getAllSizes();
+    if (mounted) {
+      setState(() {
+        _fileSizes = sizes;
+        _loadingSizes = false;
+      });
+    }
+  }
+
+  String _modelSize(SpeechModelInfo info) {
+    final String fileName = info.downloadUrl.split('/').last;
+    final int? bytes = _fileSizes[fileName];
+    if (bytes != null) return GitHubReleaseSizeCache.formatSize(bytes);
+    return _loadingSizes ? '...' : '';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return ListView(
+      shrinkWrap: true,
+      children: <Widget>[
+        Text(
+          l10n.speechModelStreaming,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 4),
+        for (final SpeechModelType type in SpeechModelType.values)
+          if (getSpeechModel(type).isStreaming)
+            RadioListTile<String>(
+              contentPadding: EdgeInsets.zero,
+              title: Text(getSpeechModel(type).displayName),
+              subtitle: Text(
+                '${getSpeechModel(type).latencyMs}ms  •  ${_modelSize(getSpeechModel(type))}',
+              ),
+              value: type.name,
+              groupValue: widget.liveSubtitleModel,
+              onChanged: (String? v) {
+                if (v != null) widget.onChanged(v);
+              },
+            ),
+        const Divider(height: 1),
+        const SizedBox(height: 8),
+        Text(
+          l10n.speechModelOffline,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 4),
+        for (final SpeechModelType type in SpeechModelType.values)
+          if (!getSpeechModel(type).isStreaming)
+            RadioListTile<String>(
+              contentPadding: EdgeInsets.zero,
+              title: Text(getSpeechModel(type).displayName),
+              subtitle: Text(_modelSize(getSpeechModel(type))),
+              value: type.name,
+              groupValue: widget.liveSubtitleModel,
+              onChanged: (String? v) {
+                if (v != null) widget.onChanged(v);
+              },
+            ),
       ],
     );
   }

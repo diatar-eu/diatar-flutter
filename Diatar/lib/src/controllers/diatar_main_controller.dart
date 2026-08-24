@@ -181,6 +181,9 @@ class DiatarMainController extends ChangeNotifier {
   SpeechRecognizer? _speechRecognizer;
   bool _liveSubtitlesActive = false;
   String _liveSubtitleText = '';
+  String? _liveSubtitleError;
+  final List<String> _liveSubtitleFinals = <String>[];
+  String _liveSubtitlePartial = '';
   final TcpSenderService _sender = TcpSenderService(
     onStatusChanged: (bool connected) {},
     onError: (String code, Map<String, String> params) {},
@@ -3897,6 +3900,7 @@ class DiatarMainController extends ChangeNotifier {
 
   bool get liveSubtitlesActive => _liveSubtitlesActive;
   String get liveSubtitleText => _liveSubtitleText;
+  String? get liveSubtitleError => _liveSubtitleError;
 
   Future<void> toggleLiveSubtitles() async {
     if (_liveSubtitlesActive) {
@@ -3906,29 +3910,66 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
+  String _buildSubtitleText() {
+    final List<String> parts = <String>[..._liveSubtitleFinals];
+    if (_liveSubtitlePartial.isNotEmpty) {
+      parts.add(_liveSubtitlePartial);
+    }
+    return parts.join('\n');
+  }
+
   Future<void> _startLiveSubtitles() async {
-    if (!await _modelManager.isModelReady()) {
-      debugPrint('LiveSubtitles: model not ready');
+    final SpeechModelType modelType = SpeechModelType.values.firstWhere(
+      (e) => e.name == settings.liveSubtitleModel,
+      orElse: () => SpeechModelType.nemotron35_560ms,
+    );
+    final SpeechModelInfo modelInfo = getSpeechModel(modelType);
+
+    if (!await _modelManager.isModelReady(modelType)) {
+      debugPrint('LiveSubtitles: model ${modelInfo.displayName} not ready');
       return;
     }
-    final String modelPath = await _modelManager.getModelPath();
-    debugPrint('LiveSubtitles: modelPath=$modelPath');
+    final String modelPath = await _modelManager.getModelPath(modelType);
+
+    if (!modelInfo.isStreaming && !await _modelManager.isVadModelReady()) {
+      debugPrint('LiveSubtitles: VAD model not ready, downloading...');
+      await _modelManager.downloadVadModel();
+    }
+    final String vadModelPath = await _modelManager.getVadModelPath();
+
+    debugPrint('LiveSubtitles: model=${modelInfo.displayName} path=$modelPath');
+    _liveSubtitleError = null;
+    _liveSubtitleFinals.clear();
+    _liveSubtitlePartial = '';
     try {
-      _speechRecognizer = SherpaOnnxSpeechRecognizer(
+      _speechRecognizer = IsolateSpeechRecognizer(
         config: SpeechRecognizerConfig(
           language: settings.liveSubtitleLanguage,
           modelPath: modelPath,
           audioDeviceId: settings.liveSubtitleDeviceId,
+          modelType: modelType,
+          whisperLanguage: settings.liveSubtitleLanguage,
+          vadModelPath: vadModelPath,
         ),
+        isStreaming: modelInfo.isStreaming,
       );
       _speechRecognizer!.results.listen(
         (SpeechResult result) {
           debugPrint(
             'LiveSubtitles: text="${result.text}" final=${result.isFinal}',
           );
-          _liveSubtitleText = result.text;
+          if (result.isFinal) {
+            _liveSubtitleFinals.add(result.text);
+            while (_liveSubtitleFinals.length > 4) {
+              _liveSubtitleFinals.removeAt(0);
+            }
+            _liveSubtitlePartial = '';
+          } else {
+            _liveSubtitlePartial = result.text;
+          }
+          _liveSubtitleText = _buildSubtitleText();
           notifyListeners();
-          _sendLiveSubtitle(result.text);
+          _sendLiveSubtitle(_liveSubtitleText);
         },
         onError: (Object error) {
           debugPrint('LiveSubtitles stream error: $error');
@@ -3942,8 +3983,10 @@ class DiatarMainController extends ChangeNotifier {
       notifyListeners();
     } catch (e, st) {
       debugPrint('LiveSubtitles start failed: $e\n$st');
+      _liveSubtitleError = e.toString();
       await _speechRecognizer?.dispose();
       _speechRecognizer = null;
+      notifyListeners();
     }
   }
 
@@ -3953,6 +3996,8 @@ class DiatarMainController extends ChangeNotifier {
     _speechRecognizer = null;
     _liveSubtitlesActive = false;
     _liveSubtitleText = '';
+    _liveSubtitleFinals.clear();
+    _liveSubtitlePartial = '';
     settings = settings.copyWith(liveSubtitlesEnabled: false);
     await _settingsStore.save(settings);
     await _sendLiveSubtitle('');

@@ -2996,7 +2996,7 @@ abstract class AppLocalizations {
   /// No description provided for @liveSubtitlesDownloadMessage.
   ///
   /// In hu, this message translates to:
-  /// **'Az élő beszédfelismeréshez egy ~650MB-os nyelvi modell szükséges. Letöltjük most?'**
+  /// **'A beszédfelismeréshez szükséges modell. Letöltjük most?'**
   String get liveSubtitlesDownloadMessage;
 
   /// No description provided for @liveSubtitlesDownloading.
@@ -3034,6 +3034,24 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Mikrofon'**
   String get speechSettingsSummary;
+
+  /// No description provided for @speechModelTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beszédmodell'**
+  String get speechModelTitle;
+
+  /// No description provided for @speechModelStreaming.
+  ///
+  /// In hu, this message translates to:
+  /// **'Streaming (alacsony késleltetés)'**
+  String get speechModelStreaming;
+
+  /// No description provided for @speechModelOffline.
+  ///
+  /// In hu, this message translates to:
+  /// **'Offline (magasabb pontosság)'**
+  String get speechModelOffline;
 
   /// No description provided for @transposeDown.
   ///

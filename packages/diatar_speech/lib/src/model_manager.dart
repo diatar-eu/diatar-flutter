@@ -2,22 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:archive/archive_io.dart';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-const String _kModelDirName =
-    'sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-560ms-int8-2026-06-11';
-const String _kModelDownloadUrl =
-    'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/$_kModelDirName.tar.bz2';
-
-const List<String> _kRequiredFiles = <String>[
-  'encoder.int8.onnx',
-  'decoder.int8.onnx',
-  'joiner.int8.onnx',
-  'tokens.txt',
-];
+import 'model_registry.dart';
 
 class ModelManager {
   Future<Directory> get _modelsDir async {
@@ -29,62 +18,120 @@ class ModelManager {
     return modelsDir;
   }
 
-  Future<String> get modelDirPath async {
+  Future<String> modelDirPath(SpeechModelType type) async {
+    final SpeechModelInfo info = getSpeechModel(type);
     final Directory dir = await _modelsDir;
-    return p.join(dir.path, _kModelDirName);
+    return p.join(dir.path, info.dirName);
   }
 
-  Future<bool> isModelReady() async {
-    final String dirPath = await modelDirPath;
+  Future<bool> isModelReady(SpeechModelType type) async {
+    final SpeechModelInfo info = getSpeechModel(type);
+    final String dirPath = await modelDirPath(type);
     final Directory dir = Directory(dirPath);
     if (!dir.existsSync()) return false;
-    for (final String file in _kRequiredFiles) {
+    for (final String file in info.requiredFiles) {
       if (!File(p.join(dirPath, file)).existsSync()) return false;
     }
     return true;
   }
 
-  Future<bool> debugCheckModel() async {
-    final String dirPath = await modelDirPath;
-    final Directory dir = Directory(dirPath);
-    debugPrint('[Model] Dir: $dirPath');
-    debugPrint('[Model] Dir exists: ${dir.existsSync()}');
-    if (dir.existsSync()) {
-      final List<String> contents = dir
-          .listSync()
-          .map((FileSystemEntity e) => p.basename(e.path))
-          .toList();
-      debugPrint('[Model] Contents: $contents');
-      for (final String file in _kRequiredFiles) {
-        final bool exists = File(p.join(dirPath, file)).existsSync();
-        debugPrint('[Model]   $file: $exists');
-      }
-    }
-    return isModelReady();
-  }
-
-  Future<String> getModelPath() async {
-    if (!await isModelReady()) {
+  Future<String> getModelPath(SpeechModelType type) async {
+    if (!await isModelReady(type)) {
       throw StateError(
-        'Model not downloaded. Call downloadModel() first.',
+        'Model ${getSpeechModel(type).displayName} not downloaded. '
+        'Call downloadModel() first.',
       );
     }
-    return modelDirPath;
+    return modelDirPath(type);
   }
 
-  Future<void> downloadModel({
+  Future<bool> isVadModelReady() async {
+    final Directory dir = await _modelsDir;
+    return File(p.join(dir.path, kVadModelFileName)).existsSync();
+  }
+
+  Future<String> getVadModelPath() async {
+    if (!await isVadModelReady()) {
+      throw StateError(
+        'VAD model not downloaded. Call downloadVadModel() first.',
+      );
+    }
+    final Directory dir = await _modelsDir;
+    return p.join(dir.path, kVadModelFileName);
+  }
+
+  Future<void> downloadVadModel({
+    void Function(double progress)? onProgress,
+  }) async {
+    if (await isVadModelReady()) {
+      onProgress?.call(1.0);
+      return;
+    }
+
+    final Directory dir = await _modelsDir;
+    final String destPath = p.join(dir.path, '${kVadModelFileName}.tmp');
+    final File tempFile = File(destPath);
+
+    try {
+      final http.Client client = http.Client();
+      final http.StreamedResponse response = await client.send(
+        http.Request('GET', Uri.parse(kVadModelUrl)),
+      );
+
+      if (response.statusCode != 200) {
+        throw HttpException(
+          'VAD download failed with status ${response.statusCode}',
+        );
+      }
+
+      final int? totalBytes = response.contentLength;
+      int receivedBytes = 0;
+
+      final IOSink sink = tempFile.openWrite();
+      final Completer<void> completer = Completer<void>();
+      response.stream.listen(
+        (List<int> chunk) {
+          sink.add(chunk);
+          receivedBytes += chunk.length;
+          if (totalBytes != null && totalBytes > 0) {
+            onProgress?.call(receivedBytes / totalBytes);
+          }
+        },
+        onDone: () async {
+          await sink.close();
+          completer.complete();
+        },
+        onError: (Object error) {
+          completer.completeError(error);
+        },
+      );
+      await completer.future;
+      client.close();
+
+      await tempFile.rename(p.join(dir.path, kVadModelFileName));
+      onProgress?.call(1.0);
+    } finally {
+      if (tempFile.existsSync()) {
+        await tempFile.delete();
+      }
+    }
+  }
+
+  Future<void> downloadModel(
+    SpeechModelType type, {
     void Function(double progress)? onProgress,
     Future<bool> Function()? onCancel,
   }) async {
-    final String dirPath = await modelDirPath;
+    final SpeechModelInfo info = getSpeechModel(type);
+    final String dirPath = await modelDirPath(type);
 
-    if (await isModelReady()) {
+    if (await isModelReady(type)) {
       onProgress?.call(1.0);
       return;
     }
 
     final Directory modelsBase = await _modelsDir;
-    final String tempPath = p.join(modelsBase.path, '${_kModelDirName}.tmp');
+    final String tempPath = p.join(modelsBase.path, '${info.dirName}.tmp');
     final Directory tempDir = Directory(tempPath);
     if (tempDir.existsSync()) {
       await tempDir.delete(recursive: true);
@@ -96,7 +143,7 @@ class ModelManager {
     try {
       final http.Client client = http.Client();
       final http.StreamedResponse response = await client.send(
-        http.Request('GET', Uri.parse(_kModelDownloadUrl)),
+        http.Request('GET', Uri.parse(info.downloadUrl)),
       );
 
       if (response.statusCode != 200) {
@@ -138,12 +185,10 @@ class ModelManager {
         await finalDir.delete(recursive: true);
       }
 
-      final Directory extractedDir = Directory(p.join(tempPath, _kModelDirName));
+      final Directory extractedDir = Directory(p.join(tempPath, info.dirName));
       if (extractedDir.existsSync()) {
         await extractedDir.rename(dirPath);
       } else {
-        // Archive may extract files directly into tempPath (no top-level dir).
-        // Move all non-archive files into the target dir.
         await finalDir.create(recursive: true);
         final List<FileSystemEntity> items = tempDir
             .listSync()
@@ -157,7 +202,7 @@ class ModelManager {
             await item.rename(destPath);
           }
         }
-        if (!await isModelReady()) {
+        if (!await isModelReady(type)) {
           throw Exception(
             'Archive extracted but required files not found in $dirPath',
           );
@@ -170,5 +215,23 @@ class ModelManager {
         await tempDir.delete(recursive: true);
       }
     }
+  }
+
+  Future<void> deleteModel(SpeechModelType type) async {
+    final String dirPath = await modelDirPath(type);
+    final Directory dir = Directory(dirPath);
+    if (dir.existsSync()) {
+      await dir.delete(recursive: true);
+    }
+  }
+
+  Future<List<SpeechModelType>> listDownloadedModels() async {
+    final List<SpeechModelType> downloaded = [];
+    for (final SpeechModelType type in SpeechModelType.values) {
+      if (await isModelReady(type)) {
+        downloaded.add(type);
+      }
+    }
+    return downloaded;
   }
 }

@@ -1693,7 +1693,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get liveSubtitlesDownloadMessage =>
-      'Az élő beszédfelismeréshez egy ~650MB-os nyelvi modell szükséges. Letöltjük most?';
+      'A beszédfelismeréshez szükséges modell. Letöltjük most?';
 
   @override
   String get liveSubtitlesDownloading =>
@@ -1713,6 +1713,15 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get speechSettingsSummary => 'Mikrofon';
+
+  @override
+  String get speechModelTitle => 'Beszédmodell';
+
+  @override
+  String get speechModelStreaming => 'Streaming (alacsony késleltetés)';
+
+  @override
+  String get speechModelOffline => 'Offline (magasabb pontosság)';
 
   @override
   String get transposeDown => 'Transzpozíció le';
