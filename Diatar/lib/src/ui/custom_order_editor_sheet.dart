@@ -290,16 +290,39 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<void> _toggleSoundAt(int index, {required bool forward}) async {
+    final List<int> pairedIndexes = <int>[index];
+    if (_isMergeLeader(index)) {
+      pairedIndexes.add(index + 1);
+    } else if (_isMergeFollower(index)) {
+      pairedIndexes.add(index - 1);
+    }
+
     setState(() {
-      final bool playSound = forward
-          ? _entries[index].playSound
-          : !_entries[index].playSound;
-      _entries[index] = _entries[index].copyWith(
-        playSound: playSound,
-        advanceAfterSound: forward
-            ? !_entries[index].advanceAfterSound
-            : playSound && _entries[index].advanceAfterSound,
-      );
+      if (forward) {
+        final bool advanceAfterSound = !_entries[index].advanceAfterSound;
+        for (final int pairedIndex in pairedIndexes) {
+          final CustomOrderEntry entry = _entries[pairedIndex];
+          if (!controller.hasSoundForCustomOrderEntry(entry)) {
+            continue;
+          }
+          _entries[pairedIndex] = entry.copyWith(
+            playSound: advanceAfterSound ? true : entry.playSound,
+            advanceAfterSound: advanceAfterSound,
+          );
+        }
+      } else {
+        final bool playSound = !_entries[index].playSound;
+        for (final int pairedIndex in pairedIndexes) {
+          final CustomOrderEntry entry = _entries[pairedIndex];
+          if (!controller.hasSoundForCustomOrderEntry(entry)) {
+            continue;
+          }
+          _entries[pairedIndex] = entry.copyWith(
+            playSound: playSound,
+            advanceAfterSound: playSound && entry.advanceAfterSound,
+          );
+        }
+      }
     });
     await _commitEntries();
   }

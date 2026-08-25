@@ -177,6 +177,9 @@ class DiatarMainController extends ChangeNotifier {
   final SongSearchService _searchService = SongSearchService();
   final AudioService _audioService = AudioService();
   late final StreamSubscription<void> _audioPlaybackCompletionSubscription;
+  final List<String> _pendingCustomMergeSoundPaths = <String>[];
+  bool _customMergeSoundSequenceActive = false;
+  bool _advanceAfterCustomMergeSounds = false;
   final ModelManager _modelManager = ModelManager();
   SpeechRecognizer? _speechRecognizer;
   bool _liveSubtitlesActive = false;
@@ -222,9 +225,7 @@ class DiatarMainController extends ChangeNotifier {
   DiatarMainController() {
     _audioPlaybackCompletionSubscription = _audioService.onPlaybackComplete
         .listen((_) {
-          if (_shouldAdvanceAfterCurrentSound()) {
-            nextVerse();
-          }
+          unawaited(_handleAudioPlaybackComplete());
         });
   }
   DateTime? tcpConnectAttemptAt;
@@ -842,28 +843,105 @@ class DiatarMainController extends ChangeNotifier {
 
   void _playCurrentVerseSound() {
     if (!showing) {
+      _clearCustomMergeSoundSequence();
       unawaited(_audioService.stop());
       return;
     }
     final bool isCustomOrder = diaVirtualBookSelected;
     final int customIndex = isCustomOrder ? _currentCustomOrderIndex() : -1;
-    if (isCustomOrder &&
-        (customIndex < 0 || !_customOrder[customIndex].playSound)) {
-      unawaited(_audioService.stop());
+    if (isCustomOrder) {
+      if (customIndex < 0 || customIndex >= _customOrder.length) {
+        _clearCustomMergeSoundSequence();
+        unawaited(_audioService.stop());
+        return;
+      }
+      final CustomOrderEntry entry = _customOrder[customIndex];
+      if (entry.mergeWithNext && customIndex + 1 < _customOrder.length) {
+        final List<CustomOrderEntry> pair = <CustomOrderEntry>[
+          entry,
+          _customOrder[customIndex + 1],
+        ];
+        final List<String> soundPaths = pair
+            .where((CustomOrderEntry item) => item.playSound)
+            .map(_resolveSoundPathForEntry)
+            .map((_AudioPathResolution resolution) => resolution.path)
+            .whereType<String>()
+            .toList();
+        if (soundPaths.isEmpty) {
+          _clearCustomMergeSoundSequence();
+          unawaited(_audioService.stop());
+          return;
+        }
+        _pendingCustomMergeSoundPaths
+          ..clear()
+          ..addAll(soundPaths);
+        _customMergeSoundSequenceActive = true;
+        _advanceAfterCustomMergeSounds = pair.any(
+          (CustomOrderEntry item) => item.playSound && item.advanceAfterSound,
+        );
+        unawaited(_playNextCustomMergeSound());
+        return;
+      }
+      _clearCustomMergeSoundSequence();
+      if (!entry.playSound) {
+        unawaited(_audioService.stop());
+        return;
+      }
+      final _AudioPathResolution resolution = _resolveSoundPathForEntry(entry);
+      if (resolution.path == null) {
+        unawaited(_audioService.stop());
+        return;
+      }
+      unawaited(_audioService.playSound(resolution.path));
       return;
     }
     if (!isCustomOrder && !settings.useSound) {
+      _clearCustomMergeSoundSequence();
       unawaited(_audioService.stop());
       return;
     }
-    final _AudioPathResolution resolution = isCustomOrder
-        ? _resolveSoundPathForEntry(_customOrder[customIndex])
-        : _resolveSoundPathForCurrentVerse();
+    _clearCustomMergeSoundSequence();
+    final _AudioPathResolution resolution = _resolveSoundPathForCurrentVerse();
     if (resolution.path == null) {
       unawaited(_audioService.stop());
       return;
     }
     unawaited(_audioService.playSound(resolution.path));
+  }
+
+  Future<void> _handleAudioPlaybackComplete() async {
+    if (_customMergeSoundSequenceActive) {
+      await _playNextCustomMergeSound();
+      return;
+    }
+    if (_shouldAdvanceAfterCurrentSound()) {
+      nextVerse();
+    }
+  }
+
+  Future<void> _playNextCustomMergeSound() async {
+    if (!_customMergeSoundSequenceActive) {
+      return;
+    }
+    if (_pendingCustomMergeSoundPaths.isEmpty) {
+      final bool shouldAdvance = _advanceAfterCustomMergeSounds;
+      _clearCustomMergeSoundSequence();
+      if (shouldAdvance && showing && diaVirtualBookSelected) {
+        nextVerse();
+      }
+      return;
+    }
+    final String path = _pendingCustomMergeSoundPaths.removeAt(0);
+    final AudioPlaybackResult result = await _audioService.playSound(path);
+    if (result.state != AudioPlaybackState.started) {
+      await _playNextCustomMergeSound();
+    }
+  }
+
+  void _clearCustomMergeSoundSequence() {
+    _pendingCustomMergeSoundPaths.clear();
+    _customMergeSoundSequenceActive = false;
+    _advanceAfterCustomMergeSounds = false;
   }
 
   _AudioPathResolution _resolveSoundPathForCurrentVerse() {
@@ -2861,6 +2939,9 @@ class DiatarMainController extends ChangeNotifier {
       if (entry.advanceAfterSound) {
         out.writeln('soundforward=true');
       }
+      if (entry.mergeWithNext) {
+        out.writeln('dbldia=true');
+      }
 
       if (entry.isSeparator) {
         final String separatorName =
@@ -3018,6 +3099,7 @@ class DiatarMainController extends ChangeNotifier {
       }
       final bool playSound = _diaBoolean(sec['sound']);
       final bool advanceAfterSound = _diaBoolean(sec['soundforward']);
+      final bool mergeWithNext = _diaBoolean(sec['dbldia']);
 
       final String separatorName = (sec['separator'] ?? '').trim();
       if (separatorName.isNotEmpty) {
@@ -3027,6 +3109,7 @@ class DiatarMainController extends ChangeNotifier {
             songIndex: CustomOrderEntry.separatorSongIndex,
             verseIndex: 0,
             label: '--- $separatorName ---',
+            mergeWithNext: mergeWithNext,
             playSound: playSound,
             advanceAfterSound: advanceAfterSound,
             customTextTitle: separatorName,
@@ -3046,6 +3129,7 @@ class DiatarMainController extends ChangeNotifier {
             label: '[Kep] ${_fileNameFromPath(kep)}',
             customImagePath: resolved,
             customType: 'image',
+            mergeWithNext: mergeWithNext,
             playSound: playSound,
             advanceAfterSound: advanceAfterSound,
           ),
@@ -3067,6 +3151,7 @@ class DiatarMainController extends ChangeNotifier {
             customTextTitle: effectiveTitle,
             customTextBody: textLines.join('\n'),
             customType: 'text',
+            mergeWithNext: mergeWithNext,
             playSound: playSound,
             advanceAfterSound: advanceAfterSound,
           ),
@@ -3085,6 +3170,7 @@ class DiatarMainController extends ChangeNotifier {
             songIndex: songIndex,
             verseIndex: verseIndex,
             label: buildEntryLabel(book.fileName, songIndex, verseIndex),
+            mergeWithNext: mergeWithNext,
             playSound: playSound,
             advanceAfterSound: advanceAfterSound,
           ),
@@ -3117,6 +3203,7 @@ class DiatarMainController extends ChangeNotifier {
           songIndex: sIx,
           verseIndex: vIx,
           label: buildEntryLabel(b.fileName, sIx, vIx),
+          mergeWithNext: mergeWithNext,
           playSound: playSound,
           advanceAfterSound: advanceAfterSound,
         ),
@@ -3208,7 +3295,10 @@ class DiatarMainController extends ChangeNotifier {
     return _diaIniParser.parse(content);
   }
 
-  bool _diaBoolean(String? value) => value?.trim().toLowerCase() == 'true';
+  bool _diaBoolean(String? value) {
+    final String normalized = value?.trim().toLowerCase() ?? '';
+    return normalized == 'true' || normalized == '1';
+  }
 
   Future<int> deleteDtxFiles(Set<String> fileNames) async {
     final Directory dtxDir = await _resolveDtxDirectory();
@@ -3433,35 +3523,57 @@ class DiatarMainController extends ChangeNotifier {
 
     if (_customOrderCursor >= 0 && _customOrderCursor < _customOrder.length) {
       final CustomOrderEntry entry = _customOrder[_customOrderCursor];
-      if (entry.isSongEntry &&
-          entry.mergeWithNext &&
-          _customOrderCursor + 1 < _customOrder.length) {
-        final CustomOrderEntry next = _customOrder[_customOrderCursor + 1];
-        if (next.isSongEntry &&
-            next.fileName == entry.fileName &&
-            next.songIndex == entry.songIndex) {
-          final DtxSong? s = currentSong;
-          if (s != null &&
-              next.verseIndex >= 0 &&
-              next.verseIndex < s.verses.length) {
-            final List<String> currentLines = displayLines;
-            final int offset = currentTransposition;
-            final List<String> nextLines = offset == 0
-                ? s.verses[next.verseIndex].lines
-                : s.verses[next.verseIndex].lines
-                      .map(
-                        (String line) =>
-                            TranspositionUtils.transposeLine(line, offset),
-                      )
-                      .toList();
-            if (nextLines.isNotEmpty) {
-              return <String>[...currentLines, '', ...nextLines];
-            }
-          }
-        }
+      if (entry.mergeWithNext) {
+        return customOrderProjectionLinesAt(_customOrderCursor);
       }
     }
     return displayLines;
+  }
+
+  List<String> customOrderProjectionLinesAt(int index) {
+    if (index < 0 || index >= _customOrder.length) {
+      return const <String>[];
+    }
+    final CustomOrderEntry entry = _customOrder[index];
+    final List<String> lines = _projectionLinesForCustomOrderEntry(entry);
+    if (!entry.mergeWithNext || index + 1 >= _customOrder.length) {
+      return lines;
+    }
+    final List<String> nextLines = _projectionLinesForCustomOrderEntry(
+      _customOrder[index + 1],
+    );
+    return nextLines.isEmpty ? lines : <String>[...lines, '', ...nextLines];
+  }
+
+  List<String> _projectionLinesForCustomOrderEntry(CustomOrderEntry entry) {
+    if (entry.isCustomText) {
+      return (entry.customTextBody ?? '')
+          .split(RegExp(r'\r?\n'))
+          .map((String line) => line.trimRight())
+          .where((String line) => line.trim().isNotEmpty)
+          .toList();
+    }
+    if (!entry.isSongEntry) {
+      return const <String>[];
+    }
+    final List<DtxVerse> verses = versesForEntry(entry);
+    if (verses.isEmpty) {
+      return const <String>[];
+    }
+    final List<String> lines =
+        verses[_safeVerseIndex(entry).clamp(0, verses.length - 1)].lines;
+    final DtxSong? song = songForEntry(entry);
+    final int offset =
+        _transpositions['${entry.fileName}|${entry.songIndex}'] ??
+        song?.transposition ??
+        0;
+    return offset == 0
+        ? lines
+        : lines
+              .map(
+                (String line) => TranspositionUtils.transposeLine(line, offset),
+              )
+              .toList();
   }
 
   /// Beallitja az aktualis enek transzpozicio eltolasat es ujrajelzi a vetítést.
@@ -4245,16 +4357,7 @@ class DiatarMainController extends ChangeNotifier {
           : (entry.customTextTitle ?? '').trim().isEmpty
           ? 'Dia'
           : (entry.customTextTitle ?? '').trim();
-      final List<String> lines = () {
-        final String body = isMergeLeader && cursor + 1 < _customOrder.length
-            ? '${entry.customTextBody ?? ''}\n${_customOrder[cursor + 1].customTextBody ?? ''}'
-            : (entry.customTextBody ?? '');
-        return body
-            .split(RegExp(r'\r?\n'))
-            .map((String line) => line.trimRight())
-            .where((String line) => line.trim().isNotEmpty)
-            .toList();
-      }();
+      final List<String> lines = customOrderProjectionLinesAt(cursor);
       final List<String> payloadLines = lines.isEmpty
           ? const <String>['']
           : lines;

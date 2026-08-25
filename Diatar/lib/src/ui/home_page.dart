@@ -1563,17 +1563,9 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           ? controller.customOrderProjectionTitleAt(cursor)
           : controller.currentCustomOrderProjectionTitle ??
                 localizedCustomEntryLabel(l10n, projectedCustom);
-      final List<String> lines = () {
-        final String body =
-            isMergeLeader && cursor + 1 < controller.customOrder.length
-            ? '${projectedCustom.customTextBody ?? ''}\n${controller.customOrder[cursor + 1].customTextBody ?? ''}'
-            : (projectedCustom.customTextBody ?? '');
-        return body
-            .split(RegExp(r'\r?\n'))
-            .map((String line) => line.trimRight())
-            .where((String line) => line.trim().isNotEmpty)
-            .toList();
-      }();
+      final List<String> lines = controller.customOrderProjectionLinesAt(
+        cursor,
+      );
       return _CustomTextPreview(
         controller: controller,
         title: title,

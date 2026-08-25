@@ -156,6 +156,64 @@ void main() {
         expect(controller.customOrder.single.advanceAfterSound, isTrue);
       });
     });
+
+    test(
+      'writes and reads DIA double slide marker on the first slide',
+      () async {
+        final DiatarMainController controller = DiatarMainController();
+        final Directory directory = await Directory.systemTemp.createTemp(
+          'diatar_double_slide_test_',
+        );
+        final String path =
+            '${directory.path}${Platform.pathSeparator}order.dia';
+        addTearDown(() => directory.delete(recursive: true));
+
+        await controller.applyCustomOrder(const <CustomOrderEntry>[
+          CustomOrderEntry(
+            fileName: '__custom_text__',
+            songIndex: -1,
+            verseIndex: 0,
+            label: '[Text] First',
+            customTextTitle: 'First',
+            customTextBody: 'First text',
+            customType: 'text',
+            mergeWithNext: true,
+          ),
+          CustomOrderEntry(
+            fileName: '__custom_text__',
+            songIndex: -1,
+            verseIndex: 0,
+            label: '[Text] Second',
+            customTextTitle: 'Second',
+            customTextBody: 'Second text',
+            customType: 'text',
+          ),
+        ], activate: true);
+        await controller.exportCustomOrderToDia(path, recordSave: false);
+
+        final String content = await File(path).readAsString();
+        expect(content, contains('[1]\ndbldia=true'));
+        expect(content, isNot(contains('[2]\ndbldia=true')));
+        expect(controller.customOrderProjectionLinesAt(0), <String>[
+          'First text',
+          '',
+          'Second text',
+        ]);
+
+        await controller.importCustomOrderFromDia(
+          path,
+          mode: CustomOrderImportMode.overwriteActive,
+        );
+        expect(controller.customOrder, hasLength(2));
+        expect(controller.customOrder.first.mergeWithNext, isTrue);
+        expect(controller.customOrder.last.mergeWithNext, isFalse);
+        expect(controller.customOrderProjectionLinesAt(0), <String>[
+          'First text',
+          '',
+          'Second text',
+        ]);
+      },
+    );
   });
 
   group('connection indicator precedence', () {
