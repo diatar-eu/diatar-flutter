@@ -1,7 +1,2 @@
-• Automatic slide-list check on startup
-• Export and import backups
-• Background image on mobile
-• Fault-tolerant DTZ import (skips broken parts instead of failing)
-• Highlight the inserted verse when inserting
-• Clear MQTT messages on exit so other devices don’t receive stale state
-• Bug fixes: duplicate slide titles, exiting the slide-list editor, search
+Bugfixes
+Sound
