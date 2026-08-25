@@ -80,6 +80,17 @@ void main() {
 
 class _FakeDtzHttpClient implements http.Client {
   @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final http.Response response = await get(request.url);
+    return http.StreamedResponse(
+      Stream<List<int>>.value(response.bodyBytes),
+      response.statusCode,
+      contentLength: response.contentLength,
+      request: request,
+    );
+  }
+
+  @override
   Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
     final String body;
     switch (url.toString()) {
@@ -120,6 +131,17 @@ class _DownloadingFakeDtzHttpClient extends _FakeDtzHttpClient {
 }
 
 class _MusicHttpClient implements http.Client {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final http.Response response = await get(request.url);
+    return http.StreamedResponse(
+      Stream<List<int>>.value(response.bodyBytes),
+      response.statusCode,
+      contentLength: response.contentLength,
+      request: request,
+    );
+  }
+
   @override
   Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
     switch (url.toString()) {

@@ -1298,19 +1298,30 @@ class DiatarMainController extends ChangeNotifier {
   /// ZIP detection is content-based (magic bytes) so that files without a
   /// recognisable extension (common on Android content URIs) are handled
   /// correctly.
-  Future<(Map<String, List<int>> dtz, Map<String, List<int>> zip)>
+  Future<(Map<String, List<int>> dtz, Map<String, String> zip)>
   _categoriseDtzFiles(List<XFile> files) async {
     final Map<String, List<int>> dtzFiles = <String, List<int>>{};
-    final Map<String, List<int>> zipFiles = <String, List<int>>{};
+    final Map<String, String> zipFiles = <String, String>{};
     for (int i = 0; i < files.length; i++) {
       final XFile file = files[i];
-      final List<int> bytes = await file.readAsBytes();
-      if (bytes.isEmpty) continue;
       final String name = _resolveDtzImportName(file, i);
-      // Use magic bytes as primary classifier; fall back to extension.
-      if (_bytesLookLikeZip(bytes) || name.toLowerCase().endsWith('.zip')) {
-        zipFiles[name] = bytes;
+      final List<int> header = await file
+          .openRead(0, 4)
+          .fold(
+            <int>[],
+            (List<int> result, List<int> chunk) => result..addAll(chunk),
+          );
+      final bool isZip =
+          _bytesLookLikeZip(header) || name.toLowerCase().endsWith('.zip');
+      if (isZip) {
+        final String zipPath = file.path.trim();
+        if (zipPath.isEmpty) {
+          throw UnsupportedError('ZIP import requires a local file path.');
+        }
+        zipFiles[name] = zipPath;
       } else {
+        final List<int> bytes = await file.readAsBytes();
+        if (bytes.isEmpty) continue;
         // Treat everything else as a candidate DTZ (text format).
         // Normalise the name: strip legacy .bin suffix and ensure .dtz extension.
         String dtzName = name;
@@ -1328,11 +1339,11 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<DtzUserImportAnalysis> analyzeDtzUserImport(List<XFile> files) async {
-    final (Map<String, List<int>> dtzFiles, Map<String, List<int>> zipFiles) =
+    final (Map<String, List<int>> dtzFiles, Map<String, String> zipFiles) =
         await _categoriseDtzFiles(files);
-    return _dtzUserImportService.analyze(
+    return _dtzUserImportService.analyzeFiles(
       dtzFiles: dtzFiles,
-      zipFiles: zipFiles,
+      zipFilePaths: zipFiles,
       availableDiaIds: _availableDiaIds(),
     );
   }
@@ -1360,15 +1371,16 @@ class DiatarMainController extends ChangeNotifier {
     required List<DtzImportPackageAnalysis> toImport,
     required List<XFile> files,
   }) async {
-    final (Map<String, List<int>> dtzFiles, Map<String, List<int>> zipFiles) =
+    final (Map<String, List<int>> dtzFiles, Map<String, String> zipFiles) =
         await _categoriseDtzFiles(files);
     final Directory dtzDir = await _dtzDownloadService.resolveDirectory();
-    final DtzUserImportCommitResult result = await _dtzUserImportService.commit(
-      toImport: toImport,
-      dtzFiles: dtzFiles,
-      zipFiles: zipFiles,
-      targetDir: dtzDir,
-    );
+    final DtzUserImportCommitResult result = await _dtzUserImportService
+        .commitFiles(
+          toImport: toImport,
+          dtzFiles: dtzFiles,
+          zipFilePaths: zipFiles,
+          targetDir: dtzDir,
+        );
     if (result.importedDtzCount > 0) {
       await reloadBooks();
     }

@@ -1,11 +1,12 @@
 import 'dart:convert';
+import 'dart:io' show IOSink;
 
-import 'package:archive/archive.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/file_system_provider.dart';
 import '../utils/path_helper.dart';
+import 'streaming_zip_service.dart';
 
 class DtzDownloadItem {
   const DtzDownloadItem({
@@ -88,6 +89,7 @@ class DtzDownloadService {
       _zipContentsPrefix = 'music_zip_contents_';
 
   final http.Client _client;
+  static const StreamingZipService _zipService = StreamingZipService();
 
   static const String _dtzListUrl = 'https://diatar.eu/downloads/dtz/_list.php';
   static const String _dtzBaseUrl = 'https://diatar.eu/downloads/dtz/';
@@ -505,7 +507,9 @@ class DtzDownloadService {
     required int totalFiles,
     void Function(DtzDownloadProgress progress)? onProgress,
   }) async {
-    final http.Response response = await _client.get(url);
+    final http.StreamedResponse response = await _client.send(
+      http.Request('GET', url),
+    );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
         'HTTP ${response.statusCode} while downloading $fileName',
@@ -517,46 +521,28 @@ class DtzDownloadService {
         ? response.contentLength!
         : 0;
     int received = 0;
-    final List<int> bytes = response.bodyBytes;
-    const int chunkSize = 64 * 1024;
-    for (int i = 0; i < bytes.length; i += chunkSize) {
-      received += (i + chunkSize < bytes.length ? chunkSize : bytes.length - i);
-      onProgress?.call(
-        DtzDownloadProgress(
-          currentFile: currentFile,
-          totalFiles: totalFiles,
-          fileName: fileName,
-          receivedBytes: received,
-          totalBytes: totalBytes,
-        ),
-      );
+    final IOSink sink = targetFile.openWrite();
+    try {
+      await for (final List<int> bytes in response.stream) {
+        received += bytes.length;
+        sink.add(bytes);
+        onProgress?.call(
+          DtzDownloadProgress(
+            currentFile: currentFile,
+            totalFiles: totalFiles,
+            fileName: fileName,
+            receivedBytes: received,
+            totalBytes: totalBytes,
+          ),
+        );
+      }
+    } finally {
+      await sink.close();
     }
-
-    await targetFile.writeAsBytes(bytes);
   }
 
   Future<List<String>> _extractZip(File zipFile, Directory targetDir) async {
-    final List<int> bytes = await zipFile.readAsBytes();
-    final Archive archive = ZipDecoder().decodeBytes(bytes);
-    final List<String> extractedFiles = <String>[];
-    for (final ArchiveFile file in archive) {
-      if (!file.isFile) {
-        continue;
-      }
-      final String normalized = file.name.replaceAll('\\', '/');
-      if (normalized.startsWith('/') ||
-          normalized.startsWith('../') ||
-          normalized.contains('/../')) {
-        continue;
-      }
-      final File outFile = FileSystemProvider.instance.file(
-        '${targetDir.path}/$normalized',
-      );
-      await outFile.create(recursive: true);
-      await outFile.writeAsBytes(file.content);
-      extractedFiles.add(normalized);
-    }
-    return extractedFiles;
+    return _zipService.extract(zipFile.path, targetDirectory: targetDir);
   }
 }
 

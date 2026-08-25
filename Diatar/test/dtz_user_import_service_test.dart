@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:file/file.dart';
+import 'package:file/local.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:diatar_app/src/services/dtz_user_import_service.dart';
@@ -18,7 +20,8 @@ List<int> _zip(Map<String, String> entries) {
   return ZipEncoder().encode(archive);
 }
 
-const String _dtzWithMedia = 'b foto\r\n'
+const String _dtzWithMedia =
+    'b foto\r\n'
     'f 3894733E kotta/01.jpg\r\n'
     'z 3894733E hang/01.mp3\r\n'
     'i B1E858E8 3000\r\n';
@@ -26,33 +29,34 @@ const String _dtzWithMedia = 'b foto\r\n'
 void main() {
   const DtzUserImportService service = DtzUserImportService();
 
-  test('ok when every referenced dia-ID is available and media is provided',
-      () {
-    final DtzUserImportAnalysis analysis = service.analyze(
-      dtzFiles: <String, List<int>>{
-        'sample.dtz': _bytes(_dtzWithMedia),
-      },
-      zipFiles: <String, List<int>>{
-        'media.zip': _zip(<String, String>{
-          'foto/kotta/01.jpg': 'x',
-          'foto/hang/01.mp3': 'y',
-        }),
-      },
-      availableDiaIds: <String>{'3894733E', 'B1E858E8'},
-    );
+  test(
+    'ok when every referenced dia-ID is available and media is provided',
+    () {
+      final DtzUserImportAnalysis analysis = service.analyze(
+        dtzFiles: <String, List<int>>{'sample.dtz': _bytes(_dtzWithMedia)},
+        zipFiles: <String, List<int>>{
+          'media.zip': _zip(<String, String>{
+            'foto/kotta/01.jpg': 'x',
+            'foto/hang/01.mp3': 'y',
+          }),
+        },
+        availableDiaIds: <String>{'3894733E', 'B1E858E8'},
+      );
 
-    final DtzImportPackageAnalysis pkg = analysis.packages.single;
-    expect(pkg.status, DtzImportStatus.ok);
-    expect(pkg.errorReason, isNull);
-    expect(pkg.matchedFiles, <String>{'foto/kotta/01.jpg', 'foto/hang/01.mp3'});
-    expect(pkg.missingFiles, isEmpty);
-  });
+      final DtzImportPackageAnalysis pkg = analysis.packages.single;
+      expect(pkg.status, DtzImportStatus.ok);
+      expect(pkg.errorReason, isNull);
+      expect(pkg.matchedFiles, <String>{
+        'foto/kotta/01.jpg',
+        'foto/hang/01.mp3',
+      });
+      expect(pkg.missingFiles, isEmpty);
+    },
+  );
 
   test('error with Missing dia-IDs when an ID is not in the DTX books', () {
     final DtzUserImportAnalysis analysis = service.analyze(
-      dtzFiles: <String, List<int>>{
-        'sample.dtz': _bytes(_dtzWithMedia),
-      },
+      dtzFiles: <String, List<int>>{'sample.dtz': _bytes(_dtzWithMedia)},
       zipFiles: <String, List<int>>{},
       availableDiaIds: <String>{'3894733E'},
     );
@@ -102,9 +106,11 @@ void main() {
     final DtzUserImportAnalysis analysis = service.analyze(
       dtzFiles: <String, List<int>>{
         // 1 of 51 missing -> ~2 % < 5 % => warning.
-        'sample.dtz': _bytes('i 3894733E 3000\r\n'
-            'i DEADBEEF 1000\r\n'
-            '$knownLines'),
+        'sample.dtz': _bytes(
+          'i 3894733E 3000\r\n'
+          'i DEADBEEF 1000\r\n'
+          '$knownLines',
+        ),
       },
       zipFiles: <String, List<int>>{},
       availableDiaIds: <String>{'3894733E', ...knownIds},
@@ -118,9 +124,7 @@ void main() {
 
   test('elevates to error when media is fine but dia-IDs are missing', () {
     final DtzUserImportAnalysis analysis = service.analyze(
-      dtzFiles: <String, List<int>>{
-        'sample.dtz': _bytes(_dtzWithMedia),
-      },
+      dtzFiles: <String, List<int>>{'sample.dtz': _bytes(_dtzWithMedia)},
       zipFiles: <String, List<int>>{
         'media.zip': _zip(<String, String>{
           'foto/kotta/01.jpg': 'x',
@@ -139,10 +143,12 @@ void main() {
   test('missingFiles contains the full list of absent media files', () {
     final DtzUserImportAnalysis analysis = service.analyze(
       dtzFiles: <String, List<int>>{
-        'sample.dtz': _bytes('b foto\r\n'
-            'f 3894733E a/1.jpg\r\n'
-            'f 3894733E a/2.jpg\r\n'
-            'f 3894733E a/3.jpg\r\n'),
+        'sample.dtz': _bytes(
+          'b foto\r\n'
+          'f 3894733E a/1.jpg\r\n'
+          'f 3894733E a/2.jpg\r\n'
+          'f 3894733E a/3.jpg\r\n',
+        ),
       },
       zipFiles: <String, List<int>>{
         'media.zip': _zip(<String, String>{'foto/a/1.jpg': 'x'}),
@@ -155,5 +161,40 @@ void main() {
     expect(pkg.matchedFiles, <String>{'foto/a/1.jpg'});
     expect(pkg.missingDiaIds, isEmpty);
     expect(pkg.status, DtzImportStatus.error); // 2 of 3 missing -> 66 %.
+  });
+
+  test('reads and extracts ZIP imports directly from a file', () async {
+    final Directory tempDir = await LocalFileSystem().systemTempDirectory
+        .createTemp('dtz_stream_import_test_');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final File zipFile = tempDir.childFile('media.zip');
+    await zipFile.writeAsBytes(
+      _zip(<String, String>{'foto/kotta/01.jpg': 'image'}),
+    );
+
+    final DtzUserImportAnalysis analysis = await service.analyzeFiles(
+      dtzFiles: <String, List<int>>{
+        'sample.dtz': _bytes('b foto\r\nf 3894733E kotta/01.jpg\r\n'),
+      },
+      zipFilePaths: <String, String>{'media.zip': zipFile.path},
+      availableDiaIds: <String>{'3894733E'},
+    );
+    expect(analysis.packages.single.status, DtzImportStatus.ok);
+
+    final DtzUserImportCommitResult result = await service.commitFiles(
+      toImport: analysis.packages,
+      dtzFiles: <String, List<int>>{
+        'sample.dtz': _bytes('b foto\r\nf 3894733E kotta/01.jpg\r\n'),
+      },
+      zipFilePaths: <String, String>{'media.zip': zipFile.path},
+      targetDir: tempDir.childDirectory('target'),
+    );
+
+    expect(result.failures, isEmpty);
+    expect(result.extractedFileCount, 1);
+    expect(
+      await tempDir.childFile('target/foto/kotta/01.jpg').readAsString(),
+      'image',
+    );
   });
 }

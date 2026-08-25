@@ -3,13 +3,16 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 
 import '../utils/file_system_provider.dart';
+import 'streaming_zip_service.dart';
 
 /// Per-package import readiness.
 enum DtzImportStatus {
   /// No media referenced, or all referenced files are present in the ZIPs.
   ok,
+
   /// Less than 5 % of referenced media files are missing – importable with warning.
   warning,
+
   /// Parse failure, or ≥ 5 % of referenced media files are missing.
   error,
 }
@@ -84,13 +87,14 @@ class DtzUserImportCommitResult {
 ///   by the committed packages – no orphan content from ZIPs ends up on disk.
 class DtzUserImportService {
   const DtzUserImportService();
+  static const StreamingZipService _streamingZipService = StreamingZipService();
 
   // -------------------------------------------------------------------------
   // Public API
   // -------------------------------------------------------------------------
 
   /// Analyzes [dtzFiles] and [zipFiles] without touching the file system.
-  /// 
+  ///
   /// [availableDiaIds] is the set of dia-IDs that are already loaded from DTX
   /// files. DTZ packages that reference unknown dia-IDs will be marked as
   /// error or warning depending on the percentage of missing dia-IDs.
@@ -103,23 +107,42 @@ class DtzUserImportService {
 
     final List<DtzImportPackageAnalysis> packages = dtzFiles.entries
         .map(
-          (MapEntry<String, List<int>> e) => _analyzeOneDtz(
-            e.key,
-            e.value,
-            allProvidedFiles,
-            availableDiaIds,
-          ),
+          (MapEntry<String, List<int>> e) =>
+              _analyzeOneDtz(e.key, e.value, allProvidedFiles, availableDiaIds),
         )
         .toList();
 
     // If no DTZ was supplied the user probably made a mistake; all ZIPs are
     // orphans and no import is possible.
-    final List<String> orphanZipNames =
-        dtzFiles.isEmpty ? zipFiles.keys.toList() : const <String>[];
+    final List<String> orphanZipNames = dtzFiles.isEmpty
+        ? zipFiles.keys.toList()
+        : const <String>[];
 
     return DtzUserImportAnalysis(
       packages: packages,
       orphanZipNames: orphanZipNames,
+    );
+  }
+
+  /// Analyses ZIPs from disk by reading only their central directories.
+  Future<DtzUserImportAnalysis> analyzeFiles({
+    required Map<String, List<int>> dtzFiles,
+    required Map<String, String> zipFilePaths,
+    Set<String> availableDiaIds = const <String>{},
+  }) async {
+    final Set<String> allProvidedFiles = <String>{};
+    for (final String path in zipFilePaths.values) {
+      try {
+        allProvidedFiles.addAll(await _streamingZipService.fileNames(path));
+      } catch (_) {
+        // Keep malformed ZIP behavior consistent with the in-memory variant.
+      }
+    }
+    return _analyze(
+      dtzFiles: dtzFiles,
+      allProvidedFiles: allProvidedFiles,
+      orphanZipNames: dtzFiles.isEmpty ? zipFilePaths.keys.toList() : const [],
+      availableDiaIds: availableDiaIds,
     );
   }
 
@@ -188,6 +211,70 @@ class DtzUserImportService {
     );
   }
 
+  /// Imports selected media directly from ZIP files on disk.
+  Future<DtzUserImportCommitResult> commitFiles({
+    required List<DtzImportPackageAnalysis> toImport,
+    required Map<String, List<int>> dtzFiles,
+    required Map<String, String> zipFilePaths,
+    required Directory targetDir,
+  }) async {
+    await targetDir.create(recursive: true);
+    final Set<String> neededFiles = toImport
+        .expand((DtzImportPackageAnalysis p) => p.matchedFiles)
+        .toSet();
+    int importedDtzCount = 0;
+    int extractedFileCount = 0;
+    final List<String> failures = <String>[];
+
+    for (final DtzImportPackageAnalysis pkg in toImport) {
+      final List<int>? bytes = dtzFiles[pkg.dtzFileName];
+      if (bytes == null) continue;
+      try {
+        await FileSystemProvider.instance
+            .file('${targetDir.path}/${pkg.dtzFileName}')
+            .writeAsBytes(bytes);
+        importedDtzCount++;
+      } catch (error) {
+        failures.add('${pkg.dtzFileName}: $error');
+      }
+    }
+    for (final MapEntry<String, String> entry in zipFilePaths.entries) {
+      try {
+        extractedFileCount += (await _streamingZipService.extract(
+          entry.value,
+          targetDirectory: targetDir,
+          only: neededFiles,
+        )).length;
+      } catch (error) {
+        failures.add('${entry.key}: $error');
+      }
+    }
+    await FileSystemProvider.persistWebFileSystem();
+    return DtzUserImportCommitResult(
+      importedDtzCount: importedDtzCount,
+      extractedFileCount: extractedFileCount,
+      failures: failures,
+    );
+  }
+
+  DtzUserImportAnalysis _analyze({
+    required Map<String, List<int>> dtzFiles,
+    required Set<String> allProvidedFiles,
+    required List<String> orphanZipNames,
+    required Set<String> availableDiaIds,
+  }) {
+    final List<DtzImportPackageAnalysis> packages = dtzFiles.entries
+        .map(
+          (MapEntry<String, List<int>> e) =>
+              _analyzeOneDtz(e.key, e.value, allProvidedFiles, availableDiaIds),
+        )
+        .toList();
+    return DtzUserImportAnalysis(
+      packages: packages,
+      orphanZipNames: orphanZipNames,
+    );
+  }
+
   // -------------------------------------------------------------------------
   // Internal helpers
   // -------------------------------------------------------------------------
@@ -238,7 +325,9 @@ class DtzUserImportService {
     if (referencedFiles.isEmpty) {
       // No media files, but check for missing dia-IDs.
       if (referencedDiaIds.isNotEmpty &&
-          !referencedDiaIds.every((String id) => availableDiaIds.contains(id))) {
+          !referencedDiaIds.every(
+            (String id) => availableDiaIds.contains(id),
+          )) {
         final Set<String> missing = referencedDiaIds
             .where((String id) => !availableDiaIds.contains(id))
             .toSet();
@@ -346,11 +435,12 @@ class DtzUserImportService {
       if (prefix == 'f' || prefix == 'F' || prefix == 'z' || prefix == 'Z') {
         final int space = rest.indexOf(' ');
         if (space <= 0) continue;
-        final String value =
-            rest.substring(space + 1).trim().replaceAll('\\', '/');
+        final String value = rest
+            .substring(space + 1)
+            .trim()
+            .replaceAll('\\', '/');
         if (value.isEmpty) continue;
-        final String full =
-            baseDir.isEmpty ? value : '$baseDir/$value';
+        final String full = baseDir.isEmpty ? value : '$baseDir/$value';
         refs.add(full);
       }
     }
