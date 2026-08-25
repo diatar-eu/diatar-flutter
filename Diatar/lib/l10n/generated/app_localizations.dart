@@ -1601,6 +1601,18 @@ abstract class AppLocalizations {
   /// **'Csoportos áthelyezés'**
   String get customOrderGroupReorder;
 
+  /// No description provided for @customOrderPlaySoundTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'A dia zenéjének lejátszása'**
+  String get customOrderPlaySoundTooltip;
+
+  /// No description provided for @customOrderAdvanceAfterSoundTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Továbblépés a zene végén'**
+  String get customOrderAdvanceAfterSoundTooltip;
+
   /// No description provided for @addSong.
   ///
   /// In hu, this message translates to:

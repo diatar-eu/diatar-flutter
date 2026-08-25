@@ -887,6 +887,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderGroupReorder => 'Group reordering';
 
   @override
+  String get customOrderPlaySoundTooltip => 'Play the slide\'s music';
+
+  @override
+  String get customOrderAdvanceAfterSoundTooltip =>
+      'Advance when the music ends';
+
+  @override
   String get addSong => 'Add song';
 
   @override

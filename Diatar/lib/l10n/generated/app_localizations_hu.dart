@@ -890,6 +890,12 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderGroupReorder => 'Csoportos áthelyezés';
 
   @override
+  String get customOrderPlaySoundTooltip => 'A dia zenéjének lejátszása';
+
+  @override
+  String get customOrderAdvanceAfterSoundTooltip => 'Továbblépés a zene végén';
+
+  @override
   String get addSong => 'Ének hozzáadása';
 
   @override

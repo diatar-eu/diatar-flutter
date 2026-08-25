@@ -1,7 +1,11 @@
 import 'dart:async';
 
+import 'dart:io';
+
 import 'package:diatar_app/src/controllers/diatar_main_controller.dart';
 import 'package:diatar_app/src/core/settings/transport_settings_policy.dart';
+import 'package:diatar_app/src/models/custom_order_entry.dart';
+import 'package:diatar_app/src/services/dtx_order_store.dart';
 import 'package:diatar_app/src/services/mqtt_sender_service.dart';
 import 'package:diatar_app/src/services/sender_transport_coordinator.dart';
 import 'package:diatar_app/src/services/tcp_sender_service.dart';
@@ -13,35 +17,34 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(
-    const MethodChannel('xyz.luan/audioplayers'),
-    (MethodCall methodCall) async {
-      if (methodCall.method == 'create') {
-        return <String, dynamic>{'playerId': 'mock-player'};
-      }
-      return null;
-    },
-  );
+      .setMockMethodCallHandler(const MethodChannel('xyz.luan/audioplayers'), (
+        MethodCall methodCall,
+      ) async {
+        if (methodCall.method == 'create') {
+          return <String, dynamic>{'playerId': 'mock-player'};
+        }
+        return null;
+      });
 
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(
-    const MethodChannel('plugins.flutter.io/shared_preferences'),
-    (MethodCall methodCall) async {
-      switch (methodCall.method) {
-        case 'getAll':
-          return <String, dynamic>{};
-        case 'setBool':
-        case 'setDouble':
-        case 'setInt':
-        case 'setString':
-        case 'setStringList':
-        case 'remove':
-          return true;
-        default:
-          return null;
-      }
-    },
-  );
+        const MethodChannel('plugins.flutter.io/shared_preferences'),
+        (MethodCall methodCall) async {
+          switch (methodCall.method) {
+            case 'getAll':
+              return <String, dynamic>{};
+            case 'setBool':
+            case 'setDouble':
+            case 'setInt':
+            case 'setString':
+            case 'setStringList':
+            case 'remove':
+              return true;
+            default:
+              return null;
+          }
+        },
+      );
 
   group('merge title formatting', () {
     test('keeps shared book and song prefix once', () {
@@ -82,42 +85,107 @@ void main() {
   });
 
   group('custom order naming', () {
-    test('updates the active set display name after a save-as rename', () async {
-      final DiatarMainController controller = DiatarMainController();
+    test(
+      'updates the active set display name after a save-as rename',
+      () async {
+        final DiatarMainController controller = DiatarMainController();
 
-      await controller.createCustomOrderSet('Régi név');
-      await controller.markCustomOrderDiaExportSaved('C:/Temp/Új név.dia');
+        await controller.createCustomOrderSet('Régi név');
+        await controller.markCustomOrderDiaExportSaved('C:/Temp/Új név.dia');
 
-      expect(controller.customOrderSets, hasLength(1));
-      expect(controller.customOrderSets.first.name, 'Új név');
-      expect(controller.customOrderSets.first.baseName, 'Új név');
-      expect(controller.customOrderSets.first.displayName, 'Új név');
-      expect(controller.suggestedCustomOrderBaseName, 'Új név');
+        expect(controller.customOrderSets, hasLength(1));
+        expect(controller.customOrderSets.first.name, 'Új név');
+        expect(controller.customOrderSets.first.baseName, 'Új név');
+        expect(controller.customOrderSets.first.displayName, 'Új név');
+        expect(controller.suggestedCustomOrderBaseName, 'Új név');
+      },
+    );
+
+    group('custom order sound settings', () {
+      test('persists slide-specific sound flags', () {
+        const StoredCustomOrderEntry entry = StoredCustomOrderEntry(
+          fileName: 'songs.dtx',
+          songIndex: 1,
+          verseIndex: 2,
+          label: 'Song/Verse',
+          playSound: true,
+          advanceAfterSound: true,
+        );
+
+        final StoredCustomOrderEntry? restored =
+            StoredCustomOrderEntry.fromJson(entry.toJson());
+
+        expect(restored, isNotNull);
+        expect(restored!.playSound, isTrue);
+        expect(restored.advanceAfterSound, isTrue);
+      });
+
+      test('writes and reads DIA sound options', () async {
+        final DiatarMainController controller = DiatarMainController();
+        final Directory directory = await Directory.systemTemp.createTemp(
+          'diatar_sound_options_test_',
+        );
+        final String path =
+            '${directory.path}${Platform.pathSeparator}order.dia';
+        addTearDown(() => directory.delete(recursive: true));
+
+        await controller.applyCustomOrder(const <CustomOrderEntry>[
+          CustomOrderEntry(
+            fileName: '__custom_text__',
+            songIndex: -1,
+            verseIndex: 0,
+            label: '[Text] Test',
+            customTextTitle: 'Test',
+            customTextBody: 'Text',
+            customType: 'text',
+            playSound: true,
+            advanceAfterSound: true,
+          ),
+        ], activate: true);
+        await controller.exportCustomOrderToDia(path, recordSave: false);
+
+        final String content = await File(path).readAsString();
+        expect(content, contains('sound=true'));
+        expect(content, contains('soundforward=true'));
+
+        await controller.importCustomOrderFromDia(
+          path,
+          mode: CustomOrderImportMode.overwriteActive,
+        );
+        expect(controller.customOrder.single.playSound, isTrue);
+        expect(controller.customOrder.single.advanceAfterSound, isTrue);
+      });
     });
   });
 
   group('connection indicator precedence', () {
-    test('TCP stays green when the connection is live even if the internet side is failing', () {
-      expect(
-        resolveTcpIndicatorState(
-          tcpActive: true,
-          tcpConnected: true,
-          tcpHasError: true,
-        ),
-        TransportIndicatorState.connected,
-      );
-    });
+    test(
+      'TCP stays green when the connection is live even if the internet side is failing',
+      () {
+        expect(
+          resolveTcpIndicatorState(
+            tcpActive: true,
+            tcpConnected: true,
+            tcpHasError: true,
+          ),
+          TransportIndicatorState.connected,
+        );
+      },
+    );
 
-    test('TCP remains yellow while it is still waiting for a TCP connection', () {
-      expect(
-        resolveTcpIndicatorState(
-          tcpActive: true,
-          tcpConnected: false,
-          tcpHasError: false,
-        ),
-        TransportIndicatorState.connecting,
-      );
-    });
+    test(
+      'TCP remains yellow while it is still waiting for a TCP connection',
+      () {
+        expect(
+          resolveTcpIndicatorState(
+            tcpActive: true,
+            tcpConnected: false,
+            tcpHasError: false,
+          ),
+          TransportIndicatorState.connecting,
+        );
+      },
+    );
 
     test('Internet status is still independent from TCP', () {
       expect(
@@ -132,42 +200,50 @@ void main() {
   });
 
   group('transport startup independence', () {
-    test('TCP startup is not blocked by a slow or failing MQTT connection', () async {
-      final Completer<void> mqttOpenGate = Completer<void>();
-      final _BlockingMqttSender mqtt = _BlockingMqttSender(mqttOpenGate);
-      final _TrackingTcpSender tcp = _TrackingTcpSender();
-      final SenderTransportCoordinator coordinator = const SenderTransportCoordinator();
+    test(
+      'TCP startup is not blocked by a slow or failing MQTT connection',
+      () async {
+        final Completer<void> mqttOpenGate = Completer<void>();
+        final _BlockingMqttSender mqtt = _BlockingMqttSender(mqttOpenGate);
+        final _TrackingTcpSender tcp = _TrackingTcpSender();
+        final SenderTransportCoordinator coordinator =
+            const SenderTransportCoordinator();
 
-      final Future<void> applyFuture = coordinator.apply(
-        mqttSender: mqtt,
-        tcpSender: tcp,
-        runtime: const TransportRuntimeState(
-          mqttUser: 'user',
-          tcpTargets: <String>['127.0.0.1:1024'],
-          mqttActive: true,
-          tcpConfigured: true,
-          mqttConnectAttemptAt: null,
-          tcpConnectAttemptAt: null,
-        ),
-        mqttPassword: 'pw',
-        mqttChannel: '1',
-        screenWidth: 1920,
-        screenHeight: 1080,
-      );
+        final Future<void> applyFuture = coordinator.apply(
+          mqttSender: mqtt,
+          tcpSender: tcp,
+          runtime: const TransportRuntimeState(
+            mqttUser: 'user',
+            tcpTargets: <String>['127.0.0.1:1024'],
+            mqttActive: true,
+            tcpConfigured: true,
+            mqttConnectAttemptAt: null,
+            tcpConnectAttemptAt: null,
+          ),
+          mqttPassword: 'pw',
+          mqttChannel: '1',
+          screenWidth: 1920,
+          screenHeight: 1080,
+        );
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(tcp.restartCalled, isTrue,
-          reason: 'TCP restart should be started independently of MQTT connection attempts.');
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(
+          tcp.restartCalled,
+          isTrue,
+          reason:
+              'TCP restart should be started independently of MQTT connection attempts.',
+        );
 
-      mqttOpenGate.complete();
-      await applyFuture;
-    });
+        mqttOpenGate.complete();
+        await applyFuture;
+      },
+    );
   });
 }
 
 class _BlockingMqttSender extends MqttSenderService {
   _BlockingMqttSender(this._openGate)
-      : super(onStatusChanged: (_) {}, onError: (_, __) {});
+    : super(onStatusChanged: (_) {}, onError: (_, __) {});
 
   final Completer<void> _openGate;
 
@@ -188,8 +264,7 @@ class _BlockingMqttSender extends MqttSenderService {
 }
 
 class _TrackingTcpSender extends TcpSenderService {
-  _TrackingTcpSender()
-      : super(onStatusChanged: (_) {}, onError: (_, __) {});
+  _TrackingTcpSender() : super(onStatusChanged: (_) {}, onError: (_, __) {});
 
   bool restartCalled = false;
 

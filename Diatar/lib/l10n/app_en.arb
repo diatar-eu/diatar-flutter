@@ -596,6 +596,8 @@
   "customOrderSuggestedFileName": "order.dia",
   "customOrderEditTitle": "Editor",
   "customOrderGroupReorder": "Group reordering",
+  "customOrderPlaySoundTooltip": "Play the slide's music",
+  "customOrderAdvanceAfterSoundTooltip": "Advance when the music ends",
   "addSong": "Add song",
   "searchSongHint": "Book, song title or lyric",
   "customOrderInsertBookLabel": "Book",

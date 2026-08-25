@@ -222,7 +222,7 @@ class DiatarMainController extends ChangeNotifier {
   DiatarMainController() {
     _audioPlaybackCompletionSubscription = _audioService.onPlaybackComplete
         .listen((_) {
-          if (settings.useSound && settings.advanceAfterMusic && showing) {
+          if (_shouldAdvanceAfterCurrentSound()) {
             nextVerse();
           }
         });
@@ -841,11 +841,24 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void _playCurrentVerseSound() {
-    if (!settings.useSound || !showing) {
+    if (!showing) {
       unawaited(_audioService.stop());
       return;
     }
-    final _AudioPathResolution resolution = _resolveSoundPathForCurrentVerse();
+    final bool isCustomOrder = diaVirtualBookSelected;
+    final int customIndex = isCustomOrder ? _currentCustomOrderIndex() : -1;
+    if (isCustomOrder &&
+        (customIndex < 0 || !_customOrder[customIndex].playSound)) {
+      unawaited(_audioService.stop());
+      return;
+    }
+    if (!isCustomOrder && !settings.useSound) {
+      unawaited(_audioService.stop());
+      return;
+    }
+    final _AudioPathResolution resolution = isCustomOrder
+        ? _resolveSoundPathForEntry(_customOrder[customIndex])
+        : _resolveSoundPathForCurrentVerse();
     if (resolution.path == null) {
       unawaited(_audioService.stop());
       return;
@@ -855,6 +868,25 @@ class DiatarMainController extends ChangeNotifier {
 
   _AudioPathResolution _resolveSoundPathForCurrentVerse() {
     final DtxVerse? verse = currentVerse;
+    return _resolveSoundPathForVerse(verse, currentSong);
+  }
+
+  _AudioPathResolution _resolveSoundPathForEntry(CustomOrderEntry entry) {
+    final List<DtxVerse> verses = versesForEntry(entry);
+    if (verses.isEmpty) {
+      return const _AudioPathResolution();
+    }
+    final int verseIndex = _safeVerseIndex(entry);
+    return _resolveSoundPathForVerse(
+      verses[verseIndex.clamp(0, verses.length - 1)],
+      songForEntry(entry),
+    );
+  }
+
+  _AudioPathResolution _resolveSoundPathForVerse(
+    DtxVerse? verse,
+    DtxSong? song,
+  ) {
     final String? diaId = verse?.diaId;
     if (diaId == null || diaId.isEmpty) {
       return const _AudioPathResolution();
@@ -865,7 +897,6 @@ class DiatarMainController extends ChangeNotifier {
     }
 
     // An uppercase Z record attaches one sound to every verse of its song.
-    final DtxSong? song = currentSong;
     if (song == null) {
       return const _AudioPathResolution();
     }
@@ -881,6 +912,22 @@ class DiatarMainController extends ChangeNotifier {
       }
     }
     return const _AudioPathResolution();
+  }
+
+  bool hasSoundForCustomOrderEntry(CustomOrderEntry entry) =>
+      _resolveSoundPathForEntry(entry).path != null;
+
+  bool _shouldAdvanceAfterCurrentSound() {
+    if (!showing) {
+      return false;
+    }
+    if (diaVirtualBookSelected) {
+      final int index = _currentCustomOrderIndex();
+      return index >= 0 &&
+          _customOrder[index].playSound &&
+          _customOrder[index].advanceAfterSound;
+    }
+    return settings.useSound && settings.advanceAfterMusic;
   }
 
   void markStartupDownloadDialogHandled() {
@@ -2808,6 +2855,12 @@ class DiatarMainController extends ChangeNotifier {
       final CustomOrderEntry entry = exportable[i];
       out.writeln();
       out.writeln('[${i + 1}]');
+      if (entry.playSound) {
+        out.writeln('sound=true');
+      }
+      if (entry.advanceAfterSound) {
+        out.writeln('soundforward=true');
+      }
 
       if (entry.isSeparator) {
         final String separatorName =
@@ -2963,6 +3016,8 @@ class DiatarMainController extends ChangeNotifier {
       if (sec == null) {
         continue;
       }
+      final bool playSound = _diaBoolean(sec['sound']);
+      final bool advanceAfterSound = _diaBoolean(sec['soundforward']);
 
       final String separatorName = (sec['separator'] ?? '').trim();
       if (separatorName.isNotEmpty) {
@@ -2972,6 +3027,8 @@ class DiatarMainController extends ChangeNotifier {
             songIndex: CustomOrderEntry.separatorSongIndex,
             verseIndex: 0,
             label: '--- $separatorName ---',
+            playSound: playSound,
+            advanceAfterSound: advanceAfterSound,
             customTextTitle: separatorName,
           ),
         );
@@ -2989,6 +3046,8 @@ class DiatarMainController extends ChangeNotifier {
             label: '[Kep] ${_fileNameFromPath(kep)}',
             customImagePath: resolved,
             customType: 'image',
+            playSound: playSound,
+            advanceAfterSound: advanceAfterSound,
           ),
         );
         continue;
@@ -3008,6 +3067,8 @@ class DiatarMainController extends ChangeNotifier {
             customTextTitle: effectiveTitle,
             customTextBody: textLines.join('\n'),
             customType: 'text',
+            playSound: playSound,
+            advanceAfterSound: advanceAfterSound,
           ),
         );
         continue;
@@ -3024,6 +3085,8 @@ class DiatarMainController extends ChangeNotifier {
             songIndex: songIndex,
             verseIndex: verseIndex,
             label: buildEntryLabel(book.fileName, songIndex, verseIndex),
+            playSound: playSound,
+            advanceAfterSound: advanceAfterSound,
           ),
         );
         continue;
@@ -3054,6 +3117,8 @@ class DiatarMainController extends ChangeNotifier {
           songIndex: sIx,
           verseIndex: vIx,
           label: buildEntryLabel(b.fileName, sIx, vIx),
+          playSound: playSound,
+          advanceAfterSound: advanceAfterSound,
         ),
       );
     }
@@ -3142,6 +3207,8 @@ class DiatarMainController extends ChangeNotifier {
   Map<String, Map<String, String>> _parseDiaIni(String content) {
     return _diaIniParser.parse(content);
   }
+
+  bool _diaBoolean(String? value) => value?.trim().toLowerCase() == 'true';
 
   Future<int> deleteDtxFiles(Set<String> fileNames) async {
     final Directory dtxDir = await _resolveDtxDirectory();

@@ -8,6 +8,8 @@ class StoredCustomOrderEntry {
     required this.verseIndex,
     required this.label,
     this.mergeWithNext = false,
+    this.playSound = false,
+    this.advanceAfterSound = false,
     this.customTextTitle,
     this.customTextBody,
     this.customImagePath,
@@ -21,6 +23,8 @@ class StoredCustomOrderEntry {
   final int verseIndex;
   final String label;
   final bool mergeWithNext;
+  final bool playSound;
+  final bool advanceAfterSound;
   final String? customTextTitle;
   final String? customTextBody;
   final String? customImagePath;
@@ -35,6 +39,8 @@ class StoredCustomOrderEntry {
       'verseIndex': verseIndex,
       'label': label,
       'dbldia': mergeWithNext,
+      'sound': playSound,
+      'soundforward': advanceAfterSound,
       'customTextTitle': customTextTitle,
       'customTextBody': customTextBody,
       'customImagePath': customImagePath,
@@ -58,6 +64,8 @@ class StoredCustomOrderEntry {
     final Object? v = raw['verseIndex'];
     final Object? l = raw['label'];
     final Object? dbldia = raw['dbldia'] ?? raw['mergeWithNext'];
+    final Object? sound = raw['sound'];
+    final Object? soundforward = raw['soundforward'];
     final Object? textTitle = raw['customTextTitle'];
     final Object? textBody = raw['customTextBody'];
     final Object? imagePath = raw['customImagePath'];
@@ -79,6 +87,8 @@ class StoredCustomOrderEntry {
           key == 'label' ||
           key == 'dbldia' ||
           key == 'mergeWithNext' ||
+          key == 'sound' ||
+          key == 'soundforward' ||
           key == 'customTextTitle' ||
           key == 'customTextBody' ||
           key == 'customImagePath' ||
@@ -95,6 +105,8 @@ class StoredCustomOrderEntry {
       verseIndex: v is num ? v.toInt() : 0,
       label: l,
       mergeWithNext: dbldia is bool ? dbldia : false,
+      playSound: sound is bool ? sound : false,
+      advanceAfterSound: soundforward is bool ? soundforward : false,
       customTextTitle: textTitle is String ? textTitle : null,
       customTextBody: textBody is String ? textBody : null,
       customImagePath: imagePath is String ? imagePath : null,
@@ -172,7 +184,9 @@ class StoredCustomOrderSet {
     final Object? rawEntries = raw['entries'];
     if (rawEntries is List) {
       for (final Object? e in rawEntries) {
-        final StoredCustomOrderEntry? parsed = StoredCustomOrderEntry.fromJson(e);
+        final StoredCustomOrderEntry? parsed = StoredCustomOrderEntry.fromJson(
+          e,
+        );
         if (parsed != null) {
           entries.add(parsed);
         }
@@ -343,7 +357,7 @@ class DtxOrderStore {
   }
 
   Future<({List<StoredCustomOrderSet> sets, int activeIndex})>
-      loadCustomOrderSets() async {
+  loadCustomOrderSets() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String raw = prefs.getString(_kCustomOrderSets) ?? '[]';
     final int activeIndex = prefs.getInt(_kCustomOrderSetsActive) ?? -1;

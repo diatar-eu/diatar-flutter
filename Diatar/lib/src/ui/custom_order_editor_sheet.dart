@@ -242,7 +242,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   DiatarMainController get controller => widget.controller;
 
   String _entrySignature(CustomOrderEntry entry) {
-    return '${entry.fileName}|${entry.songIndex}|${entry.verseIndex}|${entry.mergeWithNext}|${entry.customTextTitle ?? ''}|${entry.customTextBody ?? ''}|${entry.customImagePath ?? ''}|${entry.customType ?? ''}|${jsonEncode(entry.customData)}|${entry.label}';
+    return '${entry.fileName}|${entry.songIndex}|${entry.verseIndex}|${entry.mergeWithNext}|${entry.playSound}|${entry.advanceAfterSound}|${entry.customTextTitle ?? ''}|${entry.customTextBody ?? ''}|${entry.customImagePath ?? ''}|${entry.customType ?? ''}|${jsonEncode(entry.customData)}|${entry.label}';
   }
 
   bool _isTextualEntry(CustomOrderEntry entry) {
@@ -284,6 +284,21 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     setState(() {
       _entries[leaderIndex] = _entries[leaderIndex].copyWith(
         mergeWithNext: !_isMergeLeader(leaderIndex),
+      );
+    });
+    await _commitEntries();
+  }
+
+  Future<void> _toggleSoundAt(int index, {required bool forward}) async {
+    setState(() {
+      final bool playSound = forward
+          ? _entries[index].playSound
+          : !_entries[index].playSound;
+      _entries[index] = _entries[index].copyWith(
+        playSound: playSound,
+        advanceAfterSound: forward
+            ? !_entries[index].advanceAfterSound
+            : playSound && _entries[index].advanceAfterSound,
       );
     });
     await _commitEntries();
@@ -829,8 +844,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                               children: filteredSongs.map((_SongOption option) {
                                 final bool isSelected =
                                     option.songIndex == selectedSongIndex;
-                                final ColorScheme colorScheme =
-                                    Theme.of(innerContext).colorScheme;
+                                final ColorScheme colorScheme = Theme.of(
+                                  innerContext,
+                                ).colorScheme;
                                 return Container(
                                   width: double.infinity,
                                   decoration: BoxDecoration(
@@ -901,6 +917,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       fileName: selectedBookFileName,
       songIndex: selectedSongIndex,
       verseIndex: 0,
+      playSound: true,
+      advanceAfterSound: true,
       label: controller.buildEntryLabel(
         selectedBookFileName,
         selectedSongIndex,
@@ -918,6 +936,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           fileName: selectedBookFileName,
           songIndex: selectedSongIndex,
           verseIndex: 0,
+          playSound: true,
+          advanceAfterSound: true,
           label: controller.buildEntryLabel(
             selectedBookFileName,
             selectedSongIndex,
@@ -944,6 +964,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
               fileName: selectedBookFileName,
               songIndex: selectedSongIndex,
               verseIndex: verseIx,
+              playSound: true,
+              advanceAfterSound: true,
               label: controller.buildEntryLabel(
                 selectedBookFileName,
                 selectedSongIndex,
@@ -984,6 +1006,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       fileName: controller.books[result.bookIndex].fileName,
       songIndex: result.songIndex,
       verseIndex: 0,
+      playSound: true,
+      advanceAfterSound: true,
       label: controller.buildEntryLabel(
         controller.books[result.bookIndex].fileName,
         result.songIndex,
@@ -999,6 +1023,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
               fileName: controller.books[result.bookIndex].fileName,
               songIndex: result.songIndex,
               verseIndex: verseIx,
+              playSound: true,
+              advanceAfterSound: true,
               label: controller.buildEntryLabel(
                 controller.books[result.bookIndex].fileName,
                 result.songIndex,
@@ -1016,20 +1042,18 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     });
     await _commitEntries();
     if (mounted && insertedCount > 0) {
-      controller.selectCustomOrderEntryForEditing(
-        insertedStartIndex,
-      );
+      controller.selectCustomOrderEntryForEditing(insertedStartIndex);
     }
   }
 
   Future<void> _pickAndSendImageSlide() async {
     final AppLocalizations l10n = context.l10n;
-    final List<XFile> files =
-        await DesktopProjectorBridge.instance.runWithNativeDialog(
-      () => showFileOpenPanel(
-        extensions: const <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
-      ),
-    );
+    final List<XFile> files = await DesktopProjectorBridge.instance
+        .runWithNativeDialog(
+          () => showFileOpenPanel(
+            extensions: const <String>['png', 'jpg', 'jpeg', 'bmp', 'webp'],
+          ),
+        );
     final XFile? file = files.isEmpty ? null : files.first;
     if (file == null) {
       return;
@@ -1626,10 +1650,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         // Androidon a rendszer "Mentés másként" ablakát (ACTION_CREATE_DOCUMENT)
         // használjuk az új hely kiválasztásához. Ha már van mentett célhely
         // (SAF URI), előbb felajánljuk a közvetlen felülírást.
-        final ({String uri, String displayName, String? renameFromName})? saved =
-            await _saveDiaWithAndroidFlow(
-          defaultFileName: defaultFileName,
-        );
+        final ({String uri, String displayName, String? renameFromName})?
+        saved = await _saveDiaWithAndroidFlow(defaultFileName: defaultFileName);
         if (saved == null || !mounted) {
           return;
         }
@@ -1641,22 +1663,21 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           return;
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.savedPath(saved.displayName)),
-          ),
+          SnackBar(content: Text(l10n.savedPath(saved.displayName))),
         );
         return;
       }
 
       try {
-        final FileSaveLocation? saveLocation =
-            await DesktopProjectorBridge.instance.runWithNativeDialog(
-          () => showFileSavePanel(
-            initialDirectory: initialDir,
-            suggestedName: defaultFileName,
-            extensions: const <String>['dia'],
-          ),
-        );
+        final FileSaveLocation? saveLocation = await DesktopProjectorBridge
+            .instance
+            .runWithNativeDialog(
+              () => showFileSavePanel(
+                initialDirectory: initialDir,
+                suggestedName: defaultFileName,
+                extensions: const <String>['dia'],
+              ),
+            );
         if (saveLocation != null) {
           targetPath = saveLocation.path;
           if (!hadUsableConfiguredDir) {
@@ -1703,7 +1724,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
               controller.settings.copyWith(diaExportPath: exportDir.path),
             );
           }
-          final String fallbackTargetPath = '${exportDir.path}/$fileBaseName.dia';
+          final String fallbackTargetPath =
+              '${exportDir.path}/$fileBaseName.dia';
           if (!await File(fallbackTargetPath).exists()) {
             targetPath = fallbackTargetPath;
             break;
@@ -1742,9 +1764,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<({String uri, String displayName, String? renameFromName})?>
-      _saveDiaWithAndroidFlow({
-    required String defaultFileName,
-  }) async {
+  _saveDiaWithAndroidFlow({required String defaultFileName}) async {
     final String storedUri = controller.settings.diaExportUri.trim();
     if (storedUri.isNotEmpty) {
       final String storedName =
@@ -1761,7 +1781,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         final bool overwritten = await _tryAndroidOverwrite(storedUri);
         if (overwritten) {
           // Felülíráskor nincs névmegadás: a diasor neve ne változzon.
-          return (uri: storedUri, displayName: storedName, renameFromName: null);
+          return (
+            uri: storedUri,
+            displayName: storedName,
+            renameFromName: null,
+          );
         }
         await _clearAndroidSavedDiaTarget();
       }
@@ -1770,9 +1794,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<({String uri, String displayName, String? renameFromName})?>
-      _saveDiaWithAndroidSystemDialog({
-    required String fileName,
-  }) async {
+  _saveDiaWithAndroidSystemDialog({required String fileName}) async {
     final Directory tempDir = await Directory.systemTemp.createTemp(
       'diatar_dia_export_',
     );
@@ -1780,13 +1802,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       final String tempPath = '${tempDir.path}/$fileName';
       await controller.exportCustomOrderToDia(tempPath, recordSave: false);
       final Uint8List data = await File(tempPath).readAsBytes();
-      final Object? decoded = await _androidDiaSaveChannel.invokeMethod<Object?>(
-        'saveDiaFile',
-        <String, Object?>{
-          'fileName': fileName,
-          'bytes': data,
-        },
-      );
+      final Object? decoded = await _androidDiaSaveChannel
+          .invokeMethod<Object?>('saveDiaFile', <String, Object?>{
+            'fileName': fileName,
+            'bytes': data,
+          });
       if (decoded is! Map) {
         return null;
       }
@@ -1841,10 +1861,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       final Uint8List data = await File(tempPath).readAsBytes();
       await _androidDiaSaveChannel.invokeMethod<Object?>(
         'overwriteDiaFile',
-        <String, Object?>{
-          'uri': uri,
-          'bytes': data,
-        },
+        <String, Object?>{'uri': uri, 'bytes': data},
       );
     } finally {
       try {
@@ -1859,10 +1876,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
   Future<void> _clearAndroidSavedDiaTarget() async {
     await controller.applySettings(
-      controller.settings.copyWith(
-        diaExportUri: '',
-        diaExportFileName: '',
-      ),
+      controller.settings.copyWith(diaExportUri: '', diaExportFileName: ''),
     );
   }
 
@@ -2030,10 +2044,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<void> _importDia() async {
-    final List<XFile> files =
-        await DesktopProjectorBridge.instance.runWithNativeDialog(
-      () => showFileOpenPanel(extensions: const <String>['dia']),
-    );
+    final List<XFile> files = await DesktopProjectorBridge.instance
+        .runWithNativeDialog(
+          () => showFileOpenPanel(extensions: const <String>['dia']),
+        );
     final XFile? file = files.isEmpty ? null : files.first;
     if (file == null) {
       return;
@@ -2073,6 +2087,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       );
     }
 
+    final bool showSoundControls = _entries.any(
+      controller.hasSoundForCustomOrderEntry,
+    );
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: ReorderableListView.builder(
@@ -2112,6 +2129,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         },
         itemBuilder: (BuildContext context, int index) {
           final CustomOrderEntry entry = _entries[index];
+          final bool hasSound = controller.hasSoundForCustomOrderEntry(entry);
+          final bool canAdvanceAfterSound = hasSound && entry.playSound;
           final bool isSongEntry = controller.isSongOrderEntry(entry);
           final bool isContinuation = isSongEntry
               ? (index > 0 &&
@@ -2156,7 +2175,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           final bool selected = controller.isCustomOrderIndexCurrent(index);
           final ColorScheme colorScheme = Theme.of(context).colorScheme;
           return Container(
-            key: ValueKey<String>('${entry.fileName}_${entry.songIndex}_$index'),
+            key: ValueKey<String>(
+              '${entry.fileName}_${entry.songIndex}_$index',
+            ),
             width: double.infinity,
             decoration: BoxDecoration(
               color: selected
@@ -2172,7 +2193,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
               contentPadding: EdgeInsets.zero,
               onTap: () => controller.selectCustomOrderEntryForEditing(index),
               leading: SizedBox(
-                width: 50,
+                width: showSoundControls ? 106 : 50,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
@@ -2189,6 +2210,61 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                           ? () => unawaited(_toggleMergeAt(index))
                           : null,
                     ),
+                    if (showSoundControls) ...<Widget>[
+                      IconButton(
+                        tooltip: context.l10n.customOrderPlaySoundTooltip,
+                        icon: Icon(
+                          Icons.music_note,
+                          color: !hasSound
+                              ? Colors.grey.shade600
+                              : entry.playSound
+                              ? Colors.tealAccent.shade400
+                              : Colors.blue.shade900,
+                        ),
+                        visualDensity: const VisualDensity(
+                          horizontal: -4,
+                          vertical: -4,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 28,
+                          minHeight: 28,
+                        ),
+                        disabledColor: Colors.grey.shade700,
+                        onPressed: hasSound
+                            ? () => unawaited(
+                                _toggleSoundAt(index, forward: false),
+                              )
+                            : null,
+                      ),
+                      IconButton(
+                        tooltip:
+                            context.l10n.customOrderAdvanceAfterSoundTooltip,
+                        icon: Icon(
+                          Icons.subdirectory_arrow_right,
+                          color: !canAdvanceAfterSound
+                              ? Colors.grey.shade600
+                              : entry.advanceAfterSound
+                              ? Colors.tealAccent.shade400
+                              : Colors.blue.shade900,
+                        ),
+                        visualDensity: const VisualDensity(
+                          horizontal: -4,
+                          vertical: -4,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 28,
+                          minHeight: 28,
+                        ),
+                        disabledColor: Colors.grey.shade700,
+                        onPressed: canAdvanceAfterSound
+                            ? () => unawaited(
+                                _toggleSoundAt(index, forward: true),
+                              )
+                            : null,
+                      ),
+                    ],
                     ReorderableDragStartListener(
                       index: index,
                       child: const Icon(Icons.drag_handle),
@@ -2197,7 +2273,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 ),
               ),
               title: Padding(
-                padding: EdgeInsets.only(left: isContinuation ? 70 : 16, right: 8),
+                padding: EdgeInsets.only(
+                  left: isContinuation ? (showSoundControls ? 126 : 70) : 16,
+                  right: 8,
+                ),
                 child: titleWidget,
               ),
               trailing: Row(
@@ -2303,9 +2382,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     setState(() {
       final List<CustomOrderEntry> replacements = normalized
           .map(
-            (int verseIx) => CustomOrderEntry(
-              fileName: base.fileName,
-              songIndex: base.songIndex,
+            (int verseIx) => base.copyWith(
               verseIndex: verseIx,
               label: controller.buildEntryLabel(
                 base.fileName,
@@ -2630,9 +2707,9 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
                 IconButton(
                   tooltip: l10n.fileChoose,
                   onPressed: () async {
-                    final String? folderPath =
-                        await DesktopProjectorBridge.instance
-                            .runWithNativeDialog(showDirectoryPicker);
+                    final String? folderPath = await DesktopProjectorBridge
+                        .instance
+                        .runWithNativeDialog(showDirectoryPicker);
                     if (folderPath == null || !mounted) {
                       return;
                     }
