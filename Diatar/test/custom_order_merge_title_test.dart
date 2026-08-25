@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'dart:io';
 
+import 'package:diatar_common/diatar_common.dart';
 import 'package:diatar_app/src/controllers/diatar_main_controller.dart';
 import 'package:diatar_app/src/core/settings/transport_settings_policy.dart';
 import 'package:diatar_app/src/models/custom_order_entry.dart';
@@ -85,6 +86,52 @@ void main() {
   });
 
   group('custom order naming', () {
+    test('writes the DTX verse ID to DIA files', () async {
+      final DiatarMainController controller = DiatarMainController();
+      controller.books = const <DtxBook>[
+        DtxBook(
+          fileName: 'szvu.dtx',
+          title: 'Szent vagy, Uram',
+          songs: <DtxSong>[
+            DtxSong(
+              title: 'Ének',
+              verses: <DtxVerse>[
+                DtxVerse(
+                  name: '1',
+                  lines: <String>['Szöveg'],
+                  diaId: '12345678',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ];
+      final Directory directory = await Directory.systemTemp.createTemp(
+        'diatar_dia_id_test_',
+      );
+      final String path = '${directory.path}${Platform.pathSeparator}order.dia';
+      addTearDown(() => directory.delete(recursive: true));
+
+      await controller.applyCustomOrder(const <CustomOrderEntry>[
+        CustomOrderEntry(
+          fileName: 'szvu.dtx',
+          songIndex: 0,
+          verseIndex: 0,
+          label: 'Ének/1',
+        ),
+      ], activate: true);
+      await controller.exportCustomOrderToDia(path, recordSave: false);
+
+      final String content = await File(path).readAsString();
+      expect(content, contains('id=12345678'));
+      expect(content, isNot(contains('id=szvu.dtx|0|0')));
+
+      final DiatarMainController imported = DiatarMainController()
+        ..books = controller.books;
+      expect(await imported.importCustomOrderFromDia(path), 1);
+      expect(imported.customOrder.single.fileName, 'szvu.dtx');
+    });
+
     test(
       'updates the active set display name after a save-as rename',
       () async {

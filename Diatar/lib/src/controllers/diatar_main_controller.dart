@@ -2985,9 +2985,12 @@ class DiatarMainController extends ChangeNotifier {
       final String verseName = verses.isEmpty
           ? ''
           : verses[verse.clamp(0, verses.length - 1)].name;
-      final String idValue = '${entry.fileName}|${entry.songIndex}|$verse';
-
-      out.writeln('id=$idValue');
+      final String? diaId = verses.isEmpty
+          ? null
+          : verses[verse.clamp(0, verses.length - 1)].diaId;
+      if (diaId != null && RegExp(r'^[0-9A-Fa-f]{8}$').hasMatch(diaId)) {
+        out.writeln('id=$diaId');
+      }
       out.writeln('kotet=${book?.title ?? entry.fileName}');
       out.writeln('enek=${song?.title ?? entry.label}');
       out.writeln('versszak=$verseName');
@@ -3068,15 +3071,22 @@ class DiatarMainController extends ChangeNotifier {
     final int declaredCount =
         int.tryParse(sections['main']?['diaszam'] ?? '') ?? 0;
 
-    // Build ID-based lookup map for faster identification
+    // Build ID-based lookup maps for faster identification. Native DIA files
+    // refer to a verse by the eight-digit hexadecimal ID from its DTX # line;
+    // the legacy internal reference remains readable for previously exported files.
     final Map<String, ({DtxBook book, int songIndex, int verseIndex})> idMap =
         <String, ({DtxBook book, int songIndex, int verseIndex})>{};
     for (final DtxBook book in books) {
       for (int si = 0; si < book.songs.length; si++) {
         final DtxSong song = book.songs[si];
         for (int vi = 0; vi < song.verses.length; vi++) {
-          final String id = '${book.fileName}|$si|$vi';
-          idMap[id] = (book: book, songIndex: si, verseIndex: vi);
+          final DtxVerse verse = song.verses[vi];
+          final String legacyId = '${book.fileName}|$si|$vi';
+          idMap[legacyId] = (book: book, songIndex: si, verseIndex: vi);
+          final String? diaId = verse.diaId;
+          if (diaId != null && RegExp(r'^[0-9A-Fa-f]{8}$').hasMatch(diaId)) {
+            idMap[diaId] = (book: book, songIndex: si, verseIndex: vi);
+          }
         }
       }
     }
