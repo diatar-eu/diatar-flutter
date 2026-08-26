@@ -80,6 +80,8 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_show(GTK_WIDGET(window));
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
+  // Temporary compatibility mode for legacy OpenGL drivers.
+  fl_dart_project_set_enable_impeller(project, FALSE);
   fl_dart_project_set_dart_entrypoint_arguments(project, self->dart_entrypoint_arguments);
 
   FlView* view = fl_view_new(project);
