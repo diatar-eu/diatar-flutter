@@ -109,6 +109,7 @@ enum _ProjectionDisplayToggle {
   kotta,
   chords,
   backgroundImage,
+  hideControlWindow,
 }
 
 enum _HomeControlMode { books, dialist }
@@ -1228,14 +1229,6 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                     ? const Color(0xFFD32F2F)
                     : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              if (controller.desktopProjectorEnabled) const SizedBox(width: 8),
-              if (controller.desktopProjectorEnabled)
-                _actionIconButton(
-                  context,
-                  icon: Icons.visibility_off,
-                  tooltip: l10n.hideControlWindow,
-                  onPressed: () => unawaited(controller.hideControlWindow()),
-                ),
               if (controller.hasAnyLoadedVersePhoto) ...<Widget>[
                 const SizedBox(width: 8),
                 _actionIconButton(
@@ -1387,6 +1380,13 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
               checked: controller.settings.projShowBackgroundImage,
               child: Text(buttonContext.l10n.showBackgroundImage),
             ),
+            if (controller.desktopProjectorEnabled) ...<PopupMenuEntry<_ProjectionDisplayToggle>>[
+              const PopupMenuDivider(),
+              PopupMenuItem<_ProjectionDisplayToggle>(
+                value: _ProjectionDisplayToggle.hideControlWindow,
+                child: Text(buttonContext.l10n.hideControlWindow),
+              ),
+            ],
           ],
         );
 
@@ -1413,6 +1413,8 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         );
       case _ProjectionDisplayToggle.backgroundImage:
         await controller.toggleBackgroundImageVisible();
+      case _ProjectionDisplayToggle.hideControlWindow:
+        await controller.hideControlWindow();
     }
   }
 
@@ -4385,7 +4387,7 @@ class _DialistPanelState extends State<_DialistPanel> {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 13),
       if (!kIsWeb)
               Tooltip(
                 message: _statusTooltip(
@@ -4403,7 +4405,7 @@ class _DialistPanelState extends State<_DialistPanel> {
                   ),
                 ),
               ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 13),
             widget.projectionDisplayButton,
           ],
         ),
