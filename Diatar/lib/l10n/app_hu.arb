@@ -1110,6 +1110,7 @@
   "liveSubtitlesMicDevice": "Mikrofon",
   "liveSubtitlesMicDeviceDefault": "Rendszer alapértelmezett",
   "speechSettingsTitle": "Beszédfelismerő",
+  "speechFeatureEnabled": "Beszédfelismerő engedélyezése",
   "speechSettingsSummary": "Mikrofon",
   "speechModelTitle": "Beszédmodell",
   "speechModelStreaming": "Streaming (alacsony késleltetés)",

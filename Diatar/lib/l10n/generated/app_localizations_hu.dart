@@ -1703,6 +1703,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get speechSettingsTitle => 'Beszédfelismerő';
 
   @override
+  String get speechFeatureEnabled => 'Beszédfelismerő engedélyezése';
+
+  @override
   String get speechSettingsSummary => 'Mikrofon';
 
   @override

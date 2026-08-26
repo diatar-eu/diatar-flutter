@@ -134,6 +134,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late String? _liveSubtitleDeviceId;
   late String _liveSubtitleLanguage;
   late String _liveSubtitleModel;
+  late bool _speechFeatureVisible;
   late Map<String, String> _desktopActionHotkeys;
   late Map<String, String> _desktopSongHotkeys;
   late Map<String, String> _desktopOrderSetHotkeys;
@@ -222,6 +223,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _liveSubtitleDeviceId = s.liveSubtitleDeviceId;
     _liveSubtitleLanguage = s.liveSubtitleLanguage;
     _liveSubtitleModel = s.liveSubtitleModel;
+    _speechFeatureVisible = s.speechFeatureVisible;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
     _desktopSongHotkeys = Map<String, String>.from(s.desktopSongHotkeys);
     _desktopOrderSetHotkeys = Map<String, String>.from(
@@ -1947,6 +1949,15 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           ),
         );
         return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.speechFeatureEnabled),
+            value: _speechFeatureVisible,
+            onChanged: (bool v) {
+              setBoth(() => _speechFeatureVisible = v);
+            },
+          ),
+          const Divider(height: 1),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.record_voice_over),
@@ -3752,6 +3763,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       liveSubtitleDeviceId: _liveSubtitleDeviceId,
       liveSubtitleLanguage: _liveSubtitleLanguage,
       liveSubtitleModel: _liveSubtitleModel,
+      speechFeatureVisible: _speechFeatureVisible,
       bkColor: _bkColor,
       txtColor: _txtColor,
       blankColor: _blankColor,

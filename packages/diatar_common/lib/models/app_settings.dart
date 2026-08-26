@@ -68,6 +68,7 @@ class AppSettings {
     this.useSound = false,
     this.advanceAfterMusic = false,
     this.liveSubtitlesEnabled = false,
+    this.speechFeatureVisible = true,
     this.liveSubtitleDeviceId,
     this.liveSubtitleLanguage = 'auto',
     this.liveSubtitleModel = 'nemotron35_560ms',
@@ -147,6 +148,7 @@ class AppSettings {
   final bool useSound;
   final bool advanceAfterMusic;
   final bool liveSubtitlesEnabled;
+  final bool speechFeatureVisible;
   final String? liveSubtitleDeviceId;
   final String liveSubtitleLanguage;
   final String liveSubtitleModel;
@@ -233,6 +235,7 @@ class AppSettings {
     bool? useSound,
     bool? advanceAfterMusic,
     bool? liveSubtitlesEnabled,
+    bool? speechFeatureVisible,
     String? liveSubtitleDeviceId,
     String? liveSubtitleLanguage,
     String? liveSubtitleModel,
@@ -323,6 +326,7 @@ class AppSettings {
       useSound: useSound ?? this.useSound,
       advanceAfterMusic: advanceAfterMusic ?? this.advanceAfterMusic,
       liveSubtitlesEnabled: liveSubtitlesEnabled ?? this.liveSubtitlesEnabled,
+      speechFeatureVisible: speechFeatureVisible ?? this.speechFeatureVisible,
       liveSubtitleDeviceId: liveSubtitleDeviceId ?? this.liveSubtitleDeviceId,
       liveSubtitleLanguage: liveSubtitleLanguage ?? this.liveSubtitleLanguage,
       liveSubtitleModel: liveSubtitleModel ?? this.liveSubtitleModel,
@@ -381,6 +385,7 @@ class AppSettings {
       'useSound': useSound,
       'advanceAfterMusic': advanceAfterMusic,
       'liveSubtitlesEnabled': liveSubtitlesEnabled,
+      'speechFeatureVisible': speechFeatureVisible,
       'liveSubtitleDeviceId': liveSubtitleDeviceId,
       'liveSubtitleLanguage': liveSubtitleLanguage,
       'liveSubtitleModel': liveSubtitleModel,
@@ -467,6 +472,7 @@ class AppSettings {
       useSound: boolValue('useSound', false),
       advanceAfterMusic: boolValue('advanceAfterMusic', false),
       liveSubtitlesEnabled: boolValue('liveSubtitlesEnabled', false),
+      speechFeatureVisible: boolValue('speechFeatureVisible', true),
       liveSubtitleDeviceId: map['liveSubtitleDeviceId'] as String?,
       liveSubtitleLanguage: map['liveSubtitleLanguage'] as String? ?? 'auto',
       liveSubtitleModel:

@@ -679,7 +679,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         onPressed: () => _openSearchSheet(context),
         icon: const Icon(Icons.search),
       ),
-      if (!kIsWeb)
+      if (!kIsWeb && controller.settings.speechFeatureVisible)
         IconButton(
           tooltip: controller.liveSubtitlesActive
               ? l10n.liveSubtitlesOff
@@ -4386,7 +4386,7 @@ class _DialistPanelState extends State<_DialistPanel> {
               ),
             ),
             const SizedBox(height: 8),
-            if (!kIsWeb)
+      if (!kIsWeb)
               Tooltip(
                 message: _statusTooltip(
                   context,

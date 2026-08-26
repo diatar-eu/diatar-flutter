@@ -62,6 +62,7 @@ class SettingsStore {
   static const String _kUseSound = 'UseSound';
   static const String _kAdvanceAfterMusic = 'AdvanceAfterMusic';
   static const String _kLiveSubtitlesEnabled = 'LiveSubtitlesEnabled';
+  static const String _kSpeechFeatureVisible = 'SpeechFeatureVisible';
   static const String _kLiveSubtitleDeviceId = 'LiveSubtitleDeviceId';
   static const String _kLiveSubtitleLanguage = 'LiveSubtitleLanguage';
   static const String _kSzentirasApiKey = 'SzentirasApiKey';
@@ -237,6 +238,7 @@ class SettingsStore {
       useSound: prefs.getBool(_kUseSound) ?? false,
       advanceAfterMusic: prefs.getBool(_kAdvanceAfterMusic) ?? false,
       liveSubtitlesEnabled: prefs.getBool(_kLiveSubtitlesEnabled) ?? false,
+      speechFeatureVisible: prefs.getBool(_kSpeechFeatureVisible) ?? true,
       liveSubtitleDeviceId: prefs.getString(_kLiveSubtitleDeviceId),
       liveSubtitleLanguage: prefs.getString(_kLiveSubtitleLanguage) ?? 'auto',
       szentirasApiKey: prefs.getString(_kSzentirasApiKey) ?? '',
@@ -345,6 +347,7 @@ class SettingsStore {
     await prefs.setBool(_kUseSound, settings.useSound);
     await prefs.setBool(_kAdvanceAfterMusic, settings.advanceAfterMusic);
     await prefs.setBool(_kLiveSubtitlesEnabled, settings.liveSubtitlesEnabled);
+    await prefs.setBool(_kSpeechFeatureVisible, settings.speechFeatureVisible);
     await prefs.setString(
       _kLiveSubtitleDeviceId,
       settings.liveSubtitleDeviceId ?? '',

@@ -1697,6 +1697,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get speechSettingsTitle => 'Speech recognition';
 
   @override
+  String get speechFeatureEnabled => 'Enable speech recognition';
+
+  @override
   String get speechSettingsSummary => 'Microphone';
 
   @override

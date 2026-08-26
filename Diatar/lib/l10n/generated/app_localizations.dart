@@ -3023,6 +3023,12 @@ abstract class AppLocalizations {
   /// **'Beszédfelismerő'**
   String get speechSettingsTitle;
 
+  /// No description provided for @speechFeatureEnabled.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beszédfelismerő engedélyezése'**
+  String get speechFeatureEnabled;
+
   /// No description provided for @speechSettingsSummary.
   ///
   /// In hu, this message translates to:

@@ -1109,6 +1109,7 @@
   "liveSubtitlesMicDevice": "Microphone",
   "liveSubtitlesMicDeviceDefault": "System default",
   "speechSettingsTitle": "Speech recognition",
+  "speechFeatureEnabled": "Enable speech recognition",
   "speechSettingsSummary": "Microphone",
   "speechModelTitle": "Speech model",
   "speechModelStreaming": "Streaming (low latency)",
