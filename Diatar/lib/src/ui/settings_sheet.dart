@@ -59,6 +59,7 @@ class DiatarSettingsSheet extends StatefulWidget {
     this.availableOrderSetsLoader,
     this.initialSection,
     this.closeAfterInitialSectionClose = false,
+    this.onDownloadBooksRequested,
   });
 
   final AppSettings initialSettings;
@@ -73,6 +74,7 @@ class DiatarSettingsSheet extends StatefulWidget {
   final List<CustomOrderSetOption> Function()? availableOrderSetsLoader;
   final DiatarSettingsInitialSection? initialSection;
   final bool closeAfterInitialSectionClose;
+  final VoidCallback? onDownloadBooksRequested;
 
   @override
   State<DiatarSettingsSheet> createState() => _DiatarSettingsSheetState();
@@ -595,6 +597,15 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               ],
             ),
             const SizedBox(height: 8),
+            if (widget.onDownloadBooksRequested != null)
+              TextButton.icon(
+                icon: const Icon(Icons.download_for_offline_outlined, size: 18),
+                label: Text(l10n.downloadBooksTooltip),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  widget.onDownloadBooksRequested!.call();
+                },
+              ),
             TextButton.icon(
               icon: const Icon(Icons.auto_stories, size: 18),
               label: Text(l10n.settingsOnboardingButton),

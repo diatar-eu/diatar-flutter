@@ -704,11 +704,6 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         onPressed: () => _openCustomOrderEditor(context),
         icon: const Icon(Icons.queue_music),
       ),
-      IconButton(
-        tooltip: l10n.downloadBooksTooltip,
-        onPressed: () => _openDownloadDialog(context),
-        icon: const Icon(Icons.download_for_offline_outlined),
-      ),
     ];
   }
 
@@ -1654,6 +1649,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           onRemoteStopRequested: () => unawaited(controller.sendStop()),
           onRemoteShutdownRequested: () =>
               unawaited(controller.sendStop(wantShutdown: true)),
+          onDownloadBooksRequested: () => _openDownloadDialog(context),
         );
       },
     );
