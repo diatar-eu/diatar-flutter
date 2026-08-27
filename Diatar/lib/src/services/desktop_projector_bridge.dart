@@ -38,10 +38,13 @@ class DesktopProjectorBridge {
   VoidCallback? onControlWindowRestored;
   Uint8List? _lastStateBytes;
   Uint8List? _lastTextBytes;
+  Uint8List? _lastRenderedTextBytes;
   Uint8List? _lastPicBytes;
   Uint8List? _lastBlankBytes;
+  ProjectionGlobals _lastGlobals = const ProjectionGlobals();
   bool _hasState = false;
   bool _hasText = false;
+  bool _hasRenderedText = false;
   bool _hasPic = false;
   bool _hasBlank = false;
 
@@ -50,8 +53,7 @@ class DesktopProjectorBridge {
   /// Linuxon a desktop_multi_window 0.3.0 + window_manager 0.5.2
   /// gyerekablak-bezárása crash-t okoz (lásd: _closeWindow), ezért
   /// Linuxon eltérő (rejtő) viselkedést használunk.
-  bool get _isLinux =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
+  bool get _isLinux => !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
 
   Future<void> start(AppSettings settings) async {
     _enabled = _isDesktopPlatform() && settings.desktopProjectorEnabled;
@@ -87,14 +89,14 @@ class DesktopProjectorBridge {
       }
       await _adoptExistingProjectorWindow();
       await _invoke('settings', settings.toMap(), cache: () {});
-      await _invoke(
-        'relocate',
-        <String, Object?>{
-          'monitor': settings.desktopProjectorMonitor,
-          'mainMonitor': await _currentDisplayIndex(),
-        },
-        cache: () {},
-      );
+      await _invoke('relocate', <String, Object?>{
+        'monitor': settings.desktopProjectorMonitor,
+        'mainMonitor': await _currentDisplayIndex(),
+      }, cache: () {});
+      final Uint8List? lastTextBytes = _lastTextBytes;
+      if (_hasText && lastTextBytes != null) {
+        await _renderAndSendText(lastTextBytes);
+      }
       return;
     }
 
@@ -139,10 +141,12 @@ class DesktopProjectorBridge {
     _starting = false;
     _lastStateBytes = null;
     _lastTextBytes = null;
+    _lastRenderedTextBytes = null;
     _lastPicBytes = null;
     _lastBlankBytes = null;
     _hasState = false;
     _hasText = false;
+    _hasRenderedText = false;
     _hasPic = false;
     _hasBlank = false;
   }
@@ -155,6 +159,10 @@ class DesktopProjectorBridge {
     if (!_enabled) {
       return;
     }
+    _lastGlobals = globals.copyWith(
+      projecting: showing,
+      wordToHighlight: wordToHighlight,
+    );
     final Uint8List body = encodeStateRecord(
       globals,
       projecting: showing,
@@ -175,7 +183,9 @@ class DesktopProjectorBridge {
     final Uint8List body = encodeTextRecord(title: title, lines: lines);
     _lastTextBytes = body;
     _hasText = true;
-    await _invoke('text', body, cache: () {});
+    _lastRenderedTextBytes = null;
+    _hasRenderedText = false;
+    await _renderAndSendText(body);
   }
 
   Future<void> sendPic(Uint8List bytes, {String ext = ''}) async {
@@ -356,6 +366,9 @@ class DesktopProjectorBridge {
       if (_hasText && _lastTextBytes != null) {
         await _channel.invokeMethod('text', _lastTextBytes);
       }
+      if (_hasRenderedText && _lastRenderedTextBytes != null) {
+        await _channel.invokeMethod('rendered_text', _lastRenderedTextBytes);
+      }
       if (_hasBlank && _lastBlankBytes != null) {
         await _channel.invokeMethod('blank', _lastBlankBytes);
       }
@@ -377,6 +390,7 @@ class DesktopProjectorBridge {
       cache();
       return;
     }
+
     try {
       await _channel.invokeMethod(method, arguments);
     } catch (_) {
@@ -388,6 +402,65 @@ class DesktopProjectorBridge {
         unawaited(_recoverProjectorWindow());
       }
     }
+  }
+
+  Future<void> _renderAndSendText(Uint8List textBytes) async {
+    final ui.Size size = await _projectorDisplaySize();
+    if (size.isEmpty) {
+      await _invoke('text', textBytes, cache: () {});
+      return;
+    }
+
+    final RecTextRecord record = RecTextRecord.fromBytes(textBytes);
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final ui.Canvas canvas = ui.Canvas(recorder);
+    ProjectorPainter(
+      frame: TextFrame(record: record),
+      globals: _lastGlobals,
+      settings: _lastSettings,
+    ).paint(canvas, size);
+    final ui.Picture picture = recorder.endRecording();
+    final ui.Image image = await picture.toImage(
+      size.width.round(),
+      size.height.round(),
+    );
+    picture.dispose();
+    final ByteData? byteData = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    image.dispose();
+    if (byteData == null) {
+      await _invoke('text', textBytes, cache: () {});
+      return;
+    }
+
+    final Uint8List imageBytes = Uint8List.fromList(
+      byteData.buffer.asUint8List(
+        byteData.offsetInBytes,
+        byteData.lengthInBytes,
+      ),
+    );
+    _lastRenderedTextBytes = encodeImageRecord(bytes: imageBytes, ext: 'png');
+    _hasRenderedText = true;
+    await _invoke('rendered_text', _lastRenderedTextBytes, cache: () {});
+  }
+
+  Future<ui.Size> _projectorDisplaySize() async {
+    final List<Display> displays = await screenRetriever.getAllDisplays();
+    if (displays.isEmpty) {
+      return ui.Size.zero;
+    }
+    final List<Display> sorted = List<Display>.from(displays)
+      ..sort((Display a, Display b) {
+        final double ax = a.visiblePosition?.dx ?? 0;
+        final double bx = b.visiblePosition?.dx ?? 0;
+        return ax.compareTo(bx);
+      });
+    final int requested = _lastSettings.desktopProjectorMonitor;
+    final int index = requested >= 0 && requested < sorted.length
+        ? requested
+        : sorted.length - 1;
+    return sorted[index].size;
   }
 
   Future<void> _recoverProjectorWindow() async {

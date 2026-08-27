@@ -100,8 +100,7 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     // `.accessory`-ra állítja, ami az EGÉSZ alkalmazást eltünteti a Dock-ból.
     // Mivel a vetítőablak amúgy sem jelenik meg külön a Dock-ban (egy app = egy
     // dock ikon), macOS-en nem használjuk a skipTaskbar-t.
-    final bool useSkipTaskbar =
-        !Platform.isMacOS;
+    final bool useSkipTaskbar = !Platform.isMacOS;
     await windowManager.waitUntilReadyToShow(
       WindowOptions(
         titleBarStyle: TitleBarStyle.hidden,
@@ -137,8 +136,9 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
 
   Future<dynamic> _handleProjectorMethodCall(MethodCall call) async {
     if (call.method == 'relocate') {
-      final Map<String, dynamic> payload =
-          Map<String, dynamic>.from(call.arguments as Map);
+      final Map<String, dynamic> payload = Map<String, dynamic>.from(
+        call.arguments as Map,
+      );
       final int? monitor = payload['monitor'] as int?;
       final int? mainMonitor = payload['mainMonitor'] as int?;
       if (mainMonitor != null) {
@@ -171,9 +171,10 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
       return;
     }
     try {
-      final int targetIndex = await _positionOnSelectedDisplay(requestedMonitor);
-      final bool sameMonitor =
-          _mainMonitor >= 0 && _mainMonitor == targetIndex;
+      final int targetIndex = await _positionOnSelectedDisplay(
+        requestedMonitor,
+      );
+      final bool sameMonitor = _mainMonitor >= 0 && _mainMonitor == targetIndex;
       // Ha a vetítő ablak a vezérlő ablakkal azonos monitoron van, akkor
       // ne legyen mindig felül, hogy a vezérlő ablak kerülhessen a tetejére.
       await windowManager.setAlwaysOnTop(!sameMonitor);
@@ -365,6 +366,11 @@ class DesktopProjectorController extends ChangeNotifier {
           Uint8List.fromList(List<int>.from(call.arguments as List<int>)),
         );
         return null;
+      case 'rendered_text':
+        await _onRenderedText(
+          Uint8List.fromList(List<int>.from(call.arguments as List<int>)),
+        );
+        return null;
       case 'pic':
         await _onPic(
           Uint8List.fromList(List<int>.from(call.arguments as List<int>)),
@@ -425,6 +431,19 @@ class DesktopProjectorController extends ChangeNotifier {
       return;
     }
     diaFrame = TextFrame(record: RecTextRecord.fromBytes(bytes));
+    notifyListeners();
+  }
+
+  Future<void> _onRenderedText(Uint8List bytes) async {
+    if (_disposed) {
+      return;
+    }
+    final RecImageRecord record = RecImageRecord.fromBytes(bytes);
+    final ui.Image? image = await _decodeImage(record.imageBytes);
+    if (image == null) {
+      return;
+    }
+    diaFrame = ImageFrame(image: image, bgMode: 2);
     notifyListeners();
   }
 
