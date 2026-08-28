@@ -47,9 +47,13 @@ bool requires_software_gl() {
 void configure_graphics_fallback() {
   // This must happen before GTK/Flutter creates its first GL context. It also
   // applies to the secondary engine used by the projector window.
-  if (g_getenv("LIBGL_ALWAYS_SOFTWARE") == nullptr &&
-      requires_software_gl()) {
-    g_setenv("LIBGL_ALWAYS_SOFTWARE", "1", FALSE);
+  if (requires_software_gl()) {
+    if (g_getenv("LIBGL_ALWAYS_SOFTWARE") == nullptr) {
+      g_setenv("LIBGL_ALWAYS_SOFTWARE", "1", FALSE);
+    }
+    // The legacy Intel drivers cannot initialize Impeller's GLES compositor,
+    // even through Mesa's software renderer. Both Flutter engines read this.
+    g_setenv("DIATAR_DISABLE_IMPELLER", "1", FALSE);
   }
 }
 

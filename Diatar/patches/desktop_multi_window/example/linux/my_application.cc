@@ -5,56 +5,9 @@
 #include <gdk/gdkx.h>
 #endif
 
-#include "desktop_multi_window/desktop_multi_window_plugin.h"
-#include "file_selector_linux/file_selector_plugin.h"
 #include "flutter/generated_plugin_registrant.h"
-#include "screen_retriever_linux/screen_retriever_linux_plugin.h"
-#include "url_launcher_linux/url_launcher_plugin.h"
-#include "window_manager/window_manager_plugin.h"
 
-namespace {
-
-void set_window_icon(GtkWindow* window) {
-  g_autoptr(GError) error = nullptr;
-  g_autofree gchar* executable_path =
-      g_file_read_link("/proc/self/exe", &error);
-  if (executable_path == nullptr) {
-    g_warning("Unable to locate executable for window icon: %s",
-              error == nullptr ? "unknown error" : error->message);
-    return;
-  }
-
-  g_autofree gchar* executable_dir = g_path_get_dirname(executable_path);
-  g_autofree gchar* icon_path = g_build_filename(
-      executable_dir, "data", "flutter_assets", "assets", "icon", "icon.png",
-      nullptr);
-  if (!gtk_window_set_icon_from_file(window, icon_path, &error)) {
-    g_warning("Unable to load window icon from %s: %s", icon_path,
-              error == nullptr ? "unknown error" : error->message);
-  }
-}
-
-// Secondary window engines are short-lived during projector toggle/restart.
-// Excluding audioplayers there avoids native teardown crashes.
-void register_secondary_window_plugins(FlPluginRegistry* registry) {
-  g_autoptr(FlPluginRegistrar) desktop_multi_window_registrar =
-    fl_plugin_registry_get_registrar_for_plugin(registry, "DesktopMultiWindowPlugin");
-  desktop_multi_window_plugin_register_with_registrar(desktop_multi_window_registrar);
-  g_autoptr(FlPluginRegistrar) file_selector_linux_registrar =
-    fl_plugin_registry_get_registrar_for_plugin(registry, "FileSelectorPlugin");
-  file_selector_plugin_register_with_registrar(file_selector_linux_registrar);
-  g_autoptr(FlPluginRegistrar) screen_retriever_linux_registrar =
-    fl_plugin_registry_get_registrar_for_plugin(registry, "ScreenRetrieverLinuxPlugin");
-  screen_retriever_linux_plugin_register_with_registrar(screen_retriever_linux_registrar);
-  g_autoptr(FlPluginRegistrar) url_launcher_linux_registrar =
-    fl_plugin_registry_get_registrar_for_plugin(registry, "UrlLauncherPlugin");
-  url_launcher_plugin_register_with_registrar(url_launcher_linux_registrar);
-  g_autoptr(FlPluginRegistrar) window_manager_registrar =
-    fl_plugin_registry_get_registrar_for_plugin(registry, "WindowManagerPlugin");
-  window_manager_plugin_register_with_registrar(window_manager_registrar);
-}
-
-}  // namespace
+#include "desktop_multi_window/desktop_multi_window_plugin.h"
 
 struct _MyApplication {
   GtkApplication parent_instance;
@@ -68,8 +21,6 @@ static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
-
-  set_window_icon(window);
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu
@@ -91,20 +42,17 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "diatar_app");
+    gtk_header_bar_set_title(header_bar, "desktop_multi_window_example");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "diatar_app");
+    gtk_window_set_title(window, "desktop_multi_window_example");
   }
 
   gtk_window_set_default_size(window, 1280, 720);
   gtk_widget_show(GTK_WIDGET(window));
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
-  if (g_strcmp0(g_getenv("DIATAR_DISABLE_IMPELLER"), "1") == 0) {
-    fl_dart_project_set_enable_impeller(project, FALSE);
-  }
   fl_dart_project_set_dart_entrypoint_arguments(project, self->dart_entrypoint_arguments);
 
   FlView* view = fl_view_new(project);
@@ -112,8 +60,9 @@ static void my_application_activate(GApplication* application) {
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+
   desktop_multi_window_plugin_set_window_created_callback([](FlPluginRegistry* registry){
-    register_secondary_window_plugins(registry);
+    fl_register_plugins(registry);
   });
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
@@ -149,7 +98,16 @@ static void my_application_startup(GApplication* application) {
 
 // Implements GApplication::shutdown.
 static void my_application_shutdown(GApplication* application) {
+  g_warning("MyApplication shutting down.");
   //MyApplication* self = MY_APPLICATION(object);
+
+    GList* windows = gtk_application_get_windows(GTK_APPLICATION(application));
+  if (windows != nullptr && g_list_length(windows) > 0) {
+    g_warning("Ignore premature shutdown (still %d windows alive)", g_list_length(windows));
+    return;  // 不让它真关闭
+  }
+  g_warning("MyApplication shutting down.");
+  G_APPLICATION_CLASS(my_application_parent_class)->shutdown(application);
 
   // Perform any actions required at application shutdown.
 

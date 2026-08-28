@@ -55,6 +55,12 @@ class DesktopProjectorBridge {
   /// Linuxon eltérő (rejtő) viselkedést használunk.
   bool get _isLinux => !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
 
+  /// A szoftveres OpenGL-es régi Linux gépeken a másodlagos Flutter-motor
+  /// szövegrajzolása nem megbízható. Ezeknek előre renderelt képet küldünk;
+  /// minden más platform a kisebb, natív szövegüzenetet használja.
+  bool get _useRenderedText =>
+      _isLinux && Platform.environment['DIATAR_DISABLE_IMPELLER'] == '1';
+
   Future<void> start(AppSettings settings) async {
     _enabled = _isDesktopPlatform() && settings.desktopProjectorEnabled;
     _lastSettings = settings;
@@ -95,7 +101,7 @@ class DesktopProjectorBridge {
       }, cache: () {});
       final Uint8List? lastTextBytes = _lastTextBytes;
       if (_hasText && lastTextBytes != null) {
-        await _renderAndSendText(lastTextBytes);
+        await _sendTextToProjector(lastTextBytes);
       }
       return;
     }
@@ -171,6 +177,10 @@ class DesktopProjectorBridge {
     _lastStateBytes = body;
     _hasState = true;
     await _invoke('state', body, cache: () {});
+    final Uint8List? lastTextBytes = _lastTextBytes;
+    if (_useRenderedText && _hasText && lastTextBytes != null) {
+      await _renderAndSendText(lastTextBytes);
+    }
   }
 
   Future<void> sendText({
@@ -185,7 +195,7 @@ class DesktopProjectorBridge {
     _hasText = true;
     _lastRenderedTextBytes = null;
     _hasRenderedText = false;
-    await _renderAndSendText(body);
+    await _sendTextToProjector(body);
   }
 
   Future<void> sendPic(Uint8List bytes, {String ext = ''}) async {
@@ -364,10 +374,13 @@ class DesktopProjectorBridge {
         await _channel.invokeMethod('state', _lastStateBytes);
       }
       if (_hasText && _lastTextBytes != null) {
-        await _channel.invokeMethod('text', _lastTextBytes);
-      }
-      if (_hasRenderedText && _lastRenderedTextBytes != null) {
-        await _channel.invokeMethod('rendered_text', _lastRenderedTextBytes);
+        if (_useRenderedText &&
+            _hasRenderedText &&
+            _lastRenderedTextBytes != null) {
+          await _channel.invokeMethod('rendered_text', _lastRenderedTextBytes);
+        } else {
+          await _channel.invokeMethod('text', _lastTextBytes);
+        }
       }
       if (_hasBlank && _lastBlankBytes != null) {
         await _channel.invokeMethod('blank', _lastBlankBytes);
@@ -381,18 +394,18 @@ class DesktopProjectorBridge {
     return sent;
   }
 
-  Future<void> _invoke(
+  Future<T?> _invoke<T>(
     String method,
     dynamic arguments, {
     required VoidCallback cache,
   }) async {
     if (_windowController == null) {
       cache();
-      return;
+      return null;
     }
 
     try {
-      await _channel.invokeMethod(method, arguments);
+      return await _channel.invokeMethod<T>(method, arguments);
     } catch (_) {
       cache();
       // Ha a csatorna már nem elérhető, a tárolt controller valószínűleg
@@ -401,7 +414,16 @@ class DesktopProjectorBridge {
       if (_enabled) {
         unawaited(_recoverProjectorWindow());
       }
+      return null;
     }
+  }
+
+  Future<void> _sendTextToProjector(Uint8List textBytes) async {
+    if (!_useRenderedText) {
+      await _invoke('text', textBytes, cache: () {});
+      return;
+    }
+    await _renderAndSendText(textBytes);
   }
 
   Future<void> _renderAndSendText(Uint8List textBytes) async {
@@ -442,7 +464,16 @@ class DesktopProjectorBridge {
     );
     _lastRenderedTextBytes = encodeImageRecord(bytes: imageBytes, ext: 'png');
     _hasRenderedText = true;
-    await _invoke('rendered_text', _lastRenderedTextBytes, cache: () {});
+    final bool? decoded = await _invoke<bool>(
+      'rendered_text',
+      _lastRenderedTextBytes,
+      cache: () {},
+    );
+    if (decoded != true) {
+      _hasRenderedText = false;
+      _lastRenderedTextBytes = null;
+      await _invoke('text', textBytes, cache: () {});
+    }
   }
 
   Future<ui.Size> _projectorDisplaySize() async {

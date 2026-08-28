@@ -367,10 +367,9 @@ class DesktopProjectorController extends ChangeNotifier {
         );
         return null;
       case 'rendered_text':
-        await _onRenderedText(
+        return _onRenderedText(
           Uint8List.fromList(List<int>.from(call.arguments as List<int>)),
         );
-        return null;
       case 'pic':
         await _onPic(
           Uint8List.fromList(List<int>.from(call.arguments as List<int>)),
@@ -434,17 +433,18 @@ class DesktopProjectorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _onRenderedText(Uint8List bytes) async {
+  Future<bool> _onRenderedText(Uint8List bytes) async {
     if (_disposed) {
-      return;
+      return false;
     }
     final RecImageRecord record = RecImageRecord.fromBytes(bytes);
     final ui.Image? image = await _decodeImage(record.imageBytes);
     if (image == null) {
-      return;
+      return false;
     }
     diaFrame = ImageFrame(image: image, bgMode: 2);
     notifyListeners();
+    return true;
   }
 
   Future<void> _onPic(Uint8List bytes) async {
