@@ -51,6 +51,8 @@ class SettingsStore {
   static const String _kDesktopProjectorEnabled = 'DesktopProjectorEnabled';
   static const String _kDesktopProjectorMonitor = 'DesktopProjectorMonitor';
   static const String _kDesktopActionHotkeys = 'DesktopActionHotkeys';
+  static const String _kDesktopActionHotkeysInitialized =
+      'DesktopActionHotkeysInitialized';
   static const String _kDesktopSongHotkeys = 'DesktopSongHotkeys';
   static const String _kDesktopOrderSetHotkeys = 'DesktopOrderSetHotkeys';
   static const String _kExternalCommandOnStart = 'ExternalCommandOnStart';
@@ -161,12 +163,24 @@ class SettingsStore {
             .toList();
     final bool tcpClientEnabled =
         prefs.getBool(_kTcpClientEnabled) ?? tcpTargets.isNotEmpty;
-    final bool hasDesktopActionHotkeys = prefs.containsKey(
-      _kDesktopActionHotkeys,
-    );
-    final Map<String, String> desktopActionHotkeys = _decodeStringMap(
+    final Map<String, String> savedDesktopActionHotkeys = _decodeStringMap(
       prefs.getStringList(_kDesktopActionHotkeys),
     );
+    final bool desktopActionHotkeysInitialized =
+        prefs.getBool(_kDesktopActionHotkeysInitialized) ?? false;
+    final Map<String, String> desktopActionHotkeys;
+    if (!desktopActionHotkeysInitialized && savedDesktopActionHotkeys.isEmpty) {
+      desktopActionHotkeys = _defaultDesktopActionHotkeys;
+      await prefs.setStringList(
+        _kDesktopActionHotkeys,
+        _encodeStringMap(desktopActionHotkeys),
+      );
+    } else {
+      desktopActionHotkeys = savedDesktopActionHotkeys;
+    }
+    if (!desktopActionHotkeysInitialized) {
+      await prefs.setBool(_kDesktopActionHotkeysInitialized, true);
+    }
     return AppSettings(
       port: legacyPort,
       tcpClientEnabled: tcpClientEnabled,
@@ -220,9 +234,7 @@ class SettingsStore {
       projectionLocked: prefs.getBool(_kProjectionLocked) ?? false,
       desktopProjectorEnabled: prefs.getBool(_kDesktopProjectorEnabled) ?? true,
       desktopProjectorMonitor: prefs.getInt(_kDesktopProjectorMonitor) ?? -1,
-      desktopActionHotkeys: hasDesktopActionHotkeys
-          ? desktopActionHotkeys
-          : _defaultDesktopActionHotkeys,
+      desktopActionHotkeys: desktopActionHotkeys,
       desktopSongHotkeys: _decodeStringMap(
         prefs.getStringList(_kDesktopSongHotkeys),
       ),
@@ -320,6 +332,7 @@ class SettingsStore {
       _kDesktopActionHotkeys,
       _encodeStringMap(settings.desktopActionHotkeys),
     );
+    await prefs.setBool(_kDesktopActionHotkeysInitialized, true);
     await prefs.setStringList(
       _kDesktopSongHotkeys,
       _encodeStringMap(settings.desktopSongHotkeys),
