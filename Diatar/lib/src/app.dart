@@ -42,6 +42,7 @@ class _DiatarAppState extends State<DiatarApp>
     WidgetsBinding.instance.addObserver(this);
     if (_isDesktopPlatform()) {
       windowManager.addListener(this);
+      unawaited(windowManager.setPreventClose(true));
     }
     if (kIsWeb) {
       registerPageHideHandler(() {
@@ -120,10 +121,16 @@ class _DiatarAppState extends State<DiatarApp>
     return AnimatedBuilder(
       animation: _controller,
       builder: (BuildContext context, _) {
-        final int themeModeIndex = _controller.settings.appThemeMode.clamp(0, 1);
-        final ThemeMode themeMode =
-            themeModeIndex == 1 ? ThemeMode.light : ThemeMode.dark;
-        final Locale? appLocale = _resolveAppLocale(_controller.settings.appLanguage);
+        final int themeModeIndex = _controller.settings.appThemeMode.clamp(
+          0,
+          1,
+        );
+        final ThemeMode themeMode = themeModeIndex == 1
+            ? ThemeMode.light
+            : ThemeMode.dark;
+        final Locale? appLocale = _resolveAppLocale(
+          _controller.settings.appLanguage,
+        );
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           onGenerateTitle: (BuildContext context) =>
@@ -152,12 +159,12 @@ class _DiatarAppState extends State<DiatarApp>
                       child: const SizedBox.expand(),
                     )
                   : _controller.pendingOnboarding
-                      ? OnboardingSheet(
-                          onComplete: () {
-                            unawaited(_controller.markOnboardingSeen());
-                          },
-                        )
-                      : DiatarHomePage(controller: _controller),
+                  ? OnboardingSheet(
+                      onComplete: () {
+                        unawaited(_controller.markOnboardingSeen());
+                      },
+                    )
+                  : DiatarHomePage(controller: _controller),
             ),
           ),
         );

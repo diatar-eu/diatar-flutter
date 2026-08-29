@@ -1,6 +1,9 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <vector>
+
+#include <flutter/standard_method_codec.h>
 
 #include "desktop_multi_window/desktop_multi_window_plugin.h"
 #include "file_selector_windows/file_selector_windows.h"
@@ -10,6 +13,22 @@
 #include "window_manager/window_manager_plugin.h"
 
 namespace {
+
+std::wstring Utf16FromUtf8(const std::string& utf8) {
+  if (utf8.empty()) {
+    return L"";
+  }
+  const int length = MultiByteToWideChar(
+      CP_UTF8, MB_ERR_INVALID_CHARS, utf8.data(),
+      static_cast<int>(utf8.size()), nullptr, 0);
+  if (length == 0) {
+    return L"";
+  }
+  std::wstring utf16(length, L'\0');
+  MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.data(),
+                      static_cast<int>(utf8.size()), utf16.data(), length);
+  return utf16;
+}
 
 // Secondary window engines are short-lived during projector toggle/restart.
 // Excluding audioplayers there avoids native teardown crashes.
@@ -49,6 +68,7 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  RegisterSystemShutdownChannel();
   DesktopMultiWindowSetWindowCreatedCallback([](void *controller) {
     auto *flutter_view_controller =
         reinterpret_cast<flutter::FlutterViewController *>(controller);
@@ -69,7 +89,59 @@ bool FlutterWindow::OnCreate() {
   return true;
 }
 
+void FlutterWindow::RegisterSystemShutdownChannel() {
+  system_shutdown_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), "diatar/system_shutdown",
+          &flutter::StandardMethodCodec::GetInstance());
+  system_shutdown_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<
+                 flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (call.method_name() != "setExitCommand") {
+          result->NotImplemented();
+          return;
+        }
+        if (call.arguments() == nullptr) {
+          result->Error("invalid-argument",
+                        "The exit command must be a string.");
+          return;
+        }
+        const auto* command = std::get_if<std::string>(&*call.arguments());
+        if (command == nullptr) {
+          result->Error("invalid-argument",
+                        "The exit command must be a string.");
+          return;
+        }
+        system_shutdown_command_ = Utf16FromUtf8(*command);
+        result->Success();
+      });
+}
+
+void FlutterWindow::RunSystemShutdownCommand() {
+  if (system_shutdown_command_.empty()) {
+    return;
+  }
+
+  std::wstring command_line = L"cmd.exe /d /s /c ";
+  command_line += system_shutdown_command_;
+  std::vector<wchar_t> mutable_command_line(command_line.begin(),
+                                             command_line.end());
+  mutable_command_line.push_back(L'\0');
+
+  STARTUPINFOW startup_info{};
+  startup_info.cb = sizeof(startup_info);
+  PROCESS_INFORMATION process_info{};
+  if (CreateProcessW(nullptr, mutable_command_line.data(), nullptr, nullptr,
+                     FALSE, DETACHED_PROCESS | CREATE_NO_WINDOW, nullptr,
+                     nullptr, &startup_info, &process_info)) {
+    CloseHandle(process_info.hThread);
+    CloseHandle(process_info.hProcess);
+  }
+}
+
 void FlutterWindow::OnDestroy() {
+  system_shutdown_channel_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -81,6 +153,14 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if (message == WM_QUERYENDSESSION) {
+    if (!session_ending_) {
+      session_ending_ = true;
+      RunSystemShutdownCommand();
+    }
+    return TRUE;
+  }
+
   auto force_redraw = [&]() {
     if (flutter_controller_) {
       flutter_controller_->ForceRedraw();

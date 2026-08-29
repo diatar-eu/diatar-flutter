@@ -34,6 +34,7 @@ import '../models/custom_order_set.dart';
 import '../services/mqtt_sender_service.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/external_command_service.dart';
+import '../services/system_shutdown_command_service.dart';
 import '../services/dtx_download_service.dart';
 import '../services/dtz_download_service.dart';
 import '../services/dtx_library_service.dart';
@@ -199,6 +200,8 @@ class DiatarMainController extends ChangeNotifier {
       DesktopProjectorBridge.instance;
   final ExternalCommandService _externalCommandService =
       const ExternalCommandService();
+  final SystemShutdownCommandService _systemShutdownCommandService =
+      const SystemShutdownCommandService();
 
   List<DtxBook> books = <DtxBook>[];
   int bookIndex = 0;
@@ -1030,6 +1033,7 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<void> init() async {
     settings = await _settingsStore.load();
+    await _updateSystemShutdownExitCommand();
     unawaited(_runExternalCommand(settings.externalCommandOnStart));
     _transpositions = await _settingsStore.loadTranspositions();
     _lastSongPerBook = await _settingsStore.loadLastSongPerBook();
@@ -1261,6 +1265,7 @@ class DiatarMainController extends ChangeNotifier {
     settings = newSettings;
     lastBlankPath = settings.blankPicPath;
     await _settingsStore.save(settings);
+    await _updateSystemShutdownExitCommand();
     try {
       await _desktopProjectorBridge
           .updateSettings(settings)
@@ -4894,6 +4899,16 @@ class DiatarMainController extends ChangeNotifier {
       await _externalCommandService.run(command);
     } on ProcessException catch (error) {
       debugPrint('External command failed: $error');
+    }
+  }
+
+  Future<void> _updateSystemShutdownExitCommand() async {
+    try {
+      await _systemShutdownCommandService.updateExitCommand(
+        settings.externalCommandOnExit,
+      );
+    } on PlatformException catch (error) {
+      debugPrint('System shutdown command setup failed: $error');
     }
   }
 
