@@ -1,4 +1,4 @@
-import 'dart:io' show IOSink;
+import 'dart:io' as io;
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -107,7 +107,7 @@ class _FileOutputStream extends OutputStream {
 
   final File _file;
   final Uint8List _chunk = Uint8List(_chunkSize);
-  IOSink? _sink;
+  io.RandomAccessFile? _handle;
   int _length = 0;
   int _chunkLength = 0;
 
@@ -116,14 +116,14 @@ class _FileOutputStream extends OutputStream {
 
   @override
   void open() {
-    _sink ??= _file.openWrite();
+    _handle ??= io.File(_file.path).openSync(mode: io.FileMode.write);
   }
 
   void _flushChunk() {
     if (_chunkLength == 0) {
       return;
     }
-    _sink!.add(Uint8List.fromList(_chunk.sublist(0, _chunkLength)));
+    _handle!.writeFromSync(Uint8List.sublistView(_chunk, 0, _chunkLength));
     _chunkLength = 0;
   }
 
@@ -173,8 +173,8 @@ class _FileOutputStream extends OutputStream {
   @override
   Future<void> close() async {
     _flushChunk();
-    await _sink?.close();
-    _sink = null;
+    _handle?.closeSync();
+    _handle = null;
   }
 
   @override

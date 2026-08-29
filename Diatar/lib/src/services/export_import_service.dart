@@ -1,4 +1,4 @@
-import 'dart:io' show IOSink;
+import 'dart:io' as io;
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -498,7 +498,7 @@ class _FsOutputStream extends OutputStream {
 
   final File _file;
   final Uint8List _chunk = Uint8List(_chunkSize);
-  IOSink? _sink;
+  io.RandomAccessFile? _handle;
   int _chunkLength = 0;
   int _length = 0;
   int _crc32 = 0;
@@ -513,18 +513,20 @@ class _FsOutputStream extends OutputStream {
   /// that empty entries still produce an (empty) file on disk.
   @override
   void open() {
-    _sink ??= _file.openWrite();
+    _handle ??= _file.openSync(mode: io.FileMode.write);
   }
 
   void _flushChunk() {
     if (_chunkLength == 0) {
       return;
     }
-    final Uint8List bytes = Uint8List.fromList(
-      _chunk.sublist(0, _chunkLength),
+    final Uint8List bytes = Uint8List.sublistView(
+      _chunk,
+      0,
+      _chunkLength,
     );
     _crc32 = getCrc32(bytes, _crc32);
-    _sink!.add(bytes);
+    _handle!.writeFromSync(bytes);
     _chunkLength = 0;
   }
 
@@ -581,8 +583,8 @@ class _FsOutputStream extends OutputStream {
   @override
   Future<void> close() async {
     _flushChunk();
-    await _sink?.close();
-    _sink = null;
+    _handle?.closeSync();
+    _handle = null;
   }
 
   @override

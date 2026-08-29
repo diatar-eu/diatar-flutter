@@ -526,6 +526,7 @@ class DtzDownloadService {
       await for (final List<int> bytes in response.stream) {
         received += bytes.length;
         sink.add(bytes);
+        await sink.flush();
         onProgress?.call(
           DtzDownloadProgress(
             currentFile: currentFile,

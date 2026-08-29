@@ -2586,6 +2586,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final sink = tempFile.openWrite();
     await for (final chunk in selectedFile.openRead()) {
       sink.add(chunk);
+      await sink.flush();
     }
     await sink.close();
     return tempFile;
