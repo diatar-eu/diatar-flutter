@@ -1055,13 +1055,14 @@ class DiatarMainController extends ChangeNotifier {
     // lassú vagy elérhetetlen.
     await reloadBooks();
 
-    await _desktopProjectorBridge.start(settings);
     _desktopProjectorBridge.onControlWindowRestored = () {
       if (_controlWindowHidden) {
         _controlWindowHidden = false;
         notifyListeners();
       }
     };
+    _desktopProjectorBridge.onDesktopHotkeyAction = runDesktopHotkeyAction;
+    await _desktopProjectorBridge.start(settings);
     _configureSender();
     await _applyTransport();
     unawaited(_checkStartupDtxUpdates());
@@ -4059,6 +4060,54 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
     _syncProjectionOnly();
     _playCurrentVerseSound();
+  }
+
+  void runDesktopHotkeyAction(String actionId) {
+    switch (actionId) {
+      case 'prevSong':
+        prevSong();
+        break;
+      case 'prevVerse':
+        prevVerse();
+        break;
+      case 'toggleProjection':
+        toggleShowing();
+        break;
+      case 'nextVerse':
+        nextVerse();
+        break;
+      case 'nextSong':
+        nextSong();
+        break;
+      case 'prevOrderSet':
+        unawaited(prevCustomOrderSet());
+        break;
+      case 'nextOrderSet':
+        unawaited(nextCustomOrderSet());
+        break;
+      case 'highlightPrev':
+        if (settings.homeShowHighlightControls) {
+          highlightPrev();
+        }
+        break;
+      case 'highlightNext':
+        if (settings.homeShowHighlightControls) {
+          highlightNext();
+        }
+        break;
+      case 'togglePhoto':
+        toggleControlPhotoView();
+        break;
+      case 'toggleChords':
+        unawaited(toggleChordsVisible());
+        break;
+      case 'toggleBackground':
+        unawaited(toggleBackgroundImageVisible());
+        break;
+      case 'toggleSheetMusic':
+        unawaited(toggleSheetMusicVisible());
+        break;
+    }
   }
 
   /// Elrejti a vezérlő (fő) ablakot, ha a vetítő ablakkal azonos

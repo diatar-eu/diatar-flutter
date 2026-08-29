@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../controllers/diatar_main_controller.dart';
+import 'desktop_hotkey.dart';
 
 class DesktopHotkeysLayer extends StatefulWidget {
   const DesktopHotkeysLayer({
@@ -51,47 +52,41 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
       return KeyEventResult.ignored;
     }
 
-    final String combo = _eventToCombo(event);
+    final Map<String, String> actionHotkeys =
+        widget.controller.settings.desktopActionHotkeys;
+    final String? actionId = desktopHotkeyActionForEvent(event, actionHotkeys);
+    if (actionId != null) {
+      widget.controller.runDesktopHotkeyAction(actionId);
+      return KeyEventResult.handled;
+    }
+
+    final String combo = desktopHotkeyComboForEvent(event);
     if (combo.isEmpty) {
       return KeyEventResult.ignored;
     }
 
-    final Map<String, String> actionHotkeys =
-        widget.controller.settings.desktopActionHotkeys;
-    String? actionId;
-    actionHotkeys.forEach((String action, String savedCombo) {
-      if (savedCombo == combo) {
-        actionId = action;
-      }
-    });
-    if (actionId != null) {
-      _runAction(actionId!);
+    final Map<String, String> songHotkeys =
+        widget.controller.settings.desktopSongHotkeys;
+    final String? songBinding = songHotkeys[combo];
+    if (songBinding != null) {
+      widget.controller.activateSongHotkeyBinding(songBinding);
       return KeyEventResult.handled;
     }
 
-final Map<String, String> songHotkeys =
-        widget.controller.settings.desktopSongHotkeys;
-     final String? songBinding = songHotkeys[combo];
-     if (songBinding != null) {
-       widget.controller.activateSongHotkeyBinding(songBinding);
-       return KeyEventResult.handled;
-     }
+    final Map<String, String> orderSetHotkeys =
+        widget.controller.settings.desktopOrderSetHotkeys;
+    final String? orderSetId = orderSetHotkeys[combo];
+    if (orderSetId != null) {
+      unawaited(widget.controller.setActiveCustomOrderSetById(orderSetId));
+      return KeyEventResult.handled;
+    }
 
-     final Map<String, String> orderSetHotkeys =
-         widget.controller.settings.desktopOrderSetHotkeys;
-     final String? orderSetId = orderSetHotkeys[combo];
-     if (orderSetId != null) {
-       unawaited(
-         widget.controller.setActiveCustomOrderSetById(orderSetId),
-       );
-       return KeyEventResult.handled;
-     }
-
-     return KeyEventResult.ignored;
+    return KeyEventResult.ignored;
   }
 
   bool _isTypingIntoTextField() {
-    final BuildContext? focusContext = FocusManager.instance.primaryFocus?.context;
+    final BuildContext? focusContext =
+        FocusManager.instance.primaryFocus?.context;
     if (focusContext == null) {
       return false;
     }
@@ -105,122 +100,5 @@ final Map<String, String> songHotkeys =
     return defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux;
-  }
-
-  void _runAction(String actionId) {
-    switch (actionId) {
-      case 'prevSong':
-        widget.controller.prevSong();
-        break;
-      case 'prevVerse':
-        widget.controller.prevVerse();
-        break;
-      case 'toggleProjection':
-        widget.controller.toggleShowing();
-        break;
-      case 'nextVerse':
-        widget.controller.nextVerse();
-        break;
-      case 'nextSong':
-        widget.controller.nextSong();
-        break;
-      case 'prevOrderSet':
-        unawaited(widget.controller.prevCustomOrderSet());
-        break;
-      case 'nextOrderSet':
-        unawaited(widget.controller.nextCustomOrderSet());
-        break;
-      case 'highlightPrev':
-        if (!widget.controller.settings.homeShowHighlightControls) {
-          break;
-        }
-        widget.controller.highlightPrev();
-        break;
-      case 'highlightNext':
-        if (!widget.controller.settings.homeShowHighlightControls) {
-          break;
-        }
-        widget.controller.highlightNext();
-        break;
-      case 'togglePhoto':
-        widget.controller.toggleControlPhotoView();
-        break;
-      case 'toggleChords':
-        unawaited(widget.controller.toggleChordsVisible());
-        break;
-      case 'toggleBackground':
-        unawaited(widget.controller.toggleBackgroundImageVisible());
-        break;
-      case 'toggleSheetMusic':
-        unawaited(widget.controller.toggleSheetMusicVisible());
-        break;
-    }
-  }
-
-  String _eventToCombo(KeyEvent event) {
-    final LogicalKeyboardKey key = event.logicalKey;
-    if (_isModifierKey(key)) {
-      return '';
-    }
-
-    final List<String> parts = <String>[];
-    if (HardwareKeyboard.instance.isControlPressed) {
-      parts.add('Ctrl');
-    }
-    if (HardwareKeyboard.instance.isAltPressed) {
-      parts.add('Alt');
-    }
-    if (HardwareKeyboard.instance.isShiftPressed) {
-      parts.add('Shift');
-    }
-    if (HardwareKeyboard.instance.isMetaPressed) {
-      parts.add('Meta');
-    }
-
-    final String keyPart = _normalizeKeyPart(key);
-    if (keyPart.isEmpty) {
-      return '';
-    }
-    parts.add(keyPart);
-    return parts.join('+');
-  }
-
-  bool _isModifierKey(LogicalKeyboardKey key) {
-    return key == LogicalKeyboardKey.shiftLeft ||
-        key == LogicalKeyboardKey.shiftRight ||
-        key == LogicalKeyboardKey.controlLeft ||
-        key == LogicalKeyboardKey.controlRight ||
-        key == LogicalKeyboardKey.altLeft ||
-        key == LogicalKeyboardKey.altRight ||
-        key == LogicalKeyboardKey.metaLeft ||
-        key == LogicalKeyboardKey.metaRight;
-  }
-
-  String _normalizeKeyPart(LogicalKeyboardKey key) {
-    final String label = key.keyLabel.trim();
-    if (label.isNotEmpty && label.length == 1) {
-      final int code = label.codeUnitAt(0);
-      if ((code >= 0x41 && code <= 0x5A) ||
-          (code >= 0x61 && code <= 0x7A) ||
-          (code >= 0x30 && code <= 0x39)) {
-        return label.toUpperCase();
-      }
-    }
-
-    final String debugName = key.debugName ?? '';
-    if (debugName.isEmpty) {
-      return label.isNotEmpty ? _capitalize(label) : '';
-    }
-    if (debugName.startsWith('F') && debugName.length <= 3) {
-      return debugName.toUpperCase();
-    }
-    return _capitalize(debugName.replaceAll(' ', ''));
-  }
-
-  String _capitalize(String value) {
-    if (value.isEmpty) {
-      return value;
-    }
-    return value[0].toUpperCase() + value.substring(1);
   }
 }

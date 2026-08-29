@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'desktop_hotkey.dart';
+
 class DesktopProjectorWindow extends StatefulWidget {
   const DesktopProjectorWindow({super.key, required this.monitor});
 
@@ -34,6 +36,9 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     mode: ChannelMode.bidirectional,
   );
   final DesktopProjectorController _controller = DesktopProjectorController();
+  final FocusNode _hotkeyFocusNode = FocusNode(
+    debugLabel: 'desktop-projector-hotkeys',
+  );
   WindowController? _currentWindowController;
   int _mainMonitor = -1;
   bool _windowReady = false;
@@ -189,19 +194,12 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
         await windowManager.setFullScreen(true);
       }
       await windowManager.show(inactive: true);
-      if (!sameMonitor) {
-        await windowManager.focus();
-      }
       // Biztonsági újraalkalmazás: futás közbeni monitorváltáskor a
       // window_manager néha nem érvényesíti azonnal az alwaysOnTop
       // beállítást.
       await Future<void>.delayed(const Duration(milliseconds: 120));
       await windowManager.setAlwaysOnTop(!sameMonitor);
-      if (!sameMonitor) {
-        await windowManager.focus();
-      } else {
-        await _requestControlForeground();
-      }
+      await _requestControlForeground();
     } catch (_) {
       // Nem kritikus: következő settings/relocate ciklus újrapróbálja.
     }
@@ -286,6 +284,7 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
   @override
   void dispose() {
     windowManager.removeListener(this);
+    _hotkeyFocusNode.dispose();
     final WindowController? current = _currentWindowController;
     if (current != null) {
       unawaited(current.setWindowMethodHandler(null));
@@ -308,6 +307,18 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     }
   }
 
+  KeyEventResult _onHotkeyEvent(FocusNode node, KeyEvent event) {
+    final String? actionId = desktopHotkeyActionForEvent(
+      event,
+      _controller.settings.desktopActionHotkeys,
+    );
+    if (actionId == null) {
+      return KeyEventResult.ignored;
+    }
+    unawaited(_controlChannel.invokeMethod<void>('hotkeyAction', actionId));
+    return KeyEventResult.handled;
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -315,19 +326,24 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
       builder: (BuildContext context, _) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          home: Scaffold(
-            backgroundColor: Colors.black,
-            body: MouseRegion(
-              cursor: SystemMouseCursors.none,
-              child: GestureDetector(
-                onTap: _onProjectionTap,
-                child: CustomPaint(
-                  painter: ProjectorPainter(
-                    frame: _controller.activeFrame,
-                    globals: _controller.globals,
-                    settings: _controller.settings,
+          home: Focus(
+            autofocus: true,
+            focusNode: _hotkeyFocusNode,
+            onKeyEvent: _onHotkeyEvent,
+            child: Scaffold(
+              backgroundColor: Colors.black,
+              body: MouseRegion(
+                cursor: SystemMouseCursors.none,
+                child: GestureDetector(
+                  onTap: _onProjectionTap,
+                  child: CustomPaint(
+                    painter: ProjectorPainter(
+                      frame: _controller.activeFrame,
+                      globals: _controller.globals,
+                      settings: _controller.settings,
+                    ),
+                    child: const SizedBox.expand(),
                   ),
-                  child: const SizedBox.expand(),
                 ),
               ),
             ),

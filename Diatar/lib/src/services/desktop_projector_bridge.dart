@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -15,6 +16,7 @@ class DesktopProjectorBridge {
   static final DesktopProjectorBridge instance = DesktopProjectorBridge._();
 
   static const String _channelName = 'diatar/desktop_projector';
+  static const String _controlChannelName = 'diatar/desktop_projector_control';
   static const String _businessId = 'desktop_projector';
   static const String _windowCloseMethod = 'window_close';
   static const Duration _windowOpTimeout = Duration(milliseconds: 1200);
@@ -23,6 +25,10 @@ class DesktopProjectorBridge {
   final WindowMethodChannel _channel = const WindowMethodChannel(
     _channelName,
     mode: ChannelMode.unidirectional,
+  );
+  final WindowMethodChannel _controlChannel = const WindowMethodChannel(
+    _controlChannelName,
+    mode: ChannelMode.bidirectional,
   );
 
   WindowController? _windowController;
@@ -36,6 +42,7 @@ class DesktopProjectorBridge {
   /// ablakba való kattintás) hozza vissza. A controller ezen keresztül
   /// szinkronizálhatja a belső `controlWindowHidden` állapotát.
   VoidCallback? onControlWindowRestored;
+  void Function(String actionId)? onDesktopHotkeyAction;
   Uint8List? _lastStateBytes;
   Uint8List? _lastTextBytes;
   Uint8List? _lastRenderedTextBytes;
@@ -68,9 +75,36 @@ class DesktopProjectorBridge {
       await _closeProjectorWindowsBestEffort();
       return;
     }
+    await _controlChannel.setMethodCallHandler(_handleControlMethodCall);
     await _adoptExistingProjectorWindow();
     await _ensureProjectorWindow();
     await _invoke('settings', settings.toMap(), cache: () {});
+  }
+
+  Future<dynamic> _handleControlMethodCall(MethodCall call) async {
+    switch (call.method) {
+      case 'showControl':
+        await _restoreControlWindow();
+        return null;
+      case 'focusControl':
+        await focusControlWindow();
+        return null;
+      case 'hotkeyAction':
+        final Object? actionId = call.arguments;
+        if (actionId is! String || actionId.isEmpty) {
+          throw ArgumentError.value(
+            actionId,
+            'actionId',
+            'A desktop hotkey action identifier is required.',
+          );
+        }
+        onDesktopHotkeyAction?.call(actionId);
+        return null;
+      default:
+        throw MissingPluginException(
+          'Unknown desktop projector control method: ${call.method}',
+        );
+    }
   }
 
   Future<void> updateSettings(AppSettings settings) async {
@@ -279,7 +313,7 @@ class DesktopProjectorBridge {
   /// A vezérlőablakot fókuszba hozza a vetítő fölé úgy, hogy közben
   /// a rejtett állapotot nem módosítja.
   Future<void> focusControlWindow() async {
-    if (!_enabled || _controlWindowHidden) {
+    if (!_enabled) {
       return;
     }
     try {
@@ -346,6 +380,7 @@ class DesktopProjectorBridge {
 
   Future<void> dispose() async {
     await _closeWindow();
+    await _controlChannel.setMethodCallHandler(null);
     _enabled = false;
   }
 
