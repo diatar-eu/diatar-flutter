@@ -1,2 +1,34 @@
-Bugfixek
+Új funkciók
 Zene
+- Letölthetők a zenék (Letöltés ablak, Zenék lap)
+- Zene lejátszás a diasorban, és továbbítás a vetítőre
+- Zene után automatikus továbblépés a következő diára
+- Kettőzött diák helyes kezelése és zenéjük
+
+Beszédfelismerés
+- Kikapcsolható a beszédfelismerés (beállítások)
+- Több (offline) felismerő modell közül lehet választani
+- Optimalizált, háttérszálon futó felismerés
+- A VAD (hangaktivitás-detektáló) modell már nem feltétlenül szükséges a streaming modellekhez
+
+Vetítés
+- Gyorsbillentyűk a képernyőmód váltásához (Kötetek / Diasor / Vetítés), a meglévő gyorsbillentyű-rendszerben
+- A vetítő ablak mindig visszaadja a fókuszt az irányító ablaknak
+- Vetítő képernyő megjelenítése a főablakból is
+- Nem szabályozható a vetítés görgethetősége — a szöveg mindig a területhez illeszkedik
+
+Énekkeresés
+- A keresés nem érzékeny az ékezetekre, írásjelekre, kis- és nagybetűkre
+
+Import / letöltés
+- Minden ZIP import streamelve (nagyobb fájlok is)
+- ZIP import javítva (pufferelés)
+
+Rendszer
+- Windows: kilépéskor shell parancs végrehajtása
+- Linux: ikon beállítva, régi hardveren is indul (Impeller kikapcsolva)
+- A dia fájl ID írása helyreállítva
+
+Bugfixek
+- Dupla diák helyes kezelése és zenéjük
+- Keresési és importálási hibák javítása
