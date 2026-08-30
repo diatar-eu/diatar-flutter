@@ -117,7 +117,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late int _appThemeMode;
   late String _appLanguage;
   late bool _homeShowHighlightControls;
-  late bool _projAutoSize;
   late bool _projHCenter;
   late bool _projVCenter;
   late bool _projUseAkkord;
@@ -206,7 +205,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _appThemeMode = s.appThemeMode.clamp(0, 1);
     _appLanguage = _isSupportedLanguage(s.appLanguage) ? s.appLanguage : '';
     _homeShowHighlightControls = s.homeShowHighlightControls;
-    _projAutoSize = s.projAutoSize;
     _projHCenter = s.projHCenter;
     _projVCenter = s.projVCenter;
     _projUseAkkord = s.projUseAkkord;
@@ -1638,13 +1636,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 ? (bool v) => setBoth(() => _advanceAfterMusic = v)
                 : null,
             title: Text(l10n.advanceAfterMusic),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: !_projAutoSize,
-            onChanged: (bool v) => setBoth(() => _projAutoSize = !v),
-            title: Text(l10n.scrollableProjection),
-            subtitle: Text(l10n.scrollableProjectionHint),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -3750,7 +3741,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         max: 1000,
       ),
       projSpacingStep: _projSpacingStep.clamp(0, 10),
-      projAutoSize: _projAutoSize,
       projHCenter: _projHCenter,
       projVCenter: _projVCenter,
       projUseAkkord: _projUseAkkord,

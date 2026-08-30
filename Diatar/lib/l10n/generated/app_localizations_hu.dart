@@ -780,13 +780,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get autoSize => 'Automatikus méretezés';
 
   @override
-  String get scrollableProjection => 'Görgethető vetítés';
-
-  @override
-  String get scrollableProjectionHint =>
-      'Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.';
-
-  @override
   String get showTitle => 'Cím mutatása';
 
   @override

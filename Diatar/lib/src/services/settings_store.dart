@@ -27,7 +27,6 @@ class SettingsStore {
   static const String _kProjBorderR = 'ProjBorderR';
   static const String _kProjBorderB = 'ProjBorderB';
   static const String _kProjSpacingStep = 'ProjSpacingStep';
-  static const String _kProjAutoSize = 'ProjAutoSize';
   static const String _kProjHCenter = 'ProjHCenter';
   static const String _kProjVCenter = 'ProjVCenter';
   static const String _kProjUseAkkord = 'ProjUseAkkord';
@@ -210,7 +209,7 @@ class SettingsStore {
       projBorderR: prefs.getInt(_kProjBorderR) ?? 0,
       projBorderB: prefs.getInt(_kProjBorderB) ?? 0,
       projSpacingStep: prefs.getInt(_kProjSpacingStep) ?? 0,
-      projAutoSize: prefs.getBool(_kProjAutoSize) ?? true,
+      projAutoSize: true,
       projHCenter: prefs.getBool(_kProjHCenter) ?? false,
       projVCenter: prefs.getBool(_kProjVCenter) ?? true,
       projUseAkkord: prefs.getBool(_kProjUseAkkord) ?? false,
@@ -291,7 +290,6 @@ class SettingsStore {
     await prefs.setInt(_kProjBorderR, settings.projBorderR);
     await prefs.setInt(_kProjBorderB, settings.projBorderB);
     await prefs.setInt(_kProjSpacingStep, settings.projSpacingStep);
-    await prefs.setBool(_kProjAutoSize, settings.projAutoSize);
     await prefs.setBool(_kProjHCenter, settings.projHCenter);
     await prefs.setBool(_kProjVCenter, settings.projVCenter);
     await prefs.setBool(_kProjUseAkkord, settings.projUseAkkord);

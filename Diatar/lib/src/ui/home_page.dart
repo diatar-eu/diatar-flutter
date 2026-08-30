@@ -1445,10 +1445,6 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                 ? _togglePresentationControls
                 : null,
           );
-          final bool scrollableProjection = !controller.settings.projAutoSize;
-          if (scrollableProjection) {
-            return SingleChildScrollView(child: preview);
-          }
           return SizedBox(
             width: constraints.maxWidth,
             height: constraints.maxHeight,
