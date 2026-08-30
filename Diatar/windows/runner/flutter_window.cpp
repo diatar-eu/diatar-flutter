@@ -11,6 +11,7 @@
 #include "screen_retriever_windows/screen_retriever_windows_plugin_c_api.h"
 #include "url_launcher_windows/url_launcher_windows.h"
 #include "window_manager/window_manager_plugin.h"
+#include "pic_plc_worker.h"
 
 namespace {
 
@@ -69,6 +70,7 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   RegisterSystemShutdownChannel();
+  RegisterPicPlcChannel();
   DesktopMultiWindowSetWindowCreatedCallback([](void *controller) {
     auto *flutter_view_controller =
         reinterpret_cast<flutter::FlutterViewController *>(controller);
@@ -118,6 +120,77 @@ void FlutterWindow::RegisterSystemShutdownChannel() {
       });
 }
 
+void FlutterWindow::RegisterPicPlcChannel() {
+  pic_plc_worker_ = std::make_unique<PicPlcWorker>();
+  pic_plc_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), "diatar/pic_plc",
+          &flutter::StandardMethodCodec::GetInstance());
+  pic_plc_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<
+                 flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (call.method_name() == "close") {
+          pic_plc_worker_->Close();
+          result->Success();
+          return;
+        }
+        if (call.method_name() == "buttonMask") {
+          result->Success(flutter::EncodableValue(
+              pic_plc_worker_->button_mask()));
+          return;
+        }
+        if (call.arguments() == nullptr) {
+          result->Error("invalid-argument", "Arguments are required.");
+          return;
+        }
+        const auto* arguments =
+            std::get_if<flutter::EncodableMap>(&*call.arguments());
+        if (arguments == nullptr) {
+          result->Error("invalid-argument", "Arguments must be a map.");
+          return;
+        }
+        if (call.method_name() == "open") {
+          const auto iterator =
+              arguments->find(flutter::EncodableValue("port"));
+          if (iterator == arguments->end()) {
+            result->Error("invalid-argument", "A serial port is required.");
+            return;
+          }
+          const auto* port = std::get_if<std::string>(&iterator->second);
+          if (port == nullptr || port->empty()) {
+            result->Error("invalid-argument", "A serial port is required.");
+            return;
+          }
+          std::string error;
+          if (!pic_plc_worker_->Open(*port, &error)) {
+            result->Error("serial-open-failed", error);
+            return;
+          }
+          result->Success();
+          return;
+        }
+        if (call.method_name() == "setLeds") {
+          const auto led1 = arguments->find(flutter::EncodableValue("led1"));
+          const auto led2 = arguments->find(flutter::EncodableValue("led2"));
+          if (led1 == arguments->end() || led2 == arguments->end()) {
+            result->Error("invalid-argument", "Both LED states are required.");
+            return;
+          }
+          const auto* led1_value = std::get_if<bool>(&led1->second);
+          const auto* led2_value = std::get_if<bool>(&led2->second);
+          if (led1_value == nullptr || led2_value == nullptr) {
+            result->Error("invalid-argument", "LED states must be booleans.");
+            return;
+          }
+          pic_plc_worker_->SetLeds(*led1_value, *led2_value);
+          result->Success();
+          return;
+        }
+        result->NotImplemented();
+      });
+}
+
 void FlutterWindow::RunSystemShutdownCommand() {
   if (system_shutdown_command_.empty()) {
     return;
@@ -141,6 +214,8 @@ void FlutterWindow::RunSystemShutdownCommand() {
 }
 
 void FlutterWindow::OnDestroy() {
+  pic_plc_channel_.reset();
+  pic_plc_worker_.reset();
   system_shutdown_channel_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;

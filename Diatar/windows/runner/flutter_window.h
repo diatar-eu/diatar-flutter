@@ -10,6 +10,8 @@
 
 #include "win32_window.h"
 
+class PicPlcWorker;
+
 // A window that does nothing but host a Flutter view.
 class FlutterWindow : public Win32Window {
  public:
@@ -25,6 +27,7 @@ class FlutterWindow : public Win32Window {
                          LPARAM const lparam) noexcept override;
 
  private:
+  void RegisterPicPlcChannel();
   void RegisterSystemShutdownChannel();
   void RunSystemShutdownCommand();
 
@@ -35,6 +38,9 @@ class FlutterWindow : public Win32Window {
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       system_shutdown_channel_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      pic_plc_channel_;
+  std::unique_ptr<PicPlcWorker> pic_plc_worker_;
   std::wstring system_shutdown_command_;
   bool session_ending_ = false;
 };

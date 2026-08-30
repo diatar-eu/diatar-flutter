@@ -1,5 +1,7 @@
 #include "my_application.h"
 
+#include <cstring>
+
 #include <flutter_linux/flutter_linux.h>
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
@@ -11,6 +13,7 @@
 #include "screen_retriever_linux/screen_retriever_linux_plugin.h"
 #include "url_launcher_linux/url_launcher_plugin.h"
 #include "window_manager/window_manager_plugin.h"
+#include "pic_plc_worker.h"
 
 namespace {
 
@@ -59,9 +62,69 @@ void register_secondary_window_plugins(FlPluginRegistry* registry) {
 struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
+  FlMethodChannel* pic_plc_channel;
+  PicPlcWorker* pic_plc_worker;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
+
+static void pic_plc_method_call_handler(FlMethodChannel* channel,
+                                        FlMethodCall* method_call,
+                                        gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  const gchar* method = fl_method_call_get_name(method_call);
+  g_autoptr(FlMethodResponse) response = nullptr;
+
+  if (g_strcmp0(method, "close") == 0) {
+    self->pic_plc_worker->Close();
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+  } else if (g_strcmp0(method, "buttonMask") == 0) {
+    response = FL_METHOD_RESPONSE(
+        fl_method_success_response_new(fl_value_new_int(
+            self->pic_plc_worker->button_mask())));
+  } else {
+    FlValue* arguments = fl_method_call_get_args(method_call);
+    if (arguments == nullptr || fl_value_get_type(arguments) != FL_VALUE_TYPE_MAP) {
+      response = FL_METHOD_RESPONSE(fl_method_error_response_new(
+          "invalid-argument", "Arguments must be a map.", nullptr));
+    } else if (g_strcmp0(method, "open") == 0) {
+      FlValue* port_value =
+          fl_value_lookup_string(arguments, "port");
+      if (port_value == nullptr ||
+          fl_value_get_type(port_value) != FL_VALUE_TYPE_STRING ||
+          strlen(fl_value_get_string(port_value)) == 0) {
+        response = FL_METHOD_RESPONSE(fl_method_error_response_new(
+            "invalid-argument", "A serial port is required.", nullptr));
+      } else {
+        std::string error;
+        if (!self->pic_plc_worker->Open(fl_value_get_string(port_value),
+                                        &error)) {
+          response = FL_METHOD_RESPONSE(fl_method_error_response_new(
+              "serial-open-failed", error.c_str(), nullptr));
+        } else {
+          response =
+              FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+        }
+      }
+    } else if (g_strcmp0(method, "setLeds") == 0) {
+      FlValue* led1 = fl_value_lookup_string(arguments, "led1");
+      FlValue* led2 = fl_value_lookup_string(arguments, "led2");
+      if (led1 == nullptr || led2 == nullptr ||
+          fl_value_get_type(led1) != FL_VALUE_TYPE_BOOL ||
+          fl_value_get_type(led2) != FL_VALUE_TYPE_BOOL) {
+        response = FL_METHOD_RESPONSE(fl_method_error_response_new(
+            "invalid-argument", "Both LED states must be booleans.", nullptr));
+      } else {
+        self->pic_plc_worker->SetLeds(fl_value_get_bool(led1),
+                                      fl_value_get_bool(led2));
+        response = FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+      }
+    } else {
+      response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+    }
+  }
+  fl_method_call_respond(method_call, response, nullptr);
+}
 
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
@@ -112,6 +175,12 @@ static void my_application_activate(GApplication* application) {
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+  self->pic_plc_worker = new PicPlcWorker();
+  self->pic_plc_channel = fl_method_channel_new(
+      fl_engine_get_binary_messenger(fl_view_get_engine(view)), "diatar/pic_plc",
+      FL_METHOD_CODEC(fl_standard_method_codec_new()));
+  fl_method_channel_set_method_call_handler(
+      self->pic_plc_channel, pic_plc_method_call_handler, self, nullptr);
   desktop_multi_window_plugin_set_window_created_callback([](FlPluginRegistry* registry){
     register_secondary_window_plugins(registry);
   });
@@ -159,6 +228,11 @@ static void my_application_shutdown(GApplication* application) {
 // Implements GObject::dispose.
 static void my_application_dispose(GObject* object) {
   MyApplication* self = MY_APPLICATION(object);
+  if (self->pic_plc_worker != nullptr) {
+    delete self->pic_plc_worker;
+    self->pic_plc_worker = nullptr;
+  }
+  g_clear_object(&self->pic_plc_channel);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }
