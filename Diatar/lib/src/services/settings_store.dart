@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diatar_common/diatar_common.dart';
+import 'pic_plc_service.dart';
 
 class SettingsStore {
   static const String _kPort = 'Port';
@@ -71,6 +72,10 @@ class SettingsStore {
   static const String _kLastSongPerBook = 'LastSongPerBook';
   static const String _kLastVersePerBook = 'LastVersePerBook';
   static const String _kHasSeenOnboarding = 'HasSeenOnboarding';
+  static const String _kPicPlcEnabled = 'PicPlcEnabled';
+  static const String _kPicPlcPort = 'PicPlcPort';
+  static const String _kPicPlcButtonActions = 'PicPlcButtonActions';
+  static const String _kPicPlcLedActions = 'PicPlcLedActions';
 
   static const Map<String, String> _defaultDesktopActionHotkeys =
       <String, String>{
@@ -142,6 +147,77 @@ class SettingsStore {
   Future<void> markOnboardingSeen() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kHasSeenOnboarding, true);
+  }
+
+  Future<PicPlcConfiguration> loadPicPlcConfiguration() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final List<String> savedActions =
+        prefs.getStringList(_kPicPlcButtonActions) ?? const <String>[];
+    final List<PicPlcButtonAction> actions = List<PicPlcButtonAction>.generate(
+      8,
+      (int index) {
+        if (index >= savedActions.length) {
+          return PicPlcButtonAction.none;
+        }
+        return PicPlcButtonAction.values.firstWhere(
+          (PicPlcButtonAction action) => action.name == savedActions[index],
+          orElse: () => PicPlcButtonAction.none,
+        );
+      },
+    );
+    final List<String> savedLedActions =
+        prefs.getStringList(_kPicPlcLedActions) ?? const <String>[];
+    final List<PicPlcLedAction> ledActions = List<PicPlcLedAction>.generate(2, (
+      int index,
+    ) {
+      if (index >= savedLedActions.length) {
+        return PicPlcLedAction.none;
+      }
+      return PicPlcLedAction.values.firstWhere(
+        (PicPlcLedAction action) => action.name == savedLedActions[index],
+        orElse: () => PicPlcLedAction.none,
+      );
+    });
+    return PicPlcConfiguration(
+      enabled: prefs.getBool(_kPicPlcEnabled) ?? false,
+      port: prefs.getString(_kPicPlcPort) ?? '',
+      buttonActions: actions,
+      ledActions: ledActions,
+    );
+  }
+
+  Future<void> savePicPlcConfiguration(
+    PicPlcConfiguration configuration,
+  ) async {
+    if (configuration.buttonActions.length != 8) {
+      throw ArgumentError.value(
+        configuration.buttonActions,
+        'buttonActions',
+        'must contain exactly eight assignments',
+      );
+    }
+    if (configuration.ledActions.length != 2) {
+      throw ArgumentError.value(
+        configuration.ledActions,
+        'ledActions',
+        'must contain exactly two assignments',
+      );
+    }
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kPicPlcEnabled, configuration.enabled);
+    await prefs.setString(_kPicPlcPort, configuration.port.trim());
+    await prefs.setStringList(
+      _kPicPlcButtonActions,
+      configuration.buttonActions
+          .map((PicPlcButtonAction action) => action.name)
+          .toList(),
+    );
+    await prefs.setStringList(
+      _kPicPlcLedActions,
+      configuration.ledActions
+          .map((PicPlcLedAction action) => action.name)
+          .toList(),
+    );
   }
 
   Future<AppSettings> load() async {

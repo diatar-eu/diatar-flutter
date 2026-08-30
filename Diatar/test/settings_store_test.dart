@@ -1,4 +1,5 @@
 import 'package:diatar_app/src/services/settings_store.dart';
+import 'package:diatar_app/src/services/pic_plc_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -55,5 +56,36 @@ void main() {
     final settings = await SettingsStore().load();
 
     expect(settings.desktopActionHotkeys, isEmpty);
+  });
+
+  test('persists all eight PICPLC button assignments', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    const PicPlcConfiguration configuration = PicPlcConfiguration(
+      enabled: true,
+      port: 'COM3',
+      buttonActions: <PicPlcButtonAction>[
+        PicPlcButtonAction.toggleProjection,
+        PicPlcButtonAction.projectionSwitch,
+        PicPlcButtonAction.previousVerse,
+        PicPlcButtonAction.nextVerse,
+        PicPlcButtonAction.previousSong,
+        PicPlcButtonAction.nextSong,
+        PicPlcButtonAction.toggleDirection,
+        PicPlcButtonAction.step,
+      ],
+      ledActions: <PicPlcLedAction>[
+        PicPlcLedAction.projectionOn,
+        PicPlcLedAction.backward,
+      ],
+    );
+
+    final SettingsStore store = SettingsStore();
+    await store.savePicPlcConfiguration(configuration);
+
+    final PicPlcConfiguration loaded = await store.loadPicPlcConfiguration();
+    expect(loaded.enabled, isTrue);
+    expect(loaded.port, 'COM3');
+    expect(loaded.buttonActions, configuration.buttonActions);
+    expect(loaded.ledActions, configuration.ledActions);
   });
 }

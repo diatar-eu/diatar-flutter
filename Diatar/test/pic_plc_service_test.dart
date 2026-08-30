@@ -19,4 +19,32 @@ void main() {
       0,
     ]);
   });
+
+  test('repeats only navigation PICPLC actions', () {
+    expect(
+      PicPlcService.isRepeatableAction(PicPlcButtonAction.previousVerse),
+      isTrue,
+    );
+    expect(
+      PicPlcService.isRepeatableAction(PicPlcButtonAction.nextVerse),
+      isTrue,
+    );
+    expect(
+      PicPlcService.isRepeatableAction(PicPlcButtonAction.previousSong),
+      isTrue,
+    );
+    expect(
+      PicPlcService.isRepeatableAction(PicPlcButtonAction.nextSong),
+      isTrue,
+    );
+    expect(PicPlcService.isRepeatableAction(PicPlcButtonAction.step), isTrue);
+    expect(
+      PicPlcService.isRepeatableAction(PicPlcButtonAction.toggleProjection),
+      isFalse,
+    );
+    expect(
+      PicPlcService.isRepeatableAction(PicPlcButtonAction.toggleDirection),
+      isFalse,
+    );
+  });
 }

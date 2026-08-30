@@ -1,6 +1,61 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+enum PicPlcButtonAction {
+  none,
+  toggleProjection,
+  projectionSwitch,
+  previousVerse,
+  nextVerse,
+  previousSong,
+  nextSong,
+  toggleDirection,
+  directionSwitch,
+  step,
+}
+
+enum PicPlcLedAction { none, projectionOn, forward, backward }
+
+class PicPlcConfiguration {
+  const PicPlcConfiguration({
+    this.enabled = false,
+    this.port = '',
+    this.buttonActions = const <PicPlcButtonAction>[
+      PicPlcButtonAction.none,
+      PicPlcButtonAction.none,
+      PicPlcButtonAction.none,
+      PicPlcButtonAction.none,
+      PicPlcButtonAction.none,
+      PicPlcButtonAction.none,
+      PicPlcButtonAction.none,
+      PicPlcButtonAction.none,
+    ],
+    this.ledActions = const <PicPlcLedAction>[
+      PicPlcLedAction.none,
+      PicPlcLedAction.none,
+    ],
+  });
+
+  final bool enabled;
+  final String port;
+  final List<PicPlcButtonAction> buttonActions;
+  final List<PicPlcLedAction> ledActions;
+
+  PicPlcConfiguration copyWith({
+    bool? enabled,
+    String? port,
+    List<PicPlcButtonAction>? buttonActions,
+    List<PicPlcLedAction>? ledActions,
+  }) {
+    return PicPlcConfiguration(
+      enabled: enabled ?? this.enabled,
+      port: port ?? this.port,
+      buttonActions: buttonActions ?? this.buttonActions,
+      ledActions: ledActions ?? this.ledActions,
+    );
+  }
+}
+
 /// Background bridge for the PICPLC serial controller on desktop platforms.
 ///
 /// The native implementation owns the serial port and polls it at 20 Hz, so
@@ -52,6 +107,17 @@ class PicPlcService {
   static Uint8List ledCommand({required bool led1, required bool led2}) {
     final int states = (led1 ? 0x01 : 0) | (led2 ? 0x02 : 0);
     return Uint8List.fromList(<int>[0x21, 0, states, states]);
+  }
+
+  static bool isRepeatableAction(PicPlcButtonAction action) {
+    return switch (action) {
+      PicPlcButtonAction.previousVerse ||
+      PicPlcButtonAction.nextVerse ||
+      PicPlcButtonAction.previousSong ||
+      PicPlcButtonAction.nextSong ||
+      PicPlcButtonAction.step => true,
+      _ => false,
+    };
   }
 
   void _ensureDesktop() {
