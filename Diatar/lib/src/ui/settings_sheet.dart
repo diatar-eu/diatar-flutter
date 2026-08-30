@@ -24,6 +24,7 @@ import '../services/desktop_projector_bridge.dart';
 import '../services/external_command_service.dart';
 import '../services/macos_file_panels.dart';
 import '../services/blank_image_storage.dart';
+import '../services/pic_plc_service.dart';
 import '../services/web_diavetito_url.dart';
 import '../utils/friendly_path.dart';
 import 'onboarding_sheet.dart';
@@ -48,7 +49,9 @@ class DiatarSettingsSheet extends StatefulWidget {
   const DiatarSettingsSheet({
     super.key,
     required this.initialSettings,
+    required this.initialPicPlcConfiguration,
     required this.onApply,
+    required this.onApplyPicPlc,
     required this.onExitRequested,
     required this.onReloadBooksRequested,
     required this.onRemoteStopRequested,
@@ -63,7 +66,9 @@ class DiatarSettingsSheet extends StatefulWidget {
   });
 
   final AppSettings initialSettings;
+  final PicPlcConfiguration initialPicPlcConfiguration;
   final Future<void> Function(AppSettings) onApply;
+  final Future<void> Function(PicPlcConfiguration) onApplyPicPlc;
   final VoidCallback onExitRequested;
   final VoidCallback onReloadBooksRequested;
   final VoidCallback onRemoteStopRequested;
@@ -94,6 +99,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _mqttPassword;
   late final TextEditingController _blankPicPath;
   late final TextEditingController _diaExportPath;
+  late final TextEditingController _picPlcPort;
   final BlankImageStore _blankImageStore = BlankImageStore();
   final ExternalCommandService _externalCommandService =
       const ExternalCommandService();
@@ -130,6 +136,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _desktopProjectorEnabled;
   late bool _internetRelayEnabled;
   late bool _localNetworkEnabled;
+  late bool _picPlcEnabled;
+  late List<PicPlcButtonAction> _picPlcButtonActions;
+  late List<PicPlcLedAction> _picPlcLedActions;
   late String? _liveSubtitleDeviceId;
   late String _liveSubtitleLanguage;
   late String _liveSubtitleModel;
@@ -177,6 +186,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _szentirasApiKey = TextEditingController(text: s.szentirasApiKey);
     _blankPicPath = TextEditingController(text: s.blankPicPath);
     _diaExportPath = TextEditingController(text: s.diaExportPath);
+    _picPlcPort = TextEditingController(
+      text: widget.initialPicPlcConfiguration.port,
+    );
+    _picPlcEnabled = widget.initialPicPlcConfiguration.enabled;
+    _picPlcButtonActions = List<PicPlcButtonAction>.from(
+      widget.initialPicPlcConfiguration.buttonActions,
+    );
+    _picPlcLedActions = List<PicPlcLedAction>.from(
+      widget.initialPicPlcConfiguration.ledActions,
+    );
     _projFontSize = TextEditingController(text: s.projFontSize.toString());
     _projTitleSize = TextEditingController(text: s.projTitleSize.toString());
     _projLeftIndent = TextEditingController(text: s.projLeftIndent.toString());
@@ -300,6 +319,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _szentirasApiKey.dispose();
     _blankPicPath.dispose();
     _diaExportPath.dispose();
+    _picPlcPort.dispose();
     _projFontSize.dispose();
     _projTitleSize.dispose();
     _projLeftIndent.dispose();
@@ -341,6 +361,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ? l10n.valueNotSet
         : shortFriendlyPathLabel(_blankPicPath.text.trim(), l10n);
     final bool desktopHotkeysAvailable = _supportsHotkeysPlatform();
+    final bool picPlcAvailable =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux);
     final bool showInternet = _matches(
       query,
       'internet mqtt kozvetites felhasznalo user',
@@ -378,6 +402,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           query,
           'gyorsbillentyu hotkey billentyu shortcut vezerles enek',
         );
+    final bool showPicPlc =
+        picPlcAvailable &&
+        _matches(query, 'picplc vezerlo controller soros serial gomb led');
     final bool showApiKeys = _matches(query, 'api kulcs key szentiras');
     final bool showImpresszum = _matches(
       query,
@@ -393,6 +420,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         showSystem ||
         showExternalCommands ||
         showHotkeys ||
+        showPicPlc ||
         showApiKeys ||
         showImpresszum;
     return Padding(
@@ -568,7 +596,26 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openDesktopHotkeySettings,
                       description: l10n.settingsHotkeysDescription,
                     ),
-                  if (showHotkeys && showImpresszum) const Divider(height: 1),
+                  if (showHotkeys && showImpresszum && !showPicPlc)
+                    const Divider(height: 1),
+                  if (showHotkeys && showPicPlc) const Divider(height: 1),
+                  if (showPicPlc)
+                    _settingsTile(
+                      leading: const Icon(Icons.settings_remote_outlined),
+                      title: Text(l10n.picPlcSettingsTitle),
+                      subtitle: Text(
+                        _picPlcEnabled
+                            ? l10n.picPlcSettingsEnabledSummary(
+                                _picPlcPort.text.trim().isEmpty
+                                    ? l10n.valueNotSet
+                                    : _picPlcPort.text.trim(),
+                              )
+                            : l10n.picPlcSettingsDisabledSummary,
+                      ),
+                      onTap: _openPicPlcSettings,
+                      description: l10n.picPlcSettingsDescription,
+                    ),
+                  if (showPicPlc && showImpresszum) const Divider(height: 1),
                   if (showImpresszum)
                     _settingsTile(
                       leading: const Icon(Icons.info_outline),
@@ -1554,6 +1601,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       onConfirmClose: _applyApiKeysSettings,
       onCancel: () {
         if (!mounted) {
+          return;
+        }
+        if (_picPlcEnabled && _picPlcPort.text.trim().isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.picPlcPortRequired)),
+          );
           return;
         }
         setState(() {
@@ -3327,6 +3380,125 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
+  Future<void> _openPicPlcSettings() {
+    return _openSectionSheet(
+      title: context.l10n.picPlcSettingsTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final AppLocalizations l10n = context.l10n;
+        return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _picPlcEnabled,
+            onChanged: (bool enabled) =>
+                setBoth(() => _picPlcEnabled = enabled),
+            title: Text(l10n.picPlcEnabledLabel),
+          ),
+          TextField(
+            controller: _picPlcPort,
+            enabled: _picPlcEnabled,
+            decoration: InputDecoration(
+              labelText: l10n.picPlcPortLabel,
+              hintText: l10n.picPlcPortHint,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            l10n.picPlcButtonsTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 8),
+          for (int index = 0; index < _picPlcButtonActions.length; index++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: DropdownButtonFormField<PicPlcButtonAction>(
+                value: _picPlcButtonActions[index],
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: l10n.picPlcButtonLabel(index + 1),
+                ),
+                items: PicPlcButtonAction.values
+                    .map(
+                      (PicPlcButtonAction action) =>
+                          DropdownMenuItem<PicPlcButtonAction>(
+                            value: action,
+                            child: Text(_picPlcButtonActionLabel(l10n, action)),
+                          ),
+                    )
+                    .toList(),
+                onChanged: _picPlcEnabled
+                    ? (PicPlcButtonAction? action) {
+                        if (action != null) {
+                          setBoth(() => _picPlcButtonActions[index] = action);
+                        }
+                      }
+                    : null,
+              ),
+            ),
+          const SizedBox(height: 6),
+          Text(
+            l10n.picPlcLedsTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 8),
+          for (int index = 0; index < _picPlcLedActions.length; index++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: DropdownButtonFormField<PicPlcLedAction>(
+                value: _picPlcLedActions[index],
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: l10n.picPlcLedLabel(index + 1),
+                ),
+                items: PicPlcLedAction.values
+                    .map(
+                      (PicPlcLedAction action) =>
+                          DropdownMenuItem<PicPlcLedAction>(
+                            value: action,
+                            child: Text(_picPlcLedActionLabel(l10n, action)),
+                          ),
+                    )
+                    .toList(),
+                onChanged: _picPlcEnabled
+                    ? (PicPlcLedAction? action) {
+                        if (action != null) {
+                          setBoth(() => _picPlcLedActions[index] = action);
+                        }
+                      }
+                    : null,
+              ),
+            ),
+        ];
+      },
+    );
+  }
+
+  String _picPlcButtonActionLabel(
+    AppLocalizations l10n,
+    PicPlcButtonAction action,
+  ) {
+    return switch (action) {
+      PicPlcButtonAction.none => l10n.picPlcActionNone,
+      PicPlcButtonAction.toggleProjection => l10n.picPlcActionToggleProjection,
+      PicPlcButtonAction.projectionSwitch => l10n.picPlcActionProjectionSwitch,
+      PicPlcButtonAction.previousVerse => l10n.picPlcActionPreviousVerse,
+      PicPlcButtonAction.nextVerse => l10n.picPlcActionNextVerse,
+      PicPlcButtonAction.previousSong => l10n.picPlcActionPreviousSong,
+      PicPlcButtonAction.nextSong => l10n.picPlcActionNextSong,
+      PicPlcButtonAction.toggleDirection => l10n.picPlcActionToggleDirection,
+      PicPlcButtonAction.directionSwitch => l10n.picPlcActionDirectionSwitch,
+      PicPlcButtonAction.step => l10n.picPlcActionStep,
+    };
+  }
+
+  String _picPlcLedActionLabel(AppLocalizations l10n, PicPlcLedAction action) {
+    return switch (action) {
+      PicPlcLedAction.none => l10n.picPlcActionNone,
+      PicPlcLedAction.projectionOn => l10n.picPlcLedProjectionOn,
+      PicPlcLedAction.forward => l10n.picPlcLedForward,
+      PicPlcLedAction.backward => l10n.picPlcLedBackward,
+    };
+  }
+
   Future<void> _openProjectionSettings() {
     return _openSectionSheet(
       title: context.l10n.projectionSettingsTitle,
@@ -3777,6 +3949,17 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     if (!applied || !mounted) {
       return;
     }
+    final bool picPlcApplied = await _applyPicPlcConfigurationSafely(
+      PicPlcConfiguration(
+        enabled: _picPlcEnabled,
+        port: _picPlcPort.text.trim(),
+        buttonActions: List<PicPlcButtonAction>.from(_picPlcButtonActions),
+        ledActions: List<PicPlcLedAction>.from(_picPlcLedActions),
+      ),
+    );
+    if (!picPlcApplied || !mounted) {
+      return;
+    }
     Navigator.of(context).pop();
   }
 
@@ -3786,6 +3969,26 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       return true;
     } catch (error, stackTrace) {
       debugPrint('Settings apply failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) {
+        return false;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.statusCommandSendError('$error'))),
+      );
+      return false;
+    }
+  }
+
+  Future<bool> _applyPicPlcConfigurationSafely(
+    PicPlcConfiguration configuration,
+  ) async {
+    try {
+      await widget.onApplyPicPlc(configuration);
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('PICPLC settings apply failed: $error');
       debugPrintStack(stackTrace: stackTrace);
       if (!mounted) {
         return false;

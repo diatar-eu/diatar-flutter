@@ -2103,4 +2103,87 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get speechLangHuHU => 'Hungarian (hu-HU)';
+
+  @override
+  String get picPlcSettingsTitle => 'PICPLC controller';
+
+  @override
+  String picPlcSettingsEnabledSummary(Object port) {
+    return 'Enabled, port: $port';
+  }
+
+  @override
+  String get picPlcSettingsDisabledSummary => 'Disabled';
+
+  @override
+  String get picPlcSettingsDescription =>
+      'Configure the PICPLC serial controller, button assignments, and LEDs.';
+
+  @override
+  String get picPlcEnabledLabel => 'Enable PICPLC controller';
+
+  @override
+  String get picPlcPortLabel => 'Serial port';
+
+  @override
+  String get picPlcPortHint => 'e.g. COM3 or /dev/ttyUSB0';
+
+  @override
+  String get picPlcPortRequired =>
+      'Enter the serial port before enabling the PICPLC controller.';
+
+  @override
+  String get picPlcButtonsTitle => 'Button assignments';
+
+  @override
+  String picPlcButtonLabel(int number) {
+    return 'Button $number';
+  }
+
+  @override
+  String get picPlcLedsTitle => 'LED assignments';
+
+  @override
+  String picPlcLedLabel(int number) {
+    return 'LED $number';
+  }
+
+  @override
+  String get picPlcActionNone => 'No function';
+
+  @override
+  String get picPlcActionToggleProjection => 'Toggle projection (button)';
+
+  @override
+  String get picPlcActionProjectionSwitch => 'Projection on/off switch';
+
+  @override
+  String get picPlcActionPreviousVerse => 'Previous slide';
+
+  @override
+  String get picPlcActionNextVerse => 'Next slide';
+
+  @override
+  String get picPlcActionPreviousSong => 'Previous song';
+
+  @override
+  String get picPlcActionNextSong => 'Next song';
+
+  @override
+  String get picPlcActionToggleDirection => 'Toggle direction (button)';
+
+  @override
+  String get picPlcActionDirectionSwitch => 'Forward/backward switch';
+
+  @override
+  String get picPlcActionStep => 'Step slide';
+
+  @override
+  String get picPlcLedProjectionOn => 'Projection on';
+
+  @override
+  String get picPlcLedForward => 'Forward direction';
+
+  @override
+  String get picPlcLedBackward => 'Backward direction';
 }

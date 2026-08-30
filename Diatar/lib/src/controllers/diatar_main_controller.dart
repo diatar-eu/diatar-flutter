@@ -234,6 +234,8 @@ class DiatarMainController extends ChangeNotifier {
   bool tcpHasError = false;
   DateTime? mqttConnectAttemptAt;
 
+  PicPlcConfiguration get picPlcConfiguration => _picPlcConfiguration;
+
   DiatarMainController() {
     _audioPlaybackCompletionSubscription = _audioService.onPlaybackComplete
         .listen((_) {

@@ -2110,4 +2110,87 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get speechLangHuHU => 'Magyar (hu-HU)';
+
+  @override
+  String get picPlcSettingsTitle => 'PICPLC vezérlő';
+
+  @override
+  String picPlcSettingsEnabledSummary(Object port) {
+    return 'Engedélyezve, port: $port';
+  }
+
+  @override
+  String get picPlcSettingsDisabledSummary => 'Kikapcsolva';
+
+  @override
+  String get picPlcSettingsDescription =>
+      'A PICPLC soros vezérlő, a gombkiosztások és a LED-ek beállítása.';
+
+  @override
+  String get picPlcEnabledLabel => 'PICPLC vezérlő engedélyezése';
+
+  @override
+  String get picPlcPortLabel => 'Soros port';
+
+  @override
+  String get picPlcPortHint => 'pl. COM3 vagy /dev/ttyUSB0';
+
+  @override
+  String get picPlcPortRequired =>
+      'A PICPLC vezérlő engedélyezéséhez add meg a soros portot.';
+
+  @override
+  String get picPlcButtonsTitle => 'Gombkiosztások';
+
+  @override
+  String picPlcButtonLabel(int number) {
+    return '$number. gomb';
+  }
+
+  @override
+  String get picPlcLedsTitle => 'LED-kiosztások';
+
+  @override
+  String picPlcLedLabel(int number) {
+    return '$number. LED';
+  }
+
+  @override
+  String get picPlcActionNone => 'Nincs funkciója';
+
+  @override
+  String get picPlcActionToggleProjection => 'Vetítés ki/be nyomógomb';
+
+  @override
+  String get picPlcActionProjectionSwitch => 'Vetítés ki/be kapcsoló';
+
+  @override
+  String get picPlcActionPreviousVerse => 'Előző dia';
+
+  @override
+  String get picPlcActionNextVerse => 'Következő dia';
+
+  @override
+  String get picPlcActionPreviousSong => 'Előző ének';
+
+  @override
+  String get picPlcActionNextSong => 'Következő ének';
+
+  @override
+  String get picPlcActionToggleDirection => 'Irányváltó nyomógomb';
+
+  @override
+  String get picPlcActionDirectionSwitch => 'Előre/hátra kapcsoló';
+
+  @override
+  String get picPlcActionStep => 'Dia léptető gomb';
+
+  @override
+  String get picPlcLedProjectionOn => 'Vetítés bekapcsolva';
+
+  @override
+  String get picPlcLedForward => 'Előre irány';
+
+  @override
+  String get picPlcLedBackward => 'Hátra irány';
 }
