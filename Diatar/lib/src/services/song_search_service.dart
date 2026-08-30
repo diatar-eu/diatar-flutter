@@ -65,7 +65,7 @@ List<SongSearchSong> buildSearchIndex(List<DtxBook> books) {
 
   for (int bIdx = 0; bIdx < books.length; bIdx++) {
     final DtxBook book = books[bIdx];
-    final String bookTitleLower = book.displayName.toLowerCase();
+    final String bookTitleLower = normalizeSearchText(book.displayName);
 
     for (int sIdx = 0; sIdx < book.songs.length; sIdx++) {
       final DtxSong song = book.songs[sIdx];
@@ -73,15 +73,15 @@ List<SongSearchSong> buildSearchIndex(List<DtxBook> books) {
         continue;
       }
 
-      final String songTitleLower = song.title.toLowerCase();
+      final String songTitleLower = normalizeSearchText(song.title);
       final String metaHaystack = '$bookTitleLower $songTitleLower';
 
       final List<SongSearchVerse> verses = <SongSearchVerse>[];
       for (int vIdx = 0; vIdx < song.verses.length; vIdx++) {
         final DtxVerse verse = song.verses[vIdx];
-        final String verseNameLower = verse.name.toLowerCase();
+        final String verseNameLower = normalizeSearchText(verse.name);
         final String linesJoinedLower =
-            removeEscapeSequences(verse.lines.join(' ')).toLowerCase();
+            normalizeSearchText(removeEscapeSequences(verse.lines.join(' ')));
         final String verseHaystack = '$verseNameLower $linesJoinedLower';
 
         verses.add(SongSearchVerse(
@@ -208,7 +208,7 @@ class SongSearchService {
     }
     return compute(
       _runSongSearch,
-      (index: index, query: query.trim().toLowerCase()),
+      (index: index, query: normalizeSearchText(query)),
     );
   }
 }

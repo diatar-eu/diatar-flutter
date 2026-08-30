@@ -777,13 +777,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoSize => 'Auto sizing';
 
   @override
-  String get scrollableProjection => 'Scrollable projection';
-
-  @override
-  String get scrollableProjectionHint =>
-      'If turned off, text is auto-sized to fit the projection area.';
-
-  @override
   String get showTitle => 'Show title';
 
   @override
@@ -1429,6 +1422,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsHotkeyActionToggleSheetMusic => 'Toggle sheet music';
+
+  @override
+  String get settingsHotkeyActionHomeBooks => 'Show books';
+
+  @override
+  String get settingsHotkeyActionHomeDialist => 'Show slide list';
+
+  @override
+  String get settingsHotkeyActionHomePresentation => 'Show presentation';
 
   @override
   String get settingsDesktopOrderSetHotkeysTitle => 'Order set hotkeys';

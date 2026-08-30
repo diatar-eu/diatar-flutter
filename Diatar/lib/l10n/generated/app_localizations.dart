@@ -1391,18 +1391,6 @@ abstract class AppLocalizations {
   /// **'Automatikus méretezés'**
   String get autoSize;
 
-  /// No description provided for @scrollableProjection.
-  ///
-  /// In hu, this message translates to:
-  /// **'Görgethető vetítés'**
-  String get scrollableProjection;
-
-  /// No description provided for @scrollableProjectionHint.
-  ///
-  /// In hu, this message translates to:
-  /// **'Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.'**
-  String get scrollableProjectionHint;
-
   /// No description provided for @showTitle.
   ///
   /// In hu, this message translates to:
@@ -2542,6 +2530,24 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Kotta ki/be'**
   String get settingsHotkeyActionToggleSheetMusic;
+
+  /// No description provided for @settingsHotkeyActionHomeBooks.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kötetek megjelenítése'**
+  String get settingsHotkeyActionHomeBooks;
+
+  /// No description provided for @settingsHotkeyActionHomeDialist.
+  ///
+  /// In hu, this message translates to:
+  /// **'Diasor megjelenítése'**
+  String get settingsHotkeyActionHomeDialist;
+
+  /// No description provided for @settingsHotkeyActionHomePresentation.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vetítés megjelenítése'**
+  String get settingsHotkeyActionHomePresentation;
 
   /// No description provided for @settingsDesktopOrderSetHotkeysTitle.
   ///

@@ -780,13 +780,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get autoSize => 'Automatikus méretezés';
 
   @override
-  String get scrollableProjection => 'Görgethető vetítés';
-
-  @override
-  String get scrollableProjectionHint =>
-      'Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.';
-
-  @override
   String get showTitle => 'Cím mutatása';
 
   @override
@@ -1434,6 +1427,15 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get settingsHotkeyActionToggleSheetMusic => 'Kotta ki/be';
+
+  @override
+  String get settingsHotkeyActionHomeBooks => 'Kötetek megjelenítése';
+
+  @override
+  String get settingsHotkeyActionHomeDialist => 'Diasor megjelenítése';
+
+  @override
+  String get settingsHotkeyActionHomePresentation => 'Vetítés megjelenítése';
 
   @override
   String get settingsDesktopOrderSetHotkeysTitle => 'Diasor gyorsbillentyűk';

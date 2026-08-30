@@ -11,3 +11,4 @@ export 'services/mqtt_service.dart';
 export 'services/dtx_parser.dart';
 export 'ui/kotta_assets.dart';
 export 'ui/projector_painter.dart';
+export 'utils/text_normalizer.dart';

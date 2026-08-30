@@ -551,8 +551,6 @@
   "backgroundOpacity": "Háttér átlátszóság",
   "blankOpacity": "Háttérkép átlátszóság",
   "autoSize": "Automatikus méretezés",
-  "scrollableProjection": "Görgethető vetítés",
-  "scrollableProjectionHint": "Ha ki van kapcsolva, a szöveg automatikusan a vetítési területhez igazodik.",
   "showTitle": "Cím mutatása",
   "projectionLock": "Vetítés zárolása",
   "projectionUnlock": "Vetítés feloldása",
@@ -999,6 +997,9 @@
   "settingsHotkeyActionToggleChords": "Akkordok ki/be",
   "settingsHotkeyActionToggleBackground": "Háttér ki/be",
   "settingsHotkeyActionToggleSheetMusic": "Kotta ki/be",
+  "settingsHotkeyActionHomeBooks": "Kötetek megjelenítése",
+  "settingsHotkeyActionHomeDialist": "Diasor megjelenítése",
+  "settingsHotkeyActionHomePresentation": "Vetítés megjelenítése",
   "settingsDesktopOrderSetHotkeysTitle": "Diasor gyorsbillentyűk",
   "settingsOrderSetLabel": "Diasor",
   "settingsHotkeysNoOrderSets":

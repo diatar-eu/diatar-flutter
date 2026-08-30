@@ -752,12 +752,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                       : songs.first.songIndex;
                 }
 
-                final List<_SongOption> filteredSongs = songSearchQuery.isEmpty
+                final String normQuery = normalizeSearchText(songSearchQuery);
+                final List<_SongOption> filteredSongs = normQuery.isEmpty
                     ? songs
                     : songs.where((_SongOption option) {
-                        return option.songTitle.toLowerCase().contains(
-                          songSearchQuery.toLowerCase(),
-                        );
+                        return normalizeSearchText(option.songTitle)
+                            .contains(normQuery);
                       }).toList();
 
                 return AlertDialog(

@@ -1445,10 +1445,6 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                 ? _togglePresentationControls
                 : null,
           );
-          final bool scrollableProjection = !controller.settings.projAutoSize;
-          if (scrollableProjection) {
-            return SingleChildScrollView(child: preview);
-          }
           return SizedBox(
             width: constraints.maxWidth,
             height: constraints.maxHeight,
@@ -3886,13 +3882,13 @@ void _showQuickSongSearch(
     builder: (BuildContext sheetContext) {
       return StatefulBuilder(
         builder: (BuildContext context, StateSetter setSheetState) {
-          final String query = searchController.text.trim().toLowerCase();
+          final String query = normalizeSearchText(searchController.text);
           final List<MapEntry<int, DtxSong>> filtered = songs
               .asMap()
               .entries
               .where((MapEntry<int, DtxSong> e) {
                 if (query.isEmpty) return true;
-                return e.value.title.toLowerCase().contains(query);
+                return normalizeSearchText(e.value.title).contains(query);
               })
               .toList();
 
