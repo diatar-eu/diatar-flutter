@@ -1688,6 +1688,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get liveSubtitlesError => 'Speech recognition error';
 
   @override
+  String get vadDownloadTitle => 'Download speech activity model';
+
+  @override
+  String get vadDownloadMessage =>
+      'A speech activity detection (VAD) model is required for offline speech recognition. Download now?';
+
+  @override
+  String get vadDownloading => 'Downloading speech activity model...';
+
+  @override
   String get liveSubtitlesMicDevice => 'Microphone';
 
   @override

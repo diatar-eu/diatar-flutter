@@ -4172,11 +4172,10 @@ class DiatarMainController extends ChangeNotifier {
     }
     final String modelPath = await _modelManager.getModelPath(modelType);
 
-    if (!modelInfo.isStreaming && !await _modelManager.isVadModelReady()) {
-      debugPrint('LiveSubtitles: VAD model not ready, downloading...');
-      await _modelManager.downloadVadModel();
+    String vadModelPath = '';
+    if (!modelInfo.isStreaming) {
+      vadModelPath = await _modelManager.getVadModelPath();
     }
-    final String vadModelPath = await _modelManager.getVadModelPath();
 
     debugPrint('LiveSubtitles: model=${modelInfo.displayName} path=$modelPath');
     _liveSubtitleError = null;

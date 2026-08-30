@@ -3005,6 +3005,24 @@ abstract class AppLocalizations {
   /// **'Beszédfelismerési hiba'**
   String get liveSubtitlesError;
 
+  /// No description provided for @vadDownloadTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beszédaktivitás-modell letöltése'**
+  String get vadDownloadTitle;
+
+  /// No description provided for @vadDownloadMessage.
+  ///
+  /// In hu, this message translates to:
+  /// **'Az offline beszédfelismeréshez beszédaktivitás-észlelő (VAD) modell szükséges. Letöltjük most?'**
+  String get vadDownloadMessage;
+
+  /// No description provided for @vadDownloading.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beszédaktivitás-modell letöltése folyamatban...'**
+  String get vadDownloading;
+
   /// No description provided for @liveSubtitlesMicDevice.
   ///
   /// In hu, this message translates to:

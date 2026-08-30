@@ -210,6 +210,10 @@ class ModelManager {
       }
 
       onProgress?.call(1.0);
+
+      if (!info.isStreaming && !await isVadModelReady()) {
+        await downloadVadModel();
+      }
     } finally {
       if (tempDir.existsSync()) {
         await tempDir.delete(recursive: true);

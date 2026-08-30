@@ -1747,6 +1747,32 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       if (!context.mounted) return;
       await _downloadModelWithProgress(context, modelManager, modelType);
     }
+    if (!modelInfo.isStreaming &&
+        modelReady &&
+        !await modelManager.isVadModelReady() &&
+        context.mounted) {
+      final l10n = context.l10n;
+      final bool? vadConfirmed = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext ctx) => AlertDialog(
+          title: Text(l10n.vadDownloadTitle),
+          content: Text(l10n.vadDownloadMessage),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Mégse'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Letöltés'),
+            ),
+          ],
+        ),
+      );
+      if (vadConfirmed != true || !context.mounted) return;
+      if (!context.mounted) return;
+      await _downloadVadModelWithProgress(context, modelManager);
+    }
     await controller.toggleLiveSubtitles();
     if (!context.mounted) return;
     final String? error = controller.liveSubtitleError;
@@ -1783,6 +1809,22 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       builder: (BuildContext ctx) => _ModelDownloadDialog(
         modelManager: modelManager,
         modelType: modelType,
+        l10n: l10n,
+      ),
+    );
+  }
+
+  Future<void> _downloadVadModelWithProgress(
+    BuildContext context,
+    ModelManager modelManager,
+  ) async {
+    final l10n = context.l10n;
+    if (!context.mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) => _VadDownloadDialog(
+        modelManager: modelManager,
         l10n: l10n,
       ),
     );
@@ -5426,6 +5468,78 @@ class _ModelDownloadDialogState extends State<_ModelDownloadDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.l10n.liveSubtitlesDownloading),
+      content: _error != null
+          ? Text('${widget.l10n.liveSubtitlesError}: $_error')
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                LinearProgressIndicator(
+                  value: _progress > 0 ? _progress : null,
+                ),
+                const SizedBox(height: 12),
+                Text('${(_progress * 100).toStringAsFixed(0)}%'),
+              ],
+            ),
+      actions: <Widget>[
+        if (!_downloading)
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+      ],
+    );
+  }
+}
+
+class _VadDownloadDialog extends StatefulWidget {
+  final ModelManager modelManager;
+  final AppLocalizations l10n;
+
+  const _VadDownloadDialog({
+    required this.modelManager,
+    required this.l10n,
+  });
+
+  @override
+  State<_VadDownloadDialog> createState() => _VadDownloadDialogState();
+}
+
+class _VadDownloadDialogState extends State<_VadDownloadDialog> {
+  double _progress = 0;
+  bool _downloading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _startDownload();
+  }
+
+  Future<void> _startDownload() async {
+    try {
+      await widget.modelManager.downloadVadModel(
+        onProgress: (double p) {
+          if (mounted) setState(() => _progress = p);
+        },
+      );
+      if (mounted) {
+        setState(() => _downloading = false);
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _downloading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.l10n.vadDownloading),
       content: _error != null
           ? Text('${widget.l10n.liveSubtitlesError}: $_error')
           : Column(

@@ -1694,6 +1694,17 @@ class AppLocalizationsHu extends AppLocalizations {
   String get liveSubtitlesError => 'Beszédfelismerési hiba';
 
   @override
+  String get vadDownloadTitle => 'Beszédaktivitás-modell letöltése';
+
+  @override
+  String get vadDownloadMessage =>
+      'Az offline beszédfelismeréshez beszédaktivitás-észlelő (VAD) modell szükséges. Letöltjük most?';
+
+  @override
+  String get vadDownloading =>
+      'Beszédaktivitás-modell letöltése folyamatban...';
+
+  @override
   String get liveSubtitlesMicDevice => 'Mikrofon';
 
   @override
