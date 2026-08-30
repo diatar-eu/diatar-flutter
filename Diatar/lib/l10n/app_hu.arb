@@ -999,6 +999,9 @@
   "settingsHotkeyActionToggleChords": "Akkordok ki/be",
   "settingsHotkeyActionToggleBackground": "Háttér ki/be",
   "settingsHotkeyActionToggleSheetMusic": "Kotta ki/be",
+  "settingsHotkeyActionHomeBooks": "Kötetek megjelenítése",
+  "settingsHotkeyActionHomeDialist": "Diasor megjelenítése",
+  "settingsHotkeyActionHomePresentation": "Vetítés megjelenítése",
   "settingsDesktopOrderSetHotkeysTitle": "Diasor gyorsbillentyűk",
   "settingsOrderSetLabel": "Diasor",
   "settingsHotkeysNoOrderSets":

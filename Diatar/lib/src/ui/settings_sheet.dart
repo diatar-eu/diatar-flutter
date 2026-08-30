@@ -2813,6 +2813,18 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 'toggleSheetMusic',
                 l10n.settingsHotkeyActionToggleSheetMusic,
               ),
+              MapEntry<String, String>(
+                'homeBooks',
+                l10n.settingsHotkeyActionHomeBooks,
+              ),
+              MapEntry<String, String>(
+                'homeDialist',
+                l10n.settingsHotkeyActionHomeDialist,
+              ),
+              MapEntry<String, String>(
+                'homePresentation',
+                l10n.settingsHotkeyActionHomePresentation,
+              ),
             ];
 
         return <Widget>[

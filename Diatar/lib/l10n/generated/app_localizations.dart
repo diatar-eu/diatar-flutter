@@ -2543,6 +2543,24 @@ abstract class AppLocalizations {
   /// **'Kotta ki/be'**
   String get settingsHotkeyActionToggleSheetMusic;
 
+  /// No description provided for @settingsHotkeyActionHomeBooks.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kötetek megjelenítése'**
+  String get settingsHotkeyActionHomeBooks;
+
+  /// No description provided for @settingsHotkeyActionHomeDialist.
+  ///
+  /// In hu, this message translates to:
+  /// **'Diasor megjelenítése'**
+  String get settingsHotkeyActionHomeDialist;
+
+  /// No description provided for @settingsHotkeyActionHomePresentation.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vetítés megjelenítése'**
+  String get settingsHotkeyActionHomePresentation;
+
   /// No description provided for @settingsDesktopOrderSetHotkeysTitle.
   ///
   /// In hu, this message translates to:

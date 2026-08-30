@@ -4107,7 +4107,35 @@ class DiatarMainController extends ChangeNotifier {
       case 'toggleSheetMusic':
         unawaited(toggleSheetMusicVisible());
         break;
+      case 'homeBooks':
+        unawaited(_switchHomeMode(1, 0, books: true));
+        break;
+      case 'homeDialist':
+        unawaited(_switchHomeMode(0, 0, dialist: true));
+        break;
+      case 'homePresentation':
+        unawaited(setHomeLayoutMode(1));
+        break;
     }
+  }
+
+  /// A betöltött nézetet (Kötetek/Diasor) és a layout módot (vezérlő/vetítés)
+  /// állítja be a képernyőmód-váltó hotkey-akciókhoz. A dialist/books
+  /// váltásnál a könyvtárat is átváltja, megegyezően a kezelőfelületen lévő
+  /// popup viselkedésével.
+  Future<void> _switchHomeMode(
+    int viewMode,
+    int layoutMode, {
+    bool books = false,
+    bool dialist = false,
+  }) async {
+    if (dialist) {
+      selectDiaVirtualBook();
+    } else if (books) {
+      selectBookControlMode();
+    }
+    await setHomeViewMode(viewMode);
+    await setHomeLayoutMode(layoutMode);
   }
 
   /// Elrejti a vezérlő (fő) ablakot, ha a vetítő ablakkal azonos

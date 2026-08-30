@@ -42,4 +42,34 @@ void main() {
       );
     }
   });
+
+  test('recognizes screen-mode action hotkeys when configured', () {
+    const Map<String, String> homeModeHotkeys = <String, String>{
+      'homeBooks': 'F1',
+      'homeDialist': 'F2',
+      'homePresentation': 'F3',
+    };
+
+    final Map<LogicalKeyboardKey, String> expectedActions =
+        <LogicalKeyboardKey, String>{
+          LogicalKeyboardKey.f1: 'homeBooks',
+          LogicalKeyboardKey.f2: 'homeDialist',
+          LogicalKeyboardKey.f3: 'homePresentation',
+        };
+
+    for (final MapEntry<LogicalKeyboardKey, String> entry
+        in expectedActions.entries) {
+      expect(
+        desktopHotkeyActionForEvent(
+          KeyDownEvent(
+            physicalKey: PhysicalKeyboardKey.keyA,
+            logicalKey: entry.key,
+            timeStamp: Duration.zero,
+          ),
+          homeModeHotkeys,
+        ),
+        entry.value,
+      );
+    }
+  });
 }

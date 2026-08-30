@@ -1431,6 +1431,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHotkeyActionToggleSheetMusic => 'Toggle sheet music';
 
   @override
+  String get settingsHotkeyActionHomeBooks => 'Show books';
+
+  @override
+  String get settingsHotkeyActionHomeDialist => 'Show slide list';
+
+  @override
+  String get settingsHotkeyActionHomePresentation => 'Show presentation';
+
+  @override
   String get settingsDesktopOrderSetHotkeysTitle => 'Order set hotkeys';
 
   @override

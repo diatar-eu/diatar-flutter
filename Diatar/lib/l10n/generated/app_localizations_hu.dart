@@ -1436,6 +1436,15 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsHotkeyActionToggleSheetMusic => 'Kotta ki/be';
 
   @override
+  String get settingsHotkeyActionHomeBooks => 'Kötetek megjelenítése';
+
+  @override
+  String get settingsHotkeyActionHomeDialist => 'Diasor megjelenítése';
+
+  @override
+  String get settingsHotkeyActionHomePresentation => 'Vetítés megjelenítése';
+
+  @override
   String get settingsDesktopOrderSetHotkeysTitle => 'Diasor gyorsbillentyűk';
 
   @override
