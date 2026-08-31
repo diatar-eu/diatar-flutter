@@ -4538,6 +4538,7 @@ class _VersePreview extends StatelessWidget {
           controller: controller,
           onTap: onPreviewTap,
           onLongPress: onPreviewLongPress,
+          enableZoom: false,
           child: constraints.maxHeight.isFinite
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -4696,6 +4697,7 @@ class _CustomTextPreview extends StatelessWidget {
           controller: controller,
           onTap: onPreviewTap,
           onLongPress: onPreviewLongPress,
+          enableZoom: false,
           child: constraints.maxHeight.isFinite
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -5022,12 +5024,14 @@ class _SwipePagingPreview extends StatefulWidget {
   const _SwipePagingPreview({
     required this.controller,
     required this.child,
+    this.enableZoom = true,
     this.onTap,
     this.onLongPress,
   });
 
   final DiatarMainController controller;
   final Widget child;
+  final bool enableZoom;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -5352,7 +5356,9 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
               onTap: _isZoomed
                   ? null
                   : (widget.onTap ?? widget.controller.toggleShowing),
-              onDoubleTap: _isZoomed ? _resetZoom : null,
+              onDoubleTap: (widget.enableZoom && _isZoomed)
+                  ? _resetZoom
+                  : null,
               onLongPress: _isZoomed ? null : widget.onLongPress,
               child: ClipRect(
                 child: Transform.translate(
@@ -5362,7 +5368,7 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
                     minScale: 1.0,
                     maxScale: 4.0,
                     panEnabled: _isZoomed,
-                    scaleEnabled: true,
+                    scaleEnabled: widget.enableZoom,
                     boundaryMargin: const EdgeInsets.all(120),
                     child: widget.child,
                   ),
