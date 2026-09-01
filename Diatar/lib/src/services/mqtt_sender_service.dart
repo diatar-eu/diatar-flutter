@@ -5,7 +5,8 @@ import 'package:mqtt_client/mqtt_client.dart';
 import 'mqtt_client_factory.dart';
 import 'package:typed_data/typed_buffers.dart';
 
-typedef SenderErrorCallback = void Function(String code, Map<String, String> params);
+typedef SenderErrorCallback =
+    void Function(String code, Map<String, String> params);
 
 class MqttSenderService {
   MqttSenderService({required this.onStatusChanged, required this.onError});
@@ -128,14 +129,13 @@ class MqttSenderService {
     }
 
     final Set<String> ackedTopics = <String>{};
-    final StreamSubscription<MqttPublishMessage>? sub = client.published?.listen(
-      (MqttPublishMessage msg) {
-        final String? topic = msg.variableHeader?.topicName;
-        if (topic != null) {
-          ackedTopics.add(topic);
-        }
-      },
-    );
+    final StreamSubscription<MqttPublishMessage>? sub = client.published
+        ?.listen((MqttPublishMessage msg) {
+          final String? topic = msg.variableHeader?.topicName;
+          if (topic != null) {
+            ackedTopics.add(topic);
+          }
+        });
 
     try {
       // Mindhárom törlő üzenetet szinkronban elindítjuk, hogy akár azonnali
@@ -162,12 +162,23 @@ class MqttSenderService {
     _cachedBlank = null;
   }
 
-  Future<void> sendState(ProjectionGlobals globals, {required bool showing, required int wordToHighlight}) async {
-    _cachedState = encodeStateRecord(globals, projecting: showing, wordToHighlight: wordToHighlight);
+  Future<void> sendState(
+    ProjectionGlobals globals, {
+    required bool showing,
+    required int wordToHighlight,
+  }) async {
+    _cachedState = encodeStateRecord(
+      globals,
+      projecting: showing,
+      wordToHighlight: wordToHighlight,
+    );
     await _publish(_topicState, _cachedState);
   }
 
-  Future<void> sendText({required String title, required List<String> lines}) async {
+  Future<void> sendText({
+    required String title,
+    required List<String> lines,
+  }) async {
     final Uint8List body = encodeTextRecord(title: title, lines: lines);
     _cachedText = Uint8List.fromList(<int>['T'.codeUnitAt(0), ...body]);
     await _publish(_topicDia, _cachedText);
@@ -180,7 +191,10 @@ class MqttSenderService {
 
   Future<void> sendPic(Uint8List bytes, {String ext = ''}) async {
     final Uint8List body = encodeImageRecord(bytes: bytes, ext: ext);
-    await _publish(_topicDia, Uint8List.fromList(<int>['P'.codeUnitAt(0), ...body]));
+    await _publish(
+      _topicDia,
+      Uint8List.fromList(<int>['P'.codeUnitAt(0), ...body]),
+    );
   }
 
   Future<void> _replayCache() async {
@@ -195,8 +209,24 @@ class MqttSenderService {
       return;
     }
     final Uint8Buffer buffer = Uint8Buffer()..addAll(payload);
-    final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder()..addBuffer(buffer);
-    client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!, retain: true);
+    final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder()
+      ..addBuffer(buffer);
+    try {
+      client.publishMessage(
+        topic,
+        MqttQos.atLeastOnce,
+        builder.payload!,
+        retain: true,
+      );
+    } catch (e) {
+      // Átmeneti publikálási hiba (pl. reconnect közben) nem eldobható: a
+      // payload már a cache-ben van, auto-reconnect után újraküldjük. A
+      // hivatkozás nem tartható, de a kapcsolat-jelzőt jelezzük és az
+      // hibát jelentjük a hívó réteg felé, anélkül hogy a hívást
+      // összeomlasztanánk.
+      onError('senderMqttError', <String, String>{'error': '$e'});
+      onStatusChanged(false);
+    }
   }
 
   Future<void> _publishEmpty(String topic) async {
@@ -206,7 +236,12 @@ class MqttSenderService {
     }
     try {
       final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder();
-      client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!, retain: true);
+      client.publishMessage(
+        topic,
+        MqttQos.atLeastOnce,
+        builder.payload!,
+        retain: true,
+      );
     } catch (_) {
       // A kapcsolat nem connected lehet (pl. kilépés közbeni szakadás);
       // az üres törlő üzenetet ilyenkor nem tudjuk kiküldeni, de nem

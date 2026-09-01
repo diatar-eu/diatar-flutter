@@ -1682,10 +1682,14 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         if (saved == null || !mounted) {
           return;
         }
-        await controller.markCustomOrderDiaExportSaved(
-          saved.uri,
-          explicitName: saved.renameFromName,
-        );
+        try {
+          await controller.markCustomOrderDiaExportSaved(
+            saved.uri,
+            explicitName: saved.renameFromName,
+          );
+        } catch (_) {
+          // A fájl mentése megtörtént; a diasor-név frissítése csak mellékhatás.
+        }
         if (!mounted) {
           return;
         }
@@ -1845,12 +1849,18 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       final String savedName = displayName is String && displayName.isNotEmpty
           ? displayName
           : fileName;
-      await controller.applySettings(
-        controller.settings.copyWith(
-          diaExportUri: uri,
-          diaExportFileName: savedName,
-        ),
-      );
+      try {
+        await controller.applySettings(
+          controller.settings.copyWith(
+            diaExportUri: uri,
+            diaExportFileName: savedName,
+          ),
+        );
+      } catch (_) {
+        // A lokális DIA-mentés már sikeres volt; a beállításokban a célhely
+        // frissítése csak mellékhatás (MQTT/desktop-bridge szinkron), amelynek
+        // átmeneti hibája nem teheti "sikertelenné" a fájlmentést.
+      }
       return (uri: uri, displayName: savedName, renameFromName: savedName);
     } finally {
       try {
