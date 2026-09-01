@@ -566,9 +566,12 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     );
     final int storedLayout = controller.settings.homeLayoutMode;
     final bool storedTopBarHidden = controller.settings.homeTopBarHidden;
+    final double? storedControlsRatio =
+        controller.settings.landscapeControlsRatio;
     if (stored == _homeControlMode &&
         storedLayout == _homeLayoutMode &&
-        storedTopBarHidden == _homeTopBarHidden) {
+        storedTopBarHidden == _homeTopBarHidden &&
+        storedControlsRatio == _landscapeControlsRatio) {
       return;
     }
 
@@ -580,6 +583,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         _homeControlMode = stored;
         _homeLayoutMode = storedLayout;
         _homeTopBarHidden = storedTopBarHidden;
+        _landscapeControlsRatio = storedControlsRatio;
         if (storedLayout == 1) {
           _presentationControlsVisible =
               controller.settings.presentationControlsVisible;
@@ -795,6 +799,9 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             clampedWidth / math.max(constraints.maxWidth, 1.0);
       }
     });
+    if (_landscapeControlsRatio != null) {
+      unawaited(controller.setLandscapeControlsRatio(_landscapeControlsRatio));
+    }
   }
 
   void _cancelLandscapeSplitterDrag() {
@@ -887,9 +894,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                   child: Icon(
                     Icons.tune,
                     size: 18,
-                    color: theme.colorScheme.onSurface.withValues(
-                      alpha: 0.85,
-                    ),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
                   ),
                 ),
               ),
@@ -1436,7 +1441,9 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
               checked: controller.settings.projShowBackgroundImage,
               child: Text(buttonContext.l10n.showBackgroundImage),
             ),
-            if (controller.desktopProjectorEnabled) ...<PopupMenuEntry<_ProjectionDisplayToggle>>[
+            if (controller.desktopProjectorEnabled) ...<
+              PopupMenuEntry<_ProjectionDisplayToggle>
+            >[
               const PopupMenuDivider(),
               PopupMenuItem<_ProjectionDisplayToggle>(
                 value: _ProjectionDisplayToggle.hideControlWindow,
@@ -1875,10 +1882,8 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext ctx) => _VadDownloadDialog(
-        modelManager: modelManager,
-        l10n: l10n,
-      ),
+      builder: (BuildContext ctx) =>
+          _VadDownloadDialog(modelManager: modelManager, l10n: l10n),
     );
   }
 }
@@ -4482,7 +4487,7 @@ class _DialistPanelState extends State<_DialistPanel> {
               ),
             ),
             const SizedBox(height: 13),
-      if (!kIsWeb)
+            if (!kIsWeb)
               Tooltip(
                 message: _statusTooltip(
                   context,
@@ -5412,9 +5417,7 @@ class _SwipePagingPreviewState extends State<_SwipePagingPreview>
               onTap: _isZoomed
                   ? null
                   : (widget.onTap ?? widget.controller.toggleShowing),
-              onDoubleTap: (widget.enableZoom && _isZoomed)
-                  ? _resetZoom
-                  : null,
+              onDoubleTap: (widget.enableZoom && _isZoomed) ? _resetZoom : null,
               onLongPress: _isZoomed ? null : widget.onLongPress,
               child: ClipRect(
                 child: Transform.translate(
@@ -5553,10 +5556,7 @@ class _VadDownloadDialog extends StatefulWidget {
   final ModelManager modelManager;
   final AppLocalizations l10n;
 
-  const _VadDownloadDialog({
-    required this.modelManager,
-    required this.l10n,
-  });
+  const _VadDownloadDialog({required this.modelManager, required this.l10n});
 
   @override
   State<_VadDownloadDialog> createState() => _VadDownloadDialogState();

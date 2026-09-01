@@ -56,4 +56,24 @@ void main() {
 
     expect(settings.desktopActionHotkeys, isEmpty);
   });
+
+  test('defaults landscape controls ratio to null', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+
+    final settings = await SettingsStore().load();
+
+    expect(settings.landscapeControlsRatio, isNull);
+  });
+
+  test('persists landscape controls ratio round-trip', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = SettingsStore();
+    final loaded = await store.load();
+    final updated = loaded.copyWith(landscapeControlsRatio: 0.42);
+    await store.save(updated);
+
+    final reloaded = await store.load();
+
+    expect(reloaded.landscapeControlsRatio, 0.42);
+  });
 }

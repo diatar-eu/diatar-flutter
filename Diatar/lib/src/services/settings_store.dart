@@ -45,6 +45,7 @@ class SettingsStore {
   static const String _kPresentationControlsVisible =
       'PresentationControlsVisible';
   static const String _kHomeTopBarHidden = 'HomeTopBarHidden';
+  static const String _kLandscapeControlsRatio = 'LandscapeControlsRatio';
   static const String _kAppThemeMode = 'AppThemeMode';
   static const String _kAppLanguage = 'AppLanguage';
   static const String _kProjectionLocked = 'ProjectionLocked';
@@ -230,6 +231,7 @@ class SettingsStore {
       presentationControlsVisible:
           prefs.getBool(_kPresentationControlsVisible) ?? false,
       homeTopBarHidden: prefs.getBool(_kHomeTopBarHidden) ?? false,
+      landscapeControlsRatio: prefs.getDouble(_kLandscapeControlsRatio),
       appThemeMode: prefs.getInt(_kAppThemeMode) ?? 0,
       appLanguage: prefs.getString(_kAppLanguage) ?? '',
       projectionLocked: prefs.getBool(_kProjectionLocked) ?? false,
@@ -318,6 +320,12 @@ class SettingsStore {
       settings.presentationControlsVisible,
     );
     await prefs.setBool(_kHomeTopBarHidden, settings.homeTopBarHidden);
+    if (settings.landscapeControlsRatio != null) {
+      await prefs.setDouble(
+        _kLandscapeControlsRatio,
+        settings.landscapeControlsRatio!,
+      );
+    }
     await prefs.setInt(_kAppThemeMode, settings.appThemeMode);
     await prefs.setString(_kAppLanguage, settings.appLanguage);
     await prefs.setBool(_kProjectionLocked, settings.projectionLocked);
