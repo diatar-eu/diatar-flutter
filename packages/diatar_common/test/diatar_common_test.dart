@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:flutter/material.dart';
@@ -560,7 +561,7 @@ void main() {
   });
 
   test(
-    'preferred break is ignored when it would leave the next line too wide',
+    'rows never overflow: each word moves to its own line when it cannot fit',
     () {
       final ProjectorPainter painter = ProjectorPainter(
         frame: null,
@@ -575,8 +576,9 @@ void main() {
       );
 
       expect(rows.length, greaterThanOrEqualTo(2));
-      expect(rows.first, 'minekünk véghetetlen');
-      expect(rows[1], 'kegyességében');
+      expect(rows.first, 'minekünk');
+      expect(rows[1], 'véghetetlen');
+      expect(rows.last, 'kegyességében');
     },
   );
 
@@ -647,4 +649,82 @@ void main() {
       const Color(0xFF040E09),
     );
   });
+
+  test(
+    'plain multiline text rows never extend past the container width',
+    () {
+      final ProjectorPainter painter = ProjectorPainter(
+        frame: null,
+        globals: const ProjectionGlobals(useKotta: false, hCenter: true),
+        settings: const AppSettings(receiverUseKotta: false),
+      );
+      const List<String> texts = <String>[
+        'paradicsomkertben',
+        'Megszentségteleníthetetlenségeskedéseitekert',
+        'torvenyeinek egy masik szo ide',
+        'SZVU 1/2 paradicsomkertben',
+      ];
+      for (final String text in texts) {
+        for (final double width in <double>[60, 100, 180, 220, 300]) {
+          final List<String> rows = painter.debugFullPipelineRowsForRecord(
+            size: ui.Size(width, 800),
+            record: RecTextRecord(
+              scholaLine: '',
+              title: '',
+              lines: <String>[text],
+            ),
+          );
+          for (final String row in rows) {
+            final RegExpMatch? m = RegExp(r'T<([0-9.]+)/').firstMatch(row);
+            if (m == null) {
+              continue;
+            }
+            final double rowWidth = double.parse(m.group(1)!);
+            expect(
+              rowWidth,
+              lessThanOrEqualTo(width + 1),
+              reason: 'text row overflow: $row',
+            );
+          }
+        }
+      }
+    },
+  );
+
+  test(
+    'overlong kotta words are shrunk so no kotta row exceeds the width',
+    () {
+      final ProjectorPainter painter = ProjectorPainter(
+        frame: null,
+        globals: const ProjectionGlobals(useKotta: true, hCenter: false),
+        settings: const AppSettings(receiverUseKotta: true),
+      );
+      for (final double width in <double>[300, 400, 500]) {
+        final List<String> rows = painter.debugFullPipelineRowsForRecord(
+          size: ui.Size(width, 640),
+          record: RecTextRecord(
+            scholaLine: '',
+            title: '',
+            lines: <String>[
+              r'\Kr34a;paradicsomkertben hosszúvégződéssel szó',
+            ],
+          ),
+        );
+        expect(rows, isNotEmpty, reason: 'expected at least one kotta row');
+        for (final String row in rows) {
+          final RegExpMatch? m = RegExp(r'K<([0-9.]+)>').firstMatch(row);
+          if (m == null) {
+            continue;
+          }
+          final double rowWidth = double.parse(m.group(1)!);
+          expect(
+            rowWidth,
+            lessThanOrEqualTo(width + 1),
+            reason: 'kotta row overflow: $row (container $width)',
+          );
+        }
+        expect(rows.first.contains('paradicsomkertben'), isTrue);
+      }
+    },
+  );
 }

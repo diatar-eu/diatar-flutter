@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../models/app_settings.dart';
 import '../models/projection_frame.dart';
 import '../models/projection_globals.dart';
+import '../models/records.dart';
 
 import 'kotta_assets.dart';
 
@@ -232,6 +233,49 @@ class ProjectorPainter extends CustomPainter {
     double lineGap = 4.0,
   }) {
     return _slurYOffset(down: down, lineGap: lineGap);
+  }
+
+  @visibleForTesting
+  List<String> debugFullPipelineRowsForRecord({
+    required Size size,
+    required RecTextRecord record,
+  }) {
+    final TextFrame frame = TextFrame(record: record);
+    final _AutoSizeResult auto = _resolveAutoSize(size, frame);
+    final _PreparedTextLayout prepared = _prepareTextLayout(
+      size,
+      frame,
+      auto.fontSize,
+      preferPreferredBreaks: auto.preferPreferredBreaks,
+    );
+    final List<String> out = <String>[];
+    for (int li = 0; li < prepared.lines.length; li++) {
+      final _RenderLine line = prepared.lines[li];
+      final bool hasKotta = prepared.hasKottaByLine[li];
+      if (hasKotta) {
+        for (final _KottaRowLayout r in prepared.kottaRowsByLine[li]) {
+          out.add(
+            'K<${r.width.toStringAsFixed(1)}> '
+                '${r.words
+                      .map((w) =>
+                          line.words[w.wordIndex].text +
+                          (line.words[w.wordIndex].spaceAfter ? ' ' : ''))
+                      .join()}',
+          );
+        }
+      } else {
+        for (final _TextRowLayout r in prepared.textRowsByLine[li]) {
+          out.add(
+            'T<${r.width.toStringAsFixed(1)}/W${size.width.toStringAsFixed(1)}/F${auto.fontSize.toStringAsFixed(1)}> '
+                '${r.wordIndices
+                      .map((int wi) => line.words[wi].text +
+                          (line.words[wi].spaceAfter ? ' ' : ''))
+                      .join()}${r.endHyphen ? '-' : ''}',
+          );
+        }
+      }
+    }
+    return out;
   }
 
   List<String> debugTextWrappedRowsForLine(
@@ -1720,6 +1764,74 @@ class ProjectorPainter extends CustomPainter {
     return scaledWidth <= maxWidth + 0.5 ? scaled : null;
   }
 
+  // Shrinks the lyric text of a kotta-bearing word so that its slot width
+  // (the larger of the text and the melody glyph width) fits the row limit.
+  // Unlike _shrinkWordToFitWidth, words carrying kotta are allowed, because the
+  // melody itself cannot be split across rows safely.
+  _WordToken? _shrinkKottaWordToFit(
+    _WordToken word,
+    double fontSize,
+    double kottaWidth,
+    double currentWidth,
+    double maxWidth,
+    TextPainter measure,
+  ) {
+    final double textScale = (word.fontScale * (maxWidth / currentWidth))
+        .clamp(0.55, 1.0);
+    _WordToken candidate = _copyWithFontScale(word, textScale);
+    double scaledTextWidth =
+        _measureWordDisplayWidth(candidate, fontSize, measure);
+
+    // The melody glyphs do not scale with fontScale, so if the melody alone is
+    // wider than the limit we cannot make it fit by shrinking.
+    if (textScale * currentWidth <= maxWidth + 0.5 ||
+        scaledTextWidth <= maxWidth + 0.5) {
+      return candidate;
+    }
+
+    // Binary-search a scale that fits the text-driven slot width.
+    double lo = 0.55;
+    double hi = word.fontScale;
+    _WordToken? best;
+    while (hi - lo > 0.005) {
+      final double mid = (lo + hi) / 2;
+      candidate = _copyWithFontScale(word, mid);
+      scaledTextWidth = _measureWordDisplayWidth(candidate, fontSize, measure);
+      if (scaledTextWidth <= maxWidth + 0.5) {
+        best = candidate;
+        hi = mid;
+      } else {
+        lo = mid;
+      }
+    }
+    if (best != null) {
+      return best;
+    }
+    if (textScale < word.fontScale - 0.001) {
+      return _copyWithFontScale(word, textScale);
+    }
+    return null;
+  }
+
+  _WordToken _copyWithFontScale(_WordToken word, double fontScale) {
+    return _WordToken(
+      text: word.text,
+      bold: word.bold,
+      italic: word.italic,
+      underline: word.underline,
+      tieUnderline: word.tieUnderline,
+      strike: word.strike,
+      color: word.color,
+      chord: word.chord,
+      kotta: word.kotta,
+      spaceAfter: word.spaceAfter,
+      breakAfter: word.breakAfter,
+      preferredBreakAfter: word.preferredBreakAfter,
+      softHyphenAfter: word.softHyphenAfter,
+      fontScale: fontScale,
+    );
+  }
+
   List<_WordToken> _splitWordToFitWidth(
     _WordToken word,
     double fontSize,
@@ -1767,6 +1879,28 @@ class ProjectorPainter extends CustomPainter {
         bestLen = 1;
       }
 
+      double chunkScale = word.fontScale;
+      if (bestLen == 1) {
+        // A single grapheme already exceeds the chunk limit. Reduce the font
+        // scale just enough that this lone grapheme no longer overflows.
+        measure.text = TextSpan(
+          text: graphemes[start].toString(),
+          style: TextStyle(
+            fontSize: _effectiveWordFontSize(word, fontSize),
+            fontWeight: (globals.boldText || word.bold)
+                ? FontWeight.bold
+                : FontWeight.normal,
+            fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
+          ),
+        );
+        measure.layout();
+        final double singleWidth = measure.width;
+        if (singleWidth > maxChunkWidth + 0.5) {
+          chunkScale =
+              (chunkScale * (maxChunkWidth / singleWidth)).clamp(0.5, 1.0);
+        }
+      }
+
       final bool isLast = start + bestLen >= graphemes.length;
       parts.add(
         _WordToken(
@@ -1784,7 +1918,7 @@ class ProjectorPainter extends CustomPainter {
           breakAfter: isLast ? word.breakAfter : true,
           preferredBreakAfter: isLast ? word.preferredBreakAfter : false,
           softHyphenAfter: isLast ? word.softHyphenAfter : false,
-          fontScale: word.fontScale,
+          fontScale: chunkScale,
         ),
       );
 
@@ -2259,6 +2393,43 @@ class ProjectorPainter extends CustomPainter {
         currentWidth = currentPrefix.width;
       }
 
+      // A single kotta word can never be split across rows (its melody is
+      // bound to it). If it overflows the row by itself, shrink its lyric font
+      // scale so the whole slot fits, per user preference.
+      if (currentWords.isEmpty &&
+          pendingWord.length == 1 &&
+          pendingWordWidth > currentRowLimit) {
+        final _KottaWordLayout slot = pendingWord.first;
+        final int wi = slot.wordIndex;
+        final _WordToken w = line.words[wi];
+        final String kotta = (w.kotta ?? '').trim();
+        final _WordToken? shrunk = _shrinkKottaWordToFit(
+          w,
+          fontSize,
+          kotta.isEmpty ? 0 : _kottaRawWidth(kotta, lineGap, state),
+          slot.slotWidth,
+          currentRowLimit,
+          measure,
+        );
+        if (shrunk != null) {
+          line.words[wi] = shrunk;
+          final double newTextWidth = _measureWordDisplayWidth(
+            shrunk,
+            fontSize,
+            measure,
+          );
+          final double newKottaWidth = kotta.isEmpty
+              ? 0
+              : _kottaRawWidth(kotta, lineGap, state);
+          final double newSlotWidth = math.max(newTextWidth, newKottaWidth);
+          pendingWord[0] = _KottaWordLayout(
+            wordIndex: wi,
+            slotWidth: newSlotWidth,
+          );
+          pendingWordWidth = newSlotWidth;
+        }
+      }
+
       currentWords.addAll(pendingWord);
       currentWidth += pendingWordWidth;
       pendingWord.clear();
@@ -2583,6 +2754,15 @@ class ProjectorPainter extends CustomPainter {
           }
         }
 
+        // No preferred or regular break can place the final pending word on
+        // the current row without overflowing. Instead of packing every word
+        // onto one overflowing row, push the final word onto the next line so
+        // the current row stays within its limit.
+        if (breakWordIndex == combinedWordIndices.last &&
+            combinedWordIndices.length >= 2) {
+          breakWordIndex = combinedWordIndices[combinedWordIndices.length - 2];
+        }
+
         final int breakPos = combinedWordIndices.indexOf(breakWordIndex);
         final List<int> rowWordIndices = List<int>.from(
           combinedWordIndices.take(breakPos + 1),
@@ -2590,6 +2770,7 @@ class ProjectorPainter extends CustomPainter {
         final List<int> carryWordIndices = List<int>.from(
           combinedWordIndices.skip(breakPos + 1),
         );
+
         double rowBaseWidth = 0;
         for (final int idx in rowWordIndices) {
           rowBaseWidth += slotWidths[idx];
