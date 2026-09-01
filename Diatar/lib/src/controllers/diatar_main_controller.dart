@@ -1320,6 +1320,15 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setHomeTopBarHidden(bool hidden) async {
+    if (settings.homeTopBarHidden == hidden) {
+      return;
+    }
+    settings = settings.copyWith(homeTopBarHidden: hidden);
+    await _settingsStore.save(settings);
+    notifyListeners();
+  }
+
   Future<void> saveSzentirasApiKey(String key) async {
     final String trimmed = key.trim();
     if (settings.szentirasApiKey == trimmed) return;

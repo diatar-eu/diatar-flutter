@@ -48,6 +48,7 @@ class AppSettings {
     this.homeShowHighlightControls = false,
     this.homeLayoutMode = 0,
     this.presentationControlsVisible = false,
+    this.homeTopBarHidden = false,
     this.appThemeMode = 0,
     this.appLanguage = '',
     this.projectionLocked = false,
@@ -128,6 +129,7 @@ class AppSettings {
   final bool homeShowHighlightControls;
   final int homeLayoutMode;
   final bool presentationControlsVisible;
+  final bool homeTopBarHidden;
   final int appThemeMode;
   final String appLanguage;
   final bool projectionLocked;
@@ -215,6 +217,7 @@ class AppSettings {
     bool? homeShowHighlightControls,
     int? homeLayoutMode,
     bool? presentationControlsVisible,
+    bool? homeTopBarHidden,
     int? appThemeMode,
     String? appLanguage,
     bool? projectionLocked,
@@ -296,6 +299,7 @@ class AppSettings {
       homeLayoutMode: homeLayoutMode ?? this.homeLayoutMode,
       presentationControlsVisible:
           presentationControlsVisible ?? this.presentationControlsVisible,
+      homeTopBarHidden: homeTopBarHidden ?? this.homeTopBarHidden,
       appThemeMode: appThemeMode ?? this.appThemeMode,
       appLanguage: appLanguage ?? this.appLanguage,
       projectionLocked: projectionLocked ?? this.projectionLocked,

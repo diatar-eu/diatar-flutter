@@ -44,6 +44,7 @@ class SettingsStore {
   static const String _kHomeLayoutMode = 'HomeLayoutMode';
   static const String _kPresentationControlsVisible =
       'PresentationControlsVisible';
+  static const String _kHomeTopBarHidden = 'HomeTopBarHidden';
   static const String _kAppThemeMode = 'AppThemeMode';
   static const String _kAppLanguage = 'AppLanguage';
   static const String _kProjectionLocked = 'ProjectionLocked';
@@ -228,6 +229,7 @@ class SettingsStore {
       homeLayoutMode: prefs.getInt(_kHomeLayoutMode) ?? 0,
       presentationControlsVisible:
           prefs.getBool(_kPresentationControlsVisible) ?? false,
+      homeTopBarHidden: prefs.getBool(_kHomeTopBarHidden) ?? false,
       appThemeMode: prefs.getInt(_kAppThemeMode) ?? 0,
       appLanguage: prefs.getString(_kAppLanguage) ?? '',
       projectionLocked: prefs.getBool(_kProjectionLocked) ?? false,
@@ -315,6 +317,7 @@ class SettingsStore {
       _kPresentationControlsVisible,
       settings.presentationControlsVisible,
     );
+    await prefs.setBool(_kHomeTopBarHidden, settings.homeTopBarHidden);
     await prefs.setInt(_kAppThemeMode, settings.appThemeMode);
     await prefs.setString(_kAppLanguage, settings.appLanguage);
     await prefs.setBool(_kProjectionLocked, settings.projectionLocked);

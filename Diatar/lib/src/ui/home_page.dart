@@ -548,6 +548,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
   bool _isLandscapeSplitterDragging = false;
   double? _landscapeDragControlsWidth;
   bool _presentationControlsVisible = false;
+  bool _homeTopBarHidden = false;
 
   DiatarMainController get controller => widget.controller;
 
@@ -564,7 +565,10 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       controller.settings.homeViewMode,
     );
     final int storedLayout = controller.settings.homeLayoutMode;
-    if (stored == _homeControlMode && storedLayout == _homeLayoutMode) {
+    final bool storedTopBarHidden = controller.settings.homeTopBarHidden;
+    if (stored == _homeControlMode &&
+        storedLayout == _homeLayoutMode &&
+        storedTopBarHidden == _homeTopBarHidden) {
       return;
     }
 
@@ -575,6 +579,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       setState(() {
         _homeControlMode = stored;
         _homeLayoutMode = storedLayout;
+        _homeTopBarHidden = storedTopBarHidden;
         if (storedLayout == 1) {
           _presentationControlsVisible =
               controller.settings.presentationControlsVisible;
@@ -633,6 +638,17 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       _presentationControlsVisible = newValue;
     });
     unawaited(controller.setPresentationControlsVisible(newValue));
+  }
+
+  void _toggleHomeTopBar() {
+    if (_homeLayoutMode == 1) {
+      return;
+    }
+    final bool newValue = !_homeTopBarHidden;
+    setState(() {
+      _homeTopBarHidden = newValue;
+    });
+    unawaited(controller.setHomeTopBarHidden(newValue));
   }
 
   void _handlePresentationPreviewTap() {
@@ -798,8 +814,9 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
               ? Icons.library_books_outlined
               : Icons.view_list_outlined);
     final bool isPresentationMode = _homeLayoutMode == 1;
+    final bool topRowHidden = isPresentationMode || _homeTopBarHidden;
     return Scaffold(
-      appBar: isPresentationMode
+      appBar: topRowHidden
           ? null
           : AppBar(
               title: Text(l10n.appTitle),
@@ -831,49 +848,47 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     );
   }
 
-  Widget _buildSimpleView(BuildContext context) {
-    final MediaQueryData mq = MediaQuery.of(context);
-    final bool isLandscape = mq.orientation == Orientation.landscape;
-
-    if (_homeLayoutMode == 1) {
-      final ThemeData theme = Theme.of(context);
-      final AppLocalizations l10n = context.l10n;
-      final Color revealHintColor = theme.colorScheme.surface.withValues(
-        alpha: 0.42,
-      );
-      final Widget revealControlsHint = IgnorePointer(
-        ignoring: false,
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          opacity: _presentationControlsVisible ? 0.6 : 1.0,
-          child: SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 10, right: 10),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _togglePresentationControls,
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: revealHintColor,
-                      borderRadius: BorderRadius.circular(17),
-                      border: Border.all(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.28,
-                        ),
-                        width: 1,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.tune,
-                      size: 18,
+  Widget _buildTopBarRevealHint(
+    BuildContext context, {
+    required bool visible,
+    required VoidCallback onTap,
+  }) {
+    final ThemeData theme = Theme.of(context);
+    final Color revealHintColor = theme.colorScheme.surface.withValues(
+      alpha: 0.42,
+    );
+    return IgnorePointer(
+      ignoring: false,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        opacity: visible ? 0.6 : 1.0,
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10, right: 10),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onTap,
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: revealHintColor,
+                    borderRadius: BorderRadius.circular(17),
+                    border: Border.all(
                       color: theme.colorScheme.onSurface.withValues(
-                        alpha: 0.85,
+                        alpha: 0.28,
                       ),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.tune,
+                    size: 18,
+                    color: theme.colorScheme.onSurface.withValues(
+                      alpha: 0.85,
                     ),
                   ),
                 ),
@@ -881,6 +896,21 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSimpleView(BuildContext context) {
+    final MediaQueryData mq = MediaQuery.of(context);
+    final bool isLandscape = mq.orientation == Orientation.landscape;
+
+    if (_homeLayoutMode == 1) {
+      final ThemeData theme = Theme.of(context);
+      final AppLocalizations l10n = context.l10n;
+      final Widget revealControlsHint = _buildTopBarRevealHint(
+        context,
+        visible: _presentationControlsVisible,
+        onTap: _togglePresentationControls,
       );
 
       return Column(
@@ -1009,9 +1039,22 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                 ),
               ),
               Expanded(
-                child: _isLandscapeSplitterDragging
-                    ? _buildPreviewResizePlaceholder(context)
-                    : _buildSimplePreviewPane(context),
+                child: Stack(
+                  children: <Widget>[
+                    Positioned.fill(
+                      child: _isLandscapeSplitterDragging
+                          ? _buildPreviewResizePlaceholder(context)
+                          : _buildSimplePreviewPane(context),
+                    ),
+                    Positioned.fill(
+                      child: _buildTopBarRevealHint(
+                        context,
+                        visible: !_homeTopBarHidden,
+                        onTap: _toggleHomeTopBar,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           );
@@ -1023,7 +1066,20 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
       children: <Widget>[
         _buildSimpleControls(context, isLandscape: false),
         const Divider(height: 1),
-        Expanded(child: _buildSimplePreviewPane(context)),
+        Expanded(
+          child: Stack(
+            children: <Widget>[
+              Positioned.fill(child: _buildSimplePreviewPane(context)),
+              Positioned.fill(
+                child: _buildTopBarRevealHint(
+                  context,
+                  visible: !_homeTopBarHidden,
+                  onTap: _toggleHomeTopBar,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
