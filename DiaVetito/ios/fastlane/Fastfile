@@ -55,6 +55,19 @@ platform :ios do
       force: true,
       precheck_include_in_app_purchases: false
     )
+
+    changelog_path = File.join(ios_dir, "..", "..", "release-notes", "DiaVetito", "hu", "release_notes.txt")
+    changelog = File.exist?(changelog_path) ? File.read(changelog_path).strip : "Új béta build"
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: File.join(ios_dir, "unsigned.ipa"),
+      skip_waiting_for_build_processing: true,
+      distribute_external: true,
+      groups: ["Bárki"],
+      notify_external_testers: true,
+      changelog: changelog
+    )
   end
 
   desc "Deploy to TestFlight (beta)"
