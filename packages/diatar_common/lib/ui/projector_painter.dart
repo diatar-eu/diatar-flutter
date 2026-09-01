@@ -597,10 +597,15 @@ class ProjectorPainter extends CustomPainter {
           final double lineFontSize = fontSize;
           final double textRowHeight = prepared.lineHeightsByLine[i];
           final List<_TextRowLayout> rows = prepared.textRowsByLine[i];
-          for (final _TextRowLayout row in rows) {
+          if (rows.isEmpty) {
             totalHeight +=
-                _rowChordBandHeight(allLines[i], row, lineFontSize) +
-                textRowHeight * lineSpacing;
+                prepared.chordBandByLine[i] + textRowHeight * lineSpacing;
+          } else {
+            for (final _TextRowLayout row in rows) {
+              totalHeight +=
+                  _rowChordBandHeight(allLines[i], row, lineFontSize) +
+                  textRowHeight * lineSpacing;
+            }
           }
         }
       }
@@ -1044,10 +1049,16 @@ class ProjectorPainter extends CustomPainter {
           final double lineFontSize = fontSize;
           final List<_TextRowLayout> rows = prepared.textRowsByLine[i];
           final double lineTextHeight = prepared.lineHeightsByLine[i];
-          for (final _TextRowLayout row in rows) {
+          if (rows.isEmpty) {
             totalHeight +=
-                _rowChordBandHeight(allLines[i], row, lineFontSize) +
+                prepared.chordBandByLine[i] +
                 lineTextHeight * lineSpacing;
+          } else {
+            for (final _TextRowLayout row in rows) {
+              totalHeight +=
+                  _rowChordBandHeight(allLines[i], row, lineFontSize) +
+                  lineTextHeight * lineSpacing;
+            }
           }
         }
       }
