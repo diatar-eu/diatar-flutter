@@ -17,7 +17,7 @@
 
 namespace {
 
-void set_window_icon(GtkWindow* window) {
+void set_default_window_icon() {
   g_autoptr(GError) error = nullptr;
   g_autofree gchar* executable_path =
       g_file_read_link("/proc/self/exe", &error);
@@ -31,7 +31,7 @@ void set_window_icon(GtkWindow* window) {
   g_autofree gchar* icon_path = g_build_filename(
       executable_dir, "data", "flutter_assets", "assets", "icon", "icon.png",
       nullptr);
-  if (!gtk_window_set_icon_from_file(window, icon_path, &error)) {
+  if (!gtk_window_set_default_icon_from_file(icon_path, &error)) {
     g_warning("Unable to load window icon from %s: %s", icon_path,
               error == nullptr ? "unknown error" : error->message);
   }
@@ -131,8 +131,6 @@ static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
-
-  set_window_icon(window);
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu
@@ -248,6 +246,8 @@ static void my_application_class_init(MyApplicationClass* klass) {
 static void my_application_init(MyApplication* self) {}
 
 MyApplication* my_application_new() {
+  set_default_window_icon();
+
   // Set the program name to the application ID, which helps various systems
   // like GTK and desktop environments map this running application to its
   // corresponding .desktop file. This ensures better integration by allowing

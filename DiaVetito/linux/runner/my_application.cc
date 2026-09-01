@@ -10,6 +10,26 @@ namespace {
 
 constexpr char kSystemChannel[] = "com.polyjoe.diavetito/system";
 
+void set_default_window_icon() {
+  g_autoptr(GError) error = nullptr;
+  g_autofree gchar* executable_path =
+      g_file_read_link("/proc/self/exe", &error);
+  if (executable_path == nullptr) {
+    g_warning("Unable to locate executable for window icon: %s",
+              error == nullptr ? "unknown error" : error->message);
+    return;
+  }
+
+  g_autofree gchar* executable_dir = g_path_get_dirname(executable_path);
+  g_autofree gchar* icon_path = g_build_filename(
+      executable_dir, "data", "flutter_assets", "assets", "icon", "icon.png",
+      nullptr);
+  if (!gtk_window_set_default_icon_from_file(icon_path, &error)) {
+    g_warning("Unable to load window icon from %s: %s", icon_path,
+              error == nullptr ? "unknown error" : error->message);
+  }
+}
+
 gboolean request_shutdown() {
   static constexpr const char* kCommands[] = {
       "systemctl poweroff",
@@ -147,6 +167,8 @@ static void my_application_class_init(MyApplicationClass* klass) {
 static void my_application_init(MyApplication* self) {}
 
 MyApplication* my_application_new() {
+  set_default_window_icon();
+
   // Set the program name to the application ID, which helps various systems
   // like GTK and desktop environments map this running application to its
   // corresponding .desktop file. This ensures better integration by allowing

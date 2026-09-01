@@ -5,6 +5,7 @@ GenericName=Vetítő ablak
 Comment=Diatár vetítő ablak második kijelzőre
 Icon=eu.diatar.vetito
 Exec=diavetito
+StartupWMClass=eu.diatar.vetito
 Terminal=false
 Categories=Utility;Religion;
 Keywords=diatar;vetítő;zsolozsma;liturgia;

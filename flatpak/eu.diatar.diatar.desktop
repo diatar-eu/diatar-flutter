@@ -5,6 +5,7 @@ GenericName=Énekeskönyv és liturgia
 Comment=Katolikus énekeskönyv, zsolozsma és liturgikus vetítés
 Icon=eu.diatar.diatar
 Exec=diatar_app
+StartupWMClass=eu.diatar.diatar
 Terminal=false
 Categories=Utility;Religion;
 Keywords=diatar;énekeskönyv;zsolozsma;liturgia;
