@@ -10,12 +10,16 @@ typedef SenderErrorCallback =
 class TcpSenderService {
   TcpSenderService({required this.onStatusChanged, required this.onError});
 
+  static const int _rawSocketWriteChunkSize = 16 * 1024;
+
   ValueChanged<bool> onStatusChanged;
   SenderErrorCallback onError;
 
   final Map<String, RawSocket> _clients = <String, RawSocket>{};
   final Map<String, StreamSubscription<RawSocketEvent>> _subs =
       <String, StreamSubscription<RawSocketEvent>>{};
+  final Map<RawSocket, _RawSocketWriter> _writers =
+      <RawSocket, _RawSocketWriter>{};
   final Map<String, DateTime> _lastConnectError = <String, DateTime>{};
   final Set<String> _targetKeys = <String>{};
   bool _running = false;
@@ -89,10 +93,12 @@ class TcpSenderService {
 
     for (final RawSocket socket in _clients.values) {
       try {
+        _writers.remove(socket)?.close();
         socket.close();
       } catch (_) {}
     }
     _clients.clear();
+    _writers.clear();
 
     _idleTimer?.cancel();
     _idleTimer = null;
@@ -107,29 +113,42 @@ class TcpSenderService {
       StreamSubscription<RawSocketEvent>? sub;
       try {
         socket = await _connectTarget(target.host, target.port);
+        final RawSocket connectedSocket = socket;
+        connectedSocket.writeEventsEnabled = false;
+        final _RawSocketWriter writer = _RawSocketWriter(connectedSocket);
+        _writers[connectedSocket] = writer;
 
-        _clients[target.key] = socket;
+        _clients[target.key] = connectedSocket;
         _emitStatus();
-        await _replayCache(socket);
 
         final Completer<void> done = Completer<void>();
-        sub = socket.listen(
+        sub = connectedSocket.listen(
           (RawSocketEvent event) {
-            if (event == RawSocketEvent.closed) {
-              if (!done.isCompleted) {
-                done.complete();
-              }
-            } else if (event == RawSocketEvent.read) {
-              socket?.read();
+            switch (event) {
+              case RawSocketEvent.read:
+                while (connectedSocket.read() != null) {}
+                break;
+              case RawSocketEvent.write:
+                writer.onWriteReady();
+                break;
+              case RawSocketEvent.readClosed:
+              case RawSocketEvent.closed:
+                writer.close();
+                if (!done.isCompleted) {
+                  done.complete();
+                }
+                break;
             }
           },
           onError: (Object e) {
+            writer.close();
             _reportConnectOrClientError(target, e);
             if (!done.isCompleted) {
               done.complete();
             }
           },
           onDone: () {
+            writer.close();
             if (!done.isCompleted) {
               done.complete();
             }
@@ -137,6 +156,7 @@ class TcpSenderService {
           cancelOnError: true,
         );
         _subs[target.key] = sub;
+        await _enqueue(() => _replayCache(connectedSocket));
         await done.future;
       } catch (e) {
         _reportConnectOrClientError(target, e);
@@ -150,6 +170,7 @@ class TcpSenderService {
 
         final RawSocket? old = _clients.remove(target.key);
         try {
+          _writers.remove(old)?.close();
           old?.close();
         } catch (_) {}
         _emitStatus();
@@ -161,13 +182,8 @@ class TcpSenderService {
     }
   }
 
-  Future<RawSocket> _connectTarget(String host, int port) async {
-    try {
-      final RawSocket s = await RawSocket.connect(host, port);
-      return s;
-    } catch (e) {
-      rethrow;
-    }
+  Future<RawSocket> _connectTarget(String host, int port) {
+    return RawSocket.connect(host, port, timeout: const Duration(seconds: 3));
   }
 
   void _reportConnectOrClientError(_TcpTarget target, Object error) {
@@ -215,9 +231,7 @@ class TcpSenderService {
   }
 
   Future<void> sendIdle() async {
-    await _enqueue(
-      () => _sendPacket(RecTypes.idle, Uint8List(0)),
-    );
+    await _enqueue(() => _sendPacket(RecTypes.idle, Uint8List(0)));
   }
 
   Future<void> sendScreenSize({required int width, required int height}) async {
@@ -247,36 +261,60 @@ class TcpSenderService {
       final String key = entry.key;
       final RawSocket socket = entry.value;
       try {
-        socket.write(packet, 0, packet.length);
+        await _writeAll(socket, packet);
         _lastSentAt = DateTime.now();
       } catch (e) {
-        onError('senderTcpSendError', <String, String>{
-          'error': '$key - $e',
-        });
+        onError('senderTcpSendError', <String, String>{'error': '$key - $e'});
         dead.add(key);
       }
     }
     for (final String key in dead) {
       final RawSocket? deadSocket = _clients.remove(key);
       try {
+        _writers.remove(deadSocket)?.close();
         deadSocket?.close();
       } catch (_) {}
     }
     _emitStatus();
   }
 
-  Future<void> _sendToSocket(RawSocket socket, int type, Uint8List? body) async {
+  Future<void> _sendToSocket(
+    RawSocket socket,
+    int type,
+    Uint8List? body,
+  ) async {
     if (body == null) {
       return;
     }
     try {
       final Uint8List packet = encodeProjectionPacket(type, body);
-      socket.write(packet, 0, packet.length);
+      await _writeAll(socket, packet);
       _lastSentAt = DateTime.now();
     } catch (e) {
-      onError('senderTcpSendError', <String, String>{
-        'error': '$type - $e',
-      });
+      onError('senderTcpSendError', <String, String>{'error': '$type - $e'});
+    }
+  }
+
+  Future<void> _writeAll(RawSocket socket, Uint8List packet) async {
+    final _RawSocketWriter? writer = _writers[socket];
+    if (writer == null) {
+      throw StateError('The TCP connection is no longer available.');
+    }
+
+    int offset = 0;
+    while (offset < packet.length) {
+      final int remaining = packet.length - offset;
+      final int chunkLength = remaining > _rawSocketWriteChunkSize
+          ? _rawSocketWriteChunkSize
+          : remaining;
+      final Uint8List chunk = Uint8List.fromList(
+        packet.sublist(offset, offset + chunkLength),
+      );
+      final int written = socket.write(chunk);
+      offset += written;
+      if (written < chunkLength) {
+        await writer.waitForWriteReady();
+      }
     }
   }
 
@@ -334,4 +372,40 @@ class _TcpTarget {
   final int port;
 
   String get key => '$host:$port';
+}
+
+class _RawSocketWriter {
+  _RawSocketWriter(this._socket);
+
+  final RawSocket _socket;
+  Completer<void>? _writeReady;
+  bool _closed = false;
+
+  Future<void> waitForWriteReady() {
+    if (_closed) {
+      return Future<void>.error(StateError('The TCP connection is closed.'));
+    }
+    final Completer<void>? pending = _writeReady;
+    if (pending != null) {
+      return pending.future;
+    }
+
+    final Completer<void> next = Completer<void>();
+    _writeReady = next;
+    _socket.writeEventsEnabled = true;
+    return next.future;
+  }
+
+  void onWriteReady() {
+    final Completer<void>? pending = _writeReady;
+    _writeReady = null;
+    pending?.complete();
+  }
+
+  void close() {
+    _closed = true;
+    final Completer<void>? pending = _writeReady;
+    _writeReady = null;
+    pending?.completeError(StateError('The TCP connection is closed.'));
+  }
 }
