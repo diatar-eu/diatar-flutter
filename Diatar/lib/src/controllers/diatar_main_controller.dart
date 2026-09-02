@@ -2958,13 +2958,13 @@ class DiatarMainController extends ChangeNotifier {
       out.writeln();
       out.writeln('[${i + 1}]');
       if (entry.playSound) {
-        out.writeln('sound=true');
+        out.writeln('sound=1');
       }
       if (entry.advanceAfterSound) {
-        out.writeln('soundforward=true');
+        out.writeln('soundforward=1');
       }
       if (entry.mergeWithNext) {
-        out.writeln('dbldia=true');
+        out.writeln('dbldia=1');
       }
 
       if (entry.isSeparator) {
@@ -3331,7 +3331,13 @@ class DiatarMainController extends ChangeNotifier {
 
   bool _diaBoolean(String? value) {
     final String normalized = value?.trim().toLowerCase() ?? '';
-    return normalized == 'true' || normalized == '1';
+    if (normalized == 'true') {
+      return true;
+    }
+    if (normalized == 'false') {
+      return false;
+    }
+    return (num.tryParse(normalized) ?? 0) != 0;
   }
 
   Future<int> deleteDtxFiles(Set<String> fileNames) async {

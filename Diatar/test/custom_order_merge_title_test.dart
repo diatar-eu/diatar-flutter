@@ -192,8 +192,8 @@ void main() {
         await controller.exportCustomOrderToDia(path, recordSave: false);
 
         final String content = await File(path).readAsString();
-        expect(content, contains('sound=true'));
-        expect(content, contains('soundforward=true'));
+        expect(content, contains('sound=1'));
+        expect(content, contains('soundforward=1'));
 
         await controller.importCustomOrderFromDia(
           path,
@@ -201,6 +201,51 @@ void main() {
         );
         expect(controller.customOrder.single.playSound, isTrue);
         expect(controller.customOrder.single.advanceAfterSound, isTrue);
+      });
+
+      test('reads boolean and numeric DIA options', () async {
+        final Directory directory = await Directory.systemTemp.createTemp(
+          'diatar_sound_option_parsing_test_',
+        );
+        final String path =
+            '${directory.path}${Platform.pathSeparator}order.dia';
+        addTearDown(() => directory.delete(recursive: true));
+
+        await File(path).writeAsString('''
+[main]
+diaszam=2
+
+[1]
+sound=-1
+soundforward=true
+dbldia=2
+caption=First
+lines=1
+line0=First text
+
+[2]
+sound=0
+soundforward=false
+dbldia=false
+caption=Second
+lines=1
+line0=Second text
+''');
+
+        final DiatarMainController controller = DiatarMainController();
+        expect(
+          await controller.importCustomOrderFromDia(
+            path,
+            mode: CustomOrderImportMode.overwriteActive,
+          ),
+          2,
+        );
+        expect(controller.customOrder[0].playSound, isTrue);
+        expect(controller.customOrder[0].advanceAfterSound, isTrue);
+        expect(controller.customOrder[0].mergeWithNext, isTrue);
+        expect(controller.customOrder[1].playSound, isFalse);
+        expect(controller.customOrder[1].advanceAfterSound, isFalse);
+        expect(controller.customOrder[1].mergeWithNext, isFalse);
       });
     });
 
@@ -239,8 +284,8 @@ void main() {
         await controller.exportCustomOrderToDia(path, recordSave: false);
 
         final String content = await File(path).readAsString();
-        expect(content, contains('[1]\ndbldia=true'));
-        expect(content, isNot(contains('[2]\ndbldia=true')));
+        expect(content, contains('[1]\ndbldia=1'));
+        expect(content, isNot(contains('[2]\ndbldia=1')));
         expect(controller.customOrderProjectionLinesAt(0), <String>[
           'First text',
           '',
