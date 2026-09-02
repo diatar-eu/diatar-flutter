@@ -46,6 +46,15 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
   @override
   void initState() {
     super.initState();
+    // The projector runs in a separate Flutter engine, so its notation
+    // images must be loaded independently from the main window.
+    unawaited(
+      KottaAssets.ensureLoaded().then((_) {
+        if (mounted) {
+          setState(() {});
+        }
+      }),
+    );
     unawaited(_bootstrap());
   }
 
