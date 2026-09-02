@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'dart:collection';
 import 'dart:ui' as ui;
 
@@ -407,6 +407,51 @@ class ProjectorPainter extends CustomPainter {
             rowPrefixes[i].width +
             rows[i].inlinePrefix.width,
     ];
+  }
+
+  @visibleForTesting
+  int debugKottaLetterConnectorCountForLine(
+    String source, {
+    double fontSize = 24,
+    double maxWidth = 320,
+  }) {
+    final List<_RenderLine> lines = _parseOneLine(source);
+    if (lines.isEmpty) {
+      return 0;
+    }
+
+    final _RenderLine line = lines.first;
+    final List<_KottaRowLayout> rows = _buildKottaRows(
+      line,
+      fontSize,
+      maxWidth,
+      inheritedState: _KottaDrawState(),
+    );
+    final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
+    int count = 0;
+
+    for (final _KottaRowLayout row in rows) {
+      for (int i = 1; i < row.words.length; i++) {
+        final _KottaWordLayout previousSlot = row.words[i - 1];
+        final _KottaWordLayout currentSlot = row.words[i];
+        final _WordToken previous = line.words[previousSlot.wordIndex];
+        final _WordToken current = line.words[currentSlot.wordIndex];
+        final double previousTextWidth = _measureWordDisplayWidth(
+          previous,
+          fontSize,
+          measure,
+        );
+        if (_shouldPaintKottaLetterConnector(
+          previous: previous,
+          current: current,
+          gap: previousSlot.slotWidth - previousTextWidth,
+        )) {
+          count++;
+        }
+      }
+    }
+
+    return count;
   }
 
   void _drawContent(Canvas canvas, Size size) {
@@ -2237,7 +2282,7 @@ class ProjectorPainter extends CustomPainter {
           text: display,
           style: TextStyle(
             color: highlighted ? globals.hiColor : baseColor,
-            fontSize: fontSize,
+            fontSize: _effectiveWordFontSize(w, fontSize),
             fontWeight: (globals.boldText || w.bold)
                 ? FontWeight.bold
                 : FontWeight.normal,
@@ -2257,13 +2302,16 @@ class ProjectorPainter extends CustomPainter {
           wordIndex: slot.wordIndex,
           left: slotLeft,
           right: slotLeft + tp.width,
+          baseline: y + tp.computeLineMetrics().first.baseline,
           tieUnderline: w.tieUnderline,
           color: baseColor,
+          connectorColor: highlighted ? globals.hiColor : baseColor,
         ),
       );
       cx += slot.slotWidth + inset;
     }
 
+    _paintKottaLetterConnectors(canvas, line.words, slotLayouts, fontSize);
     _paintKottaTieUnderlines(
       canvas,
       sourceWords: line.words,
@@ -2296,6 +2344,53 @@ class ProjectorPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
       hyphen.paint(canvas, Offset(hyphenX, y));
+    }
+  }
+
+  bool _shouldPaintKottaLetterConnector({
+    required _WordToken previous,
+    required _WordToken current,
+    required double gap,
+  }) {
+    return !previous.spaceAfter &&
+        previous.text.isNotEmpty &&
+        current.text.isNotEmpty &&
+        gap > 0.5;
+  }
+
+  void _paintKottaLetterConnectors(
+    Canvas canvas,
+    List<_WordToken> sourceWords,
+    List<_KottaTextSlotLayout> slots,
+    double fontSize,
+  ) {
+    if (slots.length < 2) {
+      return;
+    }
+
+    final Paint paint = Paint()
+      ..strokeWidth = math.max(0.75, fontSize * 0.025)
+      ..strokeCap = StrokeCap.butt;
+    for (int i = 1; i < slots.length; i++) {
+      final _KottaTextSlotLayout previousSlot = slots[i - 1];
+      final _KottaTextSlotLayout currentSlot = slots[i];
+      final _WordToken previous = sourceWords[previousSlot.wordIndex];
+      final _WordToken current = sourceWords[currentSlot.wordIndex];
+      final double gap = currentSlot.left - previousSlot.right;
+      if (!_shouldPaintKottaLetterConnector(
+        previous: previous,
+        current: current,
+        gap: gap,
+      )) {
+        continue;
+      }
+
+      paint.color = previousSlot.connectorColor;
+      canvas.drawLine(
+        Offset(previousSlot.right, previousSlot.baseline),
+        Offset(currentSlot.left, previousSlot.baseline),
+        paint,
+      );
     }
   }
 
@@ -4870,15 +4965,19 @@ class _KottaTextSlotLayout {
     required this.wordIndex,
     required this.left,
     required this.right,
+    required this.baseline,
     required this.tieUnderline,
     required this.color,
+    required this.connectorColor,
   });
 
   final int wordIndex;
   final double left;
   final double right;
+  final double baseline;
   final bool tieUnderline;
   final Color color;
+  final Color connectorColor;
 }
 
 class _PreparedTextLayout {

@@ -317,6 +317,27 @@ void main() {
     expect(textStartXs.first, greaterThan(rowStartXs.first));
   });
 
+  test('kotta-separated parts of a word receive a baseline connector', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    expect(
+      painter.debugKottaLetterConnectorCountForLine(
+        r'\Kr41a1b1c1d1e;Ki\Kr41a;ált',
+      ),
+      1,
+    );
+    expect(
+      painter.debugKottaLetterConnectorCountForLine(
+        r'\Kr41a1b1c1d1e;Ki \Kr41a;ált',
+      ),
+      0,
+    );
+  });
+
   test('real sample first kotta row text starts after prefixed clef and key', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
