@@ -1277,5 +1277,49 @@
   "speechLangRoRO": "Román (ro-RO)",
   "speechLangEtEE": "Észt (et-EE)",
   "speechLangDaDK": "Dán (da-DK)",
-  "speechLangHuHU": "Magyar (hu-HU)"
+  "speechLangHuHU": "Magyar (hu-HU)",
+  "picPlcSettingsTitle": "PICPLC vezérlő",
+  "picPlcSettingsEnabledSummary": "Engedélyezve, port: {port}",
+  "@picPlcSettingsEnabledSummary": {
+    "placeholders": {
+      "port": {}
+    }
+  },
+  "picPlcSettingsDisabledSummary": "Kikapcsolva",
+  "picPlcSettingsDescription": "A PICPLC soros vezérlő, a gombkiosztások és a LED-ek beállítása.",
+  "picPlcEnabledLabel": "PICPLC vezérlő engedélyezése",
+  "picPlcPortLabel": "Soros port",
+  "picPlcPortHint": "pl. COM3 vagy /dev/ttyUSB0",
+  "picPlcPortRequired": "A PICPLC vezérlő engedélyezéséhez add meg a soros portot.",
+  "picPlcButtonsTitle": "Gombkiosztások",
+  "picPlcButtonLabel": "{number}. gomb",
+  "@picPlcButtonLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "picPlcLedsTitle": "LED-kiosztások",
+  "picPlcLedLabel": "{number}. LED",
+  "@picPlcLedLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "picPlcActionNone": "Nincs funkciója",
+  "picPlcActionToggleProjection": "Vetítés ki/be nyomógomb",
+  "picPlcActionProjectionSwitch": "Vetítés ki/be kapcsoló",
+  "picPlcActionPreviousVerse": "Előző dia",
+  "picPlcActionNextVerse": "Következő dia",
+  "picPlcActionPreviousSong": "Előző ének",
+  "picPlcActionNextSong": "Következő ének",
+  "picPlcActionToggleDirection": "Irányváltó nyomógomb",
+  "picPlcActionDirectionSwitch": "Előre/hátra kapcsoló",
+  "picPlcActionStep": "Dia léptető gomb",
+  "picPlcLedProjectionOn": "Vetítés bekapcsolva",
+  "picPlcLedForward": "Előre irány",
+  "picPlcLedBackward": "Hátra irány"
 }

@@ -3766,6 +3766,156 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Magyar (hu-HU)'**
   String get speechLangHuHU;
+
+  /// No description provided for @picPlcSettingsTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'PICPLC vezérlő'**
+  String get picPlcSettingsTitle;
+
+  /// No description provided for @picPlcSettingsEnabledSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Engedélyezve, port: {port}'**
+  String picPlcSettingsEnabledSummary(Object port);
+
+  /// No description provided for @picPlcSettingsDisabledSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kikapcsolva'**
+  String get picPlcSettingsDisabledSummary;
+
+  /// No description provided for @picPlcSettingsDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'A PICPLC soros vezérlő, a gombkiosztások és a LED-ek beállítása.'**
+  String get picPlcSettingsDescription;
+
+  /// No description provided for @picPlcEnabledLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'PICPLC vezérlő engedélyezése'**
+  String get picPlcEnabledLabel;
+
+  /// No description provided for @picPlcPortLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Soros port'**
+  String get picPlcPortLabel;
+
+  /// No description provided for @picPlcPortHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'pl. COM3 vagy /dev/ttyUSB0'**
+  String get picPlcPortHint;
+
+  /// No description provided for @picPlcPortRequired.
+  ///
+  /// In hu, this message translates to:
+  /// **'A PICPLC vezérlő engedélyezéséhez add meg a soros portot.'**
+  String get picPlcPortRequired;
+
+  /// No description provided for @picPlcButtonsTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Gombkiosztások'**
+  String get picPlcButtonsTitle;
+
+  /// No description provided for @picPlcButtonLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'{number}. gomb'**
+  String picPlcButtonLabel(int number);
+
+  /// No description provided for @picPlcLedsTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'LED-kiosztások'**
+  String get picPlcLedsTitle;
+
+  /// No description provided for @picPlcLedLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'{number}. LED'**
+  String picPlcLedLabel(int number);
+
+  /// No description provided for @picPlcActionNone.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nincs funkciója'**
+  String get picPlcActionNone;
+
+  /// No description provided for @picPlcActionToggleProjection.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vetítés ki/be nyomógomb'**
+  String get picPlcActionToggleProjection;
+
+  /// No description provided for @picPlcActionProjectionSwitch.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vetítés ki/be kapcsoló'**
+  String get picPlcActionProjectionSwitch;
+
+  /// No description provided for @picPlcActionPreviousVerse.
+  ///
+  /// In hu, this message translates to:
+  /// **'Előző dia'**
+  String get picPlcActionPreviousVerse;
+
+  /// No description provided for @picPlcActionNextVerse.
+  ///
+  /// In hu, this message translates to:
+  /// **'Következő dia'**
+  String get picPlcActionNextVerse;
+
+  /// No description provided for @picPlcActionPreviousSong.
+  ///
+  /// In hu, this message translates to:
+  /// **'Előző ének'**
+  String get picPlcActionPreviousSong;
+
+  /// No description provided for @picPlcActionNextSong.
+  ///
+  /// In hu, this message translates to:
+  /// **'Következő ének'**
+  String get picPlcActionNextSong;
+
+  /// No description provided for @picPlcActionToggleDirection.
+  ///
+  /// In hu, this message translates to:
+  /// **'Irányváltó nyomógomb'**
+  String get picPlcActionToggleDirection;
+
+  /// No description provided for @picPlcActionDirectionSwitch.
+  ///
+  /// In hu, this message translates to:
+  /// **'Előre/hátra kapcsoló'**
+  String get picPlcActionDirectionSwitch;
+
+  /// No description provided for @picPlcActionStep.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dia léptető gomb'**
+  String get picPlcActionStep;
+
+  /// No description provided for @picPlcLedProjectionOn.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vetítés bekapcsolva'**
+  String get picPlcLedProjectionOn;
+
+  /// No description provided for @picPlcLedForward.
+  ///
+  /// In hu, this message translates to:
+  /// **'Előre irány'**
+  String get picPlcLedForward;
+
+  /// No description provided for @picPlcLedBackward.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hátra irány'**
+  String get picPlcLedBackward;
 }
 
 class _AppLocalizationsDelegate

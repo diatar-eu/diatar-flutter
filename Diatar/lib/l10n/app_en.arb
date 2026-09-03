@@ -1276,5 +1276,49 @@
   "speechLangRoRO": "Romanian (ro-RO)",
   "speechLangEtEE": "Estonian (et-EE)",
   "speechLangDaDK": "Danish (da-DK)",
-  "speechLangHuHU": "Hungarian (hu-HU)"
+  "speechLangHuHU": "Hungarian (hu-HU)",
+  "picPlcSettingsTitle": "PICPLC controller",
+  "picPlcSettingsEnabledSummary": "Enabled, port: {port}",
+  "@picPlcSettingsEnabledSummary": {
+    "placeholders": {
+      "port": {}
+    }
+  },
+  "picPlcSettingsDisabledSummary": "Disabled",
+  "picPlcSettingsDescription": "Configure the PICPLC serial controller, button assignments, and LEDs.",
+  "picPlcEnabledLabel": "Enable PICPLC controller",
+  "picPlcPortLabel": "Serial port",
+  "picPlcPortHint": "e.g. COM3 or /dev/ttyUSB0",
+  "picPlcPortRequired": "Enter the serial port before enabling the PICPLC controller.",
+  "picPlcButtonsTitle": "Button assignments",
+  "picPlcButtonLabel": "Button {number}",
+  "@picPlcButtonLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "picPlcLedsTitle": "LED assignments",
+  "picPlcLedLabel": "LED {number}",
+  "@picPlcLedLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "picPlcActionNone": "No function",
+  "picPlcActionToggleProjection": "Toggle projection (button)",
+  "picPlcActionProjectionSwitch": "Projection on/off switch",
+  "picPlcActionPreviousVerse": "Previous slide",
+  "picPlcActionNextVerse": "Next slide",
+  "picPlcActionPreviousSong": "Previous song",
+  "picPlcActionNextSong": "Next song",
+  "picPlcActionToggleDirection": "Toggle direction (button)",
+  "picPlcActionDirectionSwitch": "Forward/backward switch",
+  "picPlcActionStep": "Step slide",
+  "picPlcLedProjectionOn": "Projection on",
+  "picPlcLedForward": "Forward direction",
+  "picPlcLedBackward": "Backward direction"
 }

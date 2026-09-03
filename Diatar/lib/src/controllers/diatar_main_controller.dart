@@ -50,6 +50,7 @@ import '../services/tcp_sender_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
 import '../services/zsolozsma_service.dart';
 import '../services/napi_lelki_batyu_service.dart';
+import '../services/pic_plc_service.dart';
 import '../services/szentiras_api_service.dart';
 import '../utils/text_chunking.dart';
 
@@ -177,7 +178,15 @@ class DiatarMainController extends ChangeNotifier {
   final NapiLelkiBatyuService _napiLelkiBatyuService = NapiLelkiBatyuService();
   final SongSearchService _searchService = SongSearchService();
   final AudioService _audioService = AudioService();
+  final PicPlcService _picPlcService = PicPlcService();
   late final StreamSubscription<void> _audioPlaybackCompletionSubscription;
+  PicPlcConfiguration _picPlcConfiguration = const PicPlcConfiguration();
+  Timer? _picPlcPollTimer;
+  final List<bool> _picPlcButtonStates = List<bool>.filled(8, false);
+  final List<Timer?> _picPlcRepeatTimers = List<Timer?>.filled(8, null);
+  bool _picPlcPollInProgress = false;
+  bool _picPlcOpen = false;
+  bool _picPlcStepForward = true;
   final List<String> _pendingCustomMergeSoundPaths = <String>[];
   bool _customMergeSoundSequenceActive = false;
   bool _advanceAfterCustomMergeSounds = false;
@@ -224,6 +233,8 @@ class DiatarMainController extends ChangeNotifier {
   bool mqttHasError = false;
   bool tcpHasError = false;
   DateTime? mqttConnectAttemptAt;
+
+  PicPlcConfiguration get picPlcConfiguration => _picPlcConfiguration;
 
   DiatarMainController() {
     _audioPlaybackCompletionSubscription = _audioService.onPlaybackComplete
@@ -1033,6 +1044,7 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<void> init() async {
     settings = await _settingsStore.load();
+    _picPlcConfiguration = await _settingsStore.loadPicPlcConfiguration();
     await _updateSystemShutdownExitCommand();
     unawaited(_runExternalCommand(settings.externalCommandOnStart));
     _transpositions = await _settingsStore.loadTranspositions();
@@ -1083,6 +1095,7 @@ class DiatarMainController extends ChangeNotifier {
       pendingOnboarding = true;
       notifyListeners();
     }
+    await _configurePicPlc();
   }
 
   Future<void> markOnboardingSeen() async {
@@ -1291,6 +1304,182 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
     await _syncCurrentDia(playSound: false);
     await _syncBackgroundImageAfterConnect();
+    await _configurePicPlc();
+  }
+
+  Future<void> configurePicPlc(PicPlcConfiguration configuration) async {
+    if (configuration.buttonActions.length != 8) {
+      throw ArgumentError.value(
+        configuration.buttonActions,
+        'configuration.buttonActions',
+        'must contain exactly eight assignments',
+      );
+    }
+    if (configuration.ledActions.length != 2) {
+      throw ArgumentError.value(
+        configuration.ledActions,
+        'configuration.ledActions',
+        'must contain exactly two assignments',
+      );
+    }
+    _picPlcConfiguration = configuration;
+    await _settingsStore.savePicPlcConfiguration(configuration);
+    await _configurePicPlc();
+  }
+
+  Future<void> _configurePicPlc() async {
+    _picPlcPollTimer?.cancel();
+    _picPlcPollTimer = null;
+    for (final Timer? timer in _picPlcRepeatTimers) {
+      timer?.cancel();
+    }
+    for (int index = 0; index < _picPlcButtonStates.length; index++) {
+      _picPlcButtonStates[index] = false;
+      _picPlcRepeatTimers[index] = null;
+    }
+    if (kIsWeb ||
+        (defaultTargetPlatform != TargetPlatform.windows &&
+            defaultTargetPlatform != TargetPlatform.linux)) {
+      return;
+    }
+    _picPlcOpen = false;
+    await _picPlcService.close();
+    if (!_picPlcConfiguration.enabled ||
+        _picPlcConfiguration.port.trim().isEmpty) {
+      return;
+    }
+    try {
+      await _picPlcService.open(_picPlcConfiguration.port);
+    } on PlatformException catch (error) {
+      debugPrint('PICPLC connection failed: $error');
+      return;
+    }
+    _picPlcOpen = true;
+    await _updatePicPlcLeds();
+    _picPlcPollTimer = Timer.periodic(
+      const Duration(milliseconds: 50),
+      (_) => unawaited(_pollPicPlc()),
+    );
+  }
+
+  Future<void> _updatePicPlcLeds() async {
+    if (!_picPlcOpen) {
+      return;
+    }
+    bool isActive(PicPlcLedAction action) {
+      return switch (action) {
+        PicPlcLedAction.none => false,
+        PicPlcLedAction.projectionOn => showing,
+        PicPlcLedAction.forward => _picPlcStepForward,
+        PicPlcLedAction.backward => !_picPlcStepForward,
+      };
+    }
+
+    try {
+      await _picPlcService.setLeds(
+        led1: isActive(_picPlcConfiguration.ledActions[0]),
+        led2: isActive(_picPlcConfiguration.ledActions[1]),
+      );
+    } on PlatformException catch (error) {
+      debugPrint('PICPLC LED update failed: $error');
+    }
+  }
+
+  Future<void> _pollPicPlc() async {
+    if (_picPlcPollInProgress) {
+      return;
+    }
+    _picPlcPollInProgress = true;
+    try {
+      final int buttonMask = await _picPlcService.buttonMask();
+      for (int index = 0; index < _picPlcButtonStates.length; index++) {
+        final bool pressed = (buttonMask & (1 << index)) != 0;
+        if (pressed != _picPlcButtonStates[index]) {
+          _picPlcButtonStates[index] = pressed;
+          _handlePicPlcButtonState(index, pressed);
+        }
+      }
+    } on PlatformException catch (error) {
+      debugPrint('PICPLC button poll failed: $error');
+    } finally {
+      _picPlcPollInProgress = false;
+    }
+  }
+
+  void _handlePicPlcButtonState(int index, bool pressed) {
+    final PicPlcButtonAction action = _picPlcConfiguration.buttonActions[index];
+    if (action == PicPlcButtonAction.projectionSwitch ||
+        action == PicPlcButtonAction.directionSwitch) {
+      _runPicPlcAction(action, pressed: pressed);
+      return;
+    }
+    if (!pressed) {
+      _picPlcRepeatTimers[index]?.cancel();
+      _picPlcRepeatTimers[index] = null;
+      return;
+    }
+    _runPicPlcAction(action, pressed: true);
+    if (PicPlcService.isRepeatableAction(action)) {
+      _picPlcRepeatTimers[index] = Timer(
+        const Duration(milliseconds: 300),
+        () => _repeatPicPlcAction(index, action),
+      );
+    }
+  }
+
+  void _repeatPicPlcAction(int index, PicPlcButtonAction action) {
+    if (!_picPlcButtonStates[index]) {
+      return;
+    }
+    _runPicPlcAction(action, pressed: true);
+    _picPlcRepeatTimers[index] = Timer(
+      const Duration(milliseconds: 100),
+      () => _repeatPicPlcAction(index, action),
+    );
+  }
+
+  void _runPicPlcAction(PicPlcButtonAction action, {required bool pressed}) {
+    switch (action) {
+      case PicPlcButtonAction.none:
+        return;
+      case PicPlcButtonAction.toggleProjection:
+        if (pressed) {
+          toggleShowing();
+        }
+        return;
+      case PicPlcButtonAction.projectionSwitch:
+        setShowing(pressed);
+        return;
+      case PicPlcButtonAction.previousVerse:
+        prevVerse();
+        return;
+      case PicPlcButtonAction.nextVerse:
+        nextVerse();
+        return;
+      case PicPlcButtonAction.previousSong:
+        prevSong();
+        return;
+      case PicPlcButtonAction.nextSong:
+        nextSong();
+        return;
+      case PicPlcButtonAction.toggleDirection:
+        if (pressed) {
+          _picPlcStepForward = !_picPlcStepForward;
+          unawaited(_updatePicPlcLeds());
+        }
+        return;
+      case PicPlcButtonAction.directionSwitch:
+        _picPlcStepForward = pressed;
+        unawaited(_updatePicPlcLeds());
+        return;
+      case PicPlcButtonAction.step:
+        if (_picPlcStepForward) {
+          nextVerse();
+        } else {
+          prevVerse();
+        }
+        return;
+    }
   }
 
   Future<void> setHomeViewMode(int mode) async {
@@ -4072,7 +4261,15 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void toggleShowing() {
-    showing = !showing;
+    setShowing(!showing);
+  }
+
+  void setShowing(bool value) {
+    if (showing == value) {
+      return;
+    }
+    showing = value;
+    unawaited(_updatePicPlcLeds());
     unawaited(
       _runExternalCommand(
         showing
@@ -5022,6 +5219,16 @@ class DiatarMainController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _picPlcPollTimer?.cancel();
+    for (final Timer? timer in _picPlcRepeatTimers) {
+      timer?.cancel();
+    }
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux)) {
+      unawaited(_picPlcService.close());
+    }
+    _picPlcOpen = false;
     _audioPlaybackCompletionSubscription.cancel();
     _speechRecognizer?.dispose();
     _sender.stop();
