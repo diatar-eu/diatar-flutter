@@ -2765,7 +2765,7 @@ class DiatarMainController extends ChangeNotifier {
     final int safe = cursor.clamp(0, _customOrder.length - 1);
     final CustomOrderEntry entry = _customOrder[safe];
 
-    if (entry.isSeparator && sync) {
+    if ((entry.isSeparator || entry.skipped) && sync) {
       final int? next = _findNextProjectableCustomOrderIndex(safe + 1);
       if (next != null) {
         _selectByCustomOrderCursor(next, sync: true);
@@ -3155,6 +3155,9 @@ class DiatarMainController extends ChangeNotifier {
       if (entry.mergeWithNext) {
         out.writeln('dbldia=1');
       }
+      if (entry.skipped) {
+        out.writeln('skipped=1');
+      }
 
       if (entry.isSeparator) {
         final String separatorName =
@@ -3323,6 +3326,7 @@ class DiatarMainController extends ChangeNotifier {
       final bool playSound = _diaBoolean(sec['sound']);
       final bool advanceAfterSound = _diaBoolean(sec['soundforward']);
       final bool mergeWithNext = _diaBoolean(sec['dbldia']);
+      final bool skipped = _diaBoolean(sec['skipped']);
 
       final String separatorName = (sec['separator'] ?? '').trim();
       if (separatorName.isNotEmpty) {
@@ -3333,6 +3337,7 @@ class DiatarMainController extends ChangeNotifier {
             verseIndex: 0,
             label: '--- $separatorName ---',
             mergeWithNext: mergeWithNext,
+            skipped: skipped,
             playSound: playSound,
             advanceAfterSound: advanceAfterSound,
             customTextTitle: separatorName,
@@ -3353,6 +3358,7 @@ class DiatarMainController extends ChangeNotifier {
             customImagePath: resolved,
             customType: 'image',
             mergeWithNext: mergeWithNext,
+            skipped: skipped,
             playSound: playSound,
             advanceAfterSound: advanceAfterSound,
           ),
@@ -3375,6 +3381,7 @@ class DiatarMainController extends ChangeNotifier {
             customTextBody: textLines.join('\n'),
             customType: 'text',
             mergeWithNext: mergeWithNext,
+            skipped: skipped,
             playSound: playSound,
             advanceAfterSound: advanceAfterSound,
           ),
@@ -3394,6 +3401,7 @@ class DiatarMainController extends ChangeNotifier {
             verseIndex: verseIndex,
             label: buildEntryLabel(book.fileName, songIndex, verseIndex),
             mergeWithNext: mergeWithNext,
+            skipped: skipped,
             playSound: playSound,
             advanceAfterSound: advanceAfterSound,
           ),
@@ -3427,6 +3435,7 @@ class DiatarMainController extends ChangeNotifier {
           verseIndex: vIx,
           label: buildEntryLabel(b.fileName, sIx, vIx),
           mergeWithNext: mergeWithNext,
+          skipped: skipped,
           playSound: playSound,
           advanceAfterSound: advanceAfterSound,
         ),

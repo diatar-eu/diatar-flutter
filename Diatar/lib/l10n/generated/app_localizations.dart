@@ -1601,6 +1601,12 @@ abstract class AppLocalizations {
   /// **'Továbblépés a zene végén'**
   String get customOrderAdvanceAfterSoundTooltip;
 
+  /// No description provided for @customOrderSkipSlideTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dia kihagyása vetítéskor'**
+  String get customOrderSkipSlideTooltip;
+
   /// No description provided for @addSong.
   ///
   /// In hu, this message translates to:

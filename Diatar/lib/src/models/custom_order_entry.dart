@@ -8,6 +8,7 @@ class CustomOrderEntry {
     required this.verseIndex,
     required this.label,
     this.mergeWithNext = false,
+    this.skipped = false,
     this.playSound = false,
     this.advanceAfterSound = false,
     this.customTextTitle,
@@ -23,6 +24,7 @@ class CustomOrderEntry {
   final int verseIndex;
   final String label;
   final bool mergeWithNext;
+  final bool skipped;
   final bool playSound;
   final bool advanceAfterSound;
   final String? customTextTitle;
@@ -45,6 +47,7 @@ class CustomOrderEntry {
     int? verseIndex,
     String? label,
     bool? mergeWithNext,
+    bool? skipped,
     bool? playSound,
     bool? advanceAfterSound,
     String? customTextTitle,
@@ -60,6 +63,7 @@ class CustomOrderEntry {
       verseIndex: verseIndex ?? this.verseIndex,
       label: label ?? this.label,
       mergeWithNext: mergeWithNext ?? this.mergeWithNext,
+      skipped: skipped ?? this.skipped,
       playSound: playSound ?? this.playSound,
       advanceAfterSound: advanceAfterSound ?? this.advanceAfterSound,
       customTextTitle: customTextTitle ?? this.customTextTitle,

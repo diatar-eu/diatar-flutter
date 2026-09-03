@@ -889,6 +889,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderAdvanceAfterSoundTooltip => 'Továbblépés a zene végén';
 
   @override
+  String get customOrderSkipSlideTooltip => 'Dia kihagyása vetítéskor';
+
+  @override
   String get addSong => 'Ének hozzáadása';
 
   @override

@@ -73,10 +73,15 @@ class _DtxManagerListEntry {
 }
 
 class _DiaVerseEntry {
-  const _DiaVerseEntry({required this.customOrderIndex, required this.label});
+  const _DiaVerseEntry({
+    required this.customOrderIndex,
+    required this.label,
+    required this.skipped,
+  });
 
   final int customOrderIndex;
   final String label;
+  final bool skipped;
 }
 
 class _DiaSongGroup {
@@ -215,7 +220,11 @@ List<_DiaSongGroup> _buildDiaSongGroups(
         _DiaSongGroup(
           label: mergedLabel,
           verses: <_DiaVerseEntry>[
-            _DiaVerseEntry(customOrderIndex: i, label: mergedLabel),
+            _DiaVerseEntry(
+              customOrderIndex: i,
+              label: mergedLabel,
+              skipped: first.skipped,
+            ),
           ],
         ),
       );
@@ -236,7 +245,11 @@ List<_DiaSongGroup> _buildDiaSongGroups(
           _DiaSongGroup(
             label: firstLabel,
             verses: <_DiaVerseEntry>[
-              _DiaVerseEntry(customOrderIndex: i, label: firstLabel),
+              _DiaVerseEntry(
+                customOrderIndex: i,
+                label: firstLabel,
+                skipped: first.skipped,
+              ),
             ],
           ),
         );
@@ -263,7 +276,11 @@ List<_DiaSongGroup> _buildDiaSongGroups(
           break;
         }
         verses.add(
-          _DiaVerseEntry(customOrderIndex: j, label: candidateSplit.suffix),
+          _DiaVerseEntry(
+            customOrderIndex: j,
+            label: candidateSplit.suffix,
+            skipped: candidate.skipped,
+          ),
         );
         j++;
       }
@@ -300,6 +317,7 @@ List<_DiaSongGroup> _buildDiaSongGroups(
         _DiaVerseEntry(
           customOrderIndex: j,
           label: _entryShortLabel(l10n, controller, candidate),
+          skipped: candidate.skipped,
         ),
       );
       lastVerse = candidate.verseIndex;
@@ -3831,10 +3849,33 @@ class _SongDropdown extends StatelessWidget {
                   value: e.key,
                   child: SizedBox(
                     width: double.infinity,
-                    child: Text(
-                      e.value.label,
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+                    child: Row(
+                      children: <Widget>[
+                        if (e.value.verses.every(
+                          (_DiaVerseEntry verse) => verse.skipped,
+                        ))
+                          const Padding(
+                            padding: EdgeInsets.only(right: 6),
+                            child: Icon(
+                              Icons.cancel_outlined,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        Expanded(
+                          child: Text(
+                            e.value.label,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style:
+                                e.value.verses.every(
+                                  (_DiaVerseEntry verse) => verse.skipped,
+                                )
+                                ? const TextStyle(color: Colors.grey)
+                                : null,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -4054,10 +4095,28 @@ class _VerseDropdown extends StatelessWidget {
             value: e.key,
             child: SizedBox(
               width: double.infinity,
-              child: Text(
-                e.value.label,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
+              child: Row(
+                children: <Widget>[
+                  if (e.value.skipped)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 6),
+                      child: Icon(
+                        Icons.cancel_outlined,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  Expanded(
+                    child: Text(
+                      e.value.label,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: e.value.skipped
+                          ? const TextStyle(color: Colors.grey)
+                          : null,
+                    ),
+                  ),
+                ],
               ),
             ),
           );
@@ -4199,12 +4258,13 @@ class _DialistPanelState extends State<_DialistPanel> {
     ThemeData theme, {
     required bool selected,
     required bool isSeparator,
+    required bool skipped,
   }) {
     return theme.textTheme.bodySmall?.copyWith(
       fontSize: 13,
       fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
       fontStyle: isSeparator ? FontStyle.italic : FontStyle.normal,
-      color: isSeparator ? theme.colorScheme.onSurfaceVariant : null,
+      color: skipped || isSeparator ? theme.colorScheme.onSurfaceVariant : null,
     );
   }
 
@@ -4222,6 +4282,7 @@ class _DialistPanelState extends State<_DialistPanel> {
       theme,
       selected: selected,
       isSeparator: isSeparator,
+      skipped: entry.skipped,
     );
     final String label = _dialistEntryLabel(context.l10n, controller, entry);
     final String firstLine = controller.firstTextLineForEntry(entry);
@@ -4273,6 +4334,7 @@ class _DialistPanelState extends State<_DialistPanel> {
       theme,
       selected: previousSelected,
       isSeparator: previousEntry.isSeparator,
+      skipped: previousEntry.skipped,
     );
 
     final List<InlineSpan> spans = <InlineSpan>[
@@ -4423,19 +4485,35 @@ class _DialistPanelState extends State<_DialistPanel> {
                                     vertical: -2,
                                   ),
                                   minTileHeight: 38,
-                                  leading: MergeIndicator(
-                                    visual:
-                                        controller
-                                            .isCustomOrderEntryMergeFollowerAt(
-                                              index,
-                                            )
-                                        ? MergeIndicatorVisual.lowerBrace
-                                        : controller
-                                              .isCustomOrderEntryMergeLeaderAt(
-                                                index,
-                                              )
-                                        ? MergeIndicatorVisual.upperBrace
-                                        : MergeIndicatorVisual.hidden,
+                                  leading: SizedBox(
+                                    width: 42,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        MergeIndicator(
+                                          visual:
+                                              controller
+                                                  .isCustomOrderEntryMergeFollowerAt(
+                                                    index,
+                                                  )
+                                              ? MergeIndicatorVisual.lowerBrace
+                                              : controller
+                                                    .isCustomOrderEntryMergeLeaderAt(
+                                                      index,
+                                                    )
+                                              ? MergeIndicatorVisual.upperBrace
+                                              : MergeIndicatorVisual.hidden,
+                                        ),
+                                        if (entry.skipped)
+                                          Icon(
+                                            Icons.cancel_outlined,
+                                            size: 16,
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                      ],
+                                    ),
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 8,

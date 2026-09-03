@@ -8,6 +8,7 @@ class StoredCustomOrderEntry {
     required this.verseIndex,
     required this.label,
     this.mergeWithNext = false,
+    this.skipped = false,
     this.playSound = false,
     this.advanceAfterSound = false,
     this.customTextTitle,
@@ -23,6 +24,7 @@ class StoredCustomOrderEntry {
   final int verseIndex;
   final String label;
   final bool mergeWithNext;
+  final bool skipped;
   final bool playSound;
   final bool advanceAfterSound;
   final String? customTextTitle;
@@ -39,6 +41,7 @@ class StoredCustomOrderEntry {
       'verseIndex': verseIndex,
       'label': label,
       'dbldia': mergeWithNext,
+      'skipped': skipped,
       'sound': playSound,
       'soundforward': advanceAfterSound,
       'customTextTitle': customTextTitle,
@@ -64,6 +67,7 @@ class StoredCustomOrderEntry {
     final Object? v = raw['verseIndex'];
     final Object? l = raw['label'];
     final Object? dbldia = raw['dbldia'] ?? raw['mergeWithNext'];
+    final Object? skipped = raw['skipped'];
     final Object? sound = raw['sound'];
     final Object? soundforward = raw['soundforward'];
     final Object? textTitle = raw['customTextTitle'];
@@ -87,6 +91,7 @@ class StoredCustomOrderEntry {
           key == 'label' ||
           key == 'dbldia' ||
           key == 'mergeWithNext' ||
+          key == 'skipped' ||
           key == 'sound' ||
           key == 'soundforward' ||
           key == 'customTextTitle' ||
@@ -105,6 +110,7 @@ class StoredCustomOrderEntry {
       verseIndex: v is num ? v.toInt() : 0,
       label: l,
       mergeWithNext: dbldia is bool ? dbldia : false,
+      skipped: skipped is bool ? skipped : false,
       playSound: sound is bool ? sound : false,
       advanceAfterSound: soundforward is bool ? soundforward : false,
       customTextTitle: textTitle is String ? textTitle : null,

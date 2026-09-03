@@ -596,6 +596,7 @@
   "customOrderGroupReorder": "Csoportos áthelyezés",
   "customOrderPlaySoundTooltip": "A dia zenéjének lejátszása",
   "customOrderAdvanceAfterSoundTooltip": "Továbblépés a zene végén",
+  "customOrderSkipSlideTooltip": "Dia kihagyása vetítéskor",
   "addSong": "Ének hozzáadása",
   "searchSongHint": "Kötet, énekcím vagy dal szövege",
   "customOrderInsertBookLabel": "Kötet",

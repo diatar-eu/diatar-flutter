@@ -243,7 +243,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   DiatarMainController get controller => widget.controller;
 
   String _entrySignature(CustomOrderEntry entry) {
-    return '${entry.fileName}|${entry.songIndex}|${entry.verseIndex}|${entry.mergeWithNext}|${entry.playSound}|${entry.advanceAfterSound}|${entry.customTextTitle ?? ''}|${entry.customTextBody ?? ''}|${entry.customImagePath ?? ''}|${entry.customType ?? ''}|${jsonEncode(entry.customData)}|${entry.label}';
+    return '${entry.fileName}|${entry.songIndex}|${entry.verseIndex}|${entry.mergeWithNext}|${entry.skipped}|${entry.playSound}|${entry.advanceAfterSound}|${entry.customTextTitle ?? ''}|${entry.customTextBody ?? ''}|${entry.customImagePath ?? ''}|${entry.customType ?? ''}|${jsonEncode(entry.customData)}|${entry.label}';
   }
 
   bool _isTextualEntry(CustomOrderEntry entry) {
@@ -286,6 +286,25 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       _entries[leaderIndex] = _entries[leaderIndex].copyWith(
         mergeWithNext: !_isMergeLeader(leaderIndex),
       );
+    });
+    await _commitEntries();
+  }
+
+  Future<void> _toggleSkippedAt(int index) async {
+    final List<int> pairedIndexes = <int>[index];
+    if (_isMergeLeader(index)) {
+      pairedIndexes.add(index + 1);
+    } else if (_isMergeFollower(index)) {
+      pairedIndexes.add(index - 1);
+    }
+
+    setState(() {
+      final bool skipped = !_entries[index].skipped;
+      for (final int pairedIndex in pairedIndexes) {
+        _entries[pairedIndex] = _entries[pairedIndex].copyWith(
+          skipped: skipped,
+        );
+      }
     });
     await _commitEntries();
   }
@@ -2234,7 +2253,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 contentPadding: EdgeInsets.zero,
                 onTap: () => controller.selectCustomOrderEntryForEditing(index),
                 leading: SizedBox(
-                  width: showSoundControls ? 106 : 50,
+                  width: showSoundControls ? 134 : 78,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
@@ -2250,6 +2269,25 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                         onTap: _canMergeAt(index)
                             ? () => unawaited(_toggleMergeAt(index))
                             : null,
+                      ),
+                      IconButton(
+                        tooltip: context.l10n.customOrderSkipSlideTooltip,
+                        icon: Icon(
+                          Icons.cancel_outlined,
+                          color: entry.skipped
+                              ? Colors.red.shade700
+                              : Colors.grey.shade600,
+                        ),
+                        visualDensity: const VisualDensity(
+                          horizontal: -4,
+                          vertical: -4,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 28,
+                          minHeight: 28,
+                        ),
+                        onPressed: () => unawaited(_toggleSkippedAt(index)),
                       ),
                       if (showSoundControls) ...<Widget>[
                         IconButton(
@@ -2315,7 +2353,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 ),
                 title: Padding(
                   padding: EdgeInsets.only(
-                    left: isContinuation ? (showSoundControls ? 126 : 70) : 16,
+                    left: isContinuation ? (showSoundControls ? 154 : 98) : 16,
                     right: 8,
                   ),
                   child: titleWidget,

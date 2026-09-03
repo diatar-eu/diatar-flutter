@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:diatar_app/src/controllers/diatar_main_controller.dart';
+import 'package:diatar_app/src/core/custom_order/custom_order_navigation_policy.dart';
 import 'package:diatar_app/src/core/settings/transport_settings_policy.dart';
 import 'package:diatar_app/src/models/custom_order_entry.dart';
 import 'package:diatar_app/src/services/dtx_order_store.dart';
@@ -55,6 +56,39 @@ void main() {
       );
 
       expect(merged, 'Kötet: ének/vers1, vers2');
+    });
+
+    group('custom order skipped slides', () {
+      const CustomOrderNavigationPolicy navigation =
+          CustomOrderNavigationPolicy();
+
+      test('does not return skipped slides while stepping', () {
+        const List<CustomOrderEntry> entries = <CustomOrderEntry>[
+          CustomOrderEntry(
+            fileName: '__custom_text__',
+            songIndex: -1,
+            verseIndex: 0,
+            label: 'Skipped',
+            skipped: true,
+          ),
+          CustomOrderEntry(
+            fileName: '__custom_text__',
+            songIndex: -1,
+            verseIndex: 0,
+            label: 'Shown',
+          ),
+          CustomOrderEntry(
+            fileName: '__custom_text__',
+            songIndex: -1,
+            verseIndex: 0,
+            label: 'Skipped too',
+            skipped: true,
+          ),
+        ];
+
+        expect(navigation.findNextProjectableIndex(entries, 0), 1);
+        expect(navigation.findPrevProjectableIndex(entries, 2), 1);
+      });
     });
 
     test('keeps shared book prefix and separates differing song/verse', () {
@@ -201,6 +235,56 @@ void main() {
         );
         expect(controller.customOrder.single.playSound, isTrue);
         expect(controller.customOrder.single.advanceAfterSound, isTrue);
+      });
+
+      test('writes and reads DIA skipped state', () async {
+        final DiatarMainController controller = DiatarMainController();
+        final Directory directory = await Directory.systemTemp.createTemp(
+          'diatar_skipped_slide_test_',
+        );
+        final String path =
+            '${directory.path}${Platform.pathSeparator}order.dia';
+        addTearDown(() => directory.delete(recursive: true));
+
+        await controller.applyCustomOrder(const <CustomOrderEntry>[
+          CustomOrderEntry(
+            fileName: '__custom_text__',
+            songIndex: -1,
+            verseIndex: 0,
+            label: '[Text] Skipped',
+            customTextTitle: 'Skipped',
+            customTextBody: 'Text',
+            customType: 'text',
+            skipped: true,
+          ),
+        ], activate: true);
+        await controller.exportCustomOrderToDia(path, recordSave: false);
+
+        final String content = await File(path).readAsString();
+        expect(content, contains('skipped=1'));
+
+        await File(path).writeAsString('''
+[main]
+diaszam=2
+
+[1]
+skipped=true
+caption=First
+lines=1
+line0=First text
+
+[2]
+skipped=0
+caption=Second
+lines=1
+line0=Second text
+''');
+        await controller.importCustomOrderFromDia(
+          path,
+          mode: CustomOrderImportMode.overwriteActive,
+        );
+        expect(controller.customOrder[0].skipped, isTrue);
+        expect(controller.customOrder[1].skipped, isFalse);
       });
 
       test('reads boolean and numeric DIA options', () async {

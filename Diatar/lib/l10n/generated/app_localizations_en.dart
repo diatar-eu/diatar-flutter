@@ -887,6 +887,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Advance when the music ends';
 
   @override
+  String get customOrderSkipSlideTooltip => 'Skip this slide during projection';
+
+  @override
   String get addSong => 'Add song';
 
   @override

@@ -7,6 +7,7 @@ class CustomOrderNavigationPolicy {
     int idx = start;
     while (idx >= 0 && idx < source.length) {
       if (!source[idx].isSeparator &&
+          !source[idx].skipped &&
           !(idx > 0 && source[idx - 1].mergeWithNext)) {
         return idx;
       }
@@ -19,6 +20,7 @@ class CustomOrderNavigationPolicy {
     int idx = start;
     while (idx >= 0 && idx < source.length) {
       if (!source[idx].isSeparator &&
+          !source[idx].skipped &&
           !(idx > 0 && source[idx - 1].mergeWithNext)) {
         return idx;
       }
