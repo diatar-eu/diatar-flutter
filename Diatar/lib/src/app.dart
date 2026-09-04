@@ -143,8 +143,8 @@ class _DiatarAppState extends State<DiatarApp>
           ],
           supportedLocales: AppLocalizations.supportedLocales,
           locale: appLocale,
-          theme: ThemeData.light(useMaterial3: true),
-          darkTheme: ThemeData.dark(useMaterial3: true),
+          theme: _theme(Brightness.light),
+          darkTheme: _theme(Brightness.dark),
           themeMode: themeMode,
           // A DesktopHotkeysLayer-t (gyorsbillentyűket kezelő Focus réteget)
           // mindig csatlakoztatjuk, hogy a billentyűk akkor is működjenek,
@@ -169,6 +169,32 @@ class _DiatarAppState extends State<DiatarApp>
           ),
         );
       },
+    );
+  }
+
+  ThemeData _theme(Brightness brightness) {
+    final ThemeData theme = brightness == Brightness.light
+        ? ThemeData.light(useMaterial3: true)
+        : ThemeData.dark(useMaterial3: true);
+    final ColorScheme colors = theme.colorScheme;
+    return theme.copyWith(
+      checkboxTheme: CheckboxThemeData(
+        checkColor: WidgetStatePropertyAll<Color>(colors.onPrimary),
+        fillColor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return colors.primary;
+          }
+          return colors.surface;
+        }),
+        side: WidgetStateBorderSide.resolveWith(
+          (Set<WidgetState> states) => BorderSide(
+            color: states.contains(WidgetState.selected)
+                ? colors.primary
+                : colors.outline,
+            width: 1.5,
+          ),
+        ),
+      ),
     );
   }
 }

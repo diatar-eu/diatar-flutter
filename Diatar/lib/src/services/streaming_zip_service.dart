@@ -1,7 +1,7 @@
 import 'dart:io' as io;
-import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:flutter/foundation.dart';
 
 import '../utils/file_system_provider.dart';
 
@@ -30,6 +30,14 @@ class StreamingZipService {
     required Directory targetDirectory,
     Set<String>? only,
   }) async {
+    if (kIsWeb) {
+      return _extractInMemory(
+        zipPath,
+        targetDirectory: targetDirectory,
+        only: only,
+      );
+    }
+
     final _ZipDirectory directory = _readDirectory(zipPath);
     final List<String> extracted = <String>[];
     try {
@@ -60,6 +68,40 @@ class StreamingZipService {
     } finally {
       await directory.close();
     }
+    return extracted;
+  }
+
+  Future<List<String>> _extractInMemory(
+    String zipPath, {
+    required Directory targetDirectory,
+    Set<String>? only,
+  }) async {
+    final File zipFile = FileSystemProvider.instance.file(zipPath);
+    final Archive archive = ZipDecoder().decodeBytes(
+      await zipFile.readAsBytes(),
+    );
+    final List<String> extracted = <String>[];
+
+    for (final ArchiveFile entry in archive) {
+      if (!entry.isFile || entry.isSymbolicLink) {
+        continue;
+      }
+      final String name = entry.name.replaceAll(r'\', '/');
+      if (!_isSafePath(name) || (only != null && !only.contains(name))) {
+        continue;
+      }
+      final Uint8List? bytes = entry.readBytes();
+      if (bytes == null) {
+        throw FormatException('Archive entry "$name" could not be read.');
+      }
+      final File target = FileSystemProvider.instance.file(
+        '${targetDirectory.path}/$name',
+      );
+      await target.parent.create(recursive: true);
+      await target.writeAsBytes(bytes, flush: true);
+      extracted.add(name);
+    }
+
     return extracted;
   }
 
