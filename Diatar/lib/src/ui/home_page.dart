@@ -2740,7 +2740,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                 ..clear()
                 ..addAll(
                   items
-                      .where((DtzManageItem item) => item.excluded)
+                      .where((DtzManageItem item) => !music || item.excluded)
                       .map((DtzManageItem item) => item.item.fileName),
                 );
               selections.initialized = true;
