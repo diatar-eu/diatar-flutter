@@ -23,6 +23,7 @@ import '../core/custom_order/entry_label_service.dart';
 import '../core/custom_order/entry_match_policy.dart';
 import '../core/custom_order/entry_resolver.dart';
 import '../core/dia/dia_ini_parser.dart';
+import '../core/dia/dia_embedded_image_codec.dart';
 import '../core/dia/dia_matching_policy.dart';
 import '../core/dia/dia_path_policy.dart';
 import '../core/navigation/song_navigation_policy.dart';
@@ -130,6 +131,8 @@ enum CustomOrderImportMode { overwriteActive, addNew }
 class DiatarMainController extends ChangeNotifier {
   final DtxParser _parser = const DtxParser();
   final DiaIniParser _diaIniParser = const DiaIniParser();
+  final DiaEmbeddedImageCodec _diaEmbeddedImageCodec =
+      const DiaEmbeddedImageCodec();
   final DiaMatchingPolicy _diaMatchingPolicy = const DiaMatchingPolicy();
   final DiaPathPolicy _diaPathPolicy = const DiaPathPolicy();
   final BookSortPolicy _bookSortPolicy = const BookSortPolicy();
@@ -260,6 +263,7 @@ class DiatarMainController extends ChangeNotifier {
     fileTransferProgress = (progress ?? 0).clamp(0.0, 1.0);
     notifyListeners();
   }
+
   int _screenWidth = 1920;
   int _screenHeight = 1080;
   Set<String> _disabledSongbooks = <String>{};
@@ -3133,6 +3137,7 @@ class DiatarMainController extends ChangeNotifier {
   Future<String> exportCustomOrderToDia(
     String path, {
     bool recordSave = true,
+    bool embedImages = false,
   }) async {
     final String safePath = path.toLowerCase().endsWith('.dia')
         ? path
@@ -3145,6 +3150,7 @@ class DiatarMainController extends ChangeNotifier {
     final List<CustomOrderEntry> exportable = _customOrder
         .map(normalizeEntry)
         .toList();
+    final Map<String, Uint8List> embeddedImages = <String, Uint8List>{};
     final StringBuffer out = StringBuffer();
     out.writeln('[main]');
     out.writeln('diaszam=${exportable.length}');
@@ -3182,6 +3188,17 @@ class DiatarMainController extends ChangeNotifier {
           diaDir,
         );
         out.writeln('kep=$rel');
+        if (embedImages) {
+          final File imageFile = FileSystemProvider.instance.file(
+            entry.customImagePath ?? '',
+          );
+          if (!await imageFile.exists()) {
+            throw DiaEmbeddedImageSourceMissingException(
+              entry.customImagePath ?? '',
+            );
+          }
+          embeddedImages[rel] = await imageFile.readAsBytes();
+        }
         continue;
       }
 
@@ -3218,6 +3235,16 @@ class DiatarMainController extends ChangeNotifier {
       out.writeln('kotet=${book?.title ?? entry.fileName}');
       out.writeln('enek=${song?.title ?? entry.label}');
       out.writeln('versszak=$verseName');
+    }
+    if (embedImages && embeddedImages.isNotEmpty) {
+      final Map<String, String> embeddedSection = _diaEmbeddedImageCodec.encode(
+        embeddedImages,
+      );
+      out.writeln();
+      out.writeln('[Embedded]');
+      for (final MapEntry<String, String> field in embeddedSection.entries) {
+        out.writeln('${field.key}=${field.value}');
+      }
     }
 
     await diaFile.writeAsString(out.toString(), encoding: utf8);
@@ -3292,6 +3319,11 @@ class DiatarMainController extends ChangeNotifier {
 
     final String content = await f.readAsString();
     final Map<String, Map<String, String>> sections = _parseDiaIni(content);
+    final Map<String, Uint8List> embeddedImages = _diaEmbeddedImageCodec.decode(
+      sections['embedded'],
+    );
+    Directory? embeddedImageDirectory;
+    int embeddedImageIndex = 0;
     final int declaredCount =
         int.tryParse(sections['main']?['diaszam'] ?? '') ?? 0;
 
@@ -3356,7 +3388,20 @@ class DiatarMainController extends ChangeNotifier {
 
       final String kep = (sec['kep'] ?? '').trim();
       if (kep.isNotEmpty) {
-        final String resolved = _resolveDiaImagePath(path, kep);
+        String resolved = _resolveDiaImagePath(path, kep);
+        if (!await FileSystemProvider.instance.file(resolved).exists()) {
+          final Uint8List? embeddedImage = embeddedImages[kep];
+          if (embeddedImage != null) {
+            embeddedImageDirectory ??= await _createEmbeddedImageDirectory();
+            final String extension = _fileExtension(kep);
+            final File target = FileSystemProvider.instance.file(
+              '${embeddedImageDirectory.path}${Platform.pathSeparator}'
+              '${embeddedImageIndex++}${extension.isEmpty ? '' : '.$extension'}',
+            );
+            await target.writeAsBytes(embeddedImage);
+            resolved = target.path;
+          }
+        }
         imported.add(
           CustomOrderEntry(
             fileName: '__custom_image__',
@@ -3449,6 +3494,9 @@ class DiatarMainController extends ChangeNotifier {
         ),
       );
     }
+    if (embeddedImageDirectory != null) {
+      await FileSystemProvider.persistWebFileSystem();
+    }
 
     final String importedName = _stripFileExtension(
       (sourceFileName ?? _fileNameFromPath(path)).trim(),
@@ -3525,6 +3573,17 @@ class DiatarMainController extends ChangeNotifier {
 
   String _stripFileExtension(String fileName) {
     return _diaPathPolicy.stripFileExtension(fileName);
+  }
+
+  Future<Directory> _createEmbeddedImageDirectory() async {
+    final String documentsPath = await PathHelper.getDocumentsDirectoryPath();
+    final Directory directory = FileSystemProvider.instance.directory(
+      '$documentsPath${Platform.pathSeparator}diatar'
+      '${Platform.pathSeparator}embedded_dia_images'
+      '${Platform.pathSeparator}${DateTime.now().microsecondsSinceEpoch}',
+    );
+    await directory.create(recursive: true);
+    return directory;
   }
 
   List<String> _collectDiaLines(Map<String, String> sec, int declaredLines) {

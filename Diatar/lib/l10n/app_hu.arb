@@ -1319,5 +1319,15 @@
   "picPlcActionStep": "Dia léptető gomb",
   "picPlcLedProjectionOn": "Vetítés bekapcsolva",
   "picPlcLedForward": "Előre irány",
-  "picPlcLedBackward": "Hátra irány"
+  "picPlcLedBackward": "Hátra irány",
+  "customOrderEmbedImagesTitle": "Képek beágyazása?",
+  "customOrderEmbedImagesMessage": "A diasor képeket tartalmaz. Beágyazzuk őket a DIA fájlba, hogy az eredeti képfájlok nélkül is használható legyen?",
+  "customOrderEmbedImagesNo": "Ne ágyazza be",
+  "customOrderEmbedImagesYes": "Beágyazás",
+  "customOrderEmbedImageMissing": "A beágyazandó kép nem található: {path}",
+  "@customOrderEmbedImageMissing": {
+    "placeholders": {
+      "path": {}
+    }
+  }
 }

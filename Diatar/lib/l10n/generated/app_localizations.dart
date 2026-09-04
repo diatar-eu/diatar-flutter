@@ -3922,6 +3922,36 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Hátra irány'**
   String get picPlcLedBackward;
+
+  /// No description provided for @customOrderEmbedImagesTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Képek beágyazása?'**
+  String get customOrderEmbedImagesTitle;
+
+  /// No description provided for @customOrderEmbedImagesMessage.
+  ///
+  /// In hu, this message translates to:
+  /// **'A diasor képeket tartalmaz. Beágyazzuk őket a DIA fájlba, hogy az eredeti képfájlok nélkül is használható legyen?'**
+  String get customOrderEmbedImagesMessage;
+
+  /// No description provided for @customOrderEmbedImagesNo.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ne ágyazza be'**
+  String get customOrderEmbedImagesNo;
+
+  /// No description provided for @customOrderEmbedImagesYes.
+  ///
+  /// In hu, this message translates to:
+  /// **'Beágyazás'**
+  String get customOrderEmbedImagesYes;
+
+  /// No description provided for @customOrderEmbedImageMissing.
+  ///
+  /// In hu, this message translates to:
+  /// **'A beágyazandó kép nem található: {path}'**
+  String customOrderEmbedImageMissing(Object path);
 }
 
 class _AppLocalizationsDelegate

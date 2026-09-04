@@ -1318,5 +1318,15 @@
   "picPlcActionStep": "Step slide",
   "picPlcLedProjectionOn": "Projection on",
   "picPlcLedForward": "Forward direction",
-  "picPlcLedBackward": "Backward direction"
+  "picPlcLedBackward": "Backward direction",
+  "customOrderEmbedImagesTitle": "Embed images?",
+  "customOrderEmbedImagesMessage": "This slide list contains images. Embed them in the DIA file so it can be used without the original image files?",
+  "customOrderEmbedImagesNo": "Do not embed",
+  "customOrderEmbedImagesYes": "Embed",
+  "customOrderEmbedImageMissing": "The image to embed was not found: {path}",
+  "@customOrderEmbedImageMissing": {
+    "placeholders": {
+      "path": {}
+    }
+  }
 }

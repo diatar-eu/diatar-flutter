@@ -167,6 +167,63 @@ void main() {
     });
 
     test(
+      'uses an embedded image when the DIA image path is unavailable',
+      () async {
+        final DiatarMainController controller = DiatarMainController();
+        final Directory directory = await Directory.systemTemp.createTemp(
+          'diatar_embedded_image_test_',
+        );
+        final String diaPath =
+            '${directory.path}${Platform.pathSeparator}order.dia';
+        final File imageFile = File(
+          '${directory.path}${Platform.pathSeparator}image.png',
+        );
+        await imageFile.writeAsBytes(<int>[137, 80, 78, 71]);
+        addTearDown(() => directory.delete(recursive: true));
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('plugins.flutter.io/path_provider'),
+              (MethodCall methodCall) async => directory.path,
+            );
+        addTearDown(
+          () => TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .setMockMethodCallHandler(
+                const MethodChannel('plugins.flutter.io/path_provider'),
+                null,
+              ),
+        );
+
+        await controller.applyCustomOrder(<CustomOrderEntry>[
+          CustomOrderEntry(
+            fileName: '__custom_image__',
+            songIndex: -2,
+            verseIndex: 0,
+            label: '[Image] image.png',
+            customImagePath: imageFile.path,
+            customType: 'image',
+          ),
+        ], activate: true);
+        await controller.exportCustomOrderToDia(
+          diaPath,
+          recordSave: false,
+          embedImages: true,
+        );
+        await imageFile.delete();
+
+        final DiatarMainController imported = DiatarMainController();
+        expect(await imported.importCustomOrderFromDia(diaPath), 1);
+        final File restoredImage = File(
+          imported.customOrder.single.customImagePath!,
+        );
+        addTearDown(() => restoredImage.parent.delete(recursive: true));
+
+        expect(await restoredImage.readAsBytes(), <int>[137, 80, 78, 71]);
+      },
+    );
+
+    test(
       'updates the active set display name after a save-as rename',
       () async {
         final DiatarMainController controller = DiatarMainController();

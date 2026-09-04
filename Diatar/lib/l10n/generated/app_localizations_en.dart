@@ -2189,4 +2189,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get picPlcLedBackward => 'Backward direction';
+
+  @override
+  String get customOrderEmbedImagesTitle => 'Embed images?';
+
+  @override
+  String get customOrderEmbedImagesMessage =>
+      'This slide list contains images. Embed them in the DIA file so it can be used without the original image files?';
+
+  @override
+  String get customOrderEmbedImagesNo => 'Do not embed';
+
+  @override
+  String get customOrderEmbedImagesYes => 'Embed';
+
+  @override
+  String customOrderEmbedImageMissing(Object path) {
+    return 'The image to embed was not found: $path';
+  }
 }

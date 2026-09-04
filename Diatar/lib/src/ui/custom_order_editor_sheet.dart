@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
 
 import '../controllers/diatar_main_controller.dart';
+import '../core/dia/dia_embedded_image_codec.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
 import '../models/custom_order_set.dart';
@@ -1675,6 +1676,13 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     final l10n = context.l10n;
     try {
       await _commitEntries();
+      final bool embedImages =
+          _entries.any((CustomOrderEntry entry) => entry.isCustomImage)
+          ? await _askEmbedDiaImages()
+          : false;
+      if (!mounted) {
+        return;
+      }
 
       String? targetPath;
       bool nativeSaveDialogAvailable = true;
@@ -1697,7 +1705,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         // használjuk az új hely kiválasztásához. Ha már van mentett célhely
         // (SAF URI), előbb felajánljuk a közvetlen felülírást.
         final ({String uri, String displayName, String? renameFromName})?
-        saved = await _saveDiaWithAndroidFlow(defaultFileName: defaultFileName);
+        saved = await _saveDiaWithAndroidFlow(
+          defaultFileName: defaultFileName,
+          embedImages: embedImages,
+        );
         if (saved == null || !mounted) {
           return;
         }
@@ -1796,6 +1807,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
       final String outPath = await controller.exportCustomOrderToDia(
         targetPath,
+        embedImages: embedImages,
       );
       if (!mounted) {
         return;
@@ -1813,8 +1825,35 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
   }
 
+  Future<bool> _askEmbedDiaImages() async {
+    final AppLocalizations l10n = context.l10n;
+    final bool? embed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.customOrderEmbedImagesTitle),
+          content: Text(l10n.customOrderEmbedImagesMessage),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.customOrderEmbedImagesNo),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.customOrderEmbedImagesYes),
+            ),
+          ],
+        );
+      },
+    );
+    return embed ?? false;
+  }
+
   Future<({String uri, String displayName, String? renameFromName})?>
-  _saveDiaWithAndroidFlow({required String defaultFileName}) async {
+  _saveDiaWithAndroidFlow({
+    required String defaultFileName,
+    required bool embedImages,
+  }) async {
     final String storedUri = controller.settings.diaExportUri.trim();
     if (storedUri.isNotEmpty) {
       final String storedName =
@@ -1828,7 +1867,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         return null;
       }
       if (decision == 'overwrite') {
-        final bool overwritten = await _tryAndroidOverwrite(storedUri);
+        final bool overwritten = await _tryAndroidOverwrite(
+          storedUri,
+          embedImages: embedImages,
+        );
         if (overwritten) {
           // Felülíráskor nincs névmegadás: a diasor neve ne változzon.
           return (
@@ -1840,17 +1882,27 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         await _clearAndroidSavedDiaTarget();
       }
     }
-    return _saveDiaWithAndroidSystemDialog(fileName: defaultFileName);
+    return _saveDiaWithAndroidSystemDialog(
+      fileName: defaultFileName,
+      embedImages: embedImages,
+    );
   }
 
   Future<({String uri, String displayName, String? renameFromName})?>
-  _saveDiaWithAndroidSystemDialog({required String fileName}) async {
+  _saveDiaWithAndroidSystemDialog({
+    required String fileName,
+    required bool embedImages,
+  }) async {
     final Directory tempDir = await Directory.systemTemp.createTemp(
       'diatar_dia_export_',
     );
     try {
       final String tempPath = '${tempDir.path}/$fileName';
-      await controller.exportCustomOrderToDia(tempPath, recordSave: false);
+      await controller.exportCustomOrderToDia(
+        tempPath,
+        recordSave: false,
+        embedImages: embedImages,
+      );
       final Uint8List data = await File(tempPath).readAsBytes();
       final Object? decoded = await _androidDiaSaveChannel
           .invokeMethod<Object?>('saveDiaFile', <String, Object?>{
@@ -1892,9 +1944,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
   }
 
-  Future<bool> _tryAndroidOverwrite(String uri) async {
+  Future<bool> _tryAndroidOverwrite(
+    String uri, {
+    required bool embedImages,
+  }) async {
     try {
-      await _saveDiaWithAndroidOverwrite(uri: uri);
+      await _saveDiaWithAndroidOverwrite(uri: uri, embedImages: embedImages);
       return true;
     } on PlatformException {
       return false;
@@ -1903,7 +1958,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
   }
 
-  Future<void> _saveDiaWithAndroidOverwrite({required String uri}) async {
+  Future<void> _saveDiaWithAndroidOverwrite({
+    required String uri,
+    required bool embedImages,
+  }) async {
     final Directory tempDir = await Directory.systemTemp.createTemp(
       'diatar_dia_export_',
     );
@@ -1913,7 +1971,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           ? controller.settings.diaExportFileName.trim()
           : 'diasor.dia';
       final String tempPath = '${tempDir.path}/$fileName';
-      await controller.exportCustomOrderToDia(tempPath, recordSave: false);
+      await controller.exportCustomOrderToDia(
+        tempPath,
+        recordSave: false,
+        embedImages: embedImages,
+      );
       final Uint8List data = await File(tempPath).readAsBytes();
       await _androidDiaSaveChannel.invokeMethod<Object?>(
         'overwriteDiaFile',
@@ -2013,6 +2075,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   String _formatDiaSaveErrorDetails(Object error, AppLocalizations l10n) {
+    if (error is DiaEmbeddedImageSourceMissingException) {
+      return l10n.customOrderEmbedImageMissing(
+        formatFriendlyPathLabel(error.path, l10n),
+      );
+    }
     final String raw = '$error';
     final String lowered = raw.toLowerCase();
     final bool permissionLikeError =

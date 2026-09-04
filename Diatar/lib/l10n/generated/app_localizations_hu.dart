@@ -2196,4 +2196,22 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get picPlcLedBackward => 'Hátra irány';
+
+  @override
+  String get customOrderEmbedImagesTitle => 'Képek beágyazása?';
+
+  @override
+  String get customOrderEmbedImagesMessage =>
+      'A diasor képeket tartalmaz. Beágyazzuk őket a DIA fájlba, hogy az eredeti képfájlok nélkül is használható legyen?';
+
+  @override
+  String get customOrderEmbedImagesNo => 'Ne ágyazza be';
+
+  @override
+  String get customOrderEmbedImagesYes => 'Beágyazás';
+
+  @override
+  String customOrderEmbedImageMissing(Object path) {
+    return 'A beágyazandó kép nem található: $path';
+  }
 }
