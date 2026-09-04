@@ -67,7 +67,10 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
 
     final Map<String, String> songHotkeys =
         widget.controller.settings.desktopSongHotkeys;
-    final String? songBinding = songHotkeys[combo];
+    final String? songBinding = desktopHotkeyValueForCombo(
+      combo,
+      songHotkeys,
+    );
     if (songBinding != null) {
       widget.controller.activateSongHotkeyBinding(songBinding);
       return KeyEventResult.handled;
@@ -75,7 +78,10 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
 
     final Map<String, String> orderSetHotkeys =
         widget.controller.settings.desktopOrderSetHotkeys;
-    final String? orderSetId = orderSetHotkeys[combo];
+    final String? orderSetId = desktopHotkeyValueForCombo(
+      combo,
+      orderSetHotkeys,
+    );
     if (orderSetId != null) {
       unawaited(widget.controller.setActiveCustomOrderSetById(orderSetId));
       return KeyEventResult.handled;

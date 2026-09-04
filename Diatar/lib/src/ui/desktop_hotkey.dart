@@ -13,9 +13,23 @@ String? desktopHotkeyActionForEvent(
     return null;
   }
 
+  final String normalizedCombo = _normalizeStoredCombo(combo);
   for (final MapEntry<String, String> entry in actionHotkeys.entries) {
-    if (entry.value == combo) {
+    if (_normalizeStoredCombo(entry.value) == normalizedCombo) {
       return entry.key;
+    }
+  }
+  return null;
+}
+
+String? desktopHotkeyValueForCombo(
+  String combo,
+  Map<String, String> hotkeys,
+) {
+  final String normalizedCombo = _normalizeStoredCombo(combo);
+  for (final MapEntry<String, String> entry in hotkeys.entries) {
+    if (_normalizeStoredCombo(entry.key) == normalizedCombo) {
+      return entry.value;
     }
   }
   return null;
@@ -86,4 +100,8 @@ String _capitalize(String value) {
     return value;
   }
   return value[0].toUpperCase() + value.substring(1);
+}
+
+String _normalizeStoredCombo(String combo) {
+  return combo.replaceAll(RegExp(r'\s+'), '');
 }

@@ -72,4 +72,29 @@ void main() {
       );
     }
   });
+
+  test('recognizes hotkeys saved with spaced key names', () {
+    const Map<String, String> actionHotkeys = <String, String>{
+      'prevSong': 'Page Up',
+      'nextSong': 'Page Down',
+    };
+
+    expect(
+      desktopHotkeyActionForEvent(
+        KeyDownEvent(
+          physicalKey: PhysicalKeyboardKey.keyA,
+          logicalKey: LogicalKeyboardKey.pageUp,
+          timeStamp: Duration.zero,
+        ),
+        actionHotkeys,
+      ),
+      'prevSong',
+    );
+    expect(
+      desktopHotkeyValueForCombo('PageDown', <String, String>{
+        'Page Down': 'next-song',
+      }),
+      'next-song',
+    );
+  });
 }
