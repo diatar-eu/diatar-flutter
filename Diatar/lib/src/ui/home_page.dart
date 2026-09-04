@@ -1114,7 +1114,13 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     if (isLandscape) {
       return Column(
         children: <Widget>[
-          if (controller.loading) const LinearProgressIndicator(minHeight: 2),
+          if (controller.loading || controller.fileTransferInProgress)
+            LinearProgressIndicator(
+              value: controller.fileTransferInProgress
+                  ? controller.fileTransferProgress
+                  : null,
+              minHeight: 2,
+            ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -1161,7 +1167,13 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
 
     return Column(
       children: <Widget>[
-        if (controller.loading) const LinearProgressIndicator(minHeight: 2),
+        if (controller.loading || controller.fileTransferInProgress)
+          LinearProgressIndicator(
+            value: controller.fileTransferInProgress
+                ? controller.fileTransferProgress
+                : null,
+            minHeight: 2,
+          ),
         Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -1731,6 +1743,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           onRemoteShutdownRequested: () =>
               unawaited(controller.sendStop(wantShutdown: true)),
           onDownloadBooksRequested: () => _openDownloadDialog(context),
+          onFileTransferProgress: controller.setFileTransferProgress,
         );
       },
     );

@@ -77,7 +77,10 @@ void main() {
         .directory('${tempRoot.path}/diatar/empty')
         .create();
 
-    final String zipPath = await diskService.createExportArchiveFile();
+    final List<double> progress = <double>[];
+    final String zipPath = await diskService.createExportArchiveFile(
+      onProgress: progress.add,
+    );
     addTearDown(() async {
       try {
         await FileSystemProvider.instance.file(zipPath).parent.delete(
@@ -104,46 +107,8 @@ void main() {
       utf8.decode(entries['diatar/DTXs/song.dtx']!.content),
       equals('song'),
     );
-  });
-
-  test('reports conflicts before importing', () async {
-    await fileSystem
-        .file('/documents/diatar/DTXs/existing.dtx')
-        .create(recursive: true);
-
-    final DiatarImportPreview preview = await service.inspectImportArchive(
-      _zip(<String, List<int>>{
-        'diatar/DTXs/existing.dtx': utf8.encode('new'),
-        'diatar/DTXs/new.dtx': utf8.encode('new'),
-      }),
-    );
-
-    expect(preview.fileCount, 2);
-    expect(preview.conflictingFileCount, 1);
-  });
-
-  test('skip policy preserves every existing file', () async {
-    final file = fileSystem.file('/documents/diatar/DTXs/existing.dtx');
-    await file.create(recursive: true);
-    await file.writeAsString('old');
-
-    final DiatarImportResult result = await service.importArchive(
-      _zip(<String, List<int>>{
-        'diatar/DTXs/existing.dtx': utf8.encode('replacement'),
-        'diatar/DTXs/new.dtx': utf8.encode('new'),
-      }),
-      existingFilePolicy: ExistingFilePolicy.skip,
-    );
-
-    expect(await file.readAsString(), 'old');
-    expect(
-      await fileSystem.file('/documents/diatar/DTXs/new.dtx').readAsString(),
-      'new',
-    );
-    expect(result.importedFileCount, 1);
-    expect(result.skippedFileCount, 1);
-    expect(result.errors, isEmpty);
-    expect(persistCount, 1);
+    expect(progress, isNotEmpty);
+    expect(progress.last, 1);
   });
 
   test('overwrite policy replaces every existing file', () async {
@@ -154,19 +119,23 @@ void main() {
     await first.writeAsString('old first');
     await second.writeAsString('old second');
 
+    final List<double> progress = <double>[];
     final DiatarImportResult result = await service.importArchive(
       _zip(<String, List<int>>{
         'diatar/first.txt': utf8.encode('new first'),
         'diatar/second.txt': utf8.encode('new second'),
       }),
-      existingFilePolicy: ExistingFilePolicy.overwrite,
+      onProgress: progress.add,
     );
 
     expect(await first.readAsString(), 'new first');
     expect(await second.readAsString(), 'new second');
     expect(result.importedFileCount, 2);
-    expect(result.skippedFileCount, 0);
     expect(result.errors, isEmpty);
+    expect(persistCount, 1);
+    expect(progress, isNotEmpty);
+    expect(progress.first, greaterThan(0));
+    expect(progress.last, 1);
   });
 
   test('rejects path traversal without writing outside diatar', () async {
@@ -177,7 +146,6 @@ void main() {
     await expectLater(
       service.importArchive(
         bytes,
-        existingFilePolicy: ExistingFilePolicy.overwrite,
       ),
       throwsA(
         isA<DiatarArchiveException>().having(
@@ -192,7 +160,7 @@ void main() {
 
   test('rejects ZIP files that do not contain a diatar root', () async {
     await expectLater(
-      service.inspectImportArchive(
+      service.importArchive(
         _zip(<String, List<int>>{'other/file.txt': utf8.encode('wrong root')}),
       ),
       throwsA(isA<DiatarArchiveException>()),
@@ -229,7 +197,6 @@ void main() {
 
     final DiatarImportResult result = await service.importArchive(
       corrupted,
-      existingFilePolicy: ExistingFilePolicy.overwrite,
     );
 
     expect(result.importedFileCount, 0);

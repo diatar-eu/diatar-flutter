@@ -248,10 +248,18 @@ class DiatarMainController extends ChangeNotifier {
   String lastPicPath = '';
   String lastBlankPath = '';
   bool downloadInProgress = false;
+  bool fileTransferInProgress = false;
+  double fileTransferProgress = 0;
   int downloadCurrentFile = 0;
   int downloadTotalFiles = 0;
   String downloadCurrentName = '';
   double downloadCurrentFraction = 0;
+
+  void setFileTransferProgress(double? progress) {
+    fileTransferInProgress = progress != null;
+    fileTransferProgress = (progress ?? 0).clamp(0.0, 1.0);
+    notifyListeners();
+  }
   int _screenWidth = 1920;
   int _screenHeight = 1080;
   Set<String> _disabledSongbooks = <String>{};

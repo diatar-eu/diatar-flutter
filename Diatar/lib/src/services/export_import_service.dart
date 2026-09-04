@@ -1,4 +1,5 @@
 import 'dart:io' as io;
+import 'dart:async';
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -7,8 +8,6 @@ import 'package:path/path.dart' as path;
 
 import '../utils/file_system_provider.dart';
 import '../utils/path_helper.dart';
-
-enum ExistingFilePolicy { overwrite, skip }
 
 enum DiatarArchiveErrorCode { sourceDirectoryMissing, invalidArchive }
 
@@ -25,25 +24,13 @@ class DiatarArchiveException implements Exception {
   }
 }
 
-class DiatarImportPreview {
-  const DiatarImportPreview({
-    required this.fileCount,
-    required this.conflictingFileCount,
-  });
-
-  final int fileCount;
-  final int conflictingFileCount;
-}
-
 class DiatarImportResult {
   const DiatarImportResult({
     required this.importedFileCount,
-    required this.skippedFileCount,
     required this.errors,
   });
 
   final int importedFileCount;
-  final int skippedFileCount;
   final List<String> errors;
 
   bool get isSuccess => errors.isEmpty;
@@ -113,28 +100,28 @@ class ExportImportService {
     return Uint8List.fromList(ZipEncoder().encode(archive));
   }
 
-  /// Streams the complete diatar directory into a ZIP file on disk, keeping
-  /// memory usage bounded by the size of the largest single file instead of the
-  /// whole library. The archive is built in a background isolate so the UI
-  /// thread stays responsive.
+  /// Streams the complete diatar directory into an uncompressed ZIP file on
+  /// disk. Storing entries instead of deflating them avoids the archive
+  /// package's per-entry compression buffer and keeps memory use bounded.
   ///
   /// Returns the path of the created temporary archive. The caller owns the
   /// returned file and its parent directory and must delete them when done.
-  Future<String> createExportArchiveFile() async {
+  Future<String> createExportArchiveFile({
+    void Function(double progress)? onProgress,
+  }) async {
     final FileSystem fs = _fs;
     final String documentsPath = await _documentsDirectoryPathProvider();
     final Directory tempDir = await fs.systemTempDirectory.createTemp(
       'diatar_backup_',
     );
-    final String targetPath = fs.path.join(tempDir.path, 'diatar-backup.zip');
+    final String targetPath = fs.path.join(tempDir.path, 'diatar-backup.zip'    );
     try {
-      final ({String? path, Object? error}) result = await Isolate.run(
-        () => _streamExportArchiveTo(fs, documentsPath, targetPath),
+      await _streamExportArchiveTo(
+        documentsPath: documentsPath,
+        targetPath: targetPath,
+        onProgress: onProgress,
       );
-      if (result.error != null) {
-        throw result.error!;
-      }
-      return result.path!;
+      return targetPath;
     } catch (_) {
       try {
         await tempDir.delete(recursive: true);
@@ -145,39 +132,15 @@ class ExportImportService {
     }
   }
 
-  Future<DiatarImportPreview> inspectImportArchive(Uint8List zipData) async {
-    final _ReadArchive read = _readArchiveFromBytes(zipData);
-    try {
-      return _inspectValidatedArchive(
-        _validateCentralDirectory(read.headers),
-      );
-    } finally {
-      await read.close();
-    }
-  }
-
-  Future<DiatarImportPreview> inspectImportArchiveFile(
-    String zipFilePath,
-  ) async {
-    final _ReadArchive read = _readArchiveFromFilePath(zipFilePath);
-    try {
-      return _inspectValidatedArchive(
-        _validateCentralDirectory(read.headers),
-      );
-    } finally {
-      await read.close();
-    }
-  }
-
   Future<DiatarImportResult> importArchive(
     Uint8List zipData, {
-    required ExistingFilePolicy existingFilePolicy,
+    void Function(double progress)? onProgress,
   }) async {
     final _ReadArchive read = _readArchiveFromBytes(zipData);
     try {
-      return _importValidatedArchive(
+      return await _importValidatedArchive(
         _validateCentralDirectory(read.headers),
-        existingFilePolicy: existingFilePolicy,
+        onProgress: onProgress,
       );
     } finally {
       await read.close();
@@ -186,13 +149,13 @@ class ExportImportService {
 
   Future<DiatarImportResult> importArchiveFile(
     String zipFilePath, {
-    required ExistingFilePolicy existingFilePolicy,
+    void Function(double progress)? onProgress,
   }) async {
     final _ReadArchive read = _readArchiveFromFilePath(zipFilePath);
     try {
-      return _importValidatedArchive(
+      return await _importValidatedArchive(
         _validateCentralDirectory(read.headers),
-        existingFilePolicy: existingFilePolicy,
+        onProgress: onProgress,
       );
     } finally {
       await read.close();
@@ -240,34 +203,21 @@ class ExportImportService {
     }
   }
 
-  Future<DiatarImportPreview> _inspectValidatedArchive(
-    _ValidatedArchive archive,
-  ) async {
-    final Directory targetDirectory = await resolveDiatarDirectory();
-    int conflictingFileCount = 0;
-
-    for (final _ValidatedFile file in archive.files) {
-      final File target = _targetFile(targetDirectory, file.relativePath);
-      if (await target.exists()) {
-        conflictingFileCount++;
-      }
-    }
-
-    return DiatarImportPreview(
-      fileCount: archive.files.length,
-      conflictingFileCount: conflictingFileCount,
-    );
-  }
-
   Future<DiatarImportResult> _importValidatedArchive(
     _ValidatedArchive archive, {
-    required ExistingFilePolicy existingFilePolicy,
+    void Function(double progress)? onProgress,
   }) async {
     final Directory targetDirectory = await resolveDiatarDirectory();
     await targetDirectory.create(recursive: true);
 
     int importedFileCount = 0;
-    int skippedFileCount = 0;
+    int completedFileCount = 0;
+    int completedBytes = 0;
+    final int totalBytes = archive.files.fold(
+      0,
+      (int total, _ValidatedFile file) =>
+          total + file.header.uncompressedSize,
+    );
     final List<String> errors = <String>[];
 
     final List<String> directories = List<String>.from(archive.directories)
@@ -296,12 +246,6 @@ class ExportImportService {
         archivedFile.relativePath,
       );
       try {
-        if (await target.exists() &&
-            existingFilePolicy == ExistingFilePolicy.skip) {
-          skippedFileCount++;
-          continue;
-        }
-
         await target.parent.create(recursive: true);
         final ZipFile? entry = archivedFile.header.file;
         if (entry == null) {
@@ -311,7 +255,18 @@ class ExportImportService {
         _FsOutputStream? output;
         Object? failure;
         try {
-          output = _FsOutputStream(target);
+          output = _FsOutputStream(
+            target,
+            onBytesWritten: (int bytesWritten) {
+              if (totalBytes > 0) {
+                onProgress?.call(
+                  ((completedBytes + bytesWritten) / totalBytes)
+                      .clamp(0.0, 1.0)
+                      .toDouble(),
+                );
+              }
+            },
+          );
           output.open();
           entry.decompress(output);
           final int computedCrc32 = output.crc32;
@@ -343,6 +298,14 @@ class ExportImportService {
         }
       } catch (error) {
         errors.add('${archivedFile.relativePath}: $error');
+      } finally {
+        completedFileCount++;
+        completedBytes += archivedFile.header.uncompressedSize;
+        onProgress?.call(
+          totalBytes > 0
+              ? completedBytes / totalBytes
+              : completedFileCount / archive.files.length,
+        );
       }
     }
 
@@ -356,7 +319,6 @@ class ExportImportService {
 
     return DiatarImportResult(
       importedFileCount: importedFileCount,
-      skippedFileCount: skippedFileCount,
       errors: List<String>.unmodifiable(errors),
     );
   }
@@ -492,11 +454,15 @@ class _ReadArchive {
 class _FsOutputStream extends OutputStream {
   static const int _chunkSize = 64 * 1024;
 
-  _FsOutputStream(File file)
+  _FsOutputStream(
+    File file, {
+    this.onBytesWritten,
+  })
       : _file = file,
         super(byteOrder: ByteOrder.littleEndian);
 
   final File _file;
+  final void Function(int bytesWritten)? onBytesWritten;
   final Uint8List _chunk = Uint8List(_chunkSize);
   io.RandomAccessFile? _handle;
   int _chunkLength = 0;
@@ -527,6 +493,7 @@ class _FsOutputStream extends OutputStream {
     );
     _crc32 = getCrc32(bytes, _crc32);
     _handle!.writeFromSync(bytes);
+    onBytesWritten?.call(_chunkLength);
     _chunkLength = 0;
   }
 
@@ -595,65 +562,147 @@ class _FsOutputStream extends OutputStream {
   }
 }
 
-/// Runs inside a background isolate. Streams the diatar directory at
-/// [documentsPath] into the ZIP file at [targetPath] and reports the outcome
-/// as a sendable record so the original exception type survives the isolate
-/// boundary.
-Future<({String? path, Object? error})> _streamExportArchiveTo(
-  FileSystem fs,
-  String documentsPath,
-  String targetPath,
-) async {
-  try {
-    final Directory source = fs.directory(
-      fs.path.join(documentsPath, 'diatar'),
-    );
-    if (!await source.exists()) {
-      throw const DiatarArchiveException(
-        DiatarArchiveErrorCode.sourceDirectoryMissing,
-      );
+Future<void> _streamExportArchiveTo({
+  required String documentsPath,
+  required String targetPath,
+  void Function(double progress)? onProgress,
+}) async {
+  final ReceivePort receivePort = ReceivePort();
+  final Completer<void> completed = Completer<void>();
+  late final StreamSubscription<dynamic> subscription;
+  subscription = receivePort.listen((dynamic message) {
+    final _ExportArchiveUpdate update = message as _ExportArchiveUpdate;
+    if (update.errorCode != null) {
+      if (!completed.isCompleted) {
+        completed.completeError(
+          DiatarArchiveException(
+            DiatarArchiveErrorCode.values.byName(update.errorCode!),
+          ),
+        );
+      }
+      return;
     }
+    if (update.complete) {
+      if (!completed.isCompleted) {
+        completed.complete();
+      }
+      return;
+    }
+    onProgress?.call(update.progress);
+  });
+  try {
+    await Isolate.spawn<_ExportArchiveRequest>(
+      _streamExportArchiveInIsolate,
+      _ExportArchiveRequest(
+        documentsPath: documentsPath,
+        targetPath: targetPath,
+        sendPort: receivePort.sendPort,
+      ),
+    );
+    await completed.future;
+  } finally {
+    await subscription.cancel();
+    receivePort.close();
+  }
+}
 
-    final _FsOutputStream output = _FsOutputStream(fs.file(targetPath));
+class _ExportArchiveRequest {
+  const _ExportArchiveRequest({
+    required this.documentsPath,
+    required this.targetPath,
+    required this.sendPort,
+  });
+
+  final String documentsPath;
+  final String targetPath;
+  final SendPort sendPort;
+}
+
+class _ExportArchiveUpdate {
+  const _ExportArchiveUpdate.progress(this.progress)
+    : complete = false,
+      errorCode = null;
+
+  const _ExportArchiveUpdate.complete()
+    : progress = 1,
+      complete = true,
+      errorCode = null;
+
+  const _ExportArchiveUpdate.error(this.errorCode)
+    : progress = 0,
+      complete = false;
+
+  final double progress;
+  final bool complete;
+  final String? errorCode;
+}
+
+Future<void> _streamExportArchiveInIsolate(
+  _ExportArchiveRequest request,
+) async {
+  final io.Directory source = io.Directory(
+    path.join(request.documentsPath, 'diatar'),
+  );
+  if (!await source.exists()) {
+    request.sendPort.send(
+      const _ExportArchiveUpdate.error('sourceDirectoryMissing'),
+    );
+    return;
+  }
+
+  try {
+    final List<io.FileSystemEntity> entities = source.listSync(
+      recursive: true,
+      followLinks: false,
+    );
+    int totalBytes = 0;
+    for (final io.FileSystemEntity entity in entities) {
+      if (entity is io.File) {
+        totalBytes += entity.lengthSync();
+      }
+    }
+    final _FsOutputStream output = _FsOutputStream(
+      FileSystemProvider.instance.file(request.targetPath),
+    );
     output.open();
     final ZipEncoder encoder = ZipEncoder();
     encoder.startEncode(output);
+    encoder.add(ArchiveFile.directory('diatar/'));
+    int completedBytes = 0;
     try {
-      encoder.add(ArchiveFile.directory('diatar/'));
-      final List<FileSystemEntity> entities =
-          source.listSync(recursive: true, followLinks: false)..sort(
-            (FileSystemEntity left, FileSystemEntity right) =>
-                left.path.compareTo(right.path),
-          );
-      for (final FileSystemEntity entity in entities) {
-        final String relativePath = fs.path.relative(
-          entity.path,
-          from: source.path,
-        );
+      for (final io.FileSystemEntity entity in entities) {
+        final String relativePath = path.relative(entity.path, from: source.path);
         final String archivePath = path.posix.joinAll(<String>[
           'diatar',
-          ...fs.path.split(relativePath),
+          ...path.split(relativePath),
         ]);
-        if (entity is Directory) {
+        if (entity is io.Directory) {
           encoder.add(ArchiveFile.directory('$archivePath/'));
-        } else if (entity is File) {
-          encoder.add(
-            ArchiveFile.bytes(archivePath, await entity.readAsBytes()),
+        } else if (entity is io.File) {
+          final InputFileStream input = InputFileStream(
+            entity.path,
+            bufferSize: ExportImportService._streamBufferSize,
+          );
+          final ArchiveFile file = ArchiveFile.stream(archivePath, input)
+            ..compression = CompressionType.none;
+          encoder.add(file);
+          await input.close();
+          completedBytes += entity.lengthSync();
+          request.sendPort.send(
+            _ExportArchiveUpdate.progress(
+              totalBytes > 0 ? completedBytes / totalBytes : 1,
+            ),
           );
         }
       }
       encoder.endEncode();
       await output.close();
     } catch (_) {
-      try {
-        await output.close();
-      } catch (_) {
-        // Ignore output cleanup failures.
-      }
+      await output.close();
       rethrow;
     }
-    return (path: targetPath, error: null);
-  } catch (error) {
-    return (path: null, error: error);
+    request.sendPort.send(const _ExportArchiveUpdate.complete());
+  } catch (_) {
+    request.sendPort.send(const _ExportArchiveUpdate.error('invalidArchive'));
   }
 }

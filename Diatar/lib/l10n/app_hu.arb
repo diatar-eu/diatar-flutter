@@ -1134,13 +1134,10 @@
       "fileName": {}
     }
   },
-  "diatarImportSuccess": "{imported} fájl importálva, {skipped} fájl mellőzve.",
+  "diatarImportSuccess": "{imported} fájl visszaállítva.",
   "@diatarImportSuccess": {
     "placeholders": {
       "imported": {
-        "type": "int"
-      },
-      "skipped": {
         "type": "int"
       }
     }

@@ -63,6 +63,7 @@ class DiatarSettingsSheet extends StatefulWidget {
     this.initialSection,
     this.closeAfterInitialSectionClose = false,
     this.onDownloadBooksRequested,
+    this.onFileTransferProgress,
   });
 
   final AppSettings initialSettings;
@@ -80,6 +81,7 @@ class DiatarSettingsSheet extends StatefulWidget {
   final DiatarSettingsInitialSection? initialSection;
   final bool closeAfterInitialSectionClose;
   final VoidCallback? onDownloadBooksRequested;
+  final ValueChanged<double?>? onFileTransferProgress;
 
   @override
   State<DiatarSettingsSheet> createState() => _DiatarSettingsSheetState();
@@ -2416,6 +2418,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     void Function(void Function()) setBoth,
   ) async {
     setBoth(() => _fileTransferRunning = true);
+    widget.onFileTransferProgress?.call(0);
     String? tempExportDir;
     // A vezérlőablakot előrehozzuk, hogy a (macOS-on `runModal` alapú)
     // mentési panel megbízhatóan megjelenhessen; a vetítőablak jelenléte
@@ -2435,7 +2438,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         await exportFile.saveTo(fileName);
       } else {
         final String zipPath = await _exportImportService
-            .createExportArchiveFile();
+            .createExportArchiveFile(
+              onProgress: widget.onFileTransferProgress,
+            );
         tempExportDir = FileSystemProvider.instance.file(zipPath).parent.path;
         if (defaultTargetPlatform == TargetPlatform.android) {
           try {
@@ -2523,6 +2528,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   ) async {
     String? tempArchivePath;
     setBoth(() => _fileTransferRunning = true);
+    widget.onFileTransferProgress?.call(0);
     try {
       final List<XFile> selectedFiles = await DesktopProjectorBridge.instance
           .runWithNativeDialog(
@@ -2552,32 +2558,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         importPath = tempArchive.path;
       }
 
-      final DiatarImportPreview preview = importPath != null
-          ? await _exportImportService.inspectImportArchiveFile(importPath)
-          : await _exportImportService.inspectImportArchive(zipData!);
-      ExistingFilePolicy policy = ExistingFilePolicy.skip;
-      if (preview.conflictingFileCount > 0) {
-        if (!sectionContext.mounted) {
-          return;
-        }
-        final ExistingFilePolicy? selectedPolicy = await _askExistingFilePolicy(
-          sectionContext,
-          preview.conflictingFileCount,
-        );
-        if (selectedPolicy == null) {
-          return;
-        }
-        policy = selectedPolicy;
-      }
-
       final DiatarImportResult result = importPath != null
           ? await _exportImportService.importArchiveFile(
               importPath,
-              existingFilePolicy: policy,
+              onProgress: widget.onFileTransferProgress,
             )
           : await _exportImportService.importArchive(
               zipData!,
-              existingFilePolicy: policy,
+              onProgress: widget.onFileTransferProgress,
             );
 
       if (result.importedFileCount > 0) {
@@ -2593,7 +2581,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             content: Text(
               sectionContext.l10n.diatarImportSuccess(
                 result.importedFileCount,
-                result.skippedFileCount,
               ),
             ),
           ),
@@ -2634,39 +2621,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     }
     await sink.close();
     return tempFile;
-  }
-
-  Future<ExistingFilePolicy?> _askExistingFilePolicy(
-    BuildContext sectionContext,
-    int conflictCount,
-  ) {
-    final AppLocalizations l10n = sectionContext.l10n;
-    return showDialog<ExistingFilePolicy>(
-      context: sectionContext,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text(l10n.diatarImportConflictTitle),
-          content: Text(l10n.diatarImportConflictMessage(conflictCount)),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(l10n.cancel),
-            ),
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(dialogContext).pop(ExistingFilePolicy.skip),
-              child: Text(l10n.diatarImportSkipAll),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(dialogContext).pop(ExistingFilePolicy.overwrite),
-              child: Text(l10n.diatarImportOverwriteAll),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _showFileTransferError(
@@ -2710,6 +2664,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     bool sectionMounted,
     void Function(void Function()) setBoth,
   ) {
+    widget.onFileTransferProgress?.call(null);
     if (sectionMounted) {
       setBoth(() => _fileTransferRunning = false);
     } else if (mounted) {

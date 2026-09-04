@@ -1764,8 +1764,8 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
-  String diatarImportSuccess(int imported, int skipped) {
-    return '$imported fájl importálva, $skipped fájl mellőzve.';
+  String diatarImportSuccess(int imported) {
+    return '$imported fájl visszaállítva.';
   }
 
   @override

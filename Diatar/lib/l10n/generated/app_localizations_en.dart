@@ -1757,8 +1757,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String diatarImportSuccess(int imported, int skipped) {
-    return '$imported files imported, $skipped files skipped.';
+  String diatarImportSuccess(int imported) {
+    return '$imported files restored.';
   }
 
   @override

@@ -3140,8 +3140,8 @@ abstract class AppLocalizations {
   /// No description provided for @diatarImportSuccess.
   ///
   /// In hu, this message translates to:
-  /// **'{imported} fájl importálva, {skipped} fájl mellőzve.'**
-  String diatarImportSuccess(int imported, int skipped);
+  /// **'{imported} fájl visszaállítva.'**
+  String diatarImportSuccess(int imported);
 
   /// No description provided for @diatarImportConflictTitle.
   ///

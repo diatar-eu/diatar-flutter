@@ -1133,13 +1133,10 @@
       "fileName": {}
     }
   },
-  "diatarImportSuccess": "{imported} files imported, {skipped} files skipped.",
+  "diatarImportSuccess": "{imported} files restored.",
   "@diatarImportSuccess": {
     "placeholders": {
       "imported": {
-        "type": "int"
-      },
-      "skipped": {
         "type": "int"
       }
     }
