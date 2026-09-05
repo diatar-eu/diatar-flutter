@@ -282,6 +282,7 @@ jobs:
           rm -rf "$HOME/flutter"
           git init "$HOME/flutter"
           git -C "$HOME/flutter" remote add origin https://github.com/flutter/flutter.git
+          # Stable channel HEAD commit used for reproducible Linux arm64 builds.
           git -C "$HOME/flutter" fetch --depth 1 origin d3b14c876900e553bc736ca19295fc09e3853e8e
           git -C "$HOME/flutter" checkout FETCH_HEAD
           echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
