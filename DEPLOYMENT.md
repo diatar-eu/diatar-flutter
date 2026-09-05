@@ -38,12 +38,14 @@ Besides the web apps, the Web deploy also builds the Windows, Linux and Android 
 
 - `https://web.diatar.eu/downloads/Diatar/Diatar.apk`
 - `https://web.diatar.eu/downloads/Diatar/Diatar-linux.tar.gz`
+- `https://web.diatar.eu/downloads/Diatar/Diatar-linux-arm64.tar.gz` (Raspberry Pi 4/5, 64-bit Raspberry Pi OS)
 - `https://web.diatar.eu/downloads/Diatar/Diatar-windows.zip`
 - `https://web.diatar.eu/downloads/DiaVetito/DiaVetito.apk`
 - `https://web.diatar.eu/downloads/DiaVetito/DiaVetito-linux.tar.gz`
+- `https://web.diatar.eu/downloads/DiaVetito/DiaVetito-linux-arm64.tar.gz` (Raspberry Pi 4/5, 64-bit Raspberry Pi OS)
 - `https://web.diatar.eu/downloads/DiaVetito/DiaVetito-windows.zip`
 
-These artifacts are built in `web-deploy.yml` from the same checked-out (already bumped) revision as the web apps, so they always match the deployed web version.
+These artifacts are built in `deploy.yml` from the same checked-out (already bumped) revision as the web apps, so they always match the deployed web version.
 
 ### Automatic build number bump
 
