@@ -286,6 +286,7 @@ jobs:
           git -C "$HOME/flutter" fetch --depth 1 origin d3b14c876900e553bc736ca19295fc09e3853e8e
           git -C "$HOME/flutter" checkout FETCH_HEAD
           echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+          flutter precache --linux
           flutter --version
 
       - name: Enable Linux Desktop
