@@ -278,10 +278,10 @@ jobs:
             pkg-config libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
+        run: |
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$HOME/flutter"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+          flutter --version
 
       - name: Enable Linux Desktop
         run: flutter config --enable-linux-desktop
