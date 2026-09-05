@@ -9,6 +9,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../l10n/l10n.dart';
+import '../utils/system_platform.dart';
 
 class SettingsSheet extends StatefulWidget {
   const SettingsSheet({
@@ -293,6 +294,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     ),
                   if (showInternet) const Divider(height: 1),
                   if (showInternet &&
+                      !SystemPlatform.isTvOs &&
                       (defaultTargetPlatform == TargetPlatform.android ||
                           defaultTargetPlatform == TargetPlatform.iOS))
                     _settingsTile(
@@ -536,6 +538,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   Future<void> _scanAndConnectFromMainSettings() async {
     final l10n = context.l10n;
     if (kIsWeb ||
+        SystemPlatform.isTvOs ||
         (defaultTargetPlatform != TargetPlatform.android &&
             defaultTargetPlatform != TargetPlatform.iOS)) {
       await _showSectionOkDialog(

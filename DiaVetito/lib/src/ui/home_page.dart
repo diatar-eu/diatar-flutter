@@ -31,25 +31,47 @@ class _HomePageState extends State<HomePage> {
   int _lastFrameSignature = 0;
   String _appVersion = '-';
   String _buildNumber = '-';
+  static const Duration _kSettingsButtonFadeDuration = Duration(seconds: 4);
+  static const Duration _kSettingsButtonFadeTransition =
+      Duration(milliseconds: 300);
+
   Timer? _quickExitHideTimer;
   bool _showQuickExitButton = false;
   bool _isTv = false;
+  bool _isTvOs = false;
+  bool _settingsButtonVisible = false;
+  Timer? _settingsButtonFadeTimer;
+  final FocusNode _settingsButtonFocusNode = FocusNode();
 
   ProjectionController get controller => widget.controller;
+
+  bool get _isTvDevice => _isTv || _isTvOs;
 
   @override
   void initState() {
     super.initState();
+    _isTvOs = SystemPlatform.isTvOs;
+    _settingsButtonVisible = _isTvOs;
+    if (_isTvOs) {
+      _settingsButtonFadeTimer = Timer(
+        _kSettingsButtonFadeDuration,
+        _hideSettingsButton,
+      );
+    }
+    _settingsButtonFocusNode.addListener(_onSettingsButtonFocusChanged);
     _loadAppVersion();
     _detectTv();
   }
 
   Future<void> _detectTv() async {
+    final bool tvOs = SystemPlatform.isTvOs;
     final bool tv = await SystemPlatform.isTv();
-    if (!mounted || tv == _isTv) {
+    final bool tvDevice = tvOs || tv;
+    if (!mounted || tvDevice == _isTvDevice) {
       return;
     }
     setState(() {
+      _isTvOs = tvOs;
       _isTv = tv;
     });
   }
@@ -57,6 +79,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _quickExitHideTimer?.cancel();
+    _settingsButtonFadeTimer?.cancel();
+    _settingsButtonFocusNode.dispose();
     super.dispose();
   }
 
@@ -97,7 +121,7 @@ class _HomePageState extends State<HomePage> {
               return Stack(
                 children: <Widget>[
                   Positioned.fill(
-                    child: _isTv
+                    child: _isTvDevice
                         ? Focus(
                             autofocus: true,
                             onKeyEvent: _onBackgroundKeyEvent,
@@ -107,7 +131,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   if ((defaultTargetPlatform == TargetPlatform.android ||
                           defaultTargetPlatform == TargetPlatform.iOS) &&
-                      !_isTv &&
+                      !_isTvDevice &&
                       controller.settings.receiverKeepStartupLogo &&
                       controller.activeFrame is LogoFrame)
                     Positioned(
@@ -127,6 +151,28 @@ class _HomePageState extends State<HomePage> {
                         onPressed: controller.requestExit,
                         icon: const Icon(Icons.close),
                         label: Text(context.l10n.exit),
+                      ),
+                    ),
+                  if (_isTvOs)
+                    Positioned(
+                      right: 12,
+                      top: 12,
+                      child: ExcludeFocus(
+                        excluding: !_settingsButtonVisible,
+                        child: IgnorePointer(
+                          ignoring: !_settingsButtonVisible,
+                          child: AnimatedOpacity(
+                            opacity: _settingsButtonVisible ? 1 : 0,
+                            duration: _kSettingsButtonFadeTransition,
+                            curve: Curves.easeOut,
+                            child: FilledButton.icon(
+                              focusNode: _settingsButtonFocusNode,
+                              onPressed: () => _openSettings(context),
+                              icon: const Icon(Icons.settings),
+                              label: Text(context.l10n.settingsTitleReceiver),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                 ],
@@ -206,6 +252,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   KeyEventResult _onBackgroundKeyEvent(FocusNode node, KeyEvent event) {
+    _showSettingsButtonTemporarily();
     if (event is! KeyDownEvent) {
       return KeyEventResult.ignored;
     }
@@ -218,6 +265,53 @@ class _HomePageState extends State<HomePage> {
     }
     unawaited(_openSettings(context));
     return KeyEventResult.handled;
+  }
+
+  void _onSettingsButtonFocusChanged() {
+    if (!mounted) {
+      return;
+    }
+    if (_settingsButtonFocusNode.hasFocus) {
+      _showSettingsButtonTemporarily();
+    } else {
+      _settingsButtonFadeTimer?.cancel();
+      _settingsButtonFadeTimer = Timer(
+        _kSettingsButtonFadeDuration,
+        _hideSettingsButton,
+      );
+    }
+  }
+
+  void _showSettingsButtonTemporarily() {
+    if (!_isTvOs || !mounted) {
+      return;
+    }
+    final bool wasVisible = _settingsButtonVisible;
+    _settingsButtonFadeTimer?.cancel();
+    if (!wasVisible) {
+      setState(() {
+        _settingsButtonVisible = true;
+      });
+    }
+    _settingsButtonFadeTimer = Timer(
+      _kSettingsButtonFadeDuration,
+      _hideSettingsButton,
+    );
+  }
+
+  void _hideSettingsButton() {
+    if (!mounted) {
+      return;
+    }
+    if (_settingsButtonFocusNode.hasFocus) {
+      _showSettingsButtonTemporarily();
+      return;
+    }
+    if (_settingsButtonVisible && _isTvOs) {
+      setState(() {
+        _settingsButtonVisible = false;
+      });
+    }
   }
 
   void _scheduleHeightRefresh({
@@ -299,7 +393,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   bool get _supportsQuickExitOverlay {
-    if (kIsWeb || _isTv) {
+    if (kIsWeb || _isTv || _isTvOs) {
       return false;
     }
     return defaultTargetPlatform == TargetPlatform.android ||
@@ -383,6 +477,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _scanQrAndConnect() async {
     if (kIsWeb ||
+        SystemPlatform.isTvOs ||
         (defaultTargetPlatform != TargetPlatform.android &&
             defaultTargetPlatform != TargetPlatform.iOS)) {
       await _showSimpleDialog(

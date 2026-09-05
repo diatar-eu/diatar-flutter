@@ -6,12 +6,14 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/widgets.dart';
 
 import 'package:diavetito/src/app.dart';
 import 'package:diavetito/src/services/web_mqtt_settings.dart';
+import 'package:diavetito/src/ui/settings_sheet.dart';
+import 'package:diavetito/src/utils/system_platform.dart';
 import 'package:diavetito/l10n/generated/app_localizations.dart';
 
 void main() {
@@ -154,5 +156,96 @@ void main() {
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
+  });
+
+  group('tvOS', () {
+    void simulateTvOs() {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      SystemPlatform.debugSetTvOsOverride(true);
+    }
+
+    void resetTvOs() {
+      debugDefaultTargetPlatformOverride = null;
+      SystemPlatform.debugSetTvOsOverride(null);
+    }
+
+    testWidgets('shows the settings button and hides the QR scan button',
+        (WidgetTester tester) async {
+      simulateTvOs();
+      const MethodChannel systemChannel = MethodChannel(
+        'com.polyjoe.diavetito/system',
+      );
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        systemChannel,
+        (MethodCall call) async {
+          if (call.method == 'isTv') {
+            return false;
+          }
+          return null;
+        },
+      );
+      addTearDown(() {
+        tester.binding.defaultBinaryMessenger
+            .setMockMethodCallHandler(systemChannel, null);
+      });
+
+      try {
+        await tester.pumpWidget(const DiaVetitoApp());
+        await tester.pump();
+
+        final AppLocalizations hu = await AppLocalizations.delegate.load(
+          const Locale('hu'),
+        );
+        final AppLocalizations en = await AppLocalizations.delegate.load(
+          const Locale('en'),
+        );
+
+        expect(
+          find.text(hu.settingsTitleReceiver).evaluate().length +
+              find.text(en.settingsTitleReceiver).evaluate().length,
+          1,
+        );
+        expect(
+          find.text(hu.qrScanButton).evaluate().length +
+              find.text(en.qrScanButton).evaluate().length,
+          0,
+        );
+      } finally {
+        resetTvOs();
+      }
+    });
+
+    testWidgets('settings button opens the settings sheet',
+        (WidgetTester tester) async {
+      simulateTvOs();
+
+      try {
+        await tester.pumpWidget(const DiaVetitoApp());
+        await tester.pump();
+
+        final AppLocalizations hu = await AppLocalizations.delegate.load(
+          const Locale('hu'),
+        );
+        final AppLocalizations en = await AppLocalizations.delegate.load(
+          const Locale('en'),
+        );
+
+        final Finder settingsButton = find.byWidgetPredicate(
+          (Widget widget) => widget is FilledButton,
+        );
+        expect(settingsButton, findsOneWidget);
+        await tester.tap(settingsButton);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SettingsSheet), findsOneWidget);
+        expect(
+          find.text(hu.qrScanButton).evaluate().length +
+              find.text(en.qrScanButton).evaluate().length,
+          0,
+        );
+      } finally {
+        resetTvOs();
+      }
+    });
   });
 }
