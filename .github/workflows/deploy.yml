@@ -278,11 +278,34 @@ jobs:
             pkg-config libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          architecture: arm64
-          cache: true
+        env:
+          FLUTTER_RELEASES_URL: https://storage.googleapis.com/flutter_infra_release/releases/releases_linux_arm64.json
+          FLUTTER_STORAGE_BASE_URL: https://storage.googleapis.com/flutter_infra_release/releases
+        run: |
+          FLUTTER_INFO=$(curl -fsSL "$FLUTTER_RELEASES_URL")
+          FLUTTER_VERSION=$(echo "$FLUTTER_INFO" | jq -er '.current_release.stable as $stable | .releases[] | select(.hash == $stable) | .version')
+          FLUTTER_ARCHIVE=$(echo "$FLUTTER_INFO" | jq -er '.current_release.stable as $stable | .releases[] | select(.hash == $stable) | .archive')
+
+          if [ -z "$FLUTTER_VERSION" ] || [ "$FLUTTER_VERSION" = "null" ] || [ -z "$FLUTTER_ARCHIVE" ] || [ "$FLUTTER_ARCHIVE" = "null" ]; then
+            echo "Unable to resolve the stable Linux arm64 Flutter release from $FLUTTER_RELEASES_URL" >&2
+            exit 1
+          fi
+
+          FLUTTER_CACHE_PATH="$RUNNER_TOOL_CACHE/flutter/stable-${FLUTTER_VERSION}-arm64"
+
+          if [ ! -x "$FLUTTER_CACHE_PATH/flutter/bin/flutter" ]; then
+            ARCHIVE_FILE="$RUNNER_TEMP/$(basename "$FLUTTER_ARCHIVE")"
+            mkdir -p "$FLUTTER_CACHE_PATH"
+            curl -fsSL "$FLUTTER_STORAGE_BASE_URL/$FLUTTER_ARCHIVE" -o "$ARCHIVE_FILE"
+            tar xf "$ARCHIVE_FILE" -C "$FLUTTER_CACHE_PATH"
+            rm "$ARCHIVE_FILE"
+          fi
+
+          echo "FLUTTER_ROOT=$FLUTTER_CACHE_PATH/flutter" >> "$GITHUB_ENV"
+          {
+            echo "$FLUTTER_CACHE_PATH/flutter/bin"
+            echo "$FLUTTER_CACHE_PATH/flutter/bin/cache/dart-sdk/bin"
+          } >> "$GITHUB_PATH"
 
       - name: Enable Linux Desktop
         run: flutter config --enable-linux-desktop
