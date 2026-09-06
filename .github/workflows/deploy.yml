@@ -289,6 +289,7 @@ jobs:
           git -C "$HOME/flutter" fetch --depth 1 origin "$FLUTTER_STABLE_COMMIT"
           git -C "$HOME/flutter" checkout -B stable "$FLUTTER_STABLE_COMMIT"
           echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/flutter/bin:$PATH"
           flutter precache --linux
           flutter --version
 
