@@ -293,6 +293,7 @@ jobs:
 
           rm -rf "$FLUTTER_CACHE_PATH"
           git clone --depth 1 --branch "$FLUTTER_VERSION" "$FLUTTER_GIT_URL" "$FLUTTER_CACHE_PATH/flutter"
+          "$FLUTTER_CACHE_PATH/flutter/bin/flutter" --version
 
           echo "FLUTTER_ROOT=$FLUTTER_CACHE_PATH/flutter" >> "$GITHUB_ENV"
           {
