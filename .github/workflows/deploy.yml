@@ -287,6 +287,8 @@ jobs:
           git -C "$HOME/flutter" remote add origin https://github.com/flutter/flutter.git
           # Flutter stable ${FLUTTER_STABLE_VERSION} pinned commit for reproducible Linux arm64 builds.
           git -C "$HOME/flutter" fetch --depth 1 origin "$FLUTTER_STABLE_COMMIT"
+          # Fetch matching stable tag so Flutter can resolve semantic SDK version.
+          git -C "$HOME/flutter" fetch --depth 1 origin "refs/tags/$FLUTTER_STABLE_VERSION:refs/tags/$FLUTTER_STABLE_VERSION"
           git -C "$HOME/flutter" checkout -B stable "$FLUTTER_STABLE_COMMIT"
           echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
           export PATH="$HOME/flutter/bin:$PATH"
