@@ -282,8 +282,7 @@ jobs:
           FLUTTER_RELEASES_URL: https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json
           FLUTTER_GIT_URL: https://github.com/flutter/flutter.git
         run: |
-          FLUTTER_INFO=$(curl -fsSL "$FLUTTER_RELEASES_URL")
-          FLUTTER_VERSION=$(echo "$FLUTTER_INFO" | jq -er '.current_release.stable as $stable | .releases[] | select(.hash == $stable) | .version' | head -n 1)
+          FLUTTER_VERSION=$(curl -fsSL "$FLUTTER_RELEASES_URL" | jq -er '.current_release.stable as $stable | .releases[] | select(.hash == $stable) | .version' | head -n 1)
 
           if [ -z "$FLUTTER_VERSION" ] || [ "$FLUTTER_VERSION" = "null" ]; then
             echo "Unable to resolve the stable Flutter version from $FLUTTER_RELEASES_URL" >&2
@@ -292,10 +291,8 @@ jobs:
 
           FLUTTER_CACHE_PATH="$RUNNER_TOOL_CACHE/flutter/stable-${FLUTTER_VERSION}-arm64"
 
-          if [ ! -x "$FLUTTER_CACHE_PATH/flutter/bin/flutter" ]; then
-            rm -rf "$FLUTTER_CACHE_PATH"
-            git clone --depth 1 --branch "$FLUTTER_VERSION" "$FLUTTER_GIT_URL" "$FLUTTER_CACHE_PATH/flutter"
-          fi
+          rm -rf "$FLUTTER_CACHE_PATH"
+          git clone --depth 1 --branch "$FLUTTER_VERSION" "$FLUTTER_GIT_URL" "$FLUTTER_CACHE_PATH/flutter"
 
           echo "FLUTTER_ROOT=$FLUTTER_CACHE_PATH/flutter" >> "$GITHUB_ENV"
           {
