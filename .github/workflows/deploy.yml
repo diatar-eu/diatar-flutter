@@ -257,7 +257,7 @@ jobs:
     name: Build Linux arm64 (${{ matrix.app }})
     needs: [detect, bump]
     if: always() && (needs.bump.result == 'success' || needs.bump.result == 'skipped')
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-22.04-arm
     strategy:
       fail-fast: false
       matrix:
