@@ -283,8 +283,14 @@ jobs:
           FLUTTER_STORAGE_BASE_URL: https://storage.googleapis.com/flutter_infra_release/releases
         run: |
           FLUTTER_INFO=$(curl -fsSL "$FLUTTER_RELEASES_URL")
-          FLUTTER_VERSION=$(echo "$FLUTTER_INFO" | jq -r '.current_release.stable as $stable | .releases[] | select(.hash == $stable) | .version')
-          FLUTTER_ARCHIVE=$(echo "$FLUTTER_INFO" | jq -r '.current_release.stable as $stable | .releases[] | select(.hash == $stable) | .archive')
+          FLUTTER_VERSION=$(echo "$FLUTTER_INFO" | jq -er '.current_release.stable as $stable | .releases[] | select(.hash == $stable) | .version')
+          FLUTTER_ARCHIVE=$(echo "$FLUTTER_INFO" | jq -er '.current_release.stable as $stable | .releases[] | select(.hash == $stable) | .archive')
+
+          if [ -z "$FLUTTER_VERSION" ] || [ "$FLUTTER_VERSION" = "null" ] || [ -z "$FLUTTER_ARCHIVE" ] || [ "$FLUTTER_ARCHIVE" = "null" ]; then
+            echo "Unable to resolve the stable Linux arm64 Flutter release from $FLUTTER_RELEASES_URL" >&2
+            exit 1
+          fi
+
           FLUTTER_CACHE_PATH="$RUNNER_TOOL_CACHE/flutter/stable-${FLUTTER_VERSION}-arm64"
 
           if [ ! -x "$FLUTTER_CACHE_PATH/flutter/bin/flutter" ]; then
