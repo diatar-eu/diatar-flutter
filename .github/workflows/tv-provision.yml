@@ -19,8 +19,6 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
-          bundler-cache: true
-          working-directory: DiaVetito/tvos
 
       - name: Install fastlane
         run: sudo gem install fastlane
