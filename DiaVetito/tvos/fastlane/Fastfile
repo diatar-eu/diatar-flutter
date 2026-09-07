@@ -1,6 +1,6 @@
-default_platform(:tvos)
+default_platform(:ios)
 
-platform :tvos do
+platform :ios do
   def signing_identity
     @signing_identity ||= begin
       output = `security find-identity -v -p codesigning`
