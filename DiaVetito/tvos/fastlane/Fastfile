@@ -72,6 +72,7 @@ platform :ios do
       readonly: false,
       team_id: ENV["APPLE_TEAM_ID"],
       api_key: api_key,
+      git_url: ENV["MATCH_GIT_URL"] || "https://github.com/szentjozsefhackathon/ios-certs.git",
       verbose: true
     )
   end
