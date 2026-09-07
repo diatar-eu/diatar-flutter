@@ -1451,6 +1451,24 @@ abstract class AppLocalizations {
   /// **'Félkövér szöveg'**
   String get boldText;
 
+  /// No description provided for @italicText.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dőlt szöveg'**
+  String get italicText;
+
+  /// No description provided for @underlineText.
+  ///
+  /// In hu, this message translates to:
+  /// **'Aláhúzott szöveg'**
+  String get underlineText;
+
+  /// No description provided for @strikethroughText.
+  ///
+  /// In hu, this message translates to:
+  /// **'Áthúzott szöveg'**
+  String get strikethroughText;
+
   /// No description provided for @colorsTitle.
   ///
   /// In hu, this message translates to:

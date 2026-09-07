@@ -810,6 +810,15 @@ class AppLocalizationsHu extends AppLocalizations {
   String get boldText => 'Félkövér szöveg';
 
   @override
+  String get italicText => 'Dőlt szöveg';
+
+  @override
+  String get underlineText => 'Aláhúzott szöveg';
+
+  @override
+  String get strikethroughText => 'Áthúzott szöveg';
+
+  @override
   String get colorsTitle => 'Színek';
 
   @override

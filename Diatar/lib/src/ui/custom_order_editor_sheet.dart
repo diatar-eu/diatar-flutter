@@ -18,6 +18,7 @@ import '../models/custom_order_set.dart';
 import '../utils/custom_entry_labels.dart';
 import '../utils/escape_sequences.dart';
 import '../utils/friendly_path.dart';
+import '../utils/inline_text_formatting.dart';
 import '../services/song_search_service.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/macos_file_panels.dart';
@@ -2792,13 +2793,44 @@ class _CustomTextSlideDialog extends StatefulWidget {
 
 class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
   late final TextEditingController _titleController;
-  late final TextEditingController _bodyController;
+  late final InlineTextEditingController _bodyController;
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.initialTitle);
-    _bodyController = TextEditingController(text: widget.initialBody);
+    _bodyController = InlineTextEditingController.fromDia(widget.initialBody)
+      ..addListener(_refreshFormattingToolbar);
+  }
+
+  void _refreshFormattingToolbar() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Widget _buildFormattingButton(
+    InlineTextStyle style,
+    IconData icon,
+    String tooltip,
+  ) {
+    final bool isSelected = _bodyController.isStyleActiveForSelection(style);
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return IconButton(
+      tooltip: tooltip,
+      isSelected: isSelected,
+      onPressed: () => _bodyController.toggleStyle(style),
+      icon: Icon(icon),
+      selectedIcon: Icon(icon),
+      style: IconButton.styleFrom(
+        backgroundColor: isSelected
+            ? colors.primaryContainer
+            : colors.surfaceContainerHighest,
+        foregroundColor: isSelected
+            ? colors.onPrimaryContainer
+            : colors.onSurfaceVariant,
+      ),
+    );
   }
 
   @override
@@ -2823,6 +2855,34 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
               decoration: InputDecoration(labelText: l10n.textSlideTitleLabel),
             ),
             const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  _buildFormattingButton(
+                    InlineTextStyle.bold,
+                    Icons.format_bold,
+                    l10n.boldText,
+                  ),
+                  _buildFormattingButton(
+                    InlineTextStyle.italic,
+                    Icons.format_italic,
+                    l10n.italicText,
+                  ),
+                  _buildFormattingButton(
+                    InlineTextStyle.underline,
+                    Icons.format_underlined,
+                    l10n.underlineText,
+                  ),
+                  _buildFormattingButton(
+                    InlineTextStyle.strike,
+                    Icons.strikethrough_s,
+                    l10n.strikethroughText,
+                  ),
+                ],
+              ),
+            ),
             TextField(
               controller: _bodyController,
               decoration: InputDecoration(labelText: l10n.textSlideBodyLabel),
@@ -2842,7 +2902,7 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
             Navigator.of(context).pop(
               _TextSlideInput(
                 title: _titleController.text,
-                body: _bodyController.text,
+                body: _bodyController.encodedText,
               ),
             );
           },

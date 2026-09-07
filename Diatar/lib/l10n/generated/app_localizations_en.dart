@@ -807,6 +807,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get boldText => 'Bold text';
 
   @override
+  String get italicText => 'Italic text';
+
+  @override
+  String get underlineText => 'Underline text';
+
+  @override
+  String get strikethroughText => 'Strikethrough text';
+
+  @override
   String get colorsTitle => 'Colors';
 
   @override
