@@ -1685,6 +1685,12 @@ abstract class AppLocalizations {
   /// **'Elválasztó szerkesztése'**
   String get customOrderEditSeparatorTitle;
 
+  /// No description provided for @customOrderEditTextSlideTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Szöveges dia szerkesztése'**
+  String get customOrderEditTextSlideTitle;
+
   /// No description provided for @customOrderInsertVersesTitle.
   ///
   /// In hu, this message translates to:
@@ -1714,6 +1720,12 @@ abstract class AppLocalizations {
   /// In hu, this message translates to:
   /// **'Szöveg (soronként)'**
   String get textSlideBodyLabel;
+
+  /// No description provided for @textSlideDefaultTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Dia'**
+  String get textSlideDefaultTitle;
 
   /// No description provided for @loadDia.
   ///

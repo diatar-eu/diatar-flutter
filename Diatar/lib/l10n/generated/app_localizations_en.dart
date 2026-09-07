@@ -930,6 +930,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderEditSeparatorTitle => 'Edit separator';
 
   @override
+  String get customOrderEditTextSlideTitle => 'Edit text slide';
+
+  @override
   String get customOrderInsertVersesTitle => 'Verses to insert';
 
   @override
@@ -944,6 +947,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get textSlideBodyLabel => 'Text (one line per row)';
+
+  @override
+  String get textSlideDefaultTitle => 'Slide';
 
   @override
   String get loadDia => 'Load';

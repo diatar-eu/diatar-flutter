@@ -1146,9 +1146,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       return;
     }
 
-    final String effectiveTitle = normalizedTitle.isEmpty
-        ? 'Dia'
-        : normalizedTitle;
+    final String effectiveTitle = _effectiveTextSlideTitle(normalizedTitle);
     final CustomOrderEntry entry = CustomOrderEntry(
       fileName: '__custom_text__',
       songIndex: -1,
@@ -1156,6 +1154,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       label: formatCustomTextEntryLabel(context.l10n, effectiveTitle),
       customTextTitle: effectiveTitle,
       customTextBody: lines.join('\n'),
+      customType: 'text',
     );
 
     int lastInsertedIndex = 0;
@@ -1169,6 +1168,54 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       controller.selectCustomOrderEntryForEditing(lastInsertedIndex);
     }
   }
+
+  Future<void> _editCustomTextSlide(int index) async {
+    if (index < 0 || index >= _entries.length) {
+      return;
+    }
+    final CustomOrderEntry entry = _entries[index];
+    if (!entry.isCustomText || entry.isSeparator) {
+      return;
+    }
+
+    final _TextSlideInput? input = await showDialog<_TextSlideInput>(
+      context: context,
+      builder: (BuildContext context) => _CustomTextSlideDialog(
+        dialogTitle: context.l10n.customOrderEditTextSlideTitle,
+        initialTitle: entry.customTextTitle ?? '',
+        initialBody: entry.customTextBody ?? '',
+      ),
+    );
+    if (input == null || !mounted) {
+      return;
+    }
+
+    final String normalizedTitle = input.title.trim();
+    final List<String> lines = input.body
+        .split(RegExp(r'\r?\n'))
+        .map((String line) => line.trimRight())
+        .where((String line) => line.trim().isNotEmpty)
+        .toList();
+    if (normalizedTitle.isEmpty && lines.isEmpty) {
+      return;
+    }
+
+    final String effectiveTitle = _effectiveTextSlideTitle(normalizedTitle);
+    setState(() {
+      _entries[index] = entry.copyWith(
+        label: formatCustomTextEntryLabel(context.l10n, effectiveTitle),
+        customTextTitle: effectiveTitle,
+        customTextBody: lines.join('\n'),
+        customType: 'text',
+      );
+    });
+    await _commitEntries();
+  }
+
+  String _effectiveTextSlideTitle(String normalizedTitle) =>
+      normalizedTitle.isEmpty
+      ? context.l10n.textSlideDefaultTitle
+      : normalizedTitle;
 
   Future<void> _openZsolozsmaDialog() {
     return showDialog<void>(
@@ -2346,6 +2393,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 onTap: () => controller.selectCustomOrderEntryForEditing(index),
                 onDoubleTap: entry.isSeparator
                     ? () => unawaited(_editSeparator(index))
+                    : entry.isCustomText
+                    ? () => unawaited(_editCustomTextSlide(index))
                     : null,
                 child: ListTile(
                   dense: true,
@@ -2727,7 +2776,15 @@ class _TextSlideInput {
 }
 
 class _CustomTextSlideDialog extends StatefulWidget {
-  const _CustomTextSlideDialog();
+  const _CustomTextSlideDialog({
+    this.dialogTitle,
+    this.initialTitle = '',
+    this.initialBody = '',
+  });
+
+  final String? dialogTitle;
+  final String initialTitle;
+  final String initialBody;
 
   @override
   State<_CustomTextSlideDialog> createState() => _CustomTextSlideDialogState();
@@ -2740,8 +2797,8 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController();
-    _bodyController = TextEditingController();
+    _titleController = TextEditingController(text: widget.initialTitle);
+    _bodyController = TextEditingController(text: widget.initialBody);
   }
 
   @override
@@ -2755,7 +2812,7 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      title: Text(l10n.textSlideDialogTitle),
+      title: Text(widget.dialogTitle ?? l10n.textSlideDialogTitle),
       content: SizedBox(
         width: 420,
         child: Column(

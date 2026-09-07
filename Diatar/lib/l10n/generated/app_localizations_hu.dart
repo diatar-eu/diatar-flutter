@@ -932,6 +932,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderEditSeparatorTitle => 'Elválasztó szerkesztése';
 
   @override
+  String get customOrderEditTextSlideTitle => 'Szöveges dia szerkesztése';
+
+  @override
   String get customOrderInsertVersesTitle => 'Beszúrandó versszakok';
 
   @override
@@ -946,6 +949,9 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get textSlideBodyLabel => 'Szöveg (soronként)';
+
+  @override
+  String get textSlideDefaultTitle => 'Dia';
 
   @override
   String get loadDia => 'Betöltés';
