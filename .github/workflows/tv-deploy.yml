@@ -1,0 +1,93 @@
+name: tvOS Deploy
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: tv-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-tvos:
+    name: Build tvOS (unsigned)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup flutter-tvos
+        run: |
+          git clone --depth 1 --branch v3.47.2-tvos.1.10.0 https://github.com/fluttertv/flutter-tvos.git "$HOME/flutter-tvos"
+          echo "$HOME/flutter-tvos/bin" >> "$GITHUB_PATH"
+
+      - name: Flutter-tvos pub get
+        working-directory: DiaVetito
+        run: flutter-tvos pub get
+
+      - name: Build tvOS release (unsigned)
+        working-directory: DiaVetito
+        run: |
+          python3 - <<'PY'
+          path = "tvos/Runner.xcodeproj/project.pbxproj"
+          with open(path) as f:
+              content = f.read()
+          content = content.replace(
+              "DEVELOPMENT_TEAM = 3K775ZSA59;",
+              "CODE_SIGNING_ALLOWED = NO;\n\t\t\t\tCODE_SIGNING_REQUIRED = NO;\n\t\t\t\tDEVELOPMENT_TEAM = 3K775ZSA59;"
+          )
+          with open(path, "w") as f:
+              f.write(content)
+          PY
+          flutter-tvos build tvos --release
+
+      - name: Package tvOS app bundle
+        run: |
+          cd DiaVetito/build/tvos/Release-appletvos
+          zip -r -y -X "$GITHUB_WORKSPACE/DiaVetito-tvos-nosign.zip" Runner.app
+
+      - name: Upload tvOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DiaVetito-tvos-nosign
+          path: DiaVetito-tvos-nosign.zip
+          if-no-files-found: error
+
+  deploy-tvos:
+    name: Deploy tvOS to TestFlight
+    needs: [build-tvos]
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: DiaVetito/tvos
+
+      - name: Install fastlane
+        run: sudo gem install fastlane
+
+      - name: Download unsigned tvOS build
+        uses: actions/download-artifact@v4
+        with:
+          name: DiaVetito-tvos-nosign
+          path: DiaVetito/tvos/
+
+      - name: Decode App Store Connect API key
+        run: |
+          echo "${{ secrets.APPLE_API_KEY_BASE64 }}" | base64 -d > DiaVetito/tvos/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+
+      - name: Fastlane tv_deploy
+        working-directory: DiaVetito/tvos
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_KEY_FILEPATH: AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: fastlane tv_deploy

@@ -1,0 +1,6 @@
+git_url("https://github.com/szentjozsefhackathon/ios-certs.git")
+storage_mode("git")
+type("appstore")
+app_identifier(["eu.diatar.diavetito"])
+team_id(ENV["APPLE_TEAM_ID"])
+readonly(true)

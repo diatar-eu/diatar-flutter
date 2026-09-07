@@ -1,0 +1,78 @@
+default_platform(:tvos)
+
+platform :tvos do
+  def signing_identity
+    @signing_identity ||= begin
+      output = `security find-identity -v -p codesigning`
+      match = output.match(/"([^"]*Apple Distribution[^"]*)"/)
+      UI.user_error!("No Apple Distribution signing identity found in keychain") unless match
+      match[1]
+    end
+  end
+
+  desc "Sign and deploy the unsigned tvOS build to TestFlight"
+  lane :tv_deploy do
+    setup_ci
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APPLE_API_KEY_ID"],
+      issuer_id: ENV["APPLE_API_ISSUER_ID"],
+      key_filepath: ENV["APPLE_API_KEY_FILEPATH"]
+    )
+    match(
+      type: "appstore",
+      platform: "tvos",
+      readonly: true,
+      team_id: ENV["APPLE_TEAM_ID"],
+      api_key: api_key,
+      verbose: true
+    )
+
+    tvos_dir = File.expand_path("..", __dir__)
+    zip_name = Dir.glob("*-tvos-nosign.zip", base: tvos_dir).first
+    UI.user_error!("No *-tvos-nosign.zip artifact found in #{tvos_dir}") unless zip_name
+
+    Dir.chdir(tvos_dir) do
+      sh("mkdir", "-p", "build/tvos/Release-appletvos")
+      sh("unzip", "-o", zip_name, "-d", "build/tvos/Release-appletvos")
+      sh("mkdir", "-p", "Payload")
+      sh("cp", "-r", "build/tvos/Release-appletvos/Runner.app", "Payload/")
+      sh("zip", "-r", "unsigned.ipa", "Payload")
+
+      require "sigh"
+      resign_script = File.join(Sigh::ROOT, "lib", "assets", "resign.sh")
+      resign_cmd = "bash #{resign_script.shellescape} unsigned.ipa #{signing_identity.shellescape} -p #{ENV["sigh_eu.diatar.diavetito_appstore_profile-path"].shellescape} -v unsigned.ipa"
+      sh(resign_cmd)
+    end
+
+    changelog_path = File.join(tvos_dir, "..", "..", "release-notes", "DiaVetito", "hu", "release_notes.txt")
+    changelog = File.exist?(changelog_path) ? File.read(changelog_path).strip : "Új béta build"
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: File.join(tvos_dir, "unsigned.ipa"),
+      skip_waiting_for_build_processing: true,
+      distribute_external: true,
+      groups: ["Bárki"],
+      notify_external_testers: true,
+      changelog: changelog
+    )
+  end
+
+  desc "Provision the tvOS App Store profile via match"
+  lane :provision_tvos_profile do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APPLE_API_KEY_ID"],
+      issuer_id: ENV["APPLE_API_ISSUER_ID"],
+      key_filepath: ENV["APPLE_API_KEY_FILEPATH"]
+    )
+    match(
+      type: "appstore",
+      platform: "tvos",
+      app_identifier: ["eu.diatar.diavetito"],
+      readonly: false,
+      team_id: ENV["APPLE_TEAM_ID"],
+      api_key: api_key,
+      verbose: true
+    )
+  end
+end
