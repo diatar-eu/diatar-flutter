@@ -40,7 +40,7 @@ platform :ios do
 
       require "sigh"
       resign_script = File.join(Sigh::ROOT, "lib", "assets", "resign.sh")
-      resign_cmd = "bash #{resign_script.shellescape} unsigned.ipa #{signing_identity.shellescape} -p #{ENV["sigh_eu.diatar.diavetito_appstore_profile-path"].shellescape} -v unsigned.ipa"
+      resign_cmd = "bash #{resign_script.shellescape} unsigned.ipa #{signing_identity.shellescape} -p #{ENV["sigh_eu.diatar.vetito_appstore_profile-path"].shellescape} -v unsigned.ipa"
       sh(resign_cmd)
     end
 
@@ -68,7 +68,7 @@ platform :ios do
     match(
       type: "appstore",
       platform: "tvos",
-      app_identifier: ["eu.diatar.diavetito"],
+      app_identifier: ["eu.diatar.vetito"],
       readonly: false,
       team_id: ENV["APPLE_TEAM_ID"],
       api_key: api_key,
