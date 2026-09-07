@@ -1679,6 +1679,12 @@ abstract class AppLocalizations {
   /// **'elválasztó'**
   String get customOrderSeparatorDefaultName;
 
+  /// No description provided for @customOrderEditSeparatorTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Elválasztó szerkesztése'**
+  String get customOrderEditSeparatorTitle;
+
   /// No description provided for @customOrderInsertVersesTitle.
   ///
   /// In hu, this message translates to:

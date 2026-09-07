@@ -3174,10 +3174,9 @@ class DiatarMainController extends ChangeNotifier {
       }
 
       if (entry.isSeparator) {
-        final String separatorName =
-            (entry.customTextTitle ?? '').trim().isEmpty
+        final String separatorName = entry.customTextTitle == null
             ? entry.label.trim()
-            : (entry.customTextTitle ?? '').trim();
+            : entry.customTextTitle!.trim();
         out.writeln('separator=$separatorName');
         continue;
       }
@@ -3368,8 +3367,8 @@ class DiatarMainController extends ChangeNotifier {
       final bool mergeWithNext = _diaBoolean(sec['dbldia']);
       final bool skipped = _diaBoolean(sec['skipped']);
 
-      final String separatorName = (sec['separator'] ?? '').trim();
-      if (separatorName.isNotEmpty) {
+      if (sec.containsKey('separator')) {
+        final String separatorName = (sec['separator'] ?? '').trim();
         imported.add(
           CustomOrderEntry(
             fileName: CustomOrderEntry.separatorFileName,

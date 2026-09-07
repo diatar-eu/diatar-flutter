@@ -1202,14 +1202,73 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
   Future<void> _insertSeparator() async {
     final l10n = context.l10n;
-    String entered = l10n.customOrderSeparatorDefaultName;
+    final String? enteredName = await _promptForSeparatorName(
+      title: l10n.customOrderInsertSeparatorAction,
+      initialName: l10n.customOrderSeparatorDefaultName,
+    );
+    if (enteredName == null || !mounted) {
+      return;
+    }
 
-    final String? enteredName = await showDialog<String>(
+    final String separatorName = enteredName.trim();
+    final CustomOrderEntry entry = CustomOrderEntry(
+      fileName: CustomOrderEntry.separatorFileName,
+      songIndex: CustomOrderEntry.separatorSongIndex,
+      verseIndex: 0,
+      label: '--- $separatorName ---',
+      customTextTitle: separatorName,
+    );
+
+    int lastInsertedIndex = 0;
+    setState(() {
+      final int insertIndex = _selectedInsertInsertionIndex();
+      _entries.insert(insertIndex, entry);
+      lastInsertedIndex = insertIndex;
+    });
+    await _commitEntries();
+    if (mounted) {
+      controller.selectCustomOrderEntryForEditing(lastInsertedIndex);
+    }
+  }
+
+  Future<void> _editSeparator(int index) async {
+    if (index < 0 || index >= _entries.length) {
+      return;
+    }
+    final CustomOrderEntry entry = _entries[index];
+    if (!entry.isSeparator) {
+      return;
+    }
+
+    final String? enteredName = await _promptForSeparatorName(
+      title: context.l10n.customOrderEditSeparatorTitle,
+      initialName: separatorEntryName(entry),
+    );
+    if (enteredName == null || !mounted) {
+      return;
+    }
+
+    final String separatorName = enteredName.trim();
+    setState(() {
+      _entries[index] = entry.copyWith(
+        label: '--- $separatorName ---',
+        customTextTitle: separatorName,
+      );
+    });
+    await _commitEntries();
+  }
+
+  Future<String?> _promptForSeparatorName({
+    required String title,
+    required String initialName,
+  }) async {
+    String entered = initialName;
+    return showDialog<String>(
       context: context,
       builder: (BuildContext dialogContext) {
         final dialogL10n = dialogContext.l10n;
         return AlertDialog(
-          title: Text(dialogL10n.customOrderInsertSeparatorAction),
+          title: Text(title),
           content: TextFormField(
             initialValue: entered,
             autofocus: true,
@@ -1237,35 +1296,6 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         );
       },
     );
-
-    if (enteredName == null) {
-      return;
-    }
-    if (!mounted) {
-      return;
-    }
-
-    final String separatorName = enteredName.trim().isEmpty
-        ? l10n.customOrderSeparatorDefaultName
-        : enteredName.trim();
-    final CustomOrderEntry entry = CustomOrderEntry(
-      fileName: CustomOrderEntry.separatorFileName,
-      songIndex: CustomOrderEntry.separatorSongIndex,
-      verseIndex: 0,
-      label: '--- $separatorName ---',
-      customTextTitle: separatorName,
-    );
-
-    int lastInsertedIndex = 0;
-    setState(() {
-      final int insertIndex = _selectedInsertInsertionIndex();
-      _entries.insert(insertIndex, entry);
-      lastInsertedIndex = insertIndex;
-    });
-    await _commitEntries();
-    if (mounted) {
-      controller.selectCustomOrderEntryForEditing(lastInsertedIndex);
-    }
   }
 
   Future<void> _confirmAndClearAll() async {
@@ -2311,155 +2341,170 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                     ? colorScheme.primaryContainer.withValues(alpha: 0.55)
                     : null,
               ),
-              child: ListTile(
-                dense: true,
-                visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
-                minVerticalPadding: 0,
-                minTileHeight: 30,
-                horizontalTitleGap: 0,
-                contentPadding: EdgeInsets.zero,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => controller.selectCustomOrderEntryForEditing(index),
-                leading: SizedBox(
-                  width: showSoundControls ? 134 : 78,
-                  child: Row(
+                onDoubleTap: entry.isSeparator
+                    ? () => unawaited(_editSeparator(index))
+                    : null,
+                child: ListTile(
+                  dense: true,
+                  visualDensity: const VisualDensity(
+                    horizontal: 0,
+                    vertical: -4,
+                  ),
+                  minVerticalPadding: 0,
+                  minTileHeight: 30,
+                  horizontalTitleGap: 0,
+                  contentPadding: EdgeInsets.zero,
+                  leading: SizedBox(
+                    width: showSoundControls ? 134 : 78,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const SizedBox(width: 8),
+                        MergeIndicator(
+                          visual: _isMergeFollower(index)
+                              ? MergeIndicatorVisual.lowerBrace
+                              : _isMergeLeader(index)
+                              ? MergeIndicatorVisual.upperBrace
+                              : _canMergeAt(index)
+                              ? MergeIndicatorVisual.circle
+                              : MergeIndicatorVisual.hidden,
+                          onTap: _canMergeAt(index)
+                              ? () => unawaited(_toggleMergeAt(index))
+                              : null,
+                        ),
+                        IconButton(
+                          tooltip: context.l10n.customOrderSkipSlideTooltip,
+                          icon: Icon(
+                            Icons.cancel_outlined,
+                            color: entry.skipped
+                                ? Colors.red.shade700
+                                : Colors.grey.shade600,
+                          ),
+                          visualDensity: const VisualDensity(
+                            horizontal: -4,
+                            vertical: -4,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 28,
+                            minHeight: 28,
+                          ),
+                          onPressed: () => unawaited(_toggleSkippedAt(index)),
+                        ),
+                        if (showSoundControls) ...<Widget>[
+                          IconButton(
+                            tooltip: context.l10n.customOrderPlaySoundTooltip,
+                            icon: Icon(
+                              Icons.music_note,
+                              color: !hasSound
+                                  ? Colors.grey.shade600
+                                  : entry.playSound
+                                  ? Colors.tealAccent.shade400
+                                  : Colors.blue.shade900,
+                            ),
+                            visualDensity: const VisualDensity(
+                              horizontal: -4,
+                              vertical: -4,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 28,
+                              minHeight: 28,
+                            ),
+                            disabledColor: Colors.grey.shade700,
+                            onPressed: hasSound
+                                ? () => unawaited(
+                                    _toggleSoundAt(index, forward: false),
+                                  )
+                                : null,
+                          ),
+                          IconButton(
+                            tooltip: context
+                                .l10n
+                                .customOrderAdvanceAfterSoundTooltip,
+                            icon: Icon(
+                              Icons.subdirectory_arrow_right,
+                              color: !canAdvanceAfterSound
+                                  ? Colors.grey.shade600
+                                  : entry.advanceAfterSound
+                                  ? Colors.tealAccent.shade400
+                                  : Colors.blue.shade900,
+                            ),
+                            visualDensity: const VisualDensity(
+                              horizontal: -4,
+                              vertical: -4,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 28,
+                              minHeight: 28,
+                            ),
+                            disabledColor: Colors.grey.shade700,
+                            onPressed: canAdvanceAfterSound
+                                ? () => unawaited(
+                                    _toggleSoundAt(index, forward: true),
+                                  )
+                                : null,
+                          ),
+                        ],
+                        ReorderableDragStartListener(
+                          index: index,
+                          child: const Icon(Icons.drag_handle),
+                        ),
+                      ],
+                    ),
+                  ),
+                  title: Padding(
+                    padding: EdgeInsets.only(
+                      left: isContinuation
+                          ? (showSoundControls ? 154 : 98)
+                          : 16,
+                      right: 8,
+                    ),
+                    child: titleWidget,
+                  ),
+                  trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      const SizedBox(width: 8),
-                      MergeIndicator(
-                        visual: _isMergeFollower(index)
-                            ? MergeIndicatorVisual.lowerBrace
-                            : _isMergeLeader(index)
-                            ? MergeIndicatorVisual.upperBrace
-                            : _canMergeAt(index)
-                            ? MergeIndicatorVisual.circle
-                            : MergeIndicatorVisual.hidden,
-                        onTap: _canMergeAt(index)
-                            ? () => unawaited(_toggleMergeAt(index))
-                            : null,
-                      ),
+                      if (isSongEntry && !isContinuation)
+                        IconButton(
+                          tooltip: context.l10n.versePicker,
+                          icon: const Icon(Icons.format_list_numbered),
+                          visualDensity: const VisualDensity(
+                            horizontal: -4,
+                            vertical: -4,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 28,
+                            minHeight: 28,
+                          ),
+                          onPressed: () => _pickVerse(index),
+                        ),
                       IconButton(
-                        tooltip: context.l10n.customOrderSkipSlideTooltip,
-                        icon: Icon(
-                          Icons.cancel_outlined,
-                          color: entry.skipped
-                              ? Colors.red.shade700
-                              : Colors.grey.shade600,
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
                         ),
                         visualDensity: const VisualDensity(
                           horizontal: -4,
                           vertical: -4,
                         ),
-                        padding: EdgeInsets.zero,
+                        padding: const EdgeInsets.only(left: 4, right: 14),
                         constraints: const BoxConstraints(
                           minWidth: 28,
                           minHeight: 28,
                         ),
-                        onPressed: () => unawaited(_toggleSkippedAt(index)),
-                      ),
-                      if (showSoundControls) ...<Widget>[
-                        IconButton(
-                          tooltip: context.l10n.customOrderPlaySoundTooltip,
-                          icon: Icon(
-                            Icons.music_note,
-                            color: !hasSound
-                                ? Colors.grey.shade600
-                                : entry.playSound
-                                ? Colors.tealAccent.shade400
-                                : Colors.blue.shade900,
-                          ),
-                          visualDensity: const VisualDensity(
-                            horizontal: -4,
-                            vertical: -4,
-                          ),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 28,
-                            minHeight: 28,
-                          ),
-                          disabledColor: Colors.grey.shade700,
-                          onPressed: hasSound
-                              ? () => unawaited(
-                                  _toggleSoundAt(index, forward: false),
-                                )
-                              : null,
-                        ),
-                        IconButton(
-                          tooltip:
-                              context.l10n.customOrderAdvanceAfterSoundTooltip,
-                          icon: Icon(
-                            Icons.subdirectory_arrow_right,
-                            color: !canAdvanceAfterSound
-                                ? Colors.grey.shade600
-                                : entry.advanceAfterSound
-                                ? Colors.tealAccent.shade400
-                                : Colors.blue.shade900,
-                          ),
-                          visualDensity: const VisualDensity(
-                            horizontal: -4,
-                            vertical: -4,
-                          ),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 28,
-                            minHeight: 28,
-                          ),
-                          disabledColor: Colors.grey.shade700,
-                          onPressed: canAdvanceAfterSound
-                              ? () => unawaited(
-                                  _toggleSoundAt(index, forward: true),
-                                )
-                              : null,
-                        ),
-                      ],
-                      ReorderableDragStartListener(
-                        index: index,
-                        child: const Icon(Icons.drag_handle),
+                        onPressed: () {
+                          setState(() => _entries.removeAt(index));
+                          unawaited(_commitEntries());
+                        },
                       ),
                     ],
                   ),
-                ),
-                title: Padding(
-                  padding: EdgeInsets.only(
-                    left: isContinuation ? (showSoundControls ? 154 : 98) : 16,
-                    right: 8,
-                  ),
-                  child: titleWidget,
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    if (isSongEntry && !isContinuation)
-                      IconButton(
-                        tooltip: context.l10n.versePicker,
-                        icon: const Icon(Icons.format_list_numbered),
-                        visualDensity: const VisualDensity(
-                          horizontal: -4,
-                          vertical: -4,
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 28,
-                          minHeight: 28,
-                        ),
-                        onPressed: () => _pickVerse(index),
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      visualDensity: const VisualDensity(
-                        horizontal: -4,
-                        vertical: -4,
-                      ),
-                      padding: const EdgeInsets.only(left: 4, right: 14),
-                      constraints: const BoxConstraints(
-                        minWidth: 28,
-                        minHeight: 28,
-                      ),
-                      onPressed: () {
-                        setState(() => _entries.removeAt(index));
-                        unawaited(_commitEntries());
-                      },
-                    ),
-                  ],
                 ),
               ),
             );

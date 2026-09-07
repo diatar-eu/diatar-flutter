@@ -929,6 +929,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderSeparatorDefaultName => 'elválasztó';
 
   @override
+  String get customOrderEditSeparatorTitle => 'Elválasztó szerkesztése';
+
+  @override
   String get customOrderInsertVersesTitle => 'Beszúrandó versszakok';
 
   @override

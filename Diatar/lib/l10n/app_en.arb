@@ -609,6 +609,7 @@
   "customOrderClearAllConfirmButton": "Clear all",
   "customOrderSeparatorNameLabel": "Separator name",
   "customOrderSeparatorDefaultName": "separator",
+  "customOrderEditSeparatorTitle": "Edit separator",
   "customOrderInsertVersesTitle": "Verses to insert",
   "customOrderInsertVersesSubtitle": "Select which verses should be added to the order.",
   "textSlideDialogTitle": "Add text slide",

@@ -35,6 +35,21 @@ String formatCustomTextEntryLabel(AppLocalizations l10n, String title) {
   return l10n.customTextEntryLabel(normalized.isEmpty ? 'Dia' : normalized);
 }
 
+String separatorEntryName(CustomOrderEntry entry) {
+  final String? title = entry.customTextTitle;
+  if (title != null) {
+    return title.trim();
+  }
+  final String label = entry.label.trim();
+  final RegExpMatch? match = RegExp(r'^---\s*(.*?)\s*---$').firstMatch(label);
+  return match?.group(1)?.trim() ?? label;
+}
+
+String formatSeparatorEntryLabel(String name) {
+  final String normalized = name.trim();
+  return normalized.isEmpty ? '-- --' : '-- $normalized --';
+}
+
 String formatCustomImageEntryLabel(AppLocalizations l10n, String name) {
   return l10n.customImageEntryLabel(name.trim());
 }
@@ -43,6 +58,9 @@ String localizedCustomEntryLabel(
   AppLocalizations l10n,
   CustomOrderEntry entry,
 ) {
+  if (entry.isSeparator) {
+    return formatSeparatorEntryLabel(separatorEntryName(entry));
+  }
   if (entry.isCustomImage) {
     return formatCustomImageEntryLabel(l10n, customImageEntryName(entry));
   }

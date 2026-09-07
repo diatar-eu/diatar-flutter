@@ -120,6 +120,33 @@ void main() {
   });
 
   group('custom order naming', () {
+    test('writes and reads unnamed separators', () async {
+      final DiatarMainController controller = DiatarMainController();
+      final Directory directory = await Directory.systemTemp.createTemp(
+        'diatar_unnamed_separator_test_',
+      );
+      final String path = '${directory.path}${Platform.pathSeparator}order.dia';
+      addTearDown(() => directory.delete(recursive: true));
+
+      await controller.applyCustomOrder(const <CustomOrderEntry>[
+        CustomOrderEntry(
+          fileName: CustomOrderEntry.separatorFileName,
+          songIndex: CustomOrderEntry.separatorSongIndex,
+          verseIndex: 0,
+          label: '---  ---',
+          customTextTitle: '',
+        ),
+      ], activate: true);
+      await controller.exportCustomOrderToDia(path, recordSave: false);
+
+      final String content = await File(path).readAsString();
+      expect(content, contains('separator=\n'));
+
+      expect(await controller.importCustomOrderFromDia(path), 1);
+      expect(controller.customOrder.single.isSeparator, isTrue);
+      expect(controller.customOrder.single.customTextTitle, isEmpty);
+    });
+
     test('writes the DTX verse ID to DIA files', () async {
       final DiatarMainController controller = DiatarMainController();
       controller.books = const <DtxBook>[

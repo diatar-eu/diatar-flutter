@@ -609,6 +609,7 @@
   "customOrderClearAllConfirmButton": "Mindent töröl",
   "customOrderSeparatorNameLabel": "Elválasztó neve",
   "customOrderSeparatorDefaultName": "elválasztó",
+  "customOrderEditSeparatorTitle": "Elválasztó szerkesztése",
   "customOrderInsertVersesTitle": "Beszúrandó versszakok",
   "customOrderInsertVersesSubtitle": "Jelöld ki, mely versszakok kerüljenek a diasorba.",
   "textSlideDialogTitle": "Szöveges dia hozzáadása",
