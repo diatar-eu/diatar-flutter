@@ -145,4 +145,84 @@ void main() {
     expect(controller.encodedText, r'a\_b');
     controller.dispose();
   });
+
+  test('copies a selected DIA range with its formatting and commands', () {
+    final InlineTextDocument document = InlineTextDocument.decode(
+      r'a\Bbold\b\ \-\_\.\GAm;z',
+    );
+
+    expect(
+      document.copyRange(1, document.visibleText.length - 1).encode(),
+      r'\Bbold\b\ \-\_\.\GAm;',
+    );
+  });
+
+  test(
+    'round-trips formatting, special characters, and DIA commands in HTML',
+    () {
+      final InlineTextDocument document = InlineTextDocument.decode(
+        r'\Bbold\b \Iitalic\i\ \-\_\.\GAm;',
+      );
+
+      expect(
+        InlineTextClipboard.fromHtml(
+          InlineTextClipboard.toHtml(document),
+        ).encode(),
+        document.encode(),
+      );
+    },
+  );
+
+  test('reads office HTML formatting and non-breaking characters', () {
+    expect(
+      InlineTextClipboard.fromHtml(
+        '<p><strong>Bold</strong> <em>italic</em>&nbsp;<u>under</u><br>next</p>',
+      ).encode(),
+      '${r'\BBold\b \Iitalic\i\ \Uunder\u'}\nnext\n',
+    );
+  });
+
+  test('ignores source indentation between Word HTML blocks', () {
+    expect(
+      InlineTextClipboard.fromHtml(
+        '<p><strong>First</strong></p>\r\n  <p>Second</p>',
+      ).encode(),
+      '${r'\BFirst\b'}\nSecond\n',
+    );
+  });
+
+  test('keeps Word paragraphs and line breaks as separate lines', () {
+    expect(
+      InlineTextClipboard.fromHtml(
+        '<p class=MsoNormal>first<o:p></o:p></p>'
+        '<p class=MsoNormal>second<br>\nthird<o:p></o:p></p>',
+      ).visibleText,
+      'first\nsecond\nthird\n',
+    );
+  });
+
+  test('does not accept a platform paste while rich paste is in progress', () {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia('before');
+    controller.beginRichClipboardPaste();
+    controller.value = const TextEditingValue(
+      text: 'beplainfore',
+      selection: TextSelection.collapsed(offset: 7),
+    );
+
+    expect(controller.text, 'before');
+    controller.cancelRichClipboardPaste();
+    controller.dispose();
+  });
+
+  test('round-trips formatting and special characters in RTF', () {
+    final InlineTextDocument document = InlineTextDocument.decode(
+      r'\Bbold\b \Iitalic\i\ \-\_\.á',
+    );
+
+    expect(
+      InlineTextClipboard.fromRtf(InlineTextClipboard.toRtf(document)).encode(),
+      document.encode(),
+    );
+  });
 }

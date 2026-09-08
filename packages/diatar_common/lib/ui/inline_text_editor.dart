@@ -1,4 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:html/dom.dart' as dom;
+import 'package:html/parser.dart' as html_parser;
+import 'package:super_clipboard/super_clipboard.dart';
 
 enum InlineTextStyle { bold, italic, underline, strike, tieUnderline }
 
@@ -211,6 +217,24 @@ class InlineTextDocument {
 
   final List<_InlineTextElement> _elements;
 
+  InlineTextDocument copyRange(int start, int end) {
+    final int rangeStart = start.clamp(0, _elements.length);
+    final int rangeEnd = end.clamp(rangeStart, _elements.length);
+    return InlineTextDocument._(
+      List<_InlineTextElement>.from(_elements.sublist(rangeStart, rangeEnd)),
+    );
+  }
+
+  void replaceRangeWithDocument(
+    int start,
+    int end,
+    InlineTextDocument replacement,
+  ) {
+    final int rangeStart = start.clamp(0, _elements.length);
+    final int rangeEnd = end.clamp(rangeStart, _elements.length);
+    _elements.replaceRange(rangeStart, rangeEnd, replacement._elements);
+  }
+
   String get visibleText =>
       _elements.map((element) => element.visibleCharacter).join();
 
@@ -337,6 +361,461 @@ void _writeStyleTransition(
   }
 }
 
+/// Converts DIA inline documents to and from clipboard representations.
+///
+/// The private DIA format preserves commands such as chords and notation. HTML
+/// and RTF provide interoperable rich text for office applications.
+class InlineTextClipboardContent {
+  const InlineTextClipboardContent({
+    required this.document,
+    required this.plainText,
+  });
+
+  final InlineTextDocument document;
+  final String? plainText;
+}
+
+class InlineTextClipboard {
+  InlineTextClipboard._();
+
+  static const CustomValueFormat<String> _diaFormat = CustomValueFormat<String>(
+    applicationId: 'eu.diatar.inline-text',
+  );
+  static const SimpleValueFormat<String> _rtfFormat = SimpleValueFormat<String>(
+    android: SimplePlatformCodec<String>(formats: <String>['text/rtf']),
+    ios: SimplePlatformCodec<String>(formats: <String>['public.rtf']),
+    macos: SimplePlatformCodec<String>(formats: <String>['public.rtf']),
+    windows: SimplePlatformCodec<String>(formats: <String>['Rich Text Format']),
+    fallback: SimplePlatformCodec<String>(formats: <String>['application/rtf']),
+  );
+
+  static Future<void> copy(InlineTextDocument document) async {
+    final SystemClipboard? clipboard = SystemClipboard.instance;
+    if (clipboard == null) {
+      await Clipboard.setData(ClipboardData(text: document.visibleText));
+      return;
+    }
+    final DataWriterItem item = DataWriterItem()
+      ..add(_diaFormat(document.encode()))
+      ..add(Formats.htmlText(toHtml(document)))
+      ..add(_rtfFormat(toRtf(document)))
+      ..add(Formats.plainText(document.visibleText));
+    await clipboard.write(<DataWriterItem>[item]);
+  }
+
+  static Future<InlineTextClipboardContent?> read() async {
+    final SystemClipboard? clipboard = SystemClipboard.instance;
+    if (clipboard == null) {
+      final ClipboardData? data = await Clipboard.getData(Clipboard.kTextPlain);
+      return data?.text == null
+          ? null
+          : InlineTextClipboardContent(
+              document: InlineTextDocument.decode(data!.text!),
+              plainText: data.text,
+            );
+    }
+    final ClipboardReader reader = await clipboard.read();
+    final Future<String?> plainText = reader.readValue(Formats.plainText);
+    final String? dia = await reader.readValue(_diaFormat);
+    if (dia != null) {
+      return InlineTextClipboardContent(
+        document: InlineTextDocument.decode(dia),
+        plainText: await plainText,
+      );
+    }
+    final String? html = await reader.readValue(Formats.htmlText);
+    if (html != null) {
+      return InlineTextClipboardContent(
+        document: fromHtml(html),
+        plainText: await plainText,
+      );
+    }
+    final String? rtf = await reader.readValue(_rtfFormat);
+    if (rtf != null) {
+      return InlineTextClipboardContent(
+        document: fromRtf(rtf),
+        plainText: await plainText,
+      );
+    }
+    final String? text = await plainText;
+    return text == null
+        ? null
+        : InlineTextClipboardContent(
+            document: InlineTextDocument.decode(text),
+            plainText: text,
+          );
+  }
+
+  static String toHtml(InlineTextDocument document) {
+    final StringBuffer result = StringBuffer('<span data-diatar-inline="1">');
+    for (final _InlineTextElement element in document._elements) {
+      final String text = element.isCommand
+          ? element.rawCommand!
+          : element.visibleCharacter;
+      final String content = _escapeHtml(text);
+      if (element.isCommand) {
+        result.write(
+          '<span data-diatar-command="${_escapeHtmlAttribute(element.rawCommand!)}">$content</span>',
+        );
+        continue;
+      }
+      String wrapped = element.kind == _InlineTextElementKind.preferredLineBreak
+          ? '<br data-diatar-preferred-break="1">'
+          : content;
+      for (final InlineTextStyle style in _styleOrder.reversed) {
+        if (element.styles.contains(style)) {
+          wrapped = switch (style) {
+            InlineTextStyle.bold => '<strong>$wrapped</strong>',
+            InlineTextStyle.italic => '<em>$wrapped</em>',
+            InlineTextStyle.underline => '<u>$wrapped</u>',
+            InlineTextStyle.strike => '<s>$wrapped</s>',
+            InlineTextStyle.tieUnderline =>
+              '<span data-diatar-tie-underline="1"><u>$wrapped</u></span>',
+          };
+        }
+      }
+      result.write(wrapped);
+    }
+    result.write('</span>');
+    return result.toString();
+  }
+
+  static String toRtf(InlineTextDocument document) {
+    final StringBuffer result = StringBuffer(r'{\rtf1\ansi\deff0 ');
+    Set<InlineTextStyle> active = <InlineTextStyle>{};
+    for (final _InlineTextElement element in document._elements) {
+      _writeRtfStyleTransition(result, active, element.styles);
+      if (element.isCommand) {
+        _writeRtfText(result, element.rawCommand!);
+      } else if (element.kind == _InlineTextElementKind.preferredLineBreak) {
+        result.write(r'\line ');
+      } else {
+        _writeRtfText(result, element.visibleCharacter);
+      }
+    }
+    _writeRtfStyleTransition(result, active, const <InlineTextStyle>{});
+    return '${result.toString()}}';
+  }
+
+  static InlineTextDocument fromHtml(String source) {
+    final StringBuffer dia = StringBuffer();
+    final Set<InlineTextStyle> activeStyles = <InlineTextStyle>{};
+    bool suppressLeadingWhitespace = false;
+
+    void writeText(String text, Set<InlineTextStyle> styles) {
+      String normalized = text.replaceAll(RegExp(r'[ \t\r\n\f]+'), ' ');
+      if (suppressLeadingWhitespace) {
+        normalized = normalized.replaceFirst(RegExp(r'^ +'), '');
+      }
+      if (normalized.isEmpty) {
+        return;
+      }
+      for (final int codeUnit in normalized.codeUnits) {
+        final String character = String.fromCharCode(codeUnit);
+        _writeStyleTransition(dia, activeStyles, styles);
+        dia.write(switch (character) {
+          '\\' => r'\\',
+          '\u00A0' => r'\ ',
+          '\u00AD' => r'\-',
+          '\u2011' => r'\_',
+          '\n' => r'\.',
+          _ => character,
+        });
+      }
+      suppressLeadingWhitespace = false;
+    }
+
+    void writePreferredLineBreak(Set<InlineTextStyle> styles) {
+      _writeStyleTransition(dia, activeStyles, styles);
+      dia.write(r'\.');
+      suppressLeadingWhitespace = true;
+    }
+
+    void writeHardLineBreak(Set<InlineTextStyle> styles) {
+      _writeStyleTransition(dia, activeStyles, styles);
+      dia.write('\n');
+      suppressLeadingWhitespace = true;
+    }
+
+    void visit(dom.Node node, Set<InlineTextStyle> inherited) {
+      if (node is dom.Text) {
+        if (node.data.trim().isEmpty && RegExp(r'[\r\n]').hasMatch(node.data)) {
+          return;
+        }
+        writeText(node.data, inherited);
+        return;
+      }
+      if (node is! dom.Element) {
+        return;
+      }
+      final String? command = node.attributes['data-diatar-command'];
+      if (command != null) {
+        _writeStyleTransition(dia, activeStyles, inherited);
+        dia.write(command);
+        return;
+      }
+      final String tag = node.localName?.toLowerCase() ?? '';
+      if (tag == 'br') {
+        if (node.attributes['data-diatar-preferred-break'] == '1') {
+          writePreferredLineBreak(inherited);
+        } else {
+          writeHardLineBreak(inherited);
+        }
+        return;
+      }
+      final Set<InlineTextStyle> styles = Set<InlineTextStyle>.from(inherited);
+      if (<String>{'b', 'strong'}.contains(tag)) {
+        styles.add(InlineTextStyle.bold);
+      }
+      if (<String>{'i', 'em'}.contains(tag)) styles.add(InlineTextStyle.italic);
+      if (tag == 'u') styles.add(InlineTextStyle.underline);
+      if (<String>{'s', 'strike', 'del'}.contains(tag)) {
+        styles.add(InlineTextStyle.strike);
+      }
+      final String css = node.attributes['style']?.toLowerCase() ?? '';
+      if (RegExp(r'font-weight\s*:\s*(bold|[6-9]00)').hasMatch(css)) {
+        styles.add(InlineTextStyle.bold);
+      }
+      if (RegExp(r'font-style\s*:\s*italic').hasMatch(css)) {
+        styles.add(InlineTextStyle.italic);
+      }
+      if (RegExp(r'text-decoration[^;]*underline').hasMatch(css)) {
+        styles.add(InlineTextStyle.underline);
+      }
+      if (RegExp(r'text-decoration[^;]*(line-through|strike)').hasMatch(css)) {
+        styles.add(InlineTextStyle.strike);
+      }
+      for (final dom.Node child in node.nodes) {
+        visit(child, styles);
+      }
+      if (<String>{'p', 'div', 'li'}.contains(tag) &&
+          dia.isNotEmpty &&
+          !dia.toString().endsWith('\n')) {
+        writeHardLineBreak(styles);
+      }
+    }
+
+    final dom.DocumentFragment document = html_parser.parseFragment(source);
+    for (final dom.Node node in document.nodes) {
+      visit(node, const <InlineTextStyle>{});
+    }
+    _writeStyleTransition(dia, activeStyles, const <InlineTextStyle>{});
+    return InlineTextDocument.decode(dia.toString());
+  }
+
+  static InlineTextDocument fromRtf(String source) {
+    final StringBuffer dia = StringBuffer();
+    final List<Set<InlineTextStyle>> styles = <Set<InlineTextStyle>>[
+      <InlineTextStyle>{},
+    ];
+    final List<bool> skipped = <bool>[false];
+    final Set<InlineTextStyle> activeStyles = <InlineTextStyle>{};
+    final Set<String> skippedDestinations = <String>{
+      'colortbl',
+      'fonttbl',
+      'stylesheet',
+      'info',
+      'pict',
+      'object',
+    };
+
+    void writeText(String text) {
+      if (skipped.last) return;
+      final Set<InlineTextStyle> current = styles.last;
+      _writeStyleTransition(dia, activeStyles, current);
+      for (final int codeUnit in text.codeUnits) {
+        final String character = String.fromCharCode(codeUnit);
+        dia.write(switch (character) {
+          '\\' => r'\\',
+          '\u00A0' => r'\ ',
+          '\u00AD' => r'\-',
+          '\u2011' => r'\_',
+          '\n' => r'\.',
+          _ => character,
+        });
+      }
+    }
+
+    for (int index = 0; index < source.length; index++) {
+      final String character = source[index];
+      if (character == '{') {
+        styles.add(Set<InlineTextStyle>.from(styles.last));
+        skipped.add(skipped.last);
+        continue;
+      }
+      if (character == '}') {
+        if (styles.length > 1) {
+          styles.removeLast();
+          skipped.removeLast();
+        }
+        continue;
+      }
+      if (character != '\\') {
+        writeText(character);
+        continue;
+      }
+      if (++index >= source.length) break;
+      final String first = source[index];
+      if (<String>{'\\', '{', '}'}.contains(first)) {
+        writeText(first);
+        continue;
+      }
+      if (first == '~') {
+        writeText('\u00A0');
+        continue;
+      }
+      if (first == '-') {
+        writeText('\u00AD');
+        continue;
+      }
+      if (first == '_') {
+        writeText('\u2011');
+        continue;
+      }
+      if (first == '*') {
+        skipped[skipped.length - 1] = true;
+        continue;
+      }
+      final int wordStart = index;
+      while (index < source.length &&
+          RegExp(r'[A-Za-z]').hasMatch(source[index])) {
+        index++;
+      }
+      final String word = source.substring(wordStart, index);
+      int? parameter;
+      final int parameterStart = index;
+      if (index < source.length &&
+          (source[index] == '-' || source[index] == '+')) {
+        index++;
+      }
+      while (index < source.length && RegExp(r'\d').hasMatch(source[index])) {
+        index++;
+      }
+      if (index > parameterStart) {
+        parameter = int.tryParse(source.substring(parameterStart, index));
+      }
+      if (index < source.length && source[index] == ' ') {
+        index++;
+      }
+      index--;
+      if (skippedDestinations.contains(word)) {
+        skipped[skipped.length - 1] = true;
+        continue;
+      }
+      if (skipped.last) continue;
+      final Set<InlineTextStyle> current = styles.last;
+      switch (word) {
+        case 'b':
+          _setStyle(current, InlineTextStyle.bold, parameter != 0);
+        case 'i':
+          _setStyle(current, InlineTextStyle.italic, parameter != 0);
+        case 'ul':
+          _setStyle(current, InlineTextStyle.underline, parameter != 0);
+        case 'ulnone':
+          current.remove(InlineTextStyle.underline);
+        case 'strike':
+          _setStyle(current, InlineTextStyle.strike, parameter != 0);
+        case 'par':
+        case 'line':
+          writeText('\n');
+        case 'u':
+          if (parameter != null) {
+            writeText(
+              String.fromCharCode(
+                parameter < 0 ? parameter + 65536 : parameter,
+              ),
+            );
+            if (index + 1 < source.length) index++;
+          }
+      }
+    }
+    _writeStyleTransition(dia, activeStyles, const <InlineTextStyle>{});
+    return InlineTextDocument.decode(dia.toString());
+  }
+}
+
+void _setStyle(
+  Set<InlineTextStyle> styles,
+  InlineTextStyle style,
+  bool enabled,
+) {
+  if (enabled) {
+    styles.add(style);
+  } else {
+    styles.remove(style);
+  }
+}
+
+void _writeRtfStyleTransition(
+  StringBuffer result,
+  Set<InlineTextStyle> active,
+  Set<InlineTextStyle> target,
+) {
+  for (final InlineTextStyle style in _styleOrder) {
+    if (style == InlineTextStyle.underline ||
+        style == InlineTextStyle.tieUnderline) {
+      continue;
+    }
+    if (active.contains(style) == target.contains(style)) continue;
+    result.write(switch (style) {
+      InlineTextStyle.bold => target.contains(style) ? r'\b ' : r'\b0 ',
+      InlineTextStyle.italic => target.contains(style) ? r'\i ' : r'\i0 ',
+      InlineTextStyle.strike =>
+        target.contains(style) ? r'\strike ' : r'\strike0 ',
+      InlineTextStyle.underline || InlineTextStyle.tieUnderline =>
+        throw StateError('Handled after the loop'),
+    });
+    _setStyle(active, style, target.contains(style));
+  }
+  final bool activeUnderline =
+      active.contains(InlineTextStyle.underline) ||
+      active.contains(InlineTextStyle.tieUnderline);
+  final bool targetUnderline =
+      target.contains(InlineTextStyle.underline) ||
+      target.contains(InlineTextStyle.tieUnderline);
+  if (activeUnderline != targetUnderline) {
+    result.write(targetUnderline ? r'\ul ' : r'\ulnone ');
+  }
+  _setStyle(
+    active,
+    InlineTextStyle.underline,
+    target.contains(InlineTextStyle.underline),
+  );
+  _setStyle(
+    active,
+    InlineTextStyle.tieUnderline,
+    target.contains(InlineTextStyle.tieUnderline),
+  );
+}
+
+void _writeRtfText(StringBuffer result, String text) {
+  for (final int codeUnit in text.codeUnits) {
+    final String character = String.fromCharCode(codeUnit);
+    if (character == '\\' || character == '{' || character == '}') {
+      result.write('\\$character');
+    } else if (character == '\u00A0') {
+      result.write(r'\~');
+    } else if (character == '\u00AD') {
+      result.write(r'\-');
+    } else if (character == '\u2011') {
+      result.write(r'\_');
+    } else if (codeUnit <= 127) {
+      result.write(character);
+    } else {
+      result.write('\\u${codeUnit > 32767 ? codeUnit - 65536 : codeUnit}?');
+    }
+  }
+}
+
+String _escapeHtml(String text) => text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+
+String _escapeHtmlAttribute(String text) =>
+    _escapeHtml(text).replaceAll("'", '&#39;');
+
 /// A [TextEditingController] whose text and selection use logical DIA text.
 ///
 /// Its [text] never contains DIA markup: source commands are represented by
@@ -354,8 +833,13 @@ class InlineTextEditingController extends TextEditingController {
   final InlineTextDocument _document;
   Set<InlineTextStyle> _pendingStyles;
   bool _updatingValue = false;
+  bool _isRichClipboardPasteInProgress = false;
+  Timer? _richClipboardPasteTimer;
 
   String get encodedText => _document.encode();
+
+  InlineTextDocument get selectedDocument =>
+      _document.copyRange(selection.start, selection.end);
 
   bool isStyleActiveForSelection(InlineTextStyle style) {
     final TextSelection currentSelection = selection;
@@ -406,6 +890,7 @@ class InlineTextEditingController extends TextEditingController {
     if (!currentSelection.isValid) {
       return;
     }
+
     final int start = currentSelection.start;
     final int end = currentSelection.end;
     _document.replaceVisibleRangeWithSpecialCharacter(
@@ -415,6 +900,40 @@ class InlineTextEditingController extends TextEditingController {
       styles: _pendingStyles,
     );
     _setDocumentValue(TextSelection.collapsed(offset: start + 1));
+  }
+
+  void replaceSelectionWithDocument(InlineTextDocument replacement) {
+    final TextSelection currentSelection = selection;
+    if (!currentSelection.isValid) {
+      return;
+    }
+
+    final int start = currentSelection.start;
+    _document.replaceRangeWithDocument(
+      start,
+      currentSelection.end,
+      replacement,
+    );
+    _pendingStyles = replacement.stylesForInsertionAt(
+      replacement._elements.length,
+    );
+    _setDocumentValue(
+      TextSelection.collapsed(offset: start + replacement._elements.length),
+    );
+  }
+
+  void beginRichClipboardPaste() {
+    _richClipboardPasteTimer?.cancel();
+    _isRichClipboardPasteInProgress = true;
+    _richClipboardPasteTimer = Timer(const Duration(seconds: 1), () {
+      _isRichClipboardPasteInProgress = false;
+    });
+  }
+
+  void cancelRichClipboardPaste() {
+    _richClipboardPasteTimer?.cancel();
+    _richClipboardPasteTimer = null;
+    _isRichClipboardPasteInProgress = false;
   }
 
   void _setDocumentValue(TextSelection newSelection) {
@@ -435,7 +954,9 @@ class InlineTextEditingController extends TextEditingController {
       super.value = newValue;
       return;
     }
-
+    if (_isRichClipboardPasteInProgress) {
+      return;
+    }
     final TextEditingValue oldValue = super.value;
     if (oldValue.text != newValue.text) {
       final _TextChange change = _TextChange.between(
@@ -470,6 +991,12 @@ class InlineTextEditingController extends TextEditingController {
     } finally {
       _updatingValue = false;
     }
+  }
+
+  @override
+  void dispose() {
+    _richClipboardPasteTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -563,7 +1090,7 @@ class InlineTextEditorLabels {
 ///
 /// The [controller] exposes only visible, logical editor positions. Its
 /// [InlineTextEditingController.encodedText] property produces DIA markup.
-class InlineTextEditor extends StatelessWidget {
+class InlineTextEditor extends StatefulWidget {
   const InlineTextEditor({
     super.key,
     required this.controller,
@@ -582,6 +1109,119 @@ class InlineTextEditor extends StatelessWidget {
   final int? maxLines;
 
   @override
+  State<InlineTextEditor> createState() => _InlineTextEditorState();
+}
+
+class _InlineTextEditorState extends State<InlineTextEditor> {
+  late final FocusNode _focusNode;
+  late final bool _ownsFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownsFocusNode = widget.focusNode == null;
+    _focusNode = widget.focusNode ?? FocusNode(onKeyEvent: _handleKeyEvent);
+  }
+
+  @override
+  void dispose() {
+    if (_ownsFocusNode) {
+      _focusNode.dispose();
+    }
+    super.dispose();
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+    final bool shortcut =
+        HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isMetaPressed;
+    if (!shortcut) {
+      return KeyEventResult.ignored;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.keyC) {
+      unawaited(_copy());
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.keyX) {
+      unawaited(_cut());
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.keyV) {
+      unawaited(_paste(suppressPlatformTextChanges: true));
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  Future<void> _copy() async {
+    if (widget.controller.selection.isCollapsed) {
+      return;
+    }
+    await InlineTextClipboard.copy(widget.controller.selectedDocument);
+  }
+
+  Future<void> _cut() async {
+    if (widget.controller.selection.isCollapsed) {
+      return;
+    }
+    await _copy();
+    widget.controller.replaceSelectionWithDocument(
+      InlineTextDocument.decode(''),
+    );
+  }
+
+  Future<void> _paste({bool suppressPlatformTextChanges = false}) async {
+    if (suppressPlatformTextChanges) {
+      widget.controller.beginRichClipboardPaste();
+    }
+    final InlineTextClipboardContent? content =
+        await InlineTextClipboard.read();
+    if (content == null) {
+      if (suppressPlatformTextChanges) {
+        widget.controller.cancelRichClipboardPaste();
+      }
+      return;
+    }
+    widget.controller.replaceSelectionWithDocument(content.document);
+  }
+
+  List<ContextMenuButtonItem> _contextMenuItems(
+    EditableTextState editableTextState,
+  ) {
+    return editableTextState.contextMenuButtonItems.map((
+      ContextMenuButtonItem item,
+    ) {
+      return switch (item.type) {
+        ContextMenuButtonType.copy => ContextMenuButtonItem(
+          type: item.type,
+          onPressed: () {
+            unawaited(_copy());
+            ContextMenuController.removeAny();
+          },
+        ),
+        ContextMenuButtonType.cut => ContextMenuButtonItem(
+          type: item.type,
+          onPressed: () {
+            unawaited(_cut());
+            ContextMenuController.removeAny();
+          },
+        ),
+        ContextMenuButtonType.paste => ContextMenuButtonItem(
+          type: item.type,
+          onPressed: () {
+            unawaited(_paste());
+            ContextMenuController.removeAny();
+          },
+        ),
+        _ => item,
+      };
+    }).toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     return Column(
@@ -593,35 +1233,35 @@ class InlineTextEditor extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               _FormattingButton(
-                controller: controller,
+                controller: widget.controller,
                 style: InlineTextStyle.bold,
                 icon: Icons.format_bold,
-                tooltip: labels.bold,
+                tooltip: widget.labels.bold,
               ),
               _FormattingButton(
-                controller: controller,
+                controller: widget.controller,
                 style: InlineTextStyle.italic,
                 icon: Icons.format_italic,
-                tooltip: labels.italic,
+                tooltip: widget.labels.italic,
               ),
               _FormattingButton(
-                controller: controller,
+                controller: widget.controller,
                 style: InlineTextStyle.underline,
                 icon: Icons.format_underlined,
-                tooltip: labels.underline,
+                tooltip: widget.labels.underline,
               ),
               _FormattingButton(
-                controller: controller,
+                controller: widget.controller,
                 style: InlineTextStyle.strike,
                 icon: Icons.strikethrough_s,
-                tooltip: labels.strikethrough,
+                tooltip: widget.labels.strikethrough,
               ),
               PopupMenuButton<InlineTextSpecialCharacter>(
-                tooltip: labels.insertSpecialCharacter,
+                tooltip: widget.labels.insertSpecialCharacter,
                 icon: const Icon(Icons.more_horiz),
                 onSelected: (InlineTextSpecialCharacter character) {
-                  controller.insertSpecialCharacter(character);
-                  focusNode?.requestFocus();
+                  widget.controller.insertSpecialCharacter(character);
+                  _focusNode.requestFocus();
                 },
                 itemBuilder: (BuildContext context) {
                   return InlineTextSpecialCharacter.values
@@ -639,7 +1279,11 @@ class InlineTextEditor extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  Text(labels.specialCharacterLabel(character)),
+                                  Text(
+                                    widget.labels.specialCharacterLabel(
+                                      character,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -655,11 +1299,17 @@ class InlineTextEditor extends StatelessWidget {
           ),
         ),
         TextField(
-          controller: controller,
-          focusNode: focusNode,
-          decoration: decoration,
-          minLines: minLines,
-          maxLines: maxLines,
+          controller: widget.controller,
+          focusNode: _focusNode,
+          decoration: widget.decoration,
+          minLines: widget.minLines,
+          maxLines: widget.maxLines,
+          contextMenuBuilder: (BuildContext context, EditableTextState state) {
+            return AdaptiveTextSelectionToolbar.buttonItems(
+              anchors: state.contextMenuAnchors,
+              buttonItems: _contextMenuItems(state),
+            );
+          },
         ),
       ],
     );
