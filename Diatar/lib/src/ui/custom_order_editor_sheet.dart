@@ -18,7 +18,6 @@ import '../models/custom_order_set.dart';
 import '../utils/custom_entry_labels.dart';
 import '../utils/escape_sequences.dart';
 import '../utils/friendly_path.dart';
-import '../utils/inline_text_formatting.dart';
 import '../services/song_search_service.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/macos_file_panels.dart';
@@ -2794,7 +2793,6 @@ class _CustomTextSlideDialog extends StatefulWidget {
 class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
   late final TextEditingController _titleController;
   late final InlineTextEditingController _bodyController;
-  late final FocusNode _bodyFocusNode;
 
   @override
   void initState() {
@@ -2802,7 +2800,6 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
     _titleController = TextEditingController(text: widget.initialTitle);
     _bodyController = InlineTextEditingController.fromDia(widget.initialBody)
       ..addListener(_refreshFormattingToolbar);
-    _bodyFocusNode = FocusNode();
   }
 
   void _refreshFormattingToolbar() {
@@ -2811,86 +2808,10 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
     }
   }
 
-  Widget _buildFormattingButton(
-    InlineTextStyle style,
-    IconData icon,
-    String tooltip,
-  ) {
-    final bool isSelected = _bodyController.isStyleActiveForSelection(style);
-    final ColorScheme colors = Theme.of(context).colorScheme;
-    return IconButton(
-      tooltip: tooltip,
-      isSelected: isSelected,
-      onPressed: () => _bodyController.toggleStyle(style),
-      icon: Icon(icon),
-      selectedIcon: Icon(icon),
-      style: IconButton.styleFrom(
-        backgroundColor: isSelected
-            ? colors.primaryContainer
-            : colors.surfaceContainerHighest,
-        foregroundColor: isSelected
-            ? colors.onPrimaryContainer
-            : colors.onSurfaceVariant,
-      ),
-    );
-  }
-
-  String _specialCharacterLabel(
-    AppLocalizations l10n,
-    InlineTextSpecialCharacter character,
-  ) {
-    return switch (character) {
-      InlineTextSpecialCharacter.conditionalHyphen => l10n.conditionalHyphen,
-      InlineTextSpecialCharacter.nonBreakingSpace => l10n.nonBreakingSpace,
-      InlineTextSpecialCharacter.nonBreakingHyphen => l10n.nonBreakingHyphen,
-      InlineTextSpecialCharacter.preferredLineBreak => l10n.preferredLineBreak,
-    };
-  }
-
-  Widget _buildSpecialCharactersMenu(AppLocalizations l10n) {
-    final ColorScheme colors = Theme.of(context).colorScheme;
-    return PopupMenuButton<InlineTextSpecialCharacter>(
-      tooltip: l10n.insertSpecialCharacter,
-      icon: const Icon(Icons.more_horiz),
-      onSelected: (InlineTextSpecialCharacter character) {
-        _bodyController.insertSpecialCharacter(character);
-        _bodyFocusNode.requestFocus();
-      },
-      itemBuilder: (BuildContext context) {
-        return InlineTextSpecialCharacter.values
-            .map(
-              (InlineTextSpecialCharacter character) =>
-                  PopupMenuItem<InlineTextSpecialCharacter>(
-                    value: character,
-                    child: Row(
-                      children: <Widget>[
-                        Text(
-                          character.editorSymbol,
-                          style: TextStyle(
-                            color: colors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(_specialCharacterLabel(l10n, character)),
-                      ],
-                    ),
-                  ),
-            )
-            .toList();
-      },
-      style: IconButton.styleFrom(
-        backgroundColor: colors.surfaceContainerHighest,
-        foregroundColor: colors.onSurfaceVariant,
-      ),
-    );
-  }
-
   @override
   void dispose() {
     _titleController.dispose();
     _bodyController.dispose();
-    _bodyFocusNode.dispose();
     super.dispose();
   }
 
@@ -2909,38 +2830,19 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
               decoration: InputDecoration(labelText: l10n.textSlideTitleLabel),
             ),
             const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  _buildFormattingButton(
-                    InlineTextStyle.bold,
-                    Icons.format_bold,
-                    l10n.boldText,
-                  ),
-                  _buildFormattingButton(
-                    InlineTextStyle.italic,
-                    Icons.format_italic,
-                    l10n.italicText,
-                  ),
-                  _buildFormattingButton(
-                    InlineTextStyle.underline,
-                    Icons.format_underlined,
-                    l10n.underlineText,
-                  ),
-                  _buildFormattingButton(
-                    InlineTextStyle.strike,
-                    Icons.strikethrough_s,
-                    l10n.strikethroughText,
-                  ),
-                  _buildSpecialCharactersMenu(l10n),
-                ],
-              ),
-            ),
-            TextField(
+            InlineTextEditor(
               controller: _bodyController,
-              focusNode: _bodyFocusNode,
+              labels: InlineTextEditorLabels(
+                bold: l10n.boldText,
+                italic: l10n.italicText,
+                underline: l10n.underlineText,
+                strikethrough: l10n.strikethroughText,
+                insertSpecialCharacter: l10n.insertSpecialCharacter,
+                conditionalHyphen: l10n.conditionalHyphen,
+                nonBreakingSpace: l10n.nonBreakingSpace,
+                nonBreakingHyphen: l10n.nonBreakingHyphen,
+                preferredLineBreak: l10n.preferredLineBreak,
+              ),
               decoration: InputDecoration(labelText: l10n.textSlideBodyLabel),
               minLines: 4,
               maxLines: 8,

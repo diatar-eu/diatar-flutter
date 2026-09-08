@@ -525,6 +525,182 @@ class InlineTextEditingController extends TextEditingController {
   }
 }
 
+/// Localized labels used by [InlineTextEditor].
+class InlineTextEditorLabels {
+  const InlineTextEditorLabels({
+    required this.bold,
+    required this.italic,
+    required this.underline,
+    required this.strikethrough,
+    required this.insertSpecialCharacter,
+    required this.conditionalHyphen,
+    required this.nonBreakingSpace,
+    required this.nonBreakingHyphen,
+    required this.preferredLineBreak,
+  });
+
+  final String bold;
+  final String italic;
+  final String underline;
+  final String strikethrough;
+  final String insertSpecialCharacter;
+  final String conditionalHyphen;
+  final String nonBreakingSpace;
+  final String nonBreakingHyphen;
+  final String preferredLineBreak;
+
+  String specialCharacterLabel(InlineTextSpecialCharacter character) {
+    return switch (character) {
+      InlineTextSpecialCharacter.conditionalHyphen => conditionalHyphen,
+      InlineTextSpecialCharacter.nonBreakingSpace => nonBreakingSpace,
+      InlineTextSpecialCharacter.nonBreakingHyphen => nonBreakingHyphen,
+      InlineTextSpecialCharacter.preferredLineBreak => preferredLineBreak,
+    };
+  }
+}
+
+/// Reusable rich-text input for DIA inline text.
+///
+/// The [controller] exposes only visible, logical editor positions. Its
+/// [InlineTextEditingController.encodedText] property produces DIA markup.
+class InlineTextEditor extends StatelessWidget {
+  const InlineTextEditor({
+    super.key,
+    required this.controller,
+    required this.labels,
+    required this.decoration,
+    this.focusNode,
+    this.minLines,
+    this.maxLines,
+  });
+
+  final InlineTextEditingController controller;
+  final InlineTextEditorLabels labels;
+  final InputDecoration decoration;
+  final FocusNode? focusNode;
+  final int? minLines;
+  final int? maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              _FormattingButton(
+                controller: controller,
+                style: InlineTextStyle.bold,
+                icon: Icons.format_bold,
+                tooltip: labels.bold,
+              ),
+              _FormattingButton(
+                controller: controller,
+                style: InlineTextStyle.italic,
+                icon: Icons.format_italic,
+                tooltip: labels.italic,
+              ),
+              _FormattingButton(
+                controller: controller,
+                style: InlineTextStyle.underline,
+                icon: Icons.format_underlined,
+                tooltip: labels.underline,
+              ),
+              _FormattingButton(
+                controller: controller,
+                style: InlineTextStyle.strike,
+                icon: Icons.strikethrough_s,
+                tooltip: labels.strikethrough,
+              ),
+              PopupMenuButton<InlineTextSpecialCharacter>(
+                tooltip: labels.insertSpecialCharacter,
+                icon: const Icon(Icons.more_horiz),
+                onSelected: (InlineTextSpecialCharacter character) {
+                  controller.insertSpecialCharacter(character);
+                  focusNode?.requestFocus();
+                },
+                itemBuilder: (BuildContext context) {
+                  return InlineTextSpecialCharacter.values
+                      .map(
+                        (InlineTextSpecialCharacter character) =>
+                            PopupMenuItem<InlineTextSpecialCharacter>(
+                              value: character,
+                              child: Row(
+                                children: <Widget>[
+                                  Text(
+                                    character.editorSymbol,
+                                    style: TextStyle(
+                                      color: colors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(labels.specialCharacterLabel(character)),
+                                ],
+                              ),
+                            ),
+                      )
+                      .toList();
+                },
+                style: IconButton.styleFrom(
+                  backgroundColor: colors.surfaceContainerHighest,
+                  foregroundColor: colors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        TextField(
+          controller: controller,
+          focusNode: focusNode,
+          decoration: decoration,
+          minLines: minLines,
+          maxLines: maxLines,
+        ),
+      ],
+    );
+  }
+}
+
+class _FormattingButton extends StatelessWidget {
+  const _FormattingButton({
+    required this.controller,
+    required this.style,
+    required this.icon,
+    required this.tooltip,
+  });
+
+  final InlineTextEditingController controller;
+  final InlineTextStyle style;
+  final IconData icon;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isSelected = controller.isStyleActiveForSelection(style);
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return IconButton(
+      tooltip: tooltip,
+      isSelected: isSelected,
+      onPressed: () => controller.toggleStyle(style),
+      icon: Icon(icon),
+      selectedIcon: Icon(icon),
+      style: IconButton.styleFrom(
+        backgroundColor: isSelected
+            ? colors.primaryContainer
+            : colors.surfaceContainerHighest,
+        foregroundColor: isSelected
+            ? colors.onPrimaryContainer
+            : colors.onSurfaceVariant,
+      ),
+    );
+  }
+}
+
 bool _sameStyles(Set<InlineTextStyle> first, Set<InlineTextStyle> second) {
   return first.length == second.length && first.containsAll(second);
 }

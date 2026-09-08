@@ -1,4 +1,4 @@
-import 'package:diatar_app/src/utils/inline_text_formatting.dart';
+import 'package:diatar_common/diatar_common.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
