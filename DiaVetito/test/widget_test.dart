@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:diatar_common/diatar_common.dart';
 
 import 'package:diavetito/src/app.dart';
 import 'package:diavetito/src/services/web_mqtt_settings.dart';
@@ -23,6 +24,57 @@ void main() {
         mqttUsernameFromWebUri(Uri.parse('https://vetito.example/?mqtt=Peter')),
         'Peter',
       );
+    });
+
+    testWidgets('only applies a registered MQTT sender from settings', (
+      WidgetTester tester,
+    ) async {
+      AppSettings? appliedSettings;
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: SettingsSheet(
+              initialSettings: const AppSettings(),
+              senderSuggestions: <String>['Hoze', 'hehalom', 'H.Kovacs'],
+              onApply: (AppSettings settings) => appliedSettings = settings,
+              onConnectInternetFromQr: (_) async => false,
+              onRefreshUsers: () async {},
+              onSenderFilterChanged: (_) {},
+              registeredMqttUsername: (String username) {
+                for (final String registered in <String>[
+                  'Hoze',
+                  'hehalom',
+                  'H.Kovacs',
+                ]) {
+                  if (registered.toLowerCase() == username.toLowerCase()) {
+                    return registered;
+                  }
+                }
+                return null;
+              },
+              onExitRequested: () {},
+              onShutdownRequested: () {},
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Internet'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(SwitchListTile));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'hoz');
+      await tester.pump();
+
+      expect(find.text('Hoze'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'OK'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(appliedSettings, isNull);
     });
 
     test('decodes and trims an MQTT username', () {
@@ -71,8 +123,9 @@ void main() {
     );
   });
 
-  testWidgets('tap shows a quick exit button on native apps',
-      (WidgetTester tester) async {
+  testWidgets('tap shows a quick exit button on native apps', (
+    WidgetTester tester,
+  ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     const MethodChannel systemChannel = MethodChannel(
       'com.polyjoe.diavetito/system',
@@ -87,8 +140,10 @@ void main() {
       },
     );
     addTearDown(() {
-      tester.binding.defaultBinaryMessenger
-          .setMockMethodCallHandler(systemChannel, null);
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        systemChannel,
+        null,
+      );
     });
 
     try {
@@ -115,8 +170,9 @@ void main() {
     }
   });
 
-  testWidgets('OK (select) key opens settings on Android TV',
-      (WidgetTester tester) async {
+  testWidgets('OK (select) key opens settings on Android TV', (
+    WidgetTester tester,
+  ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     const MethodChannel systemChannel = MethodChannel(
       'com.polyjoe.diavetito/system',
@@ -131,8 +187,10 @@ void main() {
       },
     );
     addTearDown(() {
-      tester.binding.defaultBinaryMessenger
-          .setMockMethodCallHandler(systemChannel, null);
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        systemChannel,
+        null,
+      );
     });
 
     try {
@@ -169,8 +227,9 @@ void main() {
       SystemPlatform.debugSetTvOsOverride(null);
     }
 
-    testWidgets('shows the settings button and hides the QR scan button',
-        (WidgetTester tester) async {
+    testWidgets('shows the settings button and hides the QR scan button', (
+      WidgetTester tester,
+    ) async {
       simulateTvOs();
       const MethodChannel systemChannel = MethodChannel(
         'com.polyjoe.diavetito/system',
@@ -185,8 +244,10 @@ void main() {
         },
       );
       addTearDown(() {
-        tester.binding.defaultBinaryMessenger
-            .setMockMethodCallHandler(systemChannel, null);
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          systemChannel,
+          null,
+        );
       });
 
       try {
@@ -215,8 +276,9 @@ void main() {
       }
     });
 
-    testWidgets('settings button opens the settings sheet',
-        (WidgetTester tester) async {
+    testWidgets('settings button opens the settings sheet', (
+      WidgetTester tester,
+    ) async {
       simulateTvOs();
 
       try {

@@ -159,6 +159,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get senderRefreshTooltip => 'Refresh sender list';
 
   @override
+  String get invalidMqttUsernameTitle => 'Invalid MQTT sender';
+
+  @override
+  String get invalidMqttUsername => 'Select a registered MQTT sender name.';
+
+  @override
   String get channelLabel => 'Channel';
 
   @override

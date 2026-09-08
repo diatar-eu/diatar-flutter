@@ -100,6 +100,8 @@
   "senderLabel": "Sender",
   "senderHelper": "MQTT sender name",
   "senderRefreshTooltip": "Refresh sender list",
+  "invalidMqttUsernameTitle": "Invalid MQTT sender",
+  "invalidMqttUsername": "Select a registered MQTT sender name.",
   "channelLabel": "Channel",
   "clipLeft": "Left",
   "clipTop": "Top",

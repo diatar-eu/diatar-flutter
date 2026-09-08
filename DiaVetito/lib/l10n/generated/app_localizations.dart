@@ -350,6 +350,18 @@ abstract class AppLocalizations {
   /// **'Küldő lista frissítés'**
   String get senderRefreshTooltip;
 
+  /// No description provided for @invalidMqttUsernameTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Érvénytelen MQTT küldő'**
+  String get invalidMqttUsernameTitle;
+
+  /// No description provided for @invalidMqttUsername.
+  ///
+  /// In hu, this message translates to:
+  /// **'Válassz regisztrált MQTT küldőnevet.'**
+  String get invalidMqttUsername;
+
   /// No description provided for @channelLabel.
   ///
   /// In hu, this message translates to:

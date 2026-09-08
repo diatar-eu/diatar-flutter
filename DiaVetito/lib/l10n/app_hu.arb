@@ -100,6 +100,8 @@
   "senderLabel": "Küldő",
   "senderHelper": "MQTT sender neve",
   "senderRefreshTooltip": "Küldő lista frissítés",
+  "invalidMqttUsernameTitle": "Érvénytelen MQTT küldő",
+  "invalidMqttUsername": "Válassz regisztrált MQTT küldőnevet.",
   "channelLabel": "Csatorna",
   "clipLeft": "Bal",
   "clipTop": "Felső",

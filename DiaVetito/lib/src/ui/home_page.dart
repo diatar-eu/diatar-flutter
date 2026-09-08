@@ -32,8 +32,9 @@ class _HomePageState extends State<HomePage> {
   String _appVersion = '-';
   String _buildNumber = '-';
   static const Duration _kSettingsButtonFadeDuration = Duration(seconds: 4);
-  static const Duration _kSettingsButtonFadeTransition =
-      Duration(milliseconds: 300);
+  static const Duration _kSettingsButtonFadeTransition = Duration(
+    milliseconds: 300,
+  );
 
   Timer? _quickExitHideTimer;
   bool _showQuickExitButton = false;
@@ -200,10 +201,7 @@ class _HomePageState extends State<HomePage> {
             width: constraints.maxWidth,
             height: viewportHeight,
             child: CustomPaint(
-              size: Size(
-                constraints.maxWidth,
-                viewportHeight,
-              ),
+              size: Size(constraints.maxWidth, viewportHeight),
               painter: ProjectorPainter(
                 frame: controller.activeFrame,
                 globals: controller.globals,
@@ -222,10 +220,7 @@ class _HomePageState extends State<HomePage> {
               width: constraints.maxWidth,
               height: canvasHeight,
               child: CustomPaint(
-                size: Size(
-                  constraints.maxWidth,
-                  canvasHeight,
-                ),
+                size: Size(constraints.maxWidth, canvasHeight),
                 painter: ProjectorPainter(
                   frame: controller.activeFrame,
                   globals: controller.globals,
@@ -371,6 +366,7 @@ class _HomePageState extends State<HomePage> {
           onConnectInternetFromQr: controller.connectInternetFromQrUsername,
           onRefreshUsers: controller.refreshMqttUsers,
           onSenderFilterChanged: controller.updateSenderFilter,
+          registeredMqttUsername: controller.registeredMqttUsername,
           onExitRequested: controller.requestExit,
           onShutdownRequested: _handleShutdownRequested,
         );

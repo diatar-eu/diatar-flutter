@@ -130,12 +130,14 @@ class ProjectionController extends ChangeNotifier {
   }
 
   void updateSenderFilter(String mask) {
-    senderSuggestions = _mqtt
-        .usersLike(mask)
-        .map((MqttUser u) => u.username)
-        .toList();
+    senderSuggestions
+      ..clear()
+      ..addAll(_mqtt.usersLike(mask).map((MqttUser u) => u.username));
     notifyListeners();
   }
+
+  String? registeredMqttUsername(String username) =>
+      _mqtt.getUser(username)?.username;
 
   Future<void> setKeepStartupLogo(bool keep) async {
     if (_disposed || settings.receiverKeepStartupLogo == keep) {
@@ -160,8 +162,13 @@ class ProjectionController extends ChangeNotifier {
     if (user.isEmpty) {
       return false;
     }
+    await refreshMqttUsers();
+    final String? registeredUser = registeredMqttUsername(user);
+    if (registeredUser == null) {
+      return false;
+    }
 
-    settings = settings.copyWith(mqttUser: user, mqttChannel: '1');
+    settings = settings.copyWith(mqttUser: registeredUser, mqttChannel: '1');
     await _settingsStore.save(settings);
     globals = _applyReceiverDisplayFilters(globals);
     await _applyTransport();
@@ -544,10 +551,11 @@ class ProjectionController extends ChangeNotifier {
       return;
     }
     mqttUsers = users;
-    senderSuggestions = _mqtt
-        .usersLike(settings.mqttUser)
-        .map((MqttUser u) => u.username)
-        .toList();
+    senderSuggestions
+      ..clear()
+      ..addAll(
+        _mqtt.usersLike(settings.mqttUser).map((MqttUser u) => u.username),
+      );
     notifyListeners();
   }
 

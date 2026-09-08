@@ -159,6 +159,12 @@ class AppLocalizationsHu extends AppLocalizations {
   String get senderRefreshTooltip => 'Küldő lista frissítés';
 
   @override
+  String get invalidMqttUsernameTitle => 'Érvénytelen MQTT küldő';
+
+  @override
+  String get invalidMqttUsername => 'Válassz regisztrált MQTT küldőnevet.';
+
+  @override
   String get channelLabel => 'Csatorna';
 
   @override

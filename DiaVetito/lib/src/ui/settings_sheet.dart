@@ -20,6 +20,7 @@ class SettingsSheet extends StatefulWidget {
     required this.onConnectInternetFromQr,
     required this.onRefreshUsers,
     required this.onSenderFilterChanged,
+    required this.registeredMqttUsername,
     required this.onExitRequested,
     required this.onShutdownRequested,
   });
@@ -28,8 +29,9 @@ class SettingsSheet extends StatefulWidget {
   final List<String> senderSuggestions;
   final ValueChanged<AppSettings> onApply;
   final Future<bool> Function(String username) onConnectInternetFromQr;
-  final VoidCallback onRefreshUsers;
+  final Future<void> Function() onRefreshUsers;
   final ValueChanged<String> onSenderFilterChanged;
+  final String? Function(String username) registeredMqttUsername;
   final VoidCallback onExitRequested;
   final VoidCallback onShutdownRequested;
 
@@ -134,11 +136,13 @@ class _SettingsSheetState extends State<SettingsSheet> {
     _mqttUser.addListener(() {
       widget.onSenderFilterChanged(_mqttUser.text);
       final bool isEmpty = _mqttUser.text.trim().isEmpty;
-      if (_mqttTextWasNonEmpty && isEmpty) {
-        setState(() => _ipMode = true);
-      } else if (!isEmpty && !_mqttTextWasNonEmpty) {
-        setState(() => _ipMode = false);
-      }
+      setState(() {
+        if (_mqttTextWasNonEmpty && isEmpty) {
+          _ipMode = true;
+        } else if (!isEmpty && !_mqttTextWasNonEmpty) {
+          _ipMode = false;
+        }
+      });
       _mqttTextWasNonEmpty = !isEmpty;
     });
   }
@@ -311,29 +315,29 @@ class _SettingsSheetState extends State<SettingsSheet> {
                           showGeneral ||
                           showSystem))
                     const Divider(height: 1),
-                   if (showLan && !kIsWeb)
-                     _settingsTile(
-                       leading: const Icon(Icons.lan),
-                       title: Text(l10n.settingsLocalNetworkTitle),
-                       subtitle: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: <Widget>[
-                           Text(
-                             l10n.settingsLocalNetworkSubtitle(
-                               localNetworkStatus,
-                               _port.text.trim().isEmpty
-                                   ? '-'
-                                   : _port.text.trim(),
-                             ),
-                           ),
-                           Text(
-                             l10n.settingsLocalNetworkIpLabel(_localIp),
-                             style: Theme.of(context).textTheme.bodySmall,
-                           ),
-                         ],
-                       ),
-                       onTap: _openLocalNetworkSettings,
-                     ),
+                  if (showLan && !kIsWeb)
+                    _settingsTile(
+                      leading: const Icon(Icons.lan),
+                      title: Text(l10n.settingsLocalNetworkTitle),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            l10n.settingsLocalNetworkSubtitle(
+                              localNetworkStatus,
+                              _port.text.trim().isEmpty
+                                  ? '-'
+                                  : _port.text.trim(),
+                            ),
+                          ),
+                          Text(
+                            l10n.settingsLocalNetworkIpLabel(_localIp),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                      onTap: _openLocalNetworkSettings,
+                    ),
                   if (showLan &&
                       (showProjectionImage ||
                           showProjectionFilter ||
@@ -438,6 +442,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   Future<void> _openInternetSettings() {
     return _openSectionSheet(
       title: context.l10n.settingsInternetTitle,
+      onClose: _validateInternetSettings,
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         final bool internetEnabled = !_ipMode;
@@ -453,7 +458,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 }
               });
               if (v) {
-                widget.onRefreshUsers();
+                unawaited(_refreshUsers());
               }
             },
             title: Text(l10n.internetBroadcastTitle),
@@ -471,7 +476,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   ),
                 ),
                 IconButton(
-                  onPressed: widget.onRefreshUsers,
+                  onPressed: _refreshUsers,
                   icon: const Icon(Icons.refresh),
                   tooltip: l10n.senderRefreshTooltip,
                 ),
@@ -519,7 +524,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 }
               });
               if (!v) {
-                widget.onRefreshUsers();
+                unawaited(_refreshUsers());
               }
             },
             title: Text(l10n.settingsLocalNetworkTitle),
@@ -898,6 +903,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   Future<void> _openSectionSheet({
     required String title,
     String? closeButtonLabel,
+    Future<bool> Function(BuildContext context)? onClose,
     required List<Widget> Function(
       BuildContext context,
       void Function(void Function()) setBoth,
@@ -908,12 +914,25 @@ class _SettingsSheetState extends State<SettingsSheet> {
       context: context,
       isScrollControlled: true,
       builder: (BuildContext context) {
+        bool popAllowed = false;
+        void Function(void Function())? setModalStateForClose;
+        Future<void> close() async {
+          if (onClose != null && !await onClose(context)) {
+            return;
+          }
+          if (context.mounted) {
+            setModalStateForClose?.call(() => popAllowed = true);
+            Navigator.of(context).pop();
+          }
+        }
+
         return StatefulBuilder(
           builder:
               (
                 BuildContext context,
                 void Function(void Function()) setModalState,
               ) {
+                setModalStateForClose = setModalState;
                 void setBoth(void Function() fn) {
                   if (mounted) {
                     setState(fn);
@@ -921,39 +940,47 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   setModalState(() {});
                 }
 
-                return Padding(
-                  padding: EdgeInsets.only(
-                    left: 16,
-                    right: 16,
-                    top: 12,
-                    bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                  ),
-                  child: SafeArea(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          ...builder(context, setBoth),
-                          const SizedBox(height: 12),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: FilledButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: Text(
-                                closeButtonLabel ?? context.l10n.ok,
+                return PopScope(
+                  canPop: onClose == null || popAllowed,
+                  onPopInvokedWithResult: (bool didPop, _) {
+                    if (!didPop && onClose != null) {
+                      unawaited(close());
+                    }
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: 16,
+                      right: 16,
+                      top: 12,
+                      bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                    ),
+                    child: SafeArea(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 8),
+                            ...builder(context, setBoth),
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: FilledButton(
+                                onPressed: close,
+                                child: Text(
+                                  closeButtonLabel ?? context.l10n.ok,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -999,7 +1026,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
     );
   }
 
-  void _save() {
+  Future<void> _save() async {
     final int port =
         int.tryParse(_port.text.trim()) ?? widget.initialSettings.port;
     if (port < 0 || port > 65535) {
@@ -1009,9 +1036,17 @@ class _SettingsSheetState extends State<SettingsSheet> {
       return;
     }
 
+    if (!await _validateInternetSettings(context)) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    final String registeredMqttUser = _ipMode ? '' : _mqttUser.text.trim();
+
     final AppSettings updated = widget.initialSettings.copyWith(
       port: port,
-      mqttUser: _ipMode ? '' : _mqttUser.text.trim(),
+      mqttUser: registeredMqttUser,
       mqttChannel: '1',
       clipL:
           double.tryParse(_clipL.text.trim()) ?? widget.initialSettings.clipL,
@@ -1041,6 +1076,46 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
     widget.onApply(updated);
     Navigator.of(context).pop();
+  }
+
+  Future<bool> _validateInternetSettings(BuildContext sectionContext) async {
+    final String enteredMqttUser = _mqttUser.text.trim();
+    if (_ipMode || enteredMqttUser.isEmpty) {
+      return true;
+    }
+    final String? registeredMqttUser = widget.registeredMqttUsername(
+      enteredMqttUser,
+    );
+    if (registeredMqttUser == null) {
+      await showDialog<void>(
+        context: sectionContext,
+        builder: (BuildContext context) {
+          final l10n = context.l10n;
+          return AlertDialog(
+            title: Text(l10n.invalidMqttUsernameTitle),
+            content: Text(l10n.invalidMqttUsername),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(l10n.ok),
+              ),
+            ],
+          );
+        },
+      );
+      return false;
+    }
+    if (registeredMqttUser != enteredMqttUser) {
+      _mqttUser.text = registeredMqttUser;
+    }
+    return true;
+  }
+
+  Future<void> _refreshUsers() async {
+    await widget.onRefreshUsers();
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   bool _isSupportedLanguage(String code) {
