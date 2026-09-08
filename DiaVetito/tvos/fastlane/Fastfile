@@ -58,22 +58,4 @@ platform :ios do
     )
   end
 
-  desc "Provision the tvOS App Store profile via match"
-  lane :provision_tvos_profile do
-    api_key = app_store_connect_api_key(
-      key_id: ENV["APPLE_API_KEY_ID"],
-      issuer_id: ENV["APPLE_API_ISSUER_ID"],
-      key_filepath: ENV["APPLE_API_KEY_FILEPATH"]
-    )
-    match(
-      type: "appstore",
-      platform: "tvos",
-      app_identifier: ["eu.diatar.vetito"],
-      readonly: false,
-      team_id: ENV["APPLE_TEAM_ID"],
-      api_key: api_key,
-      git_url: ENV["MATCH_GIT_URL"] || "https://github.com/szentjozsefhackathon/ios-certs.git",
-      verbose: true
-    )
-  end
 end
