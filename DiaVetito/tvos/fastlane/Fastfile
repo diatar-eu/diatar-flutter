@@ -40,7 +40,7 @@ platform :ios do
 
       require "sigh"
       resign_script = File.join(Sigh::ROOT, "lib", "assets", "resign.sh")
-      resign_cmd = "bash #{resign_script.shellescape} unsigned.ipa #{signing_identity.shellescape} -p #{ENV["sigh_eu.diatar.vetito_appstore_profile-path"].shellescape} -v unsigned.ipa"
+      resign_cmd = "bash #{resign_script.shellescape} unsigned.ipa #{signing_identity.shellescape} -p #{ENV["sigh_eu.diatar.vetito_appstore_tvos_profile-path"].shellescape} -v unsigned.ipa"
       sh(resign_cmd)
     end
 
