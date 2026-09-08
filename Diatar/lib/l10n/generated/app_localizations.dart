@@ -1469,6 +1469,36 @@ abstract class AppLocalizations {
   /// **'Áthúzott szöveg'**
   String get strikethroughText;
 
+  /// No description provided for @insertSpecialCharacter.
+  ///
+  /// In hu, this message translates to:
+  /// **'Speciális karakter beszúrása'**
+  String get insertSpecialCharacter;
+
+  /// No description provided for @conditionalHyphen.
+  ///
+  /// In hu, this message translates to:
+  /// **'Feltételes kötőjel'**
+  String get conditionalHyphen;
+
+  /// No description provided for @nonBreakingSpace.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nemtörhető szóköz'**
+  String get nonBreakingSpace;
+
+  /// No description provided for @nonBreakingHyphen.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nemtörhető kötőjel'**
+  String get nonBreakingHyphen;
+
+  /// No description provided for @preferredLineBreak.
+  ///
+  /// In hu, this message translates to:
+  /// **'Sortörési javaslat'**
+  String get preferredLineBreak;
+
   /// No description provided for @colorsTitle.
   ///
   /// In hu, this message translates to:

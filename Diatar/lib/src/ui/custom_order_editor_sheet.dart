@@ -2794,6 +2794,7 @@ class _CustomTextSlideDialog extends StatefulWidget {
 class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
   late final TextEditingController _titleController;
   late final InlineTextEditingController _bodyController;
+  late final FocusNode _bodyFocusNode;
 
   @override
   void initState() {
@@ -2801,6 +2802,7 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
     _titleController = TextEditingController(text: widget.initialTitle);
     _bodyController = InlineTextEditingController.fromDia(widget.initialBody)
       ..addListener(_refreshFormattingToolbar);
+    _bodyFocusNode = FocusNode();
   }
 
   void _refreshFormattingToolbar() {
@@ -2833,10 +2835,62 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
     );
   }
 
+  String _specialCharacterLabel(
+    AppLocalizations l10n,
+    InlineTextSpecialCharacter character,
+  ) {
+    return switch (character) {
+      InlineTextSpecialCharacter.conditionalHyphen => l10n.conditionalHyphen,
+      InlineTextSpecialCharacter.nonBreakingSpace => l10n.nonBreakingSpace,
+      InlineTextSpecialCharacter.nonBreakingHyphen => l10n.nonBreakingHyphen,
+      InlineTextSpecialCharacter.preferredLineBreak => l10n.preferredLineBreak,
+    };
+  }
+
+  Widget _buildSpecialCharactersMenu(AppLocalizations l10n) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return PopupMenuButton<InlineTextSpecialCharacter>(
+      tooltip: l10n.insertSpecialCharacter,
+      icon: const Icon(Icons.more_horiz),
+      onSelected: (InlineTextSpecialCharacter character) {
+        _bodyController.insertSpecialCharacter(character);
+        _bodyFocusNode.requestFocus();
+      },
+      itemBuilder: (BuildContext context) {
+        return InlineTextSpecialCharacter.values
+            .map(
+              (InlineTextSpecialCharacter character) =>
+                  PopupMenuItem<InlineTextSpecialCharacter>(
+                    value: character,
+                    child: Row(
+                      children: <Widget>[
+                        Text(
+                          character.editorSymbol,
+                          style: TextStyle(
+                            color: colors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(_specialCharacterLabel(l10n, character)),
+                      ],
+                    ),
+                  ),
+            )
+            .toList();
+      },
+      style: IconButton.styleFrom(
+        backgroundColor: colors.surfaceContainerHighest,
+        foregroundColor: colors.onSurfaceVariant,
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
     _bodyController.dispose();
+    _bodyFocusNode.dispose();
     super.dispose();
   }
 
@@ -2880,11 +2934,13 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
                     Icons.strikethrough_s,
                     l10n.strikethroughText,
                   ),
+                  _buildSpecialCharactersMenu(l10n),
                 ],
               ),
             ),
             TextField(
               controller: _bodyController,
+              focusNode: _bodyFocusNode,
               decoration: InputDecoration(labelText: l10n.textSlideBodyLabel),
               minLines: 4,
               maxLines: 8,

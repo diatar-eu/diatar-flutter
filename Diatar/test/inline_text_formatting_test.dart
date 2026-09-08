@@ -127,4 +127,22 @@ void main() {
     expect(controller.encodedText, r'\\B');
     controller.dispose();
   });
+
+  test('inserts special characters as one logical editor position', () {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia('ab');
+    controller.value = TextEditingValue(
+      text: 'ab',
+      selection: TextSelection.collapsed(offset: 1),
+    );
+
+    controller.insertSpecialCharacter(
+      InlineTextSpecialCharacter.nonBreakingHyphen,
+    );
+
+    expect(controller.text, 'a\u2011b');
+    expect(controller.selection, const TextSelection.collapsed(offset: 2));
+    expect(controller.encodedText, r'a\_b');
+    controller.dispose();
+  });
 }

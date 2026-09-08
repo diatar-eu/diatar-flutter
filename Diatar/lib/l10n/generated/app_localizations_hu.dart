@@ -819,6 +819,21 @@ class AppLocalizationsHu extends AppLocalizations {
   String get strikethroughText => 'Áthúzott szöveg';
 
   @override
+  String get insertSpecialCharacter => 'Speciális karakter beszúrása';
+
+  @override
+  String get conditionalHyphen => 'Feltételes kötőjel';
+
+  @override
+  String get nonBreakingSpace => 'Nemtörhető szóköz';
+
+  @override
+  String get nonBreakingHyphen => 'Nemtörhető kötőjel';
+
+  @override
+  String get preferredLineBreak => 'Sortörési javaslat';
+
+  @override
   String get colorsTitle => 'Színek';
 
   @override

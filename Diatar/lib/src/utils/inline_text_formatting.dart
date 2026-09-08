@@ -4,6 +4,13 @@ enum InlineTextStyle { bold, italic, underline, strike, tieUnderline }
 
 const String inlineCommandPlaceholder = '\u25A3';
 
+enum InlineTextSpecialCharacter {
+  conditionalHyphen,
+  nonBreakingSpace,
+  nonBreakingHyphen,
+  preferredLineBreak,
+}
+
 const List<InlineTextStyle> _styleOrder = <InlineTextStyle>[
   InlineTextStyle.bold,
   InlineTextStyle.italic,
@@ -39,6 +46,33 @@ enum _InlineTextElementKind {
   command,
 }
 
+extension InlineTextSpecialCharacterDetails on InlineTextSpecialCharacter {
+  _InlineTextElementKind get _kind => switch (this) {
+    InlineTextSpecialCharacter.conditionalHyphen =>
+      _InlineTextElementKind.softHyphen,
+    InlineTextSpecialCharacter.nonBreakingSpace =>
+      _InlineTextElementKind.nonBreakingSpace,
+    InlineTextSpecialCharacter.nonBreakingHyphen =>
+      _InlineTextElementKind.nonBreakingHyphen,
+    InlineTextSpecialCharacter.preferredLineBreak =>
+      _InlineTextElementKind.preferredLineBreak,
+  };
+
+  String get visibleCharacter => switch (this) {
+    InlineTextSpecialCharacter.conditionalHyphen => '\u00AD',
+    InlineTextSpecialCharacter.nonBreakingSpace => '\u00A0',
+    InlineTextSpecialCharacter.nonBreakingHyphen => '\u2011',
+    InlineTextSpecialCharacter.preferredLineBreak => '\n',
+  };
+
+  String get editorSymbol => switch (this) {
+    InlineTextSpecialCharacter.conditionalHyphen => '\u00AC',
+    InlineTextSpecialCharacter.nonBreakingSpace => '\u2423',
+    InlineTextSpecialCharacter.nonBreakingHyphen => '\u2E17',
+    InlineTextSpecialCharacter.preferredLineBreak => '\u21B5',
+  };
+}
+
 class _InlineTextElement {
   const _InlineTextElement({
     required this.kind,
@@ -53,6 +87,18 @@ class _InlineTextElement {
   final String? rawCommand;
 
   bool get isCommand => kind == _InlineTextElementKind.command;
+
+  String get editorCharacter => switch (kind) {
+    _InlineTextElementKind.softHyphen =>
+      InlineTextSpecialCharacter.conditionalHyphen.editorSymbol,
+    _InlineTextElementKind.nonBreakingSpace =>
+      InlineTextSpecialCharacter.nonBreakingSpace.editorSymbol,
+    _InlineTextElementKind.nonBreakingHyphen =>
+      InlineTextSpecialCharacter.nonBreakingHyphen.editorSymbol,
+    _InlineTextElementKind.preferredLineBreak =>
+      InlineTextSpecialCharacter.preferredLineBreak.editorSymbol,
+    _ => visibleCharacter,
+  };
 
   _InlineTextElement copyWithStyles(Set<InlineTextStyle> newStyles) {
     return _InlineTextElement(
@@ -228,6 +274,23 @@ class InlineTextDocument {
     );
   }
 
+  void replaceVisibleRangeWithSpecialCharacter(
+    int start,
+    int end,
+    InlineTextSpecialCharacter character, {
+    required Set<InlineTextStyle> styles,
+  }) {
+    final int rangeStart = start.clamp(0, _elements.length);
+    final int rangeEnd = end.clamp(rangeStart, _elements.length);
+    _elements.replaceRange(rangeStart, rangeEnd, <_InlineTextElement>[
+      _InlineTextElement(
+        kind: character._kind,
+        styles: Set<InlineTextStyle>.unmodifiable(styles),
+        visibleCharacter: character.visibleCharacter,
+      ),
+    ]);
+  }
+
   /// Returns DIA markup with deterministic transitions and escaped literals.
   String encode() {
     final StringBuffer result = StringBuffer();
@@ -338,6 +401,34 @@ class InlineTextEditingController extends TextEditingController {
     notifyListeners();
   }
 
+  void insertSpecialCharacter(InlineTextSpecialCharacter character) {
+    final TextSelection currentSelection = selection;
+    if (!currentSelection.isValid) {
+      return;
+    }
+    final int start = currentSelection.start;
+    final int end = currentSelection.end;
+    _document.replaceVisibleRangeWithSpecialCharacter(
+      start,
+      end,
+      character,
+      styles: _pendingStyles,
+    );
+    _setDocumentValue(TextSelection.collapsed(offset: start + 1));
+  }
+
+  void _setDocumentValue(TextSelection newSelection) {
+    _updatingValue = true;
+    try {
+      super.value = TextEditingValue(
+        text: _document.visibleText,
+        selection: newSelection,
+      );
+    } finally {
+      _updatingValue = false;
+    }
+  }
+
   @override
   set value(TextEditingValue newValue) {
     if (_updatingValue) {
@@ -427,7 +518,7 @@ class InlineTextEditingController extends TextEditingController {
       }
       runStyles = element.styles;
       hasRunStyles = true;
-      textBuffer.write(element.visibleCharacter);
+      textBuffer.write(element.editorCharacter);
     }
     flushText();
     return TextSpan(style: baseStyle, children: spans);

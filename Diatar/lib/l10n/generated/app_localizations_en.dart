@@ -816,6 +816,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get strikethroughText => 'Strikethrough text';
 
   @override
+  String get insertSpecialCharacter => 'Insert special character';
+
+  @override
+  String get conditionalHyphen => 'Conditional hyphen';
+
+  @override
+  String get nonBreakingSpace => 'Non-breaking space';
+
+  @override
+  String get nonBreakingHyphen => 'Non-breaking hyphen';
+
+  @override
+  String get preferredLineBreak => 'Preferred line break';
+
+  @override
   String get colorsTitle => 'Colors';
 
   @override
