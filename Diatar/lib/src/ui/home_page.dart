@@ -14,6 +14,7 @@ import '../services/dtx_download_service.dart';
 import '../services/dtz_download_service.dart';
 import '../services/dtz_user_import_service.dart';
 import '../services/streaming_zip_service.dart';
+import '../services/android_zip_import_picker.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/macos_file_panels.dart';
 import '../utils/custom_entry_labels.dart';
@@ -3120,7 +3121,6 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
   bool _importing = false;
   bool _cancelRequested = false;
   StreamingZipProgress? _progress;
-  final Set<String> _stagedZipPaths = <String>{};
 
   bool get _canValidate => _dtzFile != null && !_analysing && !_importing;
   bool get _canImport =>
@@ -3146,48 +3146,41 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
 
   Future<void> _addZips() async {
     if (_importing) return;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        final XFile? file = await pickAndroidZipImportFile();
+        if (!mounted || file == null) return;
+        setState(() {
+          _zipFiles.add(file);
+          _resetAnalysis();
+        });
+      } catch (error) {
+        if (!mounted) return;
+        await _showIssues(
+          title: context.l10n.importDtzFailureDialogTitle,
+          issues: <String>[context.l10n.importDtzError(error.toString())],
+        );
+      }
+      return;
+    }
     final List<XFile> files = await DesktopProjectorBridge.instance
         .runWithNativeDialog(
           () => showFileOpenPanel(extensions: const <String>['zip']),
         );
     if (!mounted || files.isEmpty) return;
-    try {
-      final List<XFile> staged = <XFile>[];
-      for (int i = 0; i < files.length; i++) {
-        final XFile file = files[i];
-        final String name = DiatarMainController.resolveDtzImportName(file, i);
-        final XFile importFile = await widget.controller.stageDtzImportZip(
-          file,
-          displayName: name,
-        );
-        if (importFile.path != file.path) {
-          _stagedZipPaths.add(importFile.path);
-        }
-        staged.add(importFile);
-      }
-      if (!mounted) return;
-      setState(() {
-        _zipFiles.addAll(staged);
-        _resetAnalysis();
-      });
-    } catch (error) {
-      if (!mounted) return;
-      await _showIssues(
-        title: context.l10n.importDtzFailureDialogTitle,
-        issues: <String>[context.l10n.importDtzError(error.toString())],
-      );
-    }
+    setState(() {
+      _zipFiles.addAll(files);
+      _resetAnalysis();
+    });
   }
 
   void _removeZip(int index) {
-    final String path = _zipFiles[index].path;
+    final XFile file = _zipFiles[index];
     setState(() {
       _zipFiles.removeAt(index);
       _resetAnalysis();
     });
-    if (_stagedZipPaths.remove(path)) {
-      unawaited(widget.controller.deleteStagedDtzImportZip(path));
-    }
+    unawaited(deleteAndroidZipImportFile(file.path));
   }
 
   Future<void> _validate() async {
@@ -3352,8 +3345,8 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
 
   @override
   void dispose() {
-    for (final String path in _stagedZipPaths) {
-      unawaited(widget.controller.deleteStagedDtzImportZip(path));
+    for (final XFile file in _zipFiles) {
+      unawaited(deleteAndroidZipImportFile(file.path));
     }
     super.dispose();
   }

@@ -9,16 +9,20 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.IOException
+import java.io.File
 
 class MainActivity : FlutterActivity() {
 	companion object {
 		private const val DIA_SAVE_CHANNEL = "diatar.eu/dia_save"
+		private const val ZIP_IMPORT_CHANNEL = "diatar.eu/zip_import"
 		private const val REQUEST_SAVE_DIA = 6091
+		private const val REQUEST_PICK_ZIP = 6092
 	}
 
 	private var pendingSaveResult: MethodChannel.Result? = null
 	private var pendingSaveBytes: ByteArray? = null
 	private var pendingSavePath: String? = null
+	private var pendingZipImportResult: MethodChannel.Result? = null
 
 	override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
 		super.configureFlutterEngine(flutterEngine)
@@ -31,6 +35,33 @@ class MainActivity : FlutterActivity() {
 					else -> result.notImplemented()
 				}
 			}
+		MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ZIP_IMPORT_CHANNEL)
+			.setMethodCallHandler { call, result ->
+				if (call.method == "pickZipToCache") {
+					startZipImportPick(result)
+				} else {
+					result.notImplemented()
+				}
+			}
+	}
+
+	private fun startZipImportPick(result: MethodChannel.Result) {
+		if (pendingZipImportResult != null) {
+			result.error("busy", "Another ZIP import picker is already in progress.", null)
+			return
+		}
+		pendingZipImportResult = result
+		val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+			addCategory(Intent.CATEGORY_OPENABLE)
+			type = "application/zip"
+			addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+		}
+		try {
+			startActivityForResult(intent, REQUEST_PICK_ZIP)
+		} catch (e: Exception) {
+			pendingZipImportResult = null
+			result.error("picker_failed", e.localizedMessage ?: e.toString(), null)
+		}
 	}
 
 	private fun startSaveDiaFlow(call: MethodCall, result: MethodChannel.Result) {
@@ -137,6 +168,10 @@ class MainActivity : FlutterActivity() {
 	override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
 		super.onActivityResult(requestCode, resultCode, data)
 
+		if (requestCode == REQUEST_PICK_ZIP) {
+			handleZipImportPick(resultCode, data)
+			return
+		}
 		if (requestCode != REQUEST_SAVE_DIA) {
 			return
 		}
@@ -196,6 +231,39 @@ class MainActivity : FlutterActivity() {
 		} catch (e: Exception) {
 			result.error("save_failed", e.localizedMessage ?: e.toString(), null)
 		}
+	}
+
+	private fun handleZipImportPick(resultCode: Int, data: Intent?) {
+		val result = pendingZipImportResult
+		pendingZipImportResult = null
+		if (result == null) return
+		val uri = data?.data
+		if (resultCode != Activity.RESULT_OK || uri == null) {
+			result.success(null)
+			return
+		}
+		try {
+			contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+		} catch (_: SecurityException) {
+			// The one-shot grant from the picker is sufficient for the copy.
+		}
+		Thread {
+			try {
+				val displayName = queryDisplayName(uri).ifBlank { "scores.zip" }
+				val safeName = displayName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+				val target = File(cacheDir, "dtz_import_${System.nanoTime()}_$safeName")
+				contentResolver.openInputStream(uri)?.use { input ->
+					target.outputStream().use { output ->
+						input.copyTo(output, bufferSize = 64 * 1024)
+					}
+				} ?: throw IOException("Cannot open the selected ZIP file.")
+				runOnUiThread { result.success(target.absolutePath) }
+			} catch (e: Exception) {
+				runOnUiThread {
+					result.error("zip_copy_failed", e.localizedMessage ?: e.toString(), null)
+				}
+			}
+		}.start()
 	}
 
 	private fun queryDisplayName(uri: Uri): String {

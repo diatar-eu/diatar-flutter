@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show IOSink, Platform, ProcessException, exit;
+import 'dart:io' show Platform, ProcessException, exit;
 import 'dart:math' as math;
 
 import 'package:diatar_common/diatar_common.dart';
@@ -9,7 +9,6 @@ import 'package:diatar_speech/diatar_speech.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/path_helper.dart';
 import '../utils/file_system_provider.dart';
@@ -1644,42 +1643,6 @@ class DiatarMainController extends ChangeNotifier {
       if (last.isNotEmpty) return last;
     }
     return direct.isNotEmpty ? direct : 'file_${index + 1}';
-  }
-
-  /// Android document-provider URIs may disappear or be unreadable by the
-  /// synchronous ZIP reader. Keep a streamed, app-owned copy for the import.
-  Future<XFile> stageDtzImportZip(
-    XFile file, {
-    required String displayName,
-  }) async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
-      return file;
-    }
-    final cacheDirectory = await getTemporaryDirectory();
-    final String safeName = displayName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    final File staged = FileSystemProvider.instance.file(
-      '${cacheDirectory.path}/dtz_import_${DateTime.now().microsecondsSinceEpoch}_$safeName',
-    );
-    final IOSink sink = staged.openWrite();
-    try {
-      await for (final List<int> chunk in file.openRead()) {
-        sink.add(chunk);
-      }
-      await sink.flush();
-    } finally {
-      await sink.close();
-    }
-    return XFile(staged.path);
-  }
-
-  Future<void> deleteStagedDtzImportZip(String path) async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
-      return;
-    }
-    final File staged = FileSystemProvider.instance.file(path);
-    if (await staged.exists()) {
-      await staged.delete();
-    }
   }
 
   /// Reads [files] and categorises them into DTZ and ZIP buckets.
