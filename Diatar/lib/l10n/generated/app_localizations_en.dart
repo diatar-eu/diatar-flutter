@@ -1598,6 +1598,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Projects in a separate window on desktop. When off, the app acts only as a controller without a projector window.';
 
   @override
+  String get cameraViewTitle => 'Show camera view';
+
+  @override
+  String get cameraViewHint =>
+      'Shows the camera feed from the projector device over the local network.';
+
+  @override
+  String get cameraSourceLabel => 'Camera source';
+
+  @override
+  String get cameraSourceHelp =>
+      'Select which client\'s camera the view waits for. When only one target is listed, it is used automatically.';
+
+  @override
   String get projectorMonitorAuto => 'Automatic (last display)';
 
   @override

@@ -13,6 +13,10 @@ class AppSettings {
     this.clipR = 0,
     this.clipB = 0,
     this.mirror = false,
+    this.showCameraView = false,
+    this.cameraTarget,
+    this.cameraStreamEnabled = false,
+    this.cameraStreamDeviceId,
     this.rotateQuarterTurns = 0,
     this.mqttUser = '',
     this.mqttPassword = '',
@@ -95,6 +99,10 @@ class AppSettings {
   final double clipR;
   final double clipB;
   final bool mirror;
+  final bool showCameraView;
+  final String? cameraTarget;
+  final bool cameraStreamEnabled;
+  final String? cameraStreamDeviceId;
   final int rotateQuarterTurns;
   final String mqttUser;
   final String mqttPassword;
@@ -184,6 +192,10 @@ class AppSettings {
     double? clipR,
     double? clipB,
     bool? mirror,
+    bool? showCameraView,
+    String? cameraTarget,
+    bool? cameraStreamEnabled,
+    String? cameraStreamDeviceId,
     int? rotateQuarterTurns,
     String? mqttUser,
     String? mqttPassword,
@@ -264,6 +276,10 @@ class AppSettings {
       clipR: clipR ?? this.clipR,
       clipB: clipB ?? this.clipB,
       mirror: mirror ?? this.mirror,
+      showCameraView: showCameraView ?? this.showCameraView,
+      cameraTarget: cameraTarget ?? this.cameraTarget,
+      cameraStreamEnabled: cameraStreamEnabled ?? this.cameraStreamEnabled,
+      cameraStreamDeviceId: cameraStreamDeviceId ?? this.cameraStreamDeviceId,
       rotateQuarterTurns: rotateQuarterTurns ?? this.rotateQuarterTurns,
       mqttUser: mqttUser ?? this.mqttUser,
       mqttPassword: mqttPassword ?? this.mqttPassword,
@@ -354,6 +370,10 @@ class AppSettings {
       'clipR': clipR,
       'clipB': clipB,
       'mirror': mirror,
+      'showCameraView': showCameraView,
+      'cameraTarget': cameraTarget,
+      'cameraStreamEnabled': cameraStreamEnabled,
+      'cameraStreamDeviceId': cameraStreamDeviceId,
       'rotateQuarterTurns': rotateQuarterTurns,
       'projFontSize': projFontSize,
       'projTitleSize': projTitleSize,
@@ -439,6 +459,10 @@ class AppSettings {
       clipR: (map['clipR'] as num?)?.toDouble() ?? 0,
       clipB: (map['clipB'] as num?)?.toDouble() ?? 0,
       mirror: boolValue('mirror', false),
+      showCameraView: boolValue('showCameraView', false),
+      cameraTarget: map['cameraTarget'] as String?,
+      cameraStreamEnabled: boolValue('cameraStreamEnabled', false),
+      cameraStreamDeviceId: map['cameraStreamDeviceId'] as String?,
       rotateQuarterTurns: intValue('rotateQuarterTurns', 0),
       projFontSize: intValue('projFontSize', 70),
       projTitleSize: intValue('projTitleSize', 12),

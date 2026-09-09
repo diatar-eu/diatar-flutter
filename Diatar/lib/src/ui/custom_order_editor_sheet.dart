@@ -2317,7 +2317,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           buildDefaultDragHandles: false,
           clipBehavior: Clip.hardEdge,
           scrollController: _orderListScrollController,
-          onReorderItem: (int oldIndex, int newIndex) {
+          onReorder: (int oldIndex, int newIndex) {
             setState(() {
               if (_groupReorder) {
                 final ({int start, int end}) group = _contiguousGroupRange(

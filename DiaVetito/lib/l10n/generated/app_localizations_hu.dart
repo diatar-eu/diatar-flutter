@@ -98,6 +98,36 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
+  String get cameraStreamTitle => 'Kamera stream';
+
+  @override
+  String get cameraStreamSummary => 'Kamera stream engedélyezve';
+
+  @override
+  String get cameraStreamDevicesTitle => 'Kamera forrás';
+
+  @override
+  String get cameraStreamShortcutHint =>
+      'A vezérlő a helyi hálózaton keresztül kérheti a kameraképet.';
+
+  @override
+  String get cameraStreamEnabledTitle => 'Kamera stream engedélyezése';
+
+  @override
+  String get cameraStreamEnabledHint =>
+      'Bekapcsolás után a vezérlő kérheti a kameraképet. Ehhez kamera-hozzáférés szükséges.';
+
+  @override
+  String get cameraStreamNoDevices => 'Nem található kamera';
+
+  @override
+  String get refreshDevices => 'Eszközök frissítése';
+
+  @override
+  String get settingsSearchKeywordsCamera =>
+      'kamera stream webrtc video előnézet';
+
+  @override
   String get systemActionsBack => 'Vissza';
 
   @override

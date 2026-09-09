@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -92,6 +93,10 @@ class _SettingsSheetState extends State<SettingsSheet> {
   late bool _receiverUseKotta;
   late bool _receiverKeepStartupLogo;
   late bool _projectionScrollable;
+  late bool _cameraStreamEnabled;
+  String? _cameraStreamDeviceId;
+  List<MediaDeviceInfo> _cameraDevices = <MediaDeviceInfo>[];
+  bool _cameraDevicesLoading = false;
   late String _appLanguage;
   late Color _bkColor;
   late Color _txtColor;
@@ -127,6 +132,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
     _receiverUseKotta = s.receiverUseKotta;
     _receiverKeepStartupLogo = s.receiverKeepStartupLogo;
     _projectionScrollable = !s.projAutoSize;
+    _cameraStreamEnabled = s.cameraStreamEnabled;
+    _cameraStreamDeviceId = s.cameraStreamDeviceId;
     _appLanguage = _isSupportedLanguage(s.appLanguage) ? s.appLanguage : '';
     _bkColor = s.bkColor;
     _txtColor = s.txtColor;
@@ -230,6 +237,15 @@ class _SettingsSheetState extends State<SettingsSheet> {
       l10n.settingsSearchKeywordsGeneral,
     );
     final bool showSystem = _matches(query, l10n.settingsSearchKeywordsSystem);
+    final bool showCameraAvailable = !kIsWeb &&
+        !SystemPlatform.isTvOs &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS ||
+            defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux);
+    final bool showCamera = showCameraAvailable &&
+        _matches(query, l10n.settingsSearchKeywordsCamera);
     final bool anyVisible =
         showInternet ||
         showLan ||
@@ -237,7 +253,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
         showProjectionFilter ||
         showColors ||
         showGeneral ||
-        showSystem;
+        showSystem ||
+        showCamera;
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -413,6 +430,18 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         l10n.systemActionsSummary(remoteShutdownState),
                       ),
                       onTap: _openSystemActions,
+                    ),
+                  if (showSystem && showCamera) const Divider(height: 1),
+                  if (showCamera)
+                    _settingsTile(
+                      leading: const Icon(Icons.videocam_outlined),
+                      title: Text(l10n.cameraStreamTitle),
+                      subtitle: Text(
+                        _cameraStreamEnabled
+                            ? l10n.cameraStreamSummary
+                            : l10n.cameraStreamShortcutHint,
+                      ),
+                      onTap: _openCameraStreamSettings,
                     ),
                   if (!anyVisible)
                     Padding(
@@ -866,6 +895,140 @@ class _SettingsSheetState extends State<SettingsSheet> {
     );
   }
 
+  Future<void> _openCameraStreamSettings() {
+    return _openSectionSheet(
+      title: context.l10n.cameraStreamTitle,
+      closeButtonLabel: context.l10n.systemActionsBack,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        final ThemeData theme = Theme.of(context);
+        return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _cameraStreamEnabled,
+            onChanged: (bool v) {
+              setBoth(() => _cameraStreamEnabled = v);
+              if (v) {
+                unawaited(_loadCameraDevices());
+              }
+            },
+            title: Text(l10n.cameraStreamEnabledTitle),
+            subtitle: Text(l10n.cameraStreamEnabledHint),
+          ),
+          if (_cameraStreamEnabled) ...<Widget>[
+            const SizedBox(height: 8),
+            Text(
+              l10n.cameraStreamDevicesTitle,
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: 6),
+            if (_cameraDevicesLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_cameraDevices.isEmpty)
+              Row(
+                children: <Widget>[
+                  Expanded(child: Text(l10n.cameraStreamNoDevices)),
+                  TextButton(
+                    onPressed: () => unawaited(
+                      _loadCameraDevices(forcePermission: true),
+                    ),
+                    child: Text(l10n.refreshDevices),
+                  ),
+                ],
+              )
+            else
+              DropdownButtonFormField<String>(
+                initialValue:
+                    _cameraStreamDeviceId ?? _cameraDevices.first.deviceId,
+                decoration: InputDecoration(labelText: l10n.cameraStreamDevicesTitle),
+                items: _cameraDevices
+                    .asMap()
+                    .entries
+                    .map(
+                      (MapEntry<int, MediaDeviceInfo> entry) =>
+                          DropdownMenuItem<String>(
+                        value: entry.value.deviceId,
+                        child:
+                            Text(_cameraDeviceLabel(l10n, entry.key, entry.value)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (String? v) => setBoth(() => _cameraStreamDeviceId = v),
+              ),
+          ],
+        ];
+      },
+    );
+  }
+
+  String _cameraDeviceLabel(
+    AppLocalizations l10n,
+    int index,
+    MediaDeviceInfo device,
+  ) {
+    final String label = device.label.trim();
+    if (label.isNotEmpty) {
+      return label;
+    }
+    return '${l10n.cameraStreamDevicesTitle} ${index + 1}';
+  }
+
+  Future<void> _loadCameraDevices({bool forcePermission = false}) async {
+    setState(() => _cameraDevicesLoading = true);
+    List<MediaDeviceInfo> devices = const <MediaDeviceInfo>[];
+    try {
+      try {
+        devices = (await navigator.mediaDevices.enumerateDevices())
+            .where((MediaDeviceInfo d) => d.kind == 'videoinput')
+            .toList();
+      } catch (_) {
+        devices = const <MediaDeviceInfo>[];
+      }
+      if (forcePermission || devices.isEmpty) {
+        MediaStream? stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(<String, Object>{
+            'video': true,
+            'audio': false,
+          });
+          stream.getTracks().forEach((MediaStreamTrack track) => track.stop());
+        } catch (_) {
+          stream = null;
+        }
+        devices = (await navigator.mediaDevices.enumerateDevices())
+            .where((MediaDeviceInfo d) => d.kind == 'videoinput')
+            .toList();
+      }
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _cameraDevices = devices;
+        if (_cameraDevices.isEmpty) {
+          return;
+        }
+        final bool hasSelection = _cameraStreamDeviceId != null &&
+            _cameraDevices.any(
+              (MediaDeviceInfo d) => d.deviceId == _cameraStreamDeviceId,
+            );
+        if (!hasSelection) {
+          _cameraStreamDeviceId = _cameraDevices.first.deviceId;
+        }
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _cameraDevices = const <MediaDeviceInfo>[]);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _cameraDevicesLoading = false);
+      }
+    }
+  }
+
   Future<void> _openSystemActions() {
     return _openSectionSheet(
       title: context.l10n.systemActionsTitle,
@@ -1068,6 +1231,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
       receiverKeepStartupLogo: _receiverKeepStartupLogo,
       remoteShutdownEnabled: _remoteShutdownEnabled,
       projAutoSize: !_projectionScrollable,
+      cameraStreamEnabled: _cameraStreamEnabled,
+      cameraStreamDeviceId: _cameraStreamDeviceId,
       bkColor: _bkColor,
       txtColor: _txtColor,
       blankColor: _blankColor,

@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:flutter/foundation.dart';
 
 typedef StateCallback = FutureOr<void> Function(RecStateRecord record);
 typedef TextCallback = FutureOr<void> Function(RecTextRecord record);
 typedef ImageCallback = FutureOr<void> Function(RecImageRecord record);
 typedef AskSizeCallback = FutureOr<void> Function();
+typedef CameraCallback = FutureOr<void> Function(CameraSignal signal);
 typedef ErrorCallback = void Function(String message);
 typedef ConnectionCallback = void Function(bool connected);
 
@@ -17,6 +18,7 @@ class TcpServerService {
     required this.onPic,
     required this.onBlank,
     required this.onAskSize,
+    required this.onCamera,
     required this.onError,
     required this.onConnection,
   });
@@ -26,14 +28,15 @@ class TcpServerService {
   final ImageCallback onPic;
   final ImageCallback onBlank;
   final AskSizeCallback onAskSize;
+  final CameraCallback onCamera;
   final ErrorCallback onError;
   final ConnectionCallback onConnection;
 
   ServerSocket? _server;
-  Socket? _client;
-  StreamSubscription<List<int>>? _clientSub;
+  final Map<Socket, StreamSubscription<List<int>>> _clients = {};
   final ProjectionPacketParser _parser = ProjectionPacketParser();
   Future<void> _dispatchQueue = Future<void>.value();
+  Future<void> _sendQueue = Future<void>.value();
 
   int _port = -1;
 
@@ -63,10 +66,13 @@ class TcpServerService {
   }
 
   Future<void> stop({bool emitConnection = true}) async {
-    await _clientSub?.cancel();
-    _clientSub = null;
-    await _client?.close();
-    _client = null;
+    debugPrint('CAM srv stop called');
+    for (final MapEntry<Socket, StreamSubscription<List<int>>> entry
+        in _clients.entries.toList()) {
+      await entry.value.cancel();
+      await entry.key.close().catchError((_) {});
+    }
+    _clients.clear();
     await _server?.close();
     _server = null;
     _parser.clear();
@@ -84,34 +90,47 @@ class TcpServerService {
     await _sendPacket(RecTypes.scrSize, body);
   }
 
+  Future<void> sendCameraSignal(CameraSignal signal) async {
+    await _sendPacket(RecTypes.camera, encodeCameraSignal(signal));
+  }
+
   void _onClient(Socket socket) {
-    _clientSub?.cancel();
-    _clientSub = null;
-    _client = socket;
-    onConnection(true);
-    _clientSub = socket.listen(
+    debugPrint('CAM srv client connect ${socket.remoteAddress.address}');
+    if (_clients.isEmpty) {
+      onConnection(true);
+    }
+    _clients[socket] = socket.listen(
       _onData,
       onError: (Object e) {
+        debugPrint('CAM srv client socket error: $e');
         onError('tcpServerClientError:$e');
-        _disconnectClient();
+        _removeClient(socket, 'socketError');
       },
-      onDone: _disconnectClient,
+      onDone: () {
+        debugPrint('CAM srv client socket done');
+        _removeClient(socket, 'clientClosed');
+      },
       cancelOnError: true,
     );
   }
 
-  void _disconnectClient() {
-    _clientSub?.cancel();
-    _clientSub = null;
-    _client?.destroy();
-    _client = null;
-    _parser.clear();
-    onConnection(false);
+  void _removeClient(Socket socket, [String? reason]) {
+    debugPrint('CAM srv disconnect reason=$reason clients=${_clients.length}');
+    final StreamSubscription<List<int>>? sub = _clients.remove(socket);
+    if (sub != null) {
+      unawaited(sub.cancel().catchError((_) {}));
+      unawaited(socket.close().catchError((_) {}));
+    }
+    if (_clients.isEmpty) {
+      _parser.clear();
+      onConnection(false);
+    }
   }
 
   void _onData(List<int> data) {
     final List<ProjectionPacket> packets = _parser.addChunk(data);
     for (final ProjectionPacket packet in packets) {
+      debugPrint('CAM srv rx type=${packet.type} len=${packet.body.length}');
       _dispatchQueue = _dispatchQueue.then(
         (_) => _dispatch(packet.type, packet.body),
       );
@@ -136,6 +155,9 @@ class TcpServerService {
         case RecTypes.askSize:
           await onAskSize();
           break;
+        case RecTypes.camera:
+          onCamera(decodeCameraSignal(body));
+          break;
         case RecTypes.idle:
           // No-op.
           break;
@@ -148,17 +170,39 @@ class TcpServerService {
   }
 
   Future<void> _sendPacket(int type, Uint8List body) async {
-    final Socket? client = _client;
-    if (client == null) {
+    final Future<void> previous = _sendQueue;
+    final Completer<void> current = Completer<void>();
+    _sendQueue = current.future;
+    await previous;
+    try {
+      await _doSendPacket(type, body);
+    } finally {
+      current.complete();
+    }
+  }
+
+  Future<void> _doSendPacket(int type, Uint8List body) async {
+    if (_clients.isEmpty) {
+      debugPrint('CAM srv tx type=$type no client');
       return;
     }
     final Uint8List packet = encodeProjectionPacket(type, body);
-    try {
-      client.add(packet);
-      await client.flush();
-    } catch (e) {
-      onError('tcpServerSendError:$e');
-      _disconnectClient();
+    debugPrint('CAM srv tx type=$type len=${body.length} clients=${_clients.length}');
+    final List<Socket> dead = <Socket>[];
+    for (final MapEntry<Socket, StreamSubscription<List<int>>> entry
+        in _clients.entries.toList()) {
+      final Socket socket = entry.key;
+      try {
+        socket.add(packet);
+        await socket.flush();
+      } catch (e) {
+        debugPrint('CAM srv tx failed type=$type: $e');
+        onError('tcpServerSendError:$e');
+        dead.add(socket);
+      }
+    }
+    for (final Socket socket in dead) {
+      _removeClient(socket, 'sendError');
     }
   }
 }

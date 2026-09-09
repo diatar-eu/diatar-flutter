@@ -10,6 +10,7 @@ class RecTypes {
   static const int text = 4;
   static const int askSize = 5;
   static const int idle = 6;
+  static const int camera = 7;
 }
 
 class RecStateEndProgram {

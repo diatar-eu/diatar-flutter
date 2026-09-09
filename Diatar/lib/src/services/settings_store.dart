@@ -8,6 +8,8 @@ class SettingsStore {
   static const String _kPort = 'Port';
   static const String _kTcpClientEnabled = 'TcpClientEnabled';
   static const String _kTcpTargets = 'TcpTargets';
+  static const String _kShowCameraView = 'ShowCameraView';
+  static const String _kCameraTarget = 'CameraTarget';
   static const String _kUser = 'Username';
   static const String _kPassword = 'Password';
   static const String _kInternetRelayEnabled = 'InternetRelayEnabled';
@@ -240,6 +242,8 @@ class SettingsStore {
             .toList();
     final bool tcpClientEnabled =
         prefs.getBool(_kTcpClientEnabled) ?? tcpTargets.isNotEmpty;
+    final bool showCameraView = prefs.getBool(_kShowCameraView) ?? false;
+    final String? cameraTarget = prefs.getString(_kCameraTarget);
     final Map<String, String> savedDesktopActionHotkeys = _decodeStringMap(
       prefs.getStringList(_kDesktopActionHotkeys),
     );
@@ -262,6 +266,8 @@ class SettingsStore {
       port: legacyPort,
       tcpClientEnabled: tcpClientEnabled,
       tcpTargets: tcpTargets,
+      showCameraView: showCameraView,
+      cameraTarget: cameraTarget,
       boot: false,
       borderToClip: false,
       clipL: 0,
@@ -349,6 +355,12 @@ class SettingsStore {
     await prefs.setInt(_kPort, settings.port);
     await prefs.setBool(_kTcpClientEnabled, settings.tcpClientEnabled);
     await prefs.setStringList(_kTcpTargets, tcpTargets);
+    await prefs.setBool(_kShowCameraView, settings.showCameraView);
+    if (settings.cameraTarget != null) {
+      await prefs.setString(_kCameraTarget, settings.cameraTarget!);
+    } else {
+      await prefs.remove(_kCameraTarget);
+    }
     await prefs.setString(_kUser, settings.mqttUser);
     await prefs.setBool(_kInternetRelayEnabled, settings.internetRelayEnabled);
     await prefs.setString(

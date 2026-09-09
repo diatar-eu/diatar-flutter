@@ -6,6 +6,7 @@ import 'package:diatar_common/diatar_common.dart';
 import 'package:diatar_speech/diatar_speech.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
@@ -869,8 +870,75 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             controller.updateScreenSize(width: screenW, height: screenH),
           );
 
-          return _buildSimpleView(context);
+          final Widget? cameraOverlay = _buildCameraOverlay(context);
+          if (cameraOverlay == null) {
+            return _buildSimpleView(context);
+          }
+          return Stack(
+            children: <Widget>[
+              Positioned.fill(child: _buildSimpleView(context)),
+              Positioned(
+                right: 12,
+                bottom: 12,
+                child: cameraOverlay,
+              ),
+            ],
+          );
         },
+      ),
+    );
+  }
+
+  Widget? _buildCameraOverlay(BuildContext context) {
+    if (!controller.settings.showCameraView || !controller.cameraAvailable) {
+      return null;
+    }
+    final ThemeData theme = Theme.of(context);
+    final AppLocalizations l10n = context.l10n;
+    final Widget child;
+    if (controller.cameraViewActive) {
+      child = RTCVideoView(
+        controller.cameraRenderer,
+        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+      );
+    } else {
+      child = Padding(
+        padding: const EdgeInsets.all(8),
+        child: Text(l10n.cameraViewHint, textAlign: TextAlign.center),
+      );
+    }
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest,
+      elevation: 6,
+      borderRadius: BorderRadius.circular(10),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: controller.cameraViewActive
+            ? controller.stopCameraView
+            : controller.requestCameraView,
+        child: SizedBox(
+          width: 200,
+          height: 120,
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              child,
+              Align(
+                alignment: Alignment.bottomRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    controller.cameraViewActive
+                        ? Icons.videocam_off
+                        : Icons.videocam,
+                    size: 18,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

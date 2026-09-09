@@ -1602,6 +1602,20 @@ class AppLocalizationsHu extends AppLocalizations {
       'Külön ablakban vetít asztali környezeten. Kikapcsolva a program csak vezérlőként működik vetítőablak nélkül.';
 
   @override
+  String get cameraViewTitle => 'Kamerakép mutatása';
+
+  @override
+  String get cameraViewHint =>
+      'A vetítő eszköz kameraképét mutatja a helyi hálózaton keresztül.';
+
+  @override
+  String get cameraSourceLabel => 'Kamera forrása';
+
+  @override
+  String get cameraSourceHelp =>
+      'Válaszd ki, melyik kliens kameraképét várja a nézet. Ha egyetlen célpont van megadva, az automatikusan használódik.';
+
+  @override
   String get projectorMonitorAuto => 'Automatikus (utolsó kijelző)';
 
   @override

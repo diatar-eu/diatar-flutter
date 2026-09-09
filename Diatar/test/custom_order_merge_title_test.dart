@@ -610,7 +610,8 @@ class _BlockingMqttSender extends MqttSenderService {
 }
 
 class _TrackingTcpSender extends TcpSenderService {
-  _TrackingTcpSender() : super(onStatusChanged: (_) {}, onError: (_, __) {});
+  _TrackingTcpSender()
+      : super(onStatusChanged: (_) {}, onError: (_, __) {}, onCamera: (_, _) {});
 
   bool restartCalled = false;
 

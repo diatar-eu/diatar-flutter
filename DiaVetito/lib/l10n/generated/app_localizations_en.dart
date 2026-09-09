@@ -98,6 +98,36 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get cameraStreamTitle => 'Camera stream';
+
+  @override
+  String get cameraStreamSummary => 'Camera stream enabled';
+
+  @override
+  String get cameraStreamDevicesTitle => 'Camera source';
+
+  @override
+  String get cameraStreamShortcutHint =>
+      'The controller can request the camera stream over the local network.';
+
+  @override
+  String get cameraStreamEnabledTitle => 'Enable camera stream';
+
+  @override
+  String get cameraStreamEnabledHint =>
+      'When enabled, the controller can request the camera feed. Camera access permission is required.';
+
+  @override
+  String get cameraStreamNoDevices => 'No camera found';
+
+  @override
+  String get refreshDevices => 'Refresh devices';
+
+  @override
+  String get settingsSearchKeywordsCamera =>
+      'camera stream webrtc video preview';
+
+  @override
   String get systemActionsBack => 'Back';
 
   @override

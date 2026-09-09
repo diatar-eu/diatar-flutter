@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 
 import '../services/settings_store.dart';
 import '../services/tcp_server_service.dart';
+import '../services/webrtc_camera_service.dart';
 import '../services/web_mqtt_settings.dart';
 import '../utils/browser_window_close.dart' as browser_window_close;
 
@@ -24,6 +25,7 @@ class ProjectionController extends ChangeNotifier {
         onPic: _onPicStatic,
         onBlank: _onBlankStatic,
         onAskSize: _onAskSizeStatic,
+        onCamera: _onCameraStatic,
         onError: _onErrorStatic,
         onConnection: _onConnectionStatic,
       ),
@@ -52,6 +54,8 @@ class ProjectionController extends ChangeNotifier {
   static Future<void> _onBlankStatic(RecImageRecord record) async =>
       await _instance?._onBlank(record);
   static Future<void> _onAskSizeStatic() async => await _instance?._onAskSize();
+  static Future<void> _onCameraStatic(CameraSignal signal) async  => await
+      _instance?._onCameraSignal(signal);
   static void _onErrorStatic(String message) => _instance?._onError(message);
   static void _onConnectionStatic(bool connected) =>
       _instance?._onConnection(connected);
@@ -63,6 +67,9 @@ class ProjectionController extends ChangeNotifier {
   final SettingsStore _settingsStore = SettingsStore();
   final TcpServerService _server;
   final MqttService _mqtt;
+  late final WebrtcCameraService _camera;
+
+  bool cameraAvailable = false;
 
   AppSettings settings = const AppSettings();
   ProjectionGlobals globals = const ProjectionGlobals().copyWith(
@@ -92,7 +99,13 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
+    _camera = WebrtcCameraService(
+      sendSignal: (CameraSignal signal) => _server.sendCameraSignal(signal),
+    );
+    cameraAvailable = _camera.available;
+    await _camera.init();
     settings = (await _settingsStore.load()).copyWith(mqttChannel: '1');
+    _camera.selectedDeviceId = settings.cameraStreamDeviceId;
     if (kIsWeb) {
       final String? mqttUser = mqttUsernameFromWebUri(Uri.base);
       if (mqttUser != null && mqttUser != settings.mqttUser) {
@@ -114,13 +127,33 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
+    final AppSettings previousSettings = settings;
     settings = newSettings.copyWith(mqttChannel: '1');
     await _settingsStore.save(settings);
     globals = _applyReceiverDisplayFilters(globals);
     await _applyTransport();
     _syncNoConnectionLogo();
+    if (!settings.cameraStreamEnabled && previousSettings.cameraStreamEnabled) {
+      unawaited(_camera.stop());
+    } else if (settings.cameraStreamEnabled) {
+      if (settings.cameraStreamDeviceId != _camera.selectedDeviceId) {
+        _camera.selectedDeviceId = settings.cameraStreamDeviceId;
+        if (_camera.active) {
+          unawaited(_restartCameraStream(settings.cameraStreamDeviceId));
+        }
+      }
+    }
     if (!_disposed) {
       notifyListeners();
+    }
+  }
+
+  Future<void> _restartCameraStream(String? deviceId) async {
+    try {
+      await _camera.start(deviceId: deviceId);
+      await _camera.sendOffer();
+    } catch (_) {
+      // Camera unavailable; ignore.
     }
   }
 
@@ -424,6 +457,25 @@ class ProjectionController extends ChangeNotifier {
     );
   }
 
+  Future<void> _onCameraSignal(CameraSignal signal) async {
+    if (_disposed) {
+      return;
+    }
+    if (signal.kind == CameraSignalKind.request && !settings.cameraStreamEnabled) {
+      debugPrint('CAM offerer request ignored (cameraStreamEnabled=false)');
+      return;
+    }
+    try {
+      await _camera.handleSignal(signal);
+    } catch (e, st) {
+      debugPrint('CAM offerer handleSignal error: $e');
+      debugPrint('$st');
+    }
+    if (!_disposed) {
+      notifyListeners();
+    }
+  }
+
   void _onError(String message) {
     if (_disposed) {
       return;
@@ -689,6 +741,7 @@ class ProjectionController extends ChangeNotifier {
     _lifecycleListener?.dispose();
     _logoTimer?.cancel();
     _server.stop(emitConnection: false);
+    _camera.dispose();
     _mqtt.dispose();
     super.dispose();
   }

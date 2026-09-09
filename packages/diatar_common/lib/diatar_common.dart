@@ -1,6 +1,7 @@
 library;
 
 export 'models/app_settings.dart';
+export 'models/camera_signaling.dart';
 export 'models/dtx_models.dart';
 export 'models/mqtt_user.dart';
 export 'models/projection_frame.dart';

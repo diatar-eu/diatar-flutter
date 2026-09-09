@@ -2837,6 +2837,30 @@ abstract class AppLocalizations {
   /// **'Külön ablakban vetít asztali környezeten. Kikapcsolva a program csak vezérlőként működik vetítőablak nélkül.'**
   String get projectorEnabledHint;
 
+  /// No description provided for @cameraViewTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kamerakép mutatása'**
+  String get cameraViewTitle;
+
+  /// No description provided for @cameraViewHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'A vetítő eszköz kameraképét mutatja a helyi hálózaton keresztül.'**
+  String get cameraViewHint;
+
+  /// No description provided for @cameraSourceLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kamera forrása'**
+  String get cameraSourceLabel;
+
+  /// No description provided for @cameraSourceHelp.
+  ///
+  /// In hu, this message translates to:
+  /// **'Válaszd ki, melyik kliens kameraképét várja a nézet. Ha egyetlen célpont van megadva, az automatikusan használódik.'**
+  String get cameraSourceHelp;
+
   /// No description provided for @projectorMonitorAuto.
   ///
   /// In hu, this message translates to:

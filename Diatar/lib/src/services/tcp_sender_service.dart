@@ -6,14 +6,21 @@ import 'package:flutter/foundation.dart';
 
 typedef SenderErrorCallback =
     void Function(String code, Map<String, String> params);
+typedef SenderCameraCallback =
+    void Function(CameraSignal signal, String sourceKey);
 
 class TcpSenderService {
-  TcpSenderService({required this.onStatusChanged, required this.onError});
+  TcpSenderService({
+    required this.onStatusChanged,
+    required this.onError,
+    required this.onCamera,
+  });
 
   static const int _rawSocketWriteChunkSize = 16 * 1024;
 
   ValueChanged<bool> onStatusChanged;
   SenderErrorCallback onError;
+  SenderCameraCallback onCamera;
 
   final Map<String, RawSocket> _clients = <String, RawSocket>{};
   final Map<String, StreamSubscription<RawSocketEvent>> _subs =
@@ -22,8 +29,13 @@ class TcpSenderService {
       <RawSocket, _RawSocketWriter>{};
   final Map<String, DateTime> _lastConnectError = <String, DateTime>{};
   final Set<String> _targetKeys = <String>{};
+  final Map<RawSocket, ProjectionPacketParser> _parsers =
+      <RawSocket, ProjectionPacketParser>{};
   bool _running = false;
   int _session = 0;
+  String? _cameraTargetKey;
+  final Map<String, List<CameraSignal>> _cameraPending =
+      <String, List<CameraSignal>>{};
   Timer? _idleTimer;
   DateTime _lastSentAt = DateTime.fromMillisecondsSinceEpoch(0);
   Future<void> _sendQueue = Future<void>.value();
@@ -38,6 +50,10 @@ class TcpSenderService {
   bool get hasClients => _clients.isNotEmpty;
   bool get allTargetsConnected =>
       _targetKeys.isNotEmpty && _clients.length == _targetKeys.length;
+
+  void setCameraTargetKey(String? key) {
+    _cameraTargetKey = key;
+  }
 
   Future<void> _enqueue(Future<void> Function() task) async {
     final Future<void> previous = _sendQueue;
@@ -99,6 +115,8 @@ class TcpSenderService {
     }
     _clients.clear();
     _writers.clear();
+    _parsers.clear();
+    _cameraPending.clear();
 
     _idleTimer?.cancel();
     _idleTimer = null;
@@ -119,6 +137,8 @@ class TcpSenderService {
         _writers[connectedSocket] = writer;
 
         _clients[target.key] = connectedSocket;
+        final ProjectionPacketParser parser = ProjectionPacketParser();
+        _parsers[connectedSocket] = parser;
         _emitStatus();
 
         final Completer<void> done = Completer<void>();
@@ -126,13 +146,20 @@ class TcpSenderService {
           (RawSocketEvent event) {
             switch (event) {
               case RawSocketEvent.read:
-                while (connectedSocket.read() != null) {}
+                while (true) {
+                  final List<int>? chunk = connectedSocket.read();
+                  if (chunk == null) {
+                    break;
+                  }
+                  _handleIncoming(target.key, parser, chunk);
+                }
                 break;
               case RawSocketEvent.write:
                 writer.onWriteReady();
                 break;
               case RawSocketEvent.readClosed:
               case RawSocketEvent.closed:
+                debugPrint('CAM tcp closed ${target.key}');
                 writer.close();
                 if (!done.isCompleted) {
                   done.complete();
@@ -141,6 +168,7 @@ class TcpSenderService {
             }
           },
           onError: (Object e) {
+            debugPrint('CAM tcp error ${target.key}: $e');
             writer.close();
             _reportConnectOrClientError(target, e);
             if (!done.isCompleted) {
@@ -156,7 +184,7 @@ class TcpSenderService {
           cancelOnError: true,
         );
         _subs[target.key] = sub;
-        await _enqueue(() => _replayCache(connectedSocket));
+        await _enqueue(() => _replayCache(connectedSocket, target.key));
         await done.future;
       } catch (e) {
         _reportConnectOrClientError(target, e);
@@ -171,6 +199,7 @@ class TcpSenderService {
         final RawSocket? old = _clients.remove(target.key);
         try {
           _writers.remove(old)?.close();
+          _parsers.remove(old);
           old?.close();
         } catch (_) {}
         _emitStatus();
@@ -243,19 +272,90 @@ class TcpSenderService {
     await _enqueue(() => _sendPacket(RecTypes.scrSize, _cachedScrSize!));
   }
 
-  Future<void> _replayCache(RawSocket socket) async {
+  Future<void> sendCameraSignal(
+    CameraSignal signal, {
+    String? sourceKey,
+  }) async {
+    debugPrint('CAM tx ${signal.kind.name}');
+    await _enqueue(() async {
+      final Uint8List body = encodeCameraSignal(signal);
+      final String? key = sourceKey ?? _cameraTargetKey;
+      RawSocket? socket = key == null ? null : _clients[key];
+      if (socket == null && _clients.length == 1) {
+        socket = _clients.values.first;
+      }
+      if (socket == null) {
+        _queueCameraReply(key, signal);
+        debugPrint(
+          'CAM txSend camera target=$key not connected - queued',
+        );
+        return;
+      }
+      try {
+        await _writeAll(
+          socket,
+          encodeProjectionPacket(RecTypes.camera, body),
+        );
+        _lastSentAt = DateTime.now();
+      } catch (e) {
+        onError('senderTcpSendError', <String, String>{'error': '$e'});
+        _queueCameraReply(key, signal);
+      }
+    });
+  }
+
+  void _queueCameraReply(String? key, CameraSignal signal) {
+    if (key == null) {
+      return;
+    }
+    final List<CameraSignal> pending = _cameraPending.putIfAbsent(
+      key,
+      () => <CameraSignal>[],
+    );
+    pending.add(signal);
+    if (pending.length > 64) {
+      pending.removeAt(0);
+    }
+  }
+
+  void _handleIncoming(String sourceKey, ProjectionPacketParser parser, List<int> chunk) {
+    final List<ProjectionPacket> packets = parser.addChunk(chunk);
+    for (final ProjectionPacket packet in packets) {
+      if (packet.type == RecTypes.camera) {
+        try {
+          onCamera(decodeCameraSignal(packet.body), sourceKey);
+        } catch (_) {
+          // Ignore malformed camera signaling.
+        }
+      }
+    }
+  }
+
+  Future<void> _replayCache(RawSocket socket, String key) async {
+    debugPrint('CAM replay connected=${_clients.length}');
     await _sendToSocket(socket, RecTypes.scrSize, _cachedScrSize);
     await _sendToSocket(socket, RecTypes.state, _cachedState);
     await _sendToSocket(socket, RecTypes.text, _cachedText);
     await _sendToSocket(socket, RecTypes.blank, _cachedBlank);
     await _sendToSocket(socket, RecTypes.pic, _cachedPic);
+    final List<CameraSignal>? pending = _cameraPending.remove(key);
+    if (pending == null || pending.isEmpty) {
+      return;
+    }
+    debugPrint('CAM replay flush camera=${pending.length}');
+    for (final CameraSignal signal in pending) {
+      await _sendToSocket(socket, RecTypes.camera, encodeCameraSignal(signal));
+      _lastSentAt = DateTime.now();
+    }
   }
 
   Future<void> _sendPacket(int type, Uint8List body) async {
     if (_clients.isEmpty) {
+      debugPrint('CAM txSend type=$type no clients - dropped');
       return;
     }
     final Uint8List packet = encodeProjectionPacket(type, body);
+    debugPrint('CAM txSend type=$type body=${body.length} clients=${_clients.length}');
     final List<String> dead = <String>[];
     for (final MapEntry<String, RawSocket> entry in _clients.entries.toList()) {
       final String key = entry.key;

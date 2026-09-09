@@ -160,6 +160,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _projBoldText;
   late int _desktopProjectorMonitor;
   late bool _desktopProjectorEnabled;
+  late bool _showCameraView;
+  late String? _cameraTarget;
   late bool _internetRelayEnabled;
   late bool _localNetworkEnabled;
   late bool _picPlcEnabled;
@@ -261,6 +263,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projBoldText = s.projBoldText;
     _desktopProjectorMonitor = s.desktopProjectorMonitor;
     _desktopProjectorEnabled = s.desktopProjectorEnabled;
+    _showCameraView = s.showCameraView;
+    _cameraTarget = s.cameraTarget;
     _internetRelayEnabled = s.internetRelayEnabled;
     _localNetworkEnabled = s.tcpClientEnabled;
     _liveSubtitleDeviceId = s.liveSubtitleDeviceId;
@@ -1501,6 +1505,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   Future<void> _openLocalNetworkSettings() {
     final bool originalLocalNetworkEnabled = _localNetworkEnabled;
     final String originalTcpTargets = _tcpTargets.text;
+    final bool originalShowCameraView = _showCameraView;
+    final String? originalCameraTarget = _cameraTarget;
 
     return _openSectionSheet(
       title: context.l10n.settingsLocalNetworkTitle,
@@ -1515,10 +1521,13 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         setState(() {
           _localNetworkEnabled = originalLocalNetworkEnabled;
           _tcpTargets.text = originalTcpTargets;
+          _showCameraView = originalShowCameraView;
+          _cameraTarget = originalCameraTarget;
         });
       },
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
+        final List<String> tcpTargets = _parseTcpTargets(_tcpTargets.text);
         return <Widget>[
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -1547,6 +1556,42 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
+          if (_isCameraViewSupported()) ...<Widget>[
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _showCameraView,
+              onChanged: (bool v) => setBoth(() => _showCameraView = v),
+              title: Text(l10n.cameraViewTitle),
+              subtitle: Text(l10n.cameraViewHint),
+            ),
+            if (_showCameraView) ...<Widget>[
+              if (tcpTargets.length > 1)
+                DropdownButtonFormField<String>(
+                  initialValue: _cameraTarget != null &&
+                          tcpTargets.contains(_cameraTarget)
+                      ? _cameraTarget
+                      : tcpTargets.first,
+                  decoration: InputDecoration(labelText: l10n.cameraSourceLabel),
+                  items: List<DropdownMenuItem<String>>.generate(
+                    tcpTargets.length,
+                    (int i) => DropdownMenuItem<String>(
+                      value: tcpTargets[i],
+                      child: Text(tcpTargets[i]),
+                    ),
+                    growable: false,
+                  ),
+                  onChanged: (String? v) =>
+                      setBoth(() => _cameraTarget = v ?? tcpTargets.first),
+                ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.cameraSourceHelp,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
         ];
       },
     );
@@ -1570,6 +1615,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     }
     _tcpTargets.text = tcpTargets.join('\n');
 
+    final String? cameraTarget =
+        _cameraTarget != null && tcpTargets.contains(_cameraTarget)
+            ? _cameraTarget
+            : (tcpTargets.isEmpty ? null : tcpTargets.first);
+
     final int firstPort = localNetworkEnabled
         ? (_firstPortFromTargets(tcpTargets) ?? widget.initialSettings.port)
         : widget.initialSettings.port;
@@ -1578,6 +1628,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       port: firstPort,
       tcpClientEnabled: localNetworkEnabled,
       tcpTargets: tcpTargets,
+      showCameraView: kIsWeb ? false : _showCameraView,
+      cameraTarget: kIsWeb ? null : cameraTarget,
       internetRelayEnabled: _internetRelayEnabled,
       mqttUser: mqttUser,
       mqttPassword: mqttPassword,
@@ -3382,6 +3434,15 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     return defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux;
+  }
+
+  bool _isCameraViewSupported() {
+    if (kIsWeb) {
+      return false;
+    }
+    return _isDesktopPlatform() ||
+        defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
   }
 
   bool _supportsHotkeysPlatform() {

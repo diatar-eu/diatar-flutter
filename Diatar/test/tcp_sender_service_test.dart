@@ -22,6 +22,7 @@ void main() {
         }
       },
       onError: (_, __) {},
+      onCamera: (_, _) {},
     );
 
     server.listen((Socket client) {

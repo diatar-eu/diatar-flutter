@@ -38,6 +38,7 @@ void main() {
         },
         onBlank: (_) {},
         onAskSize: () {},
+        onCamera: (_) {},
         onError: fail,
         onConnection: (_) {},
       );

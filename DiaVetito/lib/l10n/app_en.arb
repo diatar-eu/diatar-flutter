@@ -81,6 +81,15 @@
       "state": {}
     }
   },
+  "cameraStreamTitle": "Camera stream",
+  "cameraStreamSummary": "Camera stream enabled",
+  "cameraStreamDevicesTitle": "Camera source",
+  "cameraStreamShortcutHint": "The controller can request the camera stream over the local network.",
+  "cameraStreamEnabledTitle": "Enable camera stream",
+  "cameraStreamEnabledHint": "When enabled, the controller can request the camera feed. Camera access permission is required.",
+  "cameraStreamNoDevices": "No camera found",
+  "refreshDevices": "Refresh devices",
+  "settingsSearchKeywordsCamera": "camera stream webrtc video preview",
   "systemActionsBack": "Back",
   "remoteShutdownTitle": "Remote shutdown",
   "remoteShutdownSubtitle": "When enabled, remote epStop and epShutdown commands can stop the program.",

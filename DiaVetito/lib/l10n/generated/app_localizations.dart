@@ -236,6 +236,60 @@ abstract class AppLocalizations {
   /// **'Távoli leállítás: {state}'**
   String systemActionsSummary(Object state);
 
+  /// No description provided for @cameraStreamTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kamera stream'**
+  String get cameraStreamTitle;
+
+  /// No description provided for @cameraStreamSummary.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kamera stream engedélyezve'**
+  String get cameraStreamSummary;
+
+  /// No description provided for @cameraStreamDevicesTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kamera forrás'**
+  String get cameraStreamDevicesTitle;
+
+  /// No description provided for @cameraStreamShortcutHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'A vezérlő a helyi hálózaton keresztül kérheti a kameraképet.'**
+  String get cameraStreamShortcutHint;
+
+  /// No description provided for @cameraStreamEnabledTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kamera stream engedélyezése'**
+  String get cameraStreamEnabledTitle;
+
+  /// No description provided for @cameraStreamEnabledHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Bekapcsolás után a vezérlő kérheti a kameraképet. Ehhez kamera-hozzáférés szükséges.'**
+  String get cameraStreamEnabledHint;
+
+  /// No description provided for @cameraStreamNoDevices.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nem található kamera'**
+  String get cameraStreamNoDevices;
+
+  /// No description provided for @refreshDevices.
+  ///
+  /// In hu, this message translates to:
+  /// **'Eszközök frissítése'**
+  String get refreshDevices;
+
+  /// No description provided for @settingsSearchKeywordsCamera.
+  ///
+  /// In hu, this message translates to:
+  /// **'kamera stream webrtc video előnézet'**
+  String get settingsSearchKeywordsCamera;
+
   /// No description provided for @systemActionsBack.
   ///
   /// In hu, this message translates to:

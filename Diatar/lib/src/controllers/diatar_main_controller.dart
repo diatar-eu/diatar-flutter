@@ -9,6 +9,7 @@ import 'package:diatar_speech/diatar_speech.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/path_helper.dart';
 import '../utils/file_system_provider.dart';
@@ -49,6 +50,7 @@ import '../services/song_search_service.dart';
 import '../services/settings_store.dart';
 import '../services/audio_service.dart';
 import '../services/tcp_sender_service.dart';
+import '../services/webrtc_camera_view_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
 import '../services/zsolozsma_service.dart';
 import '../services/napi_lelki_batyu_service.dart';
@@ -204,11 +206,19 @@ class DiatarMainController extends ChangeNotifier {
   final TcpSenderService _sender = TcpSenderService(
     onStatusChanged: (bool connected) {},
     onError: (String code, Map<String, String> params) {},
+    onCamera: (CameraSignal signal, String sourceKey) {},
   );
   final MqttSenderService _mqttSender = MqttSenderService(
     onStatusChanged: (bool connected) {},
     onError: (String code, Map<String, String> params) {},
   );
+  late final WebrtcCameraViewService _cameraView = WebrtcCameraViewService(
+    sendSignal: (CameraSignal signal, String? sourceKey) =>
+        _sender.sendCameraSignal(signal, sourceKey: sourceKey),
+  );
+
+  bool cameraAvailable = false;
+  bool cameraViewActive = false;
   final DesktopProjectorBridge _desktopProjectorBridge =
       DesktopProjectorBridge.instance;
   final ExternalCommandService _externalCommandService =
@@ -1094,6 +1104,8 @@ class DiatarMainController extends ChangeNotifier {
     };
     _desktopProjectorBridge.onDesktopHotkeyAction = runDesktopHotkeyAction;
     await _desktopProjectorBridge.start(settings);
+    cameraAvailable = _cameraView.available;
+    await _cameraView.init();
     _configureSender();
     await _applyTransport();
     unawaited(_checkStartupDtxUpdates());
@@ -1289,7 +1301,55 @@ class DiatarMainController extends ChangeNotifier {
       refreshFlags: _refreshSenderFlags,
       notify: notifyListeners,
     );
+    _sender.onCamera = _onCameraSignal;
   }
+
+  Future<void> _onCameraSignal(CameraSignal signal, String sourceKey) async {
+    final String? target = cameraSourceKey;
+    if (target == null || sourceKey != target) {
+      debugPrint('CAM in from=$sourceKey ignored target=$target');
+      return;
+    }
+    try {
+      await _cameraView.handleSignal(signal, sourceKey);
+      cameraViewActive = _cameraView.active;
+    } catch (_) {
+      // Camera unavailable; ignore.
+    }
+    notifyListeners();
+  }
+
+  String? _resolveCameraSourceKey(AppSettings appSettings) {
+    final List<String> targets = appSettings.tcpTargets;
+    if (targets.isEmpty) {
+      return null;
+    }
+    final String? selected = appSettings.cameraTarget;
+    if (selected != null && targets.contains(selected)) {
+      return selected;
+    }
+    return targets.first;
+  }
+
+  String? get cameraSourceKey => _resolveCameraSourceKey(settings);
+
+  Future<void> requestCameraView() async {
+    _sender.setCameraTargetKey(cameraSourceKey);
+    try {
+      await _cameraView.requestStart();
+    } catch (_) {
+      // Camera unavailable; ignore.
+    }
+    notifyListeners();
+  }
+
+  Future<void> stopCameraView() async {
+    await _cameraView.stop();
+    cameraViewActive = _cameraView.active;
+    notifyListeners();
+  }
+
+  RTCVideoRenderer get cameraRenderer => _cameraView.renderer;
 
   Future<void> applySettings(AppSettings newSettings) async {
     final AppSettings previousSettings = settings;
@@ -1297,6 +1357,18 @@ class DiatarMainController extends ChangeNotifier {
         .transportSettingsChanged(previousSettings, newSettings);
     settings = newSettings;
     lastBlankPath = settings.blankPicPath;
+    final bool cameraSourceChanged =
+        _resolveCameraSourceKey(previousSettings) != cameraSourceKey;
+    if (settings.showCameraView && !previousSettings.showCameraView) {
+      unawaited(requestCameraView());
+    } else if (!settings.showCameraView && previousSettings.showCameraView) {
+      unawaited(stopCameraView());
+    } else if (settings.showCameraView && cameraSourceChanged) {
+      unawaited(stopCameraView());
+      unawaited(requestCameraView());
+    } else {
+      _sender.setCameraTargetKey(cameraSourceKey);
+    }
     await _settingsStore.save(settings);
     await _updateSystemShutdownExitCommand();
     try {
@@ -5321,6 +5393,7 @@ class DiatarMainController extends ChangeNotifier {
     _audioPlaybackCompletionSubscription.cancel();
     _speechRecognizer?.dispose();
     _sender.stop();
+    _cameraView.dispose();
     _mqttSender.close();
     super.dispose();
   }

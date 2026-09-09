@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_linux
   desktop_multi_window
   file_selector_linux
+  flutter_webrtc
   irondash_engine_context
   record_linux
   screen_retriever_linux

@@ -81,6 +81,15 @@
       "state": {}
     }
   },
+  "cameraStreamTitle": "Kamera stream",
+  "cameraStreamSummary": "Kamera stream engedélyezve",
+  "cameraStreamDevicesTitle": "Kamera forrás",
+  "cameraStreamShortcutHint": "A vezérlő a helyi hálózaton keresztül kérheti a kameraképet.",
+  "cameraStreamEnabledTitle": "Kamera stream engedélyezése",
+  "cameraStreamEnabledHint": "Bekapcsolás után a vezérlő kérheti a kameraképet. Ehhez kamera-hozzáférés szükséges.",
+  "cameraStreamNoDevices": "Nem található kamera",
+  "refreshDevices": "Eszközök frissítése",
+  "settingsSearchKeywordsCamera": "kamera stream webrtc video előnézet",
   "systemActionsBack": "Vissza",
   "remoteShutdownTitle": "Távoli leállítás",
   "remoteShutdownSubtitle": "Ha be van kapcsolva, a távoli vetítő leállíthatja a programot.",
