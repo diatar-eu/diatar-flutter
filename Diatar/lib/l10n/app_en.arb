@@ -917,6 +917,31 @@
       "reason": {}
     }
   },
+  "importDtzFailureDialogTitle": "Score import problem",
+  "importDtzPartialImportTitle": "Score import completed with problems",
+  "importDtzFailureSourceUnreadable": "The selected ZIP file could not be read.",
+  "importDtzFailureInvalidArchive": "The selected file is not a valid ZIP archive.",
+  "importDtzFailureTooManyEntries": "The ZIP contains too many files.",
+  "importDtzFailureEntryTooLarge": "The ZIP contains a file that is too large to import safely.",
+  "importDtzFailureTotalTooLarge": "The ZIP would extract too much data to import safely.",
+  "importDtzFailureCancelled": "The import was cancelled.",
+  "importDtzFailureEntryUnreadable": "A file in the ZIP could not be extracted.",
+  "importDtzFailureWriteFailed": "The extracted file could not be written. Check available storage.",
+  "importDtzFailureDetails": "{zip}: {reason}",
+  "@importDtzFailureDetails": {
+    "placeholders": {
+      "zip": {},
+      "reason": {}
+    }
+  },
+  "importDtzProgress": "Extracting {entry} ({current}/{total})",
+  "@importDtzProgress": {
+    "placeholders": {
+      "entry": {},
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
   "importDtxFilesSuccess": "{count} .dtx file(s) imported",
   "@importDtxFilesSuccess": {
     "placeholders": {

@@ -917,6 +917,31 @@
       "reason": {}
     }
   },
+  "importDtzFailureDialogTitle": "Kottaimportálási hiba",
+  "importDtzPartialImportTitle": "A kottaimportálás hibákkal fejeződött be",
+  "importDtzFailureSourceUnreadable": "A kiválasztott ZIP fájl nem olvasható.",
+  "importDtzFailureInvalidArchive": "A kiválasztott fájl nem érvényes ZIP archívum.",
+  "importDtzFailureTooManyEntries": "A ZIP túl sok fájlt tartalmaz.",
+  "importDtzFailureEntryTooLarge": "A ZIP egy biztonságosan importálhatónál nagyobb fájlt tartalmaz.",
+  "importDtzFailureTotalTooLarge": "A ZIP túl sok adatot bontana ki a biztonságos importáláshoz.",
+  "importDtzFailureCancelled": "Az importálást megszakítottad.",
+  "importDtzFailureEntryUnreadable": "A ZIP egyik fájlja nem bontható ki.",
+  "importDtzFailureWriteFailed": "A kibontott fájl nem írható. Ellenőrizd a szabad tárhelyet.",
+  "importDtzFailureDetails": "{zip}: {reason}",
+  "@importDtzFailureDetails": {
+    "placeholders": {
+      "zip": {},
+      "reason": {}
+    }
+  },
+  "importDtzProgress": "Kibontás: {entry} ({current}/{total})",
+  "@importDtzProgress": {
+    "placeholders": {
+      "entry": {},
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
   "importDtxFilesSuccess": "{count} .dtx fájl beimportálva",
   "@importDtxFilesSuccess": {
     "placeholders": {

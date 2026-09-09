@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform, ProcessException, exit;
+import 'dart:io' show IOSink, Platform, ProcessException, exit;
 import 'dart:math' as math;
 
 import 'package:diatar_common/diatar_common.dart';
@@ -9,6 +9,7 @@ import 'package:diatar_speech/diatar_speech.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/path_helper.dart';
 import '../utils/file_system_provider.dart';
@@ -42,6 +43,7 @@ import '../services/dtx_library_service.dart';
 import '../services/dtx_order_store.dart';
 import '../services/dtz_library_service.dart';
 import '../services/dtz_user_import_service.dart';
+import '../services/streaming_zip_service.dart';
 import '../services/sender_callback_coordinator.dart';
 import '../services/sender_transport_coordinator.dart';
 import '../services/song_search_service.dart';
@@ -1621,7 +1623,7 @@ class DiatarMainController extends ChangeNotifier {
   /// On Android the content resolver sometimes strips the extension from
   /// [XFile.name], so we fall back to extracting the last path segment from
   /// [XFile.path] (which always preserves the original name on Android).
-  static String _resolveDtzImportName(XFile file, int index) {
+  static String resolveDtzImportName(XFile file, int index) {
     final String direct = file.name.trim();
     if (direct.isNotEmpty) {
       final String lower = direct.toLowerCase();
@@ -1644,6 +1646,42 @@ class DiatarMainController extends ChangeNotifier {
     return direct.isNotEmpty ? direct : 'file_${index + 1}';
   }
 
+  /// Android document-provider URIs may disappear or be unreadable by the
+  /// synchronous ZIP reader. Keep a streamed, app-owned copy for the import.
+  Future<XFile> stageDtzImportZip(
+    XFile file, {
+    required String displayName,
+  }) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return file;
+    }
+    final cacheDirectory = await getTemporaryDirectory();
+    final String safeName = displayName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final File staged = FileSystemProvider.instance.file(
+      '${cacheDirectory.path}/dtz_import_${DateTime.now().microsecondsSinceEpoch}_$safeName',
+    );
+    final IOSink sink = staged.openWrite();
+    try {
+      await for (final List<int> chunk in file.openRead()) {
+        sink.add(chunk);
+      }
+      await sink.flush();
+    } finally {
+      await sink.close();
+    }
+    return XFile(staged.path);
+  }
+
+  Future<void> deleteStagedDtzImportZip(String path) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+    final File staged = FileSystemProvider.instance.file(path);
+    if (await staged.exists()) {
+      await staged.delete();
+    }
+  }
+
   /// Reads [files] and categorises them into DTZ and ZIP buckets.
   /// ZIP detection is content-based (magic bytes) so that files without a
   /// recognisable extension (common on Android content URIs) are handled
@@ -1654,7 +1692,7 @@ class DiatarMainController extends ChangeNotifier {
     final Map<String, String> zipFiles = <String, String>{};
     for (int i = 0; i < files.length; i++) {
       final XFile file = files[i];
-      final String name = _resolveDtzImportName(file, i);
+      final String name = resolveDtzImportName(file, i);
       final List<int> header = await file
           .openRead(0, 4)
           .fold(
@@ -1720,6 +1758,8 @@ class DiatarMainController extends ChangeNotifier {
   Future<DtzUserImportCommitResult> commitDtzUserImport({
     required List<DtzImportPackageAnalysis> toImport,
     required List<XFile> files,
+    void Function(StreamingZipProgress progress)? onProgress,
+    bool Function()? isCancelled,
   }) async {
     final (Map<String, List<int>> dtzFiles, Map<String, String> zipFiles) =
         await _categoriseDtzFiles(files);
@@ -1730,6 +1770,8 @@ class DiatarMainController extends ChangeNotifier {
           dtzFiles: dtzFiles,
           zipFilePaths: zipFiles,
           targetDir: dtzDir,
+          onProgress: onProgress,
+          isCancelled: isCancelled,
         );
     if (result.importedDtzCount > 0) {
       await reloadBooks();

@@ -54,12 +54,14 @@ class DtzUserImportAnalysis {
   const DtzUserImportAnalysis({
     required this.packages,
     required this.orphanZipNames,
+    this.zipFailures = const <DtzZipFailure>[],
   });
 
   final List<DtzImportPackageAnalysis> packages;
 
   /// ZIP names that were selected but no DTZ was provided in the batch.
   final List<String> orphanZipNames;
+  final List<DtzZipFailure> zipFailures;
 
   bool get hasImportable => packages.any(
     (DtzImportPackageAnalysis p) =>
@@ -67,16 +69,25 @@ class DtzUserImportAnalysis {
   );
 }
 
+class DtzZipFailure {
+  const DtzZipFailure({required this.zipName, required this.error});
+
+  final String zipName;
+  final StreamingZipException error;
+}
+
 class DtzUserImportCommitResult {
   const DtzUserImportCommitResult({
     required this.importedDtzCount,
     required this.extractedFileCount,
     required this.failures,
+    this.zipFailures = const <DtzZipFailure>[],
   });
 
   final int importedDtzCount;
   final int extractedFileCount;
   final List<String> failures;
+  final List<DtzZipFailure> zipFailures;
 }
 
 /// Handles user-initiated DTZ + ZIP import with validation and selective extraction.
@@ -131,18 +142,36 @@ class DtzUserImportService {
     Set<String> availableDiaIds = const <String>{},
   }) async {
     final Set<String> allProvidedFiles = <String>{};
-    for (final String path in zipFilePaths.values) {
+    final List<DtzZipFailure> zipFailures = <DtzZipFailure>[];
+    for (final MapEntry<String, String> entry in zipFilePaths.entries) {
       try {
-        allProvidedFiles.addAll(await _streamingZipService.fileNames(path));
-      } catch (_) {
-        // Keep malformed ZIP behavior consistent with the in-memory variant.
+        allProvidedFiles.addAll(
+          await _streamingZipService.fileNames(entry.value),
+        );
+      } on StreamingZipException catch (error) {
+        zipFailures.add(DtzZipFailure(zipName: entry.key, error: error));
+      } catch (error) {
+        zipFailures.add(
+          DtzZipFailure(
+            zipName: entry.key,
+            error: StreamingZipException(
+              StreamingZipErrorCode.invalidArchive,
+              cause: error,
+            ),
+          ),
+        );
       }
     }
-    return _analyze(
+    final DtzUserImportAnalysis analysis = _analyze(
       dtzFiles: dtzFiles,
       allProvidedFiles: allProvidedFiles,
       orphanZipNames: dtzFiles.isEmpty ? zipFilePaths.keys.toList() : const [],
       availableDiaIds: availableDiaIds,
+    );
+    return DtzUserImportAnalysis(
+      packages: analysis.packages,
+      orphanZipNames: analysis.orphanZipNames,
+      zipFailures: zipFailures,
     );
   }
 
@@ -217,6 +246,8 @@ class DtzUserImportService {
     required Map<String, List<int>> dtzFiles,
     required Map<String, String> zipFilePaths,
     required Directory targetDir,
+    void Function(StreamingZipProgress progress)? onProgress,
+    bool Function()? isCancelled,
   }) async {
     await targetDir.create(recursive: true);
     final Set<String> neededFiles = toImport
@@ -225,6 +256,7 @@ class DtzUserImportService {
     int importedDtzCount = 0;
     int extractedFileCount = 0;
     final List<String> failures = <String>[];
+    final List<DtzZipFailure> zipFailures = <DtzZipFailure>[];
 
     for (final DtzImportPackageAnalysis pkg in toImport) {
       final List<int>? bytes = dtzFiles[pkg.dtzFileName];
@@ -244,7 +276,13 @@ class DtzUserImportService {
           entry.value,
           targetDirectory: targetDir,
           only: neededFiles,
+          onProgress: onProgress,
+          isCancelled: isCancelled,
         )).length;
+      } on StreamingZipException catch (error) {
+        failures.add('${entry.key}: ${error.code.name}'
+            '${error.entryName == null ? '' : ' (${error.entryName})'}');
+        zipFailures.add(DtzZipFailure(zipName: entry.key, error: error));
       } catch (error) {
         failures.add('${entry.key}: $error');
       }
@@ -254,6 +292,7 @@ class DtzUserImportService {
       importedDtzCount: importedDtzCount,
       extractedFileCount: extractedFileCount,
       failures: failures,
+      zipFailures: zipFailures,
     );
   }
 

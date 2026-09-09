@@ -13,6 +13,7 @@ import '../models/custom_order_set.dart';
 import '../services/dtx_download_service.dart';
 import '../services/dtz_download_service.dart';
 import '../services/dtz_user_import_service.dart';
+import '../services/streaming_zip_service.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/macos_file_panels.dart';
 import '../utils/custom_entry_labels.dart';
@@ -3117,6 +3118,9 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
   Set<String> _selectedPkgs = <String>{};
   bool _analysing = false;
   bool _importing = false;
+  bool _cancelRequested = false;
+  StreamingZipProgress? _progress;
+  final Set<String> _stagedZipPaths = <String>{};
 
   bool get _canValidate => _dtzFile != null && !_analysing && !_importing;
   bool get _canImport =>
@@ -3147,17 +3151,43 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
           () => showFileOpenPanel(extensions: const <String>['zip']),
         );
     if (!mounted || files.isEmpty) return;
-    setState(() {
-      _zipFiles.addAll(files);
-      _resetAnalysis();
-    });
+    try {
+      final List<XFile> staged = <XFile>[];
+      for (int i = 0; i < files.length; i++) {
+        final XFile file = files[i];
+        final String name = DiatarMainController.resolveDtzImportName(file, i);
+        final XFile importFile = await widget.controller.stageDtzImportZip(
+          file,
+          displayName: name,
+        );
+        if (importFile.path != file.path) {
+          _stagedZipPaths.add(importFile.path);
+        }
+        staged.add(importFile);
+      }
+      if (!mounted) return;
+      setState(() {
+        _zipFiles.addAll(staged);
+        _resetAnalysis();
+      });
+    } catch (error) {
+      if (!mounted) return;
+      await _showIssues(
+        title: context.l10n.importDtzFailureDialogTitle,
+        issues: <String>[context.l10n.importDtzError(error.toString())],
+      );
+    }
   }
 
   void _removeZip(int index) {
+    final String path = _zipFiles[index].path;
     setState(() {
       _zipFiles.removeAt(index);
       _resetAnalysis();
     });
+    if (_stagedZipPaths.remove(path)) {
+      unawaited(widget.controller.deleteStagedDtzImportZip(path));
+    }
   }
 
   Future<void> _validate() async {
@@ -3182,11 +3212,25 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
             .map((DtzImportPackageAnalysis p) => p.dtzFileName)
             .toSet();
       });
+      if (analysis.zipFailures.isNotEmpty) {
+        await _showIssues(
+          title: context.l10n.importDtzFailureDialogTitle,
+          issues: analysis.zipFailures
+              .map(
+                (DtzZipFailure failure) => context.l10n.importDtzFailureDetails(
+                  failure.zipName,
+                  _zipFailureMessage(failure.error),
+                ),
+              )
+              .toList(),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _analysing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.importDtzError(e.toString()))),
+      await _showIssues(
+        title: context.l10n.importDtzFailureDialogTitle,
+        issues: <String>[context.l10n.importDtzError(e.toString())],
       );
     }
   }
@@ -3208,12 +3252,20 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
       if (!mounted || !proceed) return;
     }
 
-    setState(() => _importing = true);
+    setState(() {
+      _importing = true;
+      _cancelRequested = false;
+      _progress = null;
+    });
     try {
       final DtzUserImportCommitResult result = await widget.controller
           .commitDtzUserImport(
             toImport: toImport,
             files: <XFile>[_dtzFile!, ..._zipFiles],
+            isCancelled: () => _cancelRequested,
+            onProgress: (StreamingZipProgress progress) {
+              if (mounted) setState(() => _progress = progress);
+            },
           );
       if (!mounted) return;
       final String msg = result.extractedFileCount > 0
@@ -3222,18 +3274,88 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
               result.extractedFileCount,
             )
           : context.l10n.importDtzSuccessNoMedia(result.importedDtzCount);
-      final ScaffoldMessengerState? messenger = ScaffoldMessenger.maybeOf(
-        context,
-      );
+      if (result.failures.isNotEmpty) {
+        setState(() => _importing = false);
+        await _showIssues(
+          title: context.l10n.importDtzPartialImportTitle,
+          issues: <String>[
+            msg,
+            ...result.zipFailures.map(
+              (DtzZipFailure failure) => context.l10n.importDtzFailureDetails(
+                failure.zipName,
+                _zipFailureMessage(failure.error),
+              ),
+            ),
+            ...result.failures.where(
+              (String failure) => !result.zipFailures.any(
+                (DtzZipFailure zipFailure) =>
+                    failure.startsWith('${zipFailure.zipName}:'),
+              ),
+            ),
+          ],
+        );
+        return;
+      }
       Navigator.of(context).pop(true);
-      messenger?.showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
       if (!mounted) return;
       setState(() => _importing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.importDtzError(e.toString()))),
+      await _showIssues(
+        title: context.l10n.importDtzFailureDialogTitle,
+        issues: <String>[context.l10n.importDtzError(e.toString())],
       );
     }
+  }
+
+  String _zipFailureMessage(StreamingZipException error) {
+    switch (error.code) {
+      case StreamingZipErrorCode.sourceUnreadable:
+        return context.l10n.importDtzFailureSourceUnreadable;
+      case StreamingZipErrorCode.invalidArchive:
+        return context.l10n.importDtzFailureInvalidArchive;
+      case StreamingZipErrorCode.tooManyEntries:
+        return context.l10n.importDtzFailureTooManyEntries;
+      case StreamingZipErrorCode.entryTooLarge:
+        return context.l10n.importDtzFailureEntryTooLarge;
+      case StreamingZipErrorCode.totalTooLarge:
+        return context.l10n.importDtzFailureTotalTooLarge;
+      case StreamingZipErrorCode.cancelled:
+        return context.l10n.importDtzFailureCancelled;
+      case StreamingZipErrorCode.entryUnreadable:
+        return context.l10n.importDtzFailureEntryUnreadable;
+      case StreamingZipErrorCode.writeFailed:
+        return context.l10n.importDtzFailureWriteFailed;
+    }
+  }
+
+  Future<void> _showIssues({
+    required String title,
+    required List<String> issues,
+  }) {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(title),
+        content: SizedBox(
+          width: 560,
+          child: SingleChildScrollView(child: Text(issues.join('\n\n'))),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(dialogContext.l10n.close),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    for (final String path in _stagedZipPaths) {
+      unawaited(widget.controller.deleteStagedDtzImportZip(path));
+    }
+    super.dispose();
   }
 
   Future<bool> _confirmImportWithErrors(
@@ -3355,6 +3477,21 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
                 const SizedBox(height: 16),
                 const LinearProgressIndicator(),
               ],
+              if (_importing) ...<Widget>[
+                const SizedBox(height: 16),
+                const LinearProgressIndicator(),
+                const SizedBox(height: 8),
+                Text(
+                  _progress == null
+                      ? l10n.importDtzImportButton
+                      : l10n.importDtzProgress(
+                          _progress!.entryName,
+                          _progress!.completedEntries + 1,
+                          _progress!.totalEntries,
+                        ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
               if (analysis != null && !_analysing) ...<Widget>[
                 const SizedBox(height: 16),
                 const Divider(),
@@ -3407,6 +3544,11 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
           onPressed: _canImport ? _import : null,
           child: Text(l10n.importDtzImportButton),
         ),
+        if (_importing)
+          TextButton(
+            onPressed: () => setState(() => _cancelRequested = true),
+            child: Text(l10n.cancel),
+          ),
       ],
     );
   }

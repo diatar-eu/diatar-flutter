@@ -1294,6 +1294,53 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
+  String get importDtzFailureDialogTitle => 'Kottaimportálási hiba';
+
+  @override
+  String get importDtzPartialImportTitle =>
+      'A kottaimportálás hibákkal fejeződött be';
+
+  @override
+  String get importDtzFailureSourceUnreadable =>
+      'A kiválasztott ZIP fájl nem olvasható.';
+
+  @override
+  String get importDtzFailureInvalidArchive =>
+      'A kiválasztott fájl nem érvényes ZIP archívum.';
+
+  @override
+  String get importDtzFailureTooManyEntries => 'A ZIP túl sok fájlt tartalmaz.';
+
+  @override
+  String get importDtzFailureEntryTooLarge =>
+      'A ZIP egy biztonságosan importálhatónál nagyobb fájlt tartalmaz.';
+
+  @override
+  String get importDtzFailureTotalTooLarge =>
+      'A ZIP túl sok adatot bontana ki a biztonságos importáláshoz.';
+
+  @override
+  String get importDtzFailureCancelled => 'Az importálást megszakítottad.';
+
+  @override
+  String get importDtzFailureEntryUnreadable =>
+      'A ZIP egyik fájlja nem bontható ki.';
+
+  @override
+  String get importDtzFailureWriteFailed =>
+      'A kibontott fájl nem írható. Ellenőrizd a szabad tárhelyet.';
+
+  @override
+  String importDtzFailureDetails(Object zip, Object reason) {
+    return '$zip: $reason';
+  }
+
+  @override
+  String importDtzProgress(Object entry, int current, int total) {
+    return 'Kibontás: $entry ($current/$total)';
+  }
+
+  @override
   String importDtxFilesSuccess(int count) {
     return '$count .dtx fájl beimportálva';
   }

@@ -2297,6 +2297,78 @@ abstract class AppLocalizations {
   /// **'Hiba a kotta importálás során: {reason}'**
   String importDtzError(Object reason);
 
+  /// No description provided for @importDtzFailureDialogTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kottaimportálási hiba'**
+  String get importDtzFailureDialogTitle;
+
+  /// No description provided for @importDtzPartialImportTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'A kottaimportálás hibákkal fejeződött be'**
+  String get importDtzPartialImportTitle;
+
+  /// No description provided for @importDtzFailureSourceUnreadable.
+  ///
+  /// In hu, this message translates to:
+  /// **'A kiválasztott ZIP fájl nem olvasható.'**
+  String get importDtzFailureSourceUnreadable;
+
+  /// No description provided for @importDtzFailureInvalidArchive.
+  ///
+  /// In hu, this message translates to:
+  /// **'A kiválasztott fájl nem érvényes ZIP archívum.'**
+  String get importDtzFailureInvalidArchive;
+
+  /// No description provided for @importDtzFailureTooManyEntries.
+  ///
+  /// In hu, this message translates to:
+  /// **'A ZIP túl sok fájlt tartalmaz.'**
+  String get importDtzFailureTooManyEntries;
+
+  /// No description provided for @importDtzFailureEntryTooLarge.
+  ///
+  /// In hu, this message translates to:
+  /// **'A ZIP egy biztonságosan importálhatónál nagyobb fájlt tartalmaz.'**
+  String get importDtzFailureEntryTooLarge;
+
+  /// No description provided for @importDtzFailureTotalTooLarge.
+  ///
+  /// In hu, this message translates to:
+  /// **'A ZIP túl sok adatot bontana ki a biztonságos importáláshoz.'**
+  String get importDtzFailureTotalTooLarge;
+
+  /// No description provided for @importDtzFailureCancelled.
+  ///
+  /// In hu, this message translates to:
+  /// **'Az importálást megszakítottad.'**
+  String get importDtzFailureCancelled;
+
+  /// No description provided for @importDtzFailureEntryUnreadable.
+  ///
+  /// In hu, this message translates to:
+  /// **'A ZIP egyik fájlja nem bontható ki.'**
+  String get importDtzFailureEntryUnreadable;
+
+  /// No description provided for @importDtzFailureWriteFailed.
+  ///
+  /// In hu, this message translates to:
+  /// **'A kibontott fájl nem írható. Ellenőrizd a szabad tárhelyet.'**
+  String get importDtzFailureWriteFailed;
+
+  /// No description provided for @importDtzFailureDetails.
+  ///
+  /// In hu, this message translates to:
+  /// **'{zip}: {reason}'**
+  String importDtzFailureDetails(Object zip, Object reason);
+
+  /// No description provided for @importDtzProgress.
+  ///
+  /// In hu, this message translates to:
+  /// **'Kibontás: {entry} ({current}/{total})'**
+  String importDtzProgress(Object entry, int current, int total);
+
   /// No description provided for @importDtxFilesSuccess.
   ///
   /// In hu, this message translates to:

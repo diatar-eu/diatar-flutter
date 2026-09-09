@@ -1289,6 +1289,54 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get importDtzFailureDialogTitle => 'Score import problem';
+
+  @override
+  String get importDtzPartialImportTitle =>
+      'Score import completed with problems';
+
+  @override
+  String get importDtzFailureSourceUnreadable =>
+      'The selected ZIP file could not be read.';
+
+  @override
+  String get importDtzFailureInvalidArchive =>
+      'The selected file is not a valid ZIP archive.';
+
+  @override
+  String get importDtzFailureTooManyEntries =>
+      'The ZIP contains too many files.';
+
+  @override
+  String get importDtzFailureEntryTooLarge =>
+      'The ZIP contains a file that is too large to import safely.';
+
+  @override
+  String get importDtzFailureTotalTooLarge =>
+      'The ZIP would extract too much data to import safely.';
+
+  @override
+  String get importDtzFailureCancelled => 'The import was cancelled.';
+
+  @override
+  String get importDtzFailureEntryUnreadable =>
+      'A file in the ZIP could not be extracted.';
+
+  @override
+  String get importDtzFailureWriteFailed =>
+      'The extracted file could not be written. Check available storage.';
+
+  @override
+  String importDtzFailureDetails(Object zip, Object reason) {
+    return '$zip: $reason';
+  }
+
+  @override
+  String importDtzProgress(Object entry, int current, int total) {
+    return 'Extracting $entry ($current/$total)';
+  }
+
+  @override
   String importDtxFilesSuccess(int count) {
     return '$count .dtx file(s) imported';
   }

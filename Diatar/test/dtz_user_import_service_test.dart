@@ -7,6 +7,7 @@ import 'package:file/local.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:diatar_app/src/services/dtz_user_import_service.dart';
+import 'package:diatar_app/src/services/streaming_zip_service.dart';
 
 List<int> _bytes(String content) =>
     Uint8List.fromList(utf8.encode(content.replaceAll('\r\n', '\n')));
@@ -195,6 +196,52 @@ void main() {
     expect(
       await tempDir.childFile('target/foto/kotta/01.jpg').readAsString(),
       'image',
+    );
+  });
+
+  test('reports ZIP validation failures instead of hiding them', () async {
+    final Directory tempDir = await LocalFileSystem().systemTempDirectory
+        .createTemp('dtz_invalid_zip_test_');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final File zipFile = tempDir.childFile('broken.zip');
+    await zipFile.writeAsString('not a zip');
+
+    final DtzUserImportAnalysis analysis = await service.analyzeFiles(
+      dtzFiles: <String, List<int>>{
+        'sample.dtz': _bytes('i 3894733E 3000\r\n'),
+      },
+      zipFilePaths: <String, String>{'broken.zip': zipFile.path},
+      availableDiaIds: <String>{'3894733E'},
+    );
+
+    expect(analysis.zipFailures, hasLength(1));
+    expect(
+      analysis.zipFailures.single.error.code,
+      StreamingZipErrorCode.invalidArchive,
+    );
+  });
+
+  test('rejects archives exceeding configured extraction limits', () async {
+    final Directory tempDir = await LocalFileSystem().systemTempDirectory
+        .createTemp('dtz_zip_limit_test_');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final File zipFile = tempDir.childFile('large-entry.zip');
+    await zipFile.writeAsBytes(
+      _zip(<String, String>{'foto/kotta/01.jpg': 'too large'}),
+    );
+
+    await expectLater(
+      const StreamingZipService().fileNames(
+        zipFile.path,
+        limits: const StreamingZipLimits(maxEntrySize: 1),
+      ),
+      throwsA(
+        isA<StreamingZipException>().having(
+          (StreamingZipException error) => error.code,
+          'code',
+          StreamingZipErrorCode.entryTooLarge,
+        ),
+      ),
     );
   });
 }
