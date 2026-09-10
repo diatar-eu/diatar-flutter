@@ -3,10 +3,10 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:diatar_common/diatar_common.dart';
 
-typedef StateCallback = void Function(RecStateRecord record);
-typedef TextCallback = void Function(RecTextRecord record);
-typedef ImageCallback = void Function(RecImageRecord record);
-typedef AskSizeCallback = void Function();
+typedef StateCallback = FutureOr<void> Function(RecStateRecord record);
+typedef TextCallback = FutureOr<void> Function(RecTextRecord record);
+typedef ImageCallback = FutureOr<void> Function(RecImageRecord record);
+typedef AskSizeCallback = FutureOr<void> Function();
 typedef ErrorCallback = void Function(String message);
 typedef ConnectionCallback = void Function(bool connected);
 
@@ -33,6 +33,7 @@ class TcpServerService {
   Socket? _client;
   StreamSubscription<List<int>>? _clientSub;
   final ProjectionPacketParser _parser = ProjectionPacketParser();
+  Future<void> _dispatchQueue = Future<void>.value();
 
   int _port = -1;
 
@@ -45,10 +46,17 @@ class TcpServerService {
       return;
     }
     try {
-      _server = await ServerSocket.bind(InternetAddress.anyIPv4, _port, shared: true);
-      _server!.listen(_onClient, onError: (Object e) {
-        onError('tcpServerError:$e');
-      });
+      _server = await ServerSocket.bind(
+        InternetAddress.anyIPv4,
+        _port,
+        shared: true,
+      );
+      _server!.listen(
+        _onClient,
+        onError: (Object e) {
+          onError('tcpServerError:$e');
+        },
+      );
     } catch (e) {
       onError('tcpServerOpenPortFailed:$_port:$e');
     }
@@ -72,7 +80,11 @@ class TcpServerService {
   }
 
   Future<void> sendScreenSize({required int width, required int height}) async {
-    final Uint8List body = encodeScreenSizeRecord(width: width, height: height, korusMode: false);
+    final Uint8List body = encodeScreenSizeRecord(
+      width: width,
+      height: height,
+      korusMode: false,
+    );
     await _sendPacket(RecTypes.scrSize, body);
   }
 
@@ -104,27 +116,29 @@ class TcpServerService {
   void _onData(List<int> data) {
     final List<ProjectionPacket> packets = _parser.addChunk(data);
     for (final ProjectionPacket packet in packets) {
-      _dispatch(packet.type, packet.body);
+      _dispatchQueue = _dispatchQueue.then(
+        (_) => _dispatch(packet.type, packet.body),
+      );
     }
   }
 
-  void _dispatch(int type, Uint8List body) {
+  Future<void> _dispatch(int type, Uint8List body) async {
     try {
       switch (type) {
         case RecTypes.state:
-          onState(RecStateRecord.fromBytes(body));
+          await onState(RecStateRecord.fromBytes(body));
           break;
         case RecTypes.text:
-          onText(RecTextRecord.fromBytes(body));
+          await onText(RecTextRecord.fromBytes(body));
           break;
         case RecTypes.pic:
-          onPic(RecImageRecord.fromBytes(body));
+          await onPic(RecImageRecord.fromBytes(body));
           break;
         case RecTypes.blank:
-          onBlank(RecImageRecord.fromBytes(body));
+          await onBlank(RecImageRecord.fromBytes(body));
           break;
         case RecTypes.askSize:
-          onAskSize();
+          await onAskSize();
           break;
         case RecTypes.idle:
           // No-op.

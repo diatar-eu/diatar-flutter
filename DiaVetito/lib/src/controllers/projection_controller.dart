@@ -43,13 +43,15 @@ class ProjectionController extends ChangeNotifier {
   static ProjectionController? _instance;
   AppLifecycleListener? _lifecycleListener;
 
-  static void _onStateStatic(RecStateRecord record) =>
-      _instance?._onState(record);
-  static void _onTextStatic(RecTextRecord record) => _instance?._onText(record);
-  static void _onPicStatic(RecImageRecord record) => _instance?._onPic(record);
-  static void _onBlankStatic(RecImageRecord record) =>
-      _instance?._onBlank(record);
-  static void _onAskSizeStatic() => _instance?._onAskSize();
+  static Future<void> _onStateStatic(RecStateRecord record) async =>
+      await _instance?._onState(record);
+  static Future<void> _onTextStatic(RecTextRecord record) async =>
+      _instance?._onText(record);
+  static Future<void> _onPicStatic(RecImageRecord record) async =>
+      await _instance?._onPic(record);
+  static Future<void> _onBlankStatic(RecImageRecord record) async =>
+      await _instance?._onBlank(record);
+  static Future<void> _onAskSizeStatic() async => await _instance?._onAskSize();
   static void _onErrorStatic(String message) => _instance?._onError(message);
   static void _onConnectionStatic(bool connected) =>
       _instance?._onConnection(connected);
