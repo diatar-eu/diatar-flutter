@@ -15,6 +15,7 @@ class MainActivity : FlutterActivity() {
 	companion object {
 		private const val DIA_SAVE_CHANNEL = "diatar.eu/dia_save"
 		private const val ZIP_IMPORT_CHANNEL = "diatar.eu/zip_import"
+		private const val EXTERNAL_COMMAND_CHANNEL = "diatar.eu/external_command"
 		private const val REQUEST_SAVE_DIA = 6091
 		private const val REQUEST_PICK_ZIP = 6092
 	}
@@ -43,6 +44,52 @@ class MainActivity : FlutterActivity() {
 					result.notImplemented()
 				}
 			}
+		MethodChannel(flutterEngine.dartExecutor.binaryMessenger, EXTERNAL_COMMAND_CHANNEL)
+			.setMethodCallHandler { call, result ->
+				if (call.method == "run") {
+					runExternalCommand(call, result)
+				} else {
+					result.notImplemented()
+				}
+			}
+	}
+
+	private fun runExternalCommand(call: MethodCall, result: MethodChannel.Result) {
+		val command = call.argument<String>("command")?.trim()
+		if (command.isNullOrEmpty()) {
+			result.error("invalid_args", "Missing command.", null)
+			return
+		}
+
+		try {
+			val isBroadcast = command.startsWith("broadcast:", ignoreCase = true)
+			val intentSpec = if (isBroadcast) {
+				command.substring("broadcast:".length).trim()
+			} else {
+				command
+			}
+			if (intentSpec.isEmpty()) {
+				result.error("invalid_args", "Missing intent after broadcast prefix.", null)
+				return
+			}
+			val intent = if (intentSpec.startsWith("intent:", ignoreCase = true)) {
+				Intent.parseUri(intentSpec, Intent.URI_INTENT_SCHEME)
+			} else {
+				Intent(Intent.ACTION_VIEW, Uri.parse(intentSpec))
+			}
+			if (isBroadcast) {
+				sendBroadcast(intent)
+			} else {
+				startActivity(intent)
+			}
+			result.success(null)
+		} catch (e: Exception) {
+			result.error(
+				"external_command_failed",
+				e.localizedMessage ?: e.toString(),
+				null,
+			)
+		}
 	}
 
 	private fun startZipImportPick(result: MethodChannel.Result) {

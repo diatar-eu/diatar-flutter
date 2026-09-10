@@ -5276,6 +5276,8 @@ class DiatarMainController extends ChangeNotifier {
       await _externalCommandService.run(command);
     } on ProcessException catch (error) {
       debugPrint('External command failed: $error');
+    } on PlatformException catch (error) {
+      debugPrint('External command failed: $error');
     }
   }
 

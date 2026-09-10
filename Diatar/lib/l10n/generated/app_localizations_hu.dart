@@ -1381,15 +1381,15 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get externalCommandsSummary =>
-      'Shell parancsok futtatása program- és vetítési eseményekkor';
+      'Parancsok vagy Android-intentek indítása program- és vetítési eseményekkor';
 
   @override
   String get externalCommandsDescription =>
-      'Windows és Linux rendszeren a program vagy a vetítés állapotának változásakor futó shell parancsok beállítása.';
+      'A program vagy a vetítés állapotának változásakor Windows és Linux rendszeren shell parancs, Androidon URI, deep link, intent vagy broadcast indítása állítható be.';
 
   @override
   String get externalCommandsHint =>
-      'Az üresen hagyott eseményhez nem fut parancs. A parancsokat az operációs rendszer parancsértelmezője indítja.';
+      'Az üresen hagyott eseményhez nem fut parancs. Windows és Linux rendszeren a parancsokat az operációs rendszer parancsértelmezője indítja. Androidon URI vagy deep link, Android Intent URI, illetve broadcast küldéséhez \"broadcast:\" előtaggal ellátott Intent URI adható meg. Az Intent URI extrákat is kezel, például: intent:#Intent;action=com.example.ACTION;S.name=value;i.count=1;end';
 
   @override
   String get externalCommandOnStart => 'A program indulásakor';

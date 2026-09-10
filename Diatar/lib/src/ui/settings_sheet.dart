@@ -1839,6 +1839,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         title: context.l10n.externalCommandTestFailedTitle,
         message: context.l10n.externalCommandTestFailed('$error'),
       );
+    } on PlatformException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      await _showExternalCommandTestDialog(
+        title: context.l10n.externalCommandTestFailedTitle,
+        message: context.l10n.externalCommandTestFailed('$error'),
+      );
     }
   }
 
@@ -2439,9 +2447,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         await exportFile.saveTo(fileName);
       } else {
         final String zipPath = await _exportImportService
-            .createExportArchiveFile(
-              onProgress: widget.onFileTransferProgress,
-            );
+            .createExportArchiveFile(onProgress: widget.onFileTransferProgress);
         tempExportDir = FileSystemProvider.instance.file(zipPath).parent.path;
         if (defaultTargetPlatform == TargetPlatform.android) {
           try {
@@ -2580,9 +2586,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ScaffoldMessenger.of(sectionContext).showSnackBar(
           SnackBar(
             content: Text(
-              sectionContext.l10n.diatarImportSuccess(
-                result.importedFileCount,
-              ),
+              sectionContext.l10n.diatarImportSuccess(result.importedFileCount),
             ),
           ),
         );
@@ -3200,7 +3204,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       return false;
     }
     return defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux;
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.android;
   }
 
   String _eventToCombo(KeyEvent event) {

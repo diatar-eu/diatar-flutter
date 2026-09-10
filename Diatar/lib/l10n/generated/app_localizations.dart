@@ -2432,19 +2432,19 @@ abstract class AppLocalizations {
   /// No description provided for @externalCommandsSummary.
   ///
   /// In hu, this message translates to:
-  /// **'Shell parancsok futtatása program- és vetítési eseményekkor'**
+  /// **'Parancsok vagy Android-intentek indítása program- és vetítési eseményekkor'**
   String get externalCommandsSummary;
 
   /// No description provided for @externalCommandsDescription.
   ///
   /// In hu, this message translates to:
-  /// **'Windows és Linux rendszeren a program vagy a vetítés állapotának változásakor futó shell parancsok beállítása.'**
+  /// **'A program vagy a vetítés állapotának változásakor Windows és Linux rendszeren shell parancs, Androidon URI, deep link, intent vagy broadcast indítása állítható be.'**
   String get externalCommandsDescription;
 
   /// No description provided for @externalCommandsHint.
   ///
   /// In hu, this message translates to:
-  /// **'Az üresen hagyott eseményhez nem fut parancs. A parancsokat az operációs rendszer parancsértelmezője indítja.'**
+  /// **'Az üresen hagyott eseményhez nem fut parancs. Windows és Linux rendszeren a parancsokat az operációs rendszer parancsértelmezője indítja. Androidon URI vagy deep link, Android Intent URI, illetve broadcast küldéséhez \"broadcast:\" előtaggal ellátott Intent URI adható meg. Az Intent URI extrákat is kezel, például: intent:#Intent;action=com.example.ACTION;S.name=value;i.count=1;end'**
   String get externalCommandsHint;
 
   /// No description provided for @externalCommandOnStart.

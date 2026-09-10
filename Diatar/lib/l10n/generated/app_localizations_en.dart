@@ -1377,15 +1377,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get externalCommandsSummary =>
-      'Run shell commands for application and projection events';
+      'Run commands or Android intents for application and projection events';
 
   @override
   String get externalCommandsDescription =>
-      'Configure shell commands that run on Windows and Linux when the application or projection state changes.';
+      'Configure shell commands on Windows and Linux, or URIs, deep links, intents and broadcasts on Android, when the application or projection state changes.';
 
   @override
   String get externalCommandsHint =>
-      'Leave a field empty to skip that event. Commands run through the operating system shell.';
+      'Leave a field empty to skip that event. On Windows and Linux commands run through the system shell. On Android, enter a URI or deep link, an Android Intent URI, or prefix an Intent URI with \"broadcast:\" to send it as a broadcast. Intent URI extras are supported, for example: intent:#Intent;action=com.example.ACTION;S.name=value;i.count=1;end';
 
   @override
   String get externalCommandOnStart => 'When the application starts';

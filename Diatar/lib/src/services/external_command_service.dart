@@ -3,17 +3,29 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 class ExternalCommandService {
   const ExternalCommandService();
 
+  static const MethodChannel _androidChannel = MethodChannel(
+    'diatar.eu/external_command',
+  );
+
   bool get isSupported =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.windows ||
-          defaultTargetPlatform == TargetPlatform.linux);
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.android);
 
   Future<void> run(String command) async {
     if (!isSupported || command.trim().isEmpty) {
+      return;
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      await _androidChannel.invokeMethod<void>('run', <String, String>{
+        'command': command.trim(),
+      });
       return;
     }
     await Process.start(
@@ -25,6 +37,12 @@ class ExternalCommandService {
   }
 
   Future<ExternalCommandTestResult> test(String command) async {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      await _androidChannel.invokeMethod<void>('run', <String, String>{
+        'command': command.trim(),
+      });
+      return const ExternalCommandTestResult(exitCode: null, errorOutput: '');
+    }
     final Process process = await Process.start(
       command,
       const <String>[],
