@@ -41,6 +41,25 @@ void main() {
     expect(AppSettings.fromMap(settings.toMap()).advanceAfterMusic, isTrue);
   });
 
+  test('state record preserves background image visibility', () {
+    const ProjectionGlobals globals = ProjectionGlobals(
+      isBlankPic: true,
+      showBlankPic: true,
+    );
+
+    final Uint8List bytes = encodeStateRecord(
+      globals,
+      projecting: false,
+      wordToHighlight: 0,
+    );
+    final RecStateRecord state = RecStateRecord.fromBytes(bytes);
+
+    expect(bytes[311], 1);
+    expect(state.projecting, isFalse);
+    expect(state.isBlankPic, isTrue);
+    expect(state.showBlankPic, isTrue);
+  });
+
   test('packet parser rebuilds records from split chunks', () {
     final ProjectionPacketParser parser = ProjectionPacketParser();
     final Uint8List payload = Uint8List.fromList(

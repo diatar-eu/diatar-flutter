@@ -218,7 +218,7 @@ class ProjectionController extends ChangeNotifier {
     if (globals.projecting && diaFrame != null) {
       return diaFrame;
     }
-    if (!globals.projecting && blankFrame != null) {
+    if (globals.isBlankPic && globals.showBlankPic && blankFrame != null) {
       return blankFrame;
     }
     return null;
@@ -573,7 +573,7 @@ class ProjectionController extends ChangeNotifier {
     if (globals.projecting) {
       return diaFrame;
     }
-    if (blankFrame != null) {
+    if (globals.isBlankPic && globals.showBlankPic && blankFrame != null) {
       return blankFrame;
     }
     return null;
