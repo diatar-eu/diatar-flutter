@@ -2421,7 +2421,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                   horizontalTitleGap: 0,
                   contentPadding: EdgeInsets.zero,
                   leading: SizedBox(
-                    width: showSoundControls ? 134 : 78,
+                    // Leave room after the drag handle for Android's
+                    // device-pixel rounding of the compact icon buttons.
+                    width: showSoundControls ? 138 : 82,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
@@ -2523,7 +2525,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                   title: Padding(
                     padding: EdgeInsets.only(
                       left: isContinuation
-                          ? (showSoundControls ? 154 : 98)
+                          ? (showSoundControls ? 158 : 102)
                           : 16,
                       right: 8,
                     ),
