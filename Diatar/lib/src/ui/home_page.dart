@@ -1818,6 +1818,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     if (!modelReady && context.mounted) {
       final l10n = context.l10n;
       final String sizeStr = await _fetchModelSize(modelInfo);
+      if (!context.mounted) return;
       final bool? confirmed = await showDialog<bool>(
         context: context,
         builder: (BuildContext ctx) => AlertDialog(

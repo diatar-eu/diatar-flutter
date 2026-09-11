@@ -3,10 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class MqttUserApiException implements Exception {
-  const MqttUserApiException({
-    required this.message,
-    this.statusCode,
-  });
+  const MqttUserApiException({required this.message, this.statusCode});
 
   final String message;
   final int? statusCode;
@@ -20,7 +17,7 @@ class MqttUserApiService {
   static const int _maxRedirects = 5;
 
   MqttUserApiService({String? Function()? acceptLanguageProvider})
-      : _acceptLanguageProvider = acceptLanguageProvider;
+    : _acceptLanguageProvider = acceptLanguageProvider;
 
   final String? Function()? _acceptLanguageProvider;
   final http.Client _client = http.Client();
@@ -107,7 +104,11 @@ class MqttUserApiService {
 
   Future<void> _post(String path, Map<String, String> payload) async {
     Uri uri = Uri.parse('$_baseUrl$path');
-    for (int redirectCount = 0; redirectCount <= _maxRedirects; redirectCount++) {
+    for (
+      int redirectCount = 0;
+      redirectCount <= _maxRedirects;
+      redirectCount++
+    ) {
       final String? acceptLanguage = _normalizeLanguageCode(
         _acceptLanguageProvider?.call(),
       );
@@ -148,10 +149,6 @@ class MqttUserApiService {
     throw const MqttUserApiException(message: 'Too many redirects');
   }
 
-  bool _isRedirect(int statusCode) {
-    return statusCode >= 300 && statusCode < 400;
-  }
-
   String _extractError(String body, int statusCode) {
     if (body.trim().isEmpty) {
       return 'HTTP $statusCode';
@@ -159,12 +156,17 @@ class MqttUserApiService {
     try {
       final dynamic decoded = jsonDecode(body);
       if (decoded is Map<String, dynamic>) {
-        final String? validationErrors = _extractValidationErrors(decoded['errors']);
+        final String? validationErrors = _extractValidationErrors(
+          decoded['errors'],
+        );
         if (validationErrors != null) {
           return validationErrors;
         }
         final dynamic message =
-            decoded['message'] ?? decoded['error'] ?? decoded['title'] ?? decoded['detail'];
+            decoded['message'] ??
+            decoded['error'] ??
+            decoded['title'] ??
+            decoded['detail'];
         if (message is String && message.trim().isNotEmpty) {
           return message;
         }

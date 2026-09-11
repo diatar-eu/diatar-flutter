@@ -64,10 +64,7 @@ class NapiLelkiBatyuService {
     throw Exception('Napi lelki batyu adat nem érhető el: $iso');
   }
 
-  Map<String, dynamic> _normalizeDay(
-    String iso,
-    Map<String, dynamic> raw,
-  ) {
+  Map<String, dynamic> _normalizeDay(String iso, Map<String, dynamic> raw) {
     // Ensure the date key is present for downstream consumers.
     final Map<String, dynamic> result = <String, dynamic>{...raw};
     result['ISO'] = iso;
@@ -95,7 +92,8 @@ class NapiLelkiBatyuService {
   List<NapiLelkiBatyuCelebration> parseCelebrations(
     Map<String, dynamic> dayJson,
   ) {
-    final List<dynamic>? celebrations = dayJson['celebration'] as List<dynamic>?;
+    final List<dynamic>? celebrations =
+        dayJson['celebration'] as List<dynamic>?;
     if (celebrations == null || celebrations.isEmpty) {
       return const <NapiLelkiBatyuCelebration>[];
     }
@@ -145,10 +143,7 @@ class NapiLelkiBatyuService {
       if (part is Map<String, dynamic>) {
         typed.add(part);
       } else if (part is List) {
-        typed.add(<String, dynamic>{
-          'type': 'array',
-          'content': part,
-        });
+        typed.add(<String, dynamic>{'type': 'array', 'content': part});
       }
     }
     return typed;
@@ -198,8 +193,10 @@ class NapiLelkiBatyuService {
           if (item is! Map<String, dynamic>) {
             continue;
           }
-          final List<CustomOrderEntry> variantEntries =
-              _entriesForPart(item, wordsPerSlide: wordsPerSlide);
+          final List<CustomOrderEntry> variantEntries = _entriesForPart(
+            item,
+            wordsPerSlide: wordsPerSlide,
+          );
           // When a part offers several alternatives (e.g. a longer and a
           // shorter "vagy" reading), each alternative must appear as its own
           // selectable item rather than being merged into one continuous
@@ -208,8 +205,9 @@ class NapiLelkiBatyuService {
           // alternative's own split verses stay together.
           if (variantCount > 1) {
             final String cause = _stringOrEmpty(item['cause']);
-            final String suffix =
-                cause.isNotEmpty ? cause : 'változat ${v + 1}';
+            final String suffix = cause.isNotEmpty
+                ? cause
+                : 'változat ${v + 1}';
             entries.addAll(_tagVariantEntries(variantEntries, suffix));
           } else {
             entries.addAll(variantEntries);
@@ -257,8 +255,9 @@ class NapiLelkiBatyuService {
       final String newTitle = slashIdx >= 0
           ? '${title.substring(0, slashIdx)}$tag${title.substring(slashIdx)}'
           : '$title$tag';
-      final String newLabel =
-          e.label.startsWith('[Batyu] ') ? '[Batyu] $newTitle' : newTitle;
+      final String newLabel = e.label.startsWith('[Batyu] ')
+          ? '[Batyu] $newTitle'
+          : newTitle;
       return e.copyWith(customTextTitle: newTitle, label: newLabel);
     }).toList();
   }
@@ -317,7 +316,9 @@ class NapiLelkiBatyuService {
       return const <CustomOrderEntry>[];
     }
 
-    final String effectiveTitle = slideTitle.isNotEmpty ? slideTitle : 'Olvasmány';
+    final String effectiveTitle = slideTitle.isNotEmpty
+        ? slideTitle
+        : 'Olvasmány';
 
     // Split the body into multiple verses. We prefer to break at sentence,
     // clause or quotation boundaries, but never exceed [wordsPerSlide] words.
@@ -399,7 +400,6 @@ class NapiLelkiBatyuService {
     Map<String, dynamic> part, {
     required int wordsPerSlide,
   }) {
-    final String teaser = _stringOrEmpty(part['teaser']);
     final String ref = _stringOrEmpty(part['ref']);
     final List<String> lines = _bodyLinesForPart(part, ref: ref);
 
@@ -418,7 +418,10 @@ class NapiLelkiBatyuService {
       ];
     }
 
-    final List<List<String>> chunks = chunkLinesByBoundary(lines, wordsPerSlide);
+    final List<List<String>> chunks = chunkLinesByBoundary(
+      lines,
+      wordsPerSlide,
+    );
     final List<CustomOrderEntry> entries = <CustomOrderEntry>[];
     for (int i = 0; i < chunks.length; i++) {
       final String body = tokensToText(chunks[i]);
@@ -446,12 +449,10 @@ class NapiLelkiBatyuService {
   /// before the first verse stay attached to the first stanza instead of
   /// becoming their own slide.
   List<List<String>> _splitPsalmStanzas(List<String> lines) {
-    bool stanzaHasVerse(List<String> stanza) => stanza.any(
-          (String l) {
-            final String t = l.trim();
-            return t.startsWith('Előénekes:') || t.startsWith('E:');
-          },
-        );
+    bool stanzaHasVerse(List<String> stanza) => stanza.any((String l) {
+      final String t = l.trim();
+      return t.startsWith('Előénekes:') || t.startsWith('E:');
+    });
 
     final List<List<String>> stanzas = <List<String>>[];
     List<String> current = <String>[];
@@ -535,13 +536,27 @@ class NapiLelkiBatyuService {
     // built at runtime to avoid writing literal entities in source.
     final String amp = '&';
     final Map<String, String> entities = <String, String>{
-      '$amp''amp;': '&',
-      '$amp''lt;': '<',
-      '$amp''gt;': '>',
-      '$amp''quot;': '"',
-      '$amp''apos;': "'",
-      '$amp''#39;': "'",
-      '$amp''nbsp;': ' ',
+      '$amp'
+              'amp;':
+          '&',
+      '$amp'
+              'lt;':
+          '<',
+      '$amp'
+              'gt;':
+          '>',
+      '$amp'
+              'quot;':
+          '"',
+      '$amp'
+              'apos;':
+          "'",
+      '$amp'
+              '#39;':
+          "'",
+      '$amp'
+              'nbsp;':
+          ' ',
     };
     for (final MapEntry<String, String> entry in entities.entries) {
       working = working.replaceAll(entry.key, entry.value);

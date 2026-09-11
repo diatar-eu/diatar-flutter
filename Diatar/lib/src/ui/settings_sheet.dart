@@ -700,6 +700,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     required VoidCallback onTap,
     String? description,
   }) {
+    final l10n = context.l10n;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
       leading: leading,
@@ -716,11 +717,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 onPressed: () => showDialog<void>(
                   context: context,
                   builder: (BuildContext ctx) => AlertDialog(
-                    content: Text(description!),
+                    content: Text(description),
                     actions: <Widget>[
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: Text(context.l10n.ok),
+                        child: Text(l10n.ok),
                       ),
                     ],
                   ),
@@ -1089,51 +1090,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
-  Future<void> _changeUsername() async {
-    final l10n = context.l10n;
-    final _ChangeUsernameInput? input = await _askChangeUsernameInput(
-      title: l10n.userActionChangeUsername,
-      initialUsername: _mqttUser.text.trim(),
-    );
-    if (input == null) {
-      return;
-    }
-    final String username = input.username;
-    final String password = input.password;
-    final String newUsername = input.newUsername;
-    if (username.isEmpty || password.isEmpty || newUsername.isEmpty) {
-      await _showInternetResultDialog(
-        l10n.userActionValidationRequiredChangeUsernameFields,
-      );
-      return;
-    }
-
-    await _runUserApiAction(
-      successMessage: l10n.userActionChangeUsernameSuccess,
-      action: () => _userApi.changeUsername(
-        username: username,
-        password: password,
-        newUsername: newUsername,
-        newPassword: password,
-      ),
-    );
-  }
-
-  Future<_ChangeUsernameInput?> _askChangeUsernameInput({
-    required String title,
-    required String initialUsername,
-  }) {
-    return showDialog<_ChangeUsernameInput>(
-      context: context,
-      builder: (BuildContext context) {
-        return _ChangeUsernameInputDialog(
-          title: title,
-          initialUsername: initialUsername,
-        );
-      },
-    );
-  }
-
   Future<_RegistrationInput?> _askRegistrationInput({
     required String title,
     required String initialUsername,
@@ -1326,17 +1282,31 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
   }
 
-  Future<Uint8List?> _buildInternetQrPng(String url, {double size = 1200}) {
+  Future<Uint8List?> _buildInternetQrPng(
+    String url, {
+    double size = 1200,
+  }) async {
     final QrPainter painter = QrPainter(
       data: url,
       version: QrVersions.auto,
       gapless: true,
-      color: Colors.black,
-      emptyColor: Colors.white,
+      eyeStyle: const QrEyeStyle(color: Colors.black),
+      dataModuleStyle: const QrDataModuleStyle(color: Colors.black),
     );
-    return painter
-        .toImageData(size, format: ui.ImageByteFormat.png)
-        .then((ByteData? data) => data?.buffer.asUint8List());
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(recorder)
+      ..drawColor(Colors.white, BlendMode.src);
+    painter.paint(canvas, Size.square(size));
+
+    final ui.Image image = await recorder.endRecording().toImage(
+      size.toInt(),
+      size.toInt(),
+    );
+    final ByteData? data = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    image.dispose();
+    return data?.buffer.asUint8List();
   }
 
   String _internetQrFileName() {
@@ -2165,32 +2135,32 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       builder:
           (BuildContext context, void Function(void Function()) setModalBoth) {
             return <Widget>[
-              RadioListTile<String>(
-                contentPadding: EdgeInsets.zero,
-                title: Text(l10n.speechLangAuto),
-                value: 'auto',
+              RadioGroup<String>(
                 groupValue: _liveSubtitleLanguage,
-                onChanged: (String? v) {
-                  if (v != null) {
-                    setBoth(() => _liveSubtitleLanguage = v);
+                onChanged: (String? value) {
+                  if (value != null) {
+                    setBoth(() => _liveSubtitleLanguage = value);
                     setModalBoth(() {});
                   }
                 },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l10n.speechLangAuto),
+                      value: 'auto',
+                    ),
+                    for (final code in _speechLanguageCodes)
+                      if (code != 'auto')
+                        RadioListTile<String>(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(_speechLanguageName(code, l10n)),
+                          value: code,
+                        ),
+                  ],
+                ),
               ),
-              for (final code in _speechLanguageCodes)
-                if (code != 'auto')
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(_speechLanguageName(code, l10n)),
-                    value: code,
-                    groupValue: _liveSubtitleLanguage,
-                    onChanged: (String? v) {
-                      if (v != null) {
-                        setBoth(() => _liveSubtitleLanguage = v);
-                        setModalBoth(() {});
-                      }
-                    },
-                  ),
             ];
           },
     );
@@ -3309,7 +3279,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: DropdownButtonFormField<PicPlcButtonAction>(
-                value: _picPlcButtonActions[index],
+                initialValue: _picPlcButtonActions[index],
                 isExpanded: true,
                 decoration: InputDecoration(
                   labelText: l10n.picPlcButtonLabel(index + 1),
@@ -3342,7 +3312,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: DropdownButtonFormField<PicPlcLedAction>(
-                value: _picPlcLedActions[index],
+                initialValue: _picPlcLedActions[index],
                 isExpanded: true,
                 decoration: InputDecoration(
                   labelText: l10n.picPlcLedLabel(index + 1),
@@ -4193,10 +4163,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     return Color(parsed);
   }
 
-  String _rgbHex(Color color) {
-    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
-  }
-
   String _songLabelForId(String id) {
     for (final SongHotkeyOption option in _availableSongs) {
       if (option.id == id) {
@@ -4374,18 +4340,6 @@ class _ChangePasswordInput {
   final String username;
   final String password;
   final String newPassword;
-}
-
-class _ChangeUsernameInput {
-  const _ChangeUsernameInput({
-    required this.username,
-    required this.password,
-    required this.newUsername,
-  });
-
-  final String username;
-  final String password;
-  final String newUsername;
 }
 
 class _RegistrationInputDialog extends StatefulWidget {
@@ -4640,104 +4594,6 @@ class _ChangeEmailInputDialogState extends State<_ChangeEmailInputDialog> {
             controller: _newEmailController,
             keyboardType: TextInputType.emailAddress,
             decoration: InputDecoration(labelText: l10n.userFieldNewEmail),
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _submit(),
-          ),
-        ],
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.cancel),
-        ),
-        FilledButton(onPressed: _submit, child: Text(l10n.ok)),
-      ],
-    );
-  }
-}
-
-class _ChangeUsernameInputDialog extends StatefulWidget {
-  const _ChangeUsernameInputDialog({
-    required this.title,
-    required this.initialUsername,
-  });
-
-  final String title;
-  final String initialUsername;
-
-  @override
-  State<_ChangeUsernameInputDialog> createState() =>
-      _ChangeUsernameInputDialogState();
-}
-
-class _ChangeUsernameInputDialogState
-    extends State<_ChangeUsernameInputDialog> {
-  late final TextEditingController _usernameController;
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _newUsernameController = TextEditingController();
-  bool _showPassword = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _usernameController = TextEditingController(text: widget.initialUsername);
-  }
-
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
-    _newUsernameController.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    Navigator.of(context).pop(
-      _ChangeUsernameInput(
-        username: _usernameController.text.trim(),
-        password: _passwordController.text.trim(),
-        newUsername: _newUsernameController.text.trim(),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return AlertDialog(
-      title: Text(widget.title),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          TextField(
-            controller: _usernameController,
-            decoration: InputDecoration(
-              labelText: l10n.userFieldCurrentUsername,
-            ),
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _passwordController,
-            obscureText: !_showPassword,
-            decoration: InputDecoration(
-              labelText: l10n.userFieldCurrentPassword,
-              suffixIcon: IconButton(
-                tooltip: _showPassword
-                    ? l10n.passwordHideTooltip
-                    : l10n.passwordShowTooltip,
-                onPressed: () => setState(() => _showPassword = !_showPassword),
-                icon: Icon(
-                  _showPassword ? Icons.visibility_off : Icons.visibility,
-                ),
-              ),
-            ),
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _newUsernameController,
-            decoration: InputDecoration(labelText: l10n.userFieldNewUsername),
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _submit(),
           ),
@@ -5057,48 +4913,46 @@ class _ModelSelectorContentState extends State<_ModelSelectorContent> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return ListView(
-      shrinkWrap: true,
-      children: <Widget>[
-        Text(
-          l10n.speechModelStreaming,
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-        const SizedBox(height: 4),
-        for (final SpeechModelType type in SpeechModelType.values)
-          if (getSpeechModel(type).isStreaming)
-            RadioListTile<String>(
-              contentPadding: EdgeInsets.zero,
-              title: Text(getSpeechModel(type).displayName),
-              subtitle: Text(
-                '${getSpeechModel(type).latencyMs}ms  •  ${_modelSize(getSpeechModel(type))}',
+    return RadioGroup<String>(
+      groupValue: widget.liveSubtitleModel,
+      onChanged: (String? value) {
+        if (value != null) widget.onChanged(value);
+      },
+      child: ListView(
+        shrinkWrap: true,
+        children: <Widget>[
+          Text(
+            l10n.speechModelStreaming,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 4),
+          for (final SpeechModelType type in SpeechModelType.values)
+            if (getSpeechModel(type).isStreaming)
+              RadioListTile<String>(
+                contentPadding: EdgeInsets.zero,
+                title: Text(getSpeechModel(type).displayName),
+                subtitle: Text(
+                  '${getSpeechModel(type).latencyMs}ms  •  ${_modelSize(getSpeechModel(type))}',
+                ),
+                value: type.name,
               ),
-              value: type.name,
-              groupValue: widget.liveSubtitleModel,
-              onChanged: (String? v) {
-                if (v != null) widget.onChanged(v);
-              },
-            ),
-        const Divider(height: 1),
-        const SizedBox(height: 8),
-        Text(
-          l10n.speechModelOffline,
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-        const SizedBox(height: 4),
-        for (final SpeechModelType type in SpeechModelType.values)
-          if (!getSpeechModel(type).isStreaming)
-            RadioListTile<String>(
-              contentPadding: EdgeInsets.zero,
-              title: Text(getSpeechModel(type).displayName),
-              subtitle: Text(_modelSize(getSpeechModel(type))),
-              value: type.name,
-              groupValue: widget.liveSubtitleModel,
-              onChanged: (String? v) {
-                if (v != null) widget.onChanged(v);
-              },
-            ),
-      ],
+          const Divider(height: 1),
+          const SizedBox(height: 8),
+          Text(
+            l10n.speechModelOffline,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 4),
+          for (final SpeechModelType type in SpeechModelType.values)
+            if (!getSpeechModel(type).isStreaming)
+              RadioListTile<String>(
+                contentPadding: EdgeInsets.zero,
+                title: Text(getSpeechModel(type).displayName),
+                subtitle: Text(_modelSize(getSpeechModel(type))),
+                value: type.name,
+              ),
+        ],
+      ),
     );
   }
 }

@@ -6,7 +6,6 @@ import 'package:diatar_common/diatar_common.dart';
 import 'package:diatar_app/src/controllers/diatar_main_controller.dart';
 import 'package:diatar_app/src/core/custom_order/custom_order_navigation_policy.dart';
 import 'package:diatar_app/src/core/settings/transport_settings_policy.dart';
-import 'package:diatar_app/src/models/custom_order_entry.dart';
 import 'package:diatar_app/src/services/dtx_order_store.dart';
 import 'package:diatar_app/src/services/mqtt_sender_service.dart';
 import 'package:diatar_app/src/services/sender_transport_coordinator.dart';

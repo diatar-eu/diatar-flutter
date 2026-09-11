@@ -8,10 +8,7 @@ import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 
 class ZsolozsmaDayPart {
-  const ZsolozsmaDayPart({
-    required this.title,
-    required this.href,
-  });
+  const ZsolozsmaDayPart({required this.title, required this.href});
 
   final String title;
   final String href;
@@ -94,7 +91,9 @@ class ZsolozsmaService {
     final Map<int, String> failedByYear = <int, String>{};
 
     for (final int year in ordered) {
-      final File localZip = FileSystemProvider.instance.file('${storageDir.path}/$year.zip');
+      final File localZip = FileSystemProvider.instance.file(
+        '${storageDir.path}/$year.zip',
+      );
       if (await localZip.exists()) {
         continue;
       }
@@ -116,10 +115,8 @@ class ZsolozsmaService {
     required Directory storageDir,
     required DateTime date,
   }) async {
-    final ZsolozsmaDayPartsLoadResult result = await listDayPartsWithDiagnostics(
-      storageDir: storageDir,
-      date: date,
-    );
+    final ZsolozsmaDayPartsLoadResult result =
+        await listDayPartsWithDiagnostics(storageDir: storageDir, date: date);
     return result.parts;
   }
 
@@ -140,7 +137,9 @@ class ZsolozsmaService {
       );
     }
 
-    final File yearZip = FileSystemProvider.instance.file('${storageDir.path}/${date.year}.zip');
+    final File yearZip = FileSystemProvider.instance.file(
+      '${storageDir.path}/${date.year}.zip',
+    );
     if (!await yearZip.exists()) {
       diag.writeln('yearZip=${yearZip.path}');
       diag.writeln('yearZipExists=false');
@@ -239,7 +238,9 @@ class ZsolozsmaService {
         diag.writeln('archiveDayLooksLikeHtml=true');
       }
       html = decoded;
-      diag.writeln('htmlSource=${extractedFallback ? 'archive+extracted' : 'archive'}');
+      diag.writeln(
+        'htmlSource=${extractedFallback ? 'archive+extracted' : 'archive'}',
+      );
     }
 
     final document = html_parser.parse(html);
@@ -248,7 +249,9 @@ class ZsolozsmaService {
       date: date,
       yymmdd: yymmdd,
     );
-    diag.writeln('formsTotal=${document.querySelectorAll('form[action]').length}');
+    diag.writeln(
+      'formsTotal=${document.querySelectorAll('form[action]').length}',
+    );
     diag.writeln('anchorsTotal=${document.querySelectorAll('a[href]').length}');
     diag.writeln('parsedMatches=${result.length}');
 
@@ -274,9 +277,9 @@ class ZsolozsmaService {
     } else {
       final List<ZsolozsmaDayPart> extractedOverview =
           await _listDayPartsFromExtractedOverview(
-        storageDir: storageDir,
-        date: date,
-      );
+            storageDir: storageDir,
+            date: date,
+          );
       diag.writeln('extractedOverviewMatches=${extractedOverview.length}');
       if (extractedOverview.isNotEmpty) {
         return ZsolozsmaDayPartsLoadResult(
@@ -320,9 +323,9 @@ class ZsolozsmaService {
     final StringBuffer diag = StringBuffer();
     final String isoDate = _formatIsoDate(date);
     final String yymmdd =
-      '${(date.year % 100).toString().padLeft(2, '0')}'
-      '${date.month.toString().padLeft(2, '0')}'
-      '${date.day.toString().padLeft(2, '0')}';
+        '${(date.year % 100).toString().padLeft(2, '0')}'
+        '${date.month.toString().padLeft(2, '0')}'
+        '${date.day.toString().padLeft(2, '0')}';
     final String href = part.href.trim();
     final String hrefBase = _fileName(href);
     final String? partCode = _extractPartCodeFromHref(href);
@@ -355,7 +358,9 @@ class ZsolozsmaService {
       );
       if (webHtml != null && _looksLikeValidPrayerHtml(webHtml)) {
         diag.writeln('webFallback=ok');
-        diag.writeln('webUrl=${_buildDayPartUri(date: date, partCode: partCode)}');
+        diag.writeln(
+          'webUrl=${_buildDayPartUri(date: date, partCode: partCode)}',
+        );
         return ZsolozsmaDayPartHtmlResult(
           html: webHtml,
           diagnostics: diag.toString().trimRight(),
@@ -366,7 +371,9 @@ class ZsolozsmaService {
       diag.writeln('webFallback=skipped_no_part_code');
     }
 
-    final File yearZip = FileSystemProvider.instance.file('${storageDir.path}/${date.year}.zip');
+    final File yearZip = FileSystemProvider.instance.file(
+      '${storageDir.path}/${date.year}.zip',
+    );
     final bool yearZipExists = await yearZip.exists();
     if (!yearZipExists) {
       diag.writeln('yearZipExists=false');
@@ -395,7 +402,9 @@ class ZsolozsmaService {
           diag.writeln('archiveHrefFile=not_found');
         } else {
           diag.writeln('archiveHrefFile=${file.name}');
-          diag.writeln('archiveHrefCompression=${file.compression?.name ?? '-'}');
+          diag.writeln(
+            'archiveHrefCompression=${file.compression?.name ?? '-'}',
+          );
           diag.writeln('archiveHrefIsCompressed=${file.isCompressed}');
           diag.writeln('archiveHrefSize=${file.size}');
           String decoded = _decodeBytes(file.content);
@@ -410,7 +419,9 @@ class ZsolozsmaService {
               decoded = lzmaDecoded;
               diag.writeln('archiveHrefLzmaFallback=ok');
               diag.writeln('archiveHrefDecodedLength=${decoded.length}');
-              diag.writeln('archiveHrefDecodedHead=${_diagnosticHead(decoded)}');
+              diag.writeln(
+                'archiveHrefDecodedHead=${_diagnosticHead(decoded)}',
+              );
             } else {
               diag.writeln('archiveHrefLzmaFallback=failed');
             }
@@ -444,12 +455,13 @@ class ZsolozsmaService {
           );
         }
         if (partCode != null) {
-          final _ExtractedDayHtml? byCode = await _loadPartCodeHtmlViaExtraction(
-            storageDir: storageDir,
-            yearZip: yearZip,
-            yymmdd: yymmdd,
-            partCode: partCode,
-          );
+          final _ExtractedDayHtml? byCode =
+              await _loadPartCodeHtmlViaExtraction(
+                storageDir: storageDir,
+                yearZip: yearZip,
+                yymmdd: yymmdd,
+                partCode: partCode,
+              );
           if (byCode != null && _looksLikeHtml(byCode.html)) {
             diag.writeln('extractPartCode=ok');
             diag.writeln('extractPartCodeFile=${byCode.dayFilePath}');
@@ -483,7 +495,9 @@ class ZsolozsmaService {
     try {
       final http.Response response = await http.get(uri);
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception('HTTP ${response.statusCode} while downloading $sourceName');
+        throw Exception(
+          'HTTP ${response.statusCode} while downloading $sourceName',
+        );
       }
 
       await tmp.writeAsBytes(response.bodyBytes);
@@ -505,9 +519,7 @@ class ZsolozsmaService {
     }
 
     return Uri.parse(_webProxyUrl).replace(
-      queryParameters: <String, String>{
-        'url': '/download/$sourceName',
-      },
+      queryParameters: <String, String>{'url': '/download/$sourceName'},
     );
   }
 
@@ -591,10 +603,7 @@ class ZsolozsmaService {
       filePath: path,
       yearZip: yearZip,
     );
-    return _ExtractedDayHtml(
-      html: html,
-      dayFilePath: path,
-    );
+    return _ExtractedDayHtml(html: html, dayFilePath: path);
   }
 
   Future<_ExtractedDayHtml?> _loadPartCodeHtmlViaExtraction({
@@ -625,10 +634,7 @@ class ZsolozsmaService {
       filePath: path,
       yearZip: yearZip,
     );
-    return _ExtractedDayHtml(
-      html: html,
-      dayFilePath: path,
-    );
+    return _ExtractedDayHtml(html: html, dayFilePath: path);
   }
 
   Future<bool> _hasNewerZipThanExtraction({
@@ -645,12 +651,19 @@ class ZsolozsmaService {
     required File yearZip,
   }) async {
     final String yearName = _fileName(yearZip.path).replaceAll('.zip', '');
-    final Directory cacheRoot = FileSystemProvider.instance.directory('${storageDir.path}/_unzipped');
-    final Directory yearDir = FileSystemProvider.instance.directory('${cacheRoot.path}/$yearName');
+    final Directory cacheRoot = FileSystemProvider.instance.directory(
+      '${storageDir.path}/_unzipped',
+    );
+    final Directory yearDir = FileSystemProvider.instance.directory(
+      '${cacheRoot.path}/$yearName',
+    );
 
     final bool mustExtract =
         !await yearDir.exists() ||
-        await _hasNewerZipThanExtraction(zipFile: yearZip, extractedDir: yearDir);
+        await _hasNewerZipThanExtraction(
+          zipFile: yearZip,
+          extractedDir: yearDir,
+        );
 
     if (!mustExtract) {
       return yearDir;
@@ -732,7 +745,9 @@ class ZsolozsmaService {
     required Directory storageDir,
     required DateTime date,
   }) async {
-    final File yearZip = FileSystemProvider.instance.file('${storageDir.path}/${date.year}.zip');
+    final File yearZip = FileSystemProvider.instance.file(
+      '${storageDir.path}/${date.year}.zip',
+    );
     final Directory? yearDir = await _prepareExtractedYearDirectory(
       storageDir: storageDir,
       yearZip: yearZip,
@@ -791,7 +806,9 @@ class ZsolozsmaService {
         break;
       }
 
-      final File preferredFile = FileSystemProvider.instance.file(preferredPath);
+      final File preferredFile = FileSystemProvider.instance.file(
+        preferredPath,
+      );
       if (!await preferredFile.exists()) {
         break;
       }
@@ -933,10 +950,7 @@ class ZsolozsmaService {
     }
   }
 
-  String _decodeArchiveTextBytes(
-    List<int> bytes, {
-    int? uncompressedSize,
-  }) {
+  String _decodeArchiveTextBytes(List<int> bytes, {int? uncompressedSize}) {
     final String decoded = _decodeBytes(bytes);
     if (_looksLikeHtml(decoded)) {
       return decoded;
@@ -1051,7 +1065,9 @@ class ZsolozsmaService {
     final String head = text.length > 512
         ? text.substring(0, 512).toLowerCase()
         : text.toLowerCase();
-    return head.contains('<html') || head.contains('<body') || head.contains('<a ');
+    return head.contains('<html') ||
+        head.contains('<body') ||
+        head.contains('<a ');
   }
 
   List<ZsolozsmaDayPart> _extractDayPartsFromDocument({
@@ -1066,7 +1082,9 @@ class ZsolozsmaService {
     for (final dom.Element form in document.querySelectorAll('form[action]')) {
       final String action = (form.attributes['action'] ?? '').trim();
       final String? code = _canonicalDayPartCode(action);
-      if (code == null || !_isSupportedDayPartCode(code) || !seenCodes.add(code)) {
+      if (code == null ||
+          !_isSupportedDayPartCode(code) ||
+          !seenCodes.add(code)) {
         continue;
       }
 
@@ -1074,15 +1092,17 @@ class ZsolozsmaService {
       final String title = _titleForPartCode(
         code: code,
         fallback: _preferredDayPartTitle(
-        primary: input?.attributes['title'],
-        secondary: input?.attributes['value'],
-        fallback: code,
-      ),
+          primary: input?.attributes['title'],
+          secondary: input?.attributes['value'],
+          fallback: code,
+        ),
       );
-      fromForms.add(ZsolozsmaDayPart(
-        title: title,
-        href: _normalizedDayPartHref(dayPrefix: dayPrefix, code: code),
-      ));
+      fromForms.add(
+        ZsolozsmaDayPart(
+          title: title,
+          href: _normalizedDayPartHref(dayPrefix: dayPrefix, code: code),
+        ),
+      );
     }
 
     if (fromForms.isNotEmpty) {
@@ -1095,22 +1115,26 @@ class ZsolozsmaService {
     for (final dom.Element anchor in document.querySelectorAll('a[href]')) {
       final String href = (anchor.attributes['href'] ?? '').trim();
       final String? code = _canonicalDayPartCode(href);
-      if (code == null || !_isSupportedDayPartCode(code) || !seenCodes.add(code)) {
+      if (code == null ||
+          !_isSupportedDayPartCode(code) ||
+          !seenCodes.add(code)) {
         continue;
       }
 
       final String title = _titleForPartCode(
         code: code,
         fallback: _preferredDayPartTitle(
-        primary: anchor.attributes['title'],
-        secondary: anchor.text,
-        fallback: code,
-      ),
+          primary: anchor.attributes['title'],
+          secondary: anchor.text,
+          fallback: code,
+        ),
       );
-      fromAnchors.add(ZsolozsmaDayPart(
-        title: title,
-        href: _normalizedDayPartHref(dayPrefix: dayPrefix, code: code),
-      ));
+      fromAnchors.add(
+        ZsolozsmaDayPart(
+          title: title,
+          href: _normalizedDayPartHref(dayPrefix: dayPrefix, code: code),
+        ),
+      );
     }
 
     fromAnchors.sort(_compareDayPartOrder);
@@ -1121,61 +1145,6 @@ class ZsolozsmaService {
     return '${(date.year % 100).toString().padLeft(2, '0')}'
         '${date.month.toString().padLeft(2, '0')}'
         '${date.day.toString().padLeft(2, '0')}';
-  }
-
-  bool _matchesDayPartTarget({
-    required String rawTarget,
-    required DateTime date,
-    String? yymmdd,
-  }) {
-    final String target = rawTarget.trim();
-    if (target.isEmpty) {
-      return false;
-    }
-
-    final Uri? uri = Uri.tryParse(target);
-    if (uri != null) {
-      final String qt = uri.queryParameters['qt'] ?? '';
-      final String p = uri.queryParameters['p'] ?? '';
-      if (qt == 'pdt' && p.isNotEmpty && p != '*') {
-        return _matchesQueryDate(uri: uri, date: date);
-      }
-    }
-
-    return yymmdd != null && target.toUpperCase().contains(yymmdd.toUpperCase());
-  }
-
-  bool _matchesQueryDate({
-    required Uri uri,
-    required DateTime date,
-  }) {
-    final String day = uri.queryParameters['d'] ?? '';
-    final String month = uri.queryParameters['m'] ?? '';
-    final String year = uri.queryParameters['r'] ?? '';
-
-    if (day.isEmpty || month.isEmpty || year.isEmpty) {
-      return true;
-    }
-
-    return day == '${date.day}' &&
-        month == '${date.month}' &&
-        year == '${date.year}';
-  }
-
-  String _normalizeDayPartTarget(
-    String rawTarget,
-  ) {
-    final String target = rawTarget.trim();
-    final Uri? uri = Uri.tryParse(target);
-
-    final bool isCgi =
-        target.startsWith('/cgi-bin/l.cgi') ||
-        target.contains('/cgi-bin/l.cgi') ||
-        (uri != null && uri.path.endsWith('/cgi-bin/l.cgi'));
-    if (isCgi) {
-      return _normalizeHref(target);
-    }
-    return target;
   }
 
   String _normalizedDayPartHref({
@@ -1265,10 +1234,7 @@ class ZsolozsmaService {
     return false;
   }
 
-  String _titleForPartCode({
-    required String code,
-    required String fallback,
-  }) {
+  String _titleForPartCode({required String code, required String fallback}) {
     switch (code) {
       case '01':
         return 'Imádságra hívás';
@@ -1367,10 +1333,7 @@ class ZsolozsmaService {
     return null;
   }
 
-  Uri _buildDayPartUri({
-    required DateTime date,
-    required String partCode,
-  }) {
+  Uri _buildDayPartUri({required DateTime date, required String partCode}) {
     return Uri.parse(_cgiUrl).replace(
       queryParameters: <String, String>{
         'qt': 'pdt',
@@ -1394,10 +1357,7 @@ class ZsolozsmaService {
         return null;
       }
       final String html = _decodeBytes(response.bodyBytes);
-      return await _resolveFullTextPreference(
-        html: html,
-        baseUri: uri,
-      );
+      return await _resolveFullTextPreference(html: html, baseUri: uri);
     } catch (_) {
       return null;
     }
@@ -1433,7 +1393,8 @@ class ZsolozsmaService {
   }
 
   bool _isCgiHref(String href) {
-    return href.contains('/cgi-bin/l.cgi') || href.startsWith('$_baseSiteUrl/cgi-bin/l.cgi');
+    return href.contains('/cgi-bin/l.cgi') ||
+        href.startsWith('$_baseSiteUrl/cgi-bin/l.cgi');
   }
 
   String _normalizeHref(String href) {
@@ -1455,10 +1416,7 @@ class ZsolozsmaService {
         return null;
       }
       final String html = _decodeBytes(response.bodyBytes);
-      return await _resolveFullTextPreference(
-        html: html,
-        baseUri: uri,
-      );
+      return await _resolveFullTextPreference(html: html, baseUri: uri);
     } catch (_) {
       return null;
     }
@@ -1578,10 +1536,12 @@ class ZsolozsmaService {
         continue;
       }
 
-      result.add(ZsolozsmaDayPart(
-        title: _titleForPartCode(code: code, fallback: baseName),
-        href: _normalizedDayPartHref(dayPrefix: yymmdd, code: code),
-      ));
+      result.add(
+        ZsolozsmaDayPart(
+          title: _titleForPartCode(code: code, fallback: baseName),
+          href: _normalizedDayPartHref(dayPrefix: yymmdd, code: code),
+        ),
+      );
     }
 
     result.sort(_compareDayPartOrder);
@@ -1604,10 +1564,12 @@ class ZsolozsmaService {
       if (code == null || !_isSupportedDayPartCode(code) || !seen.add(code)) {
         continue;
       }
-      result.add(ZsolozsmaDayPart(
-        title: _titleForPartCode(code: code, fallback: baseName),
-        href: _normalizedDayPartHref(dayPrefix: yymmdd, code: code),
-      ));
+      result.add(
+        ZsolozsmaDayPart(
+          title: _titleForPartCode(code: code, fallback: baseName),
+          href: _normalizedDayPartHref(dayPrefix: yymmdd, code: code),
+        ),
+      );
     }
 
     result.sort(_compareDayPartOrder);
@@ -1665,10 +1627,7 @@ class ZsolozsmaService {
 }
 
 class _ExtractedDayHtml {
-  const _ExtractedDayHtml({
-    required this.html,
-    required this.dayFilePath,
-  });
+  const _ExtractedDayHtml({required this.html, required this.dayFilePath});
 
   final String html;
   final String dayFilePath;

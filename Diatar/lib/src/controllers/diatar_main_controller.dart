@@ -2571,10 +2571,6 @@ class DiatarMainController extends ChangeNotifier {
     );
   }
 
-  String _normalizeDiaText(String text) {
-    return _diaMatchingPolicy.normalize(text);
-  }
-
   int _findBookIndexForDia(String kotet) {
     return _diaMatchingPolicy.findBookIndex(books, kotet);
   }
@@ -3790,10 +3786,6 @@ class DiatarMainController extends ChangeNotifier {
     return _bookSortPolicy.compare(left, right);
   }
 
-  int _preferredBookGroupPriority(String group) {
-    return _bookSortPolicy.preferredGroupPriority(group);
-  }
-
   DtxBook? get currentBook =>
       books.isEmpty ? null : books[bookIndex.clamp(0, books.length - 1)];
 
@@ -4268,11 +4260,6 @@ class DiatarMainController extends ChangeNotifier {
     if (prevSongIdx == null) {
       return;
     }
-    final DtxBook? b = currentBook;
-    if (b == null) {
-      return;
-    }
-    final DtxSong prevSong = b.songs[prevSongIdx];
     _selectSongAndVerse(prevSongIdx, 0, includeVerseInStatus: false);
   }
 

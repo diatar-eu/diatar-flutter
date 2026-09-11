@@ -2317,7 +2317,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           buildDefaultDragHandles: false,
           clipBehavior: Clip.hardEdge,
           scrollController: _orderListScrollController,
-          onReorder: (int oldIndex, int newIndex) {
+          onReorderItem: (int oldIndex, int newIndex) {
             setState(() {
               if (_groupReorder) {
                 final ({int start, int end}) group = _contiguousGroupRange(
@@ -2335,13 +2335,10 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                 );
                 _entries.removeRange(groupStart, groupEnd + 1);
                 final int insertAt = newIndex > groupEnd
-                    ? newIndex - block.length
+                    ? newIndex - (block.length - 1)
                     : newIndex;
                 _entries.insertAll(insertAt, block);
               } else {
-                if (newIndex > oldIndex) {
-                  newIndex -= 1;
-                }
                 final CustomOrderEntry entry = _entries.removeAt(oldIndex);
                 _entries.insert(newIndex, entry);
               }
