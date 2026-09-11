@@ -904,6 +904,16 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customOrderEditTitle => 'Szerkesztő';
 
   @override
+  String customOrderEditTitleWithName(Object name) {
+    return '$name - Szerkesztő';
+  }
+
+  @override
+  String customOrderModifiedName(Object name) {
+    return '✦ $name';
+  }
+
+  @override
   String get customOrderGroupReorder => 'Csoportos áthelyezés';
 
   @override

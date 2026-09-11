@@ -901,6 +901,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customOrderEditTitle => 'Editor';
 
   @override
+  String customOrderEditTitleWithName(Object name) {
+    return '$name - Editor';
+  }
+
+  @override
+  String customOrderModifiedName(Object name) {
+    return '✦ $name';
+  }
+
+  @override
   String get customOrderGroupReorder => 'Group reordering';
 
   @override

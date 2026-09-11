@@ -601,6 +601,18 @@
   "diatarPlaylistFileTypeLabel": "Diatar playlist",
   "customOrderSuggestedFileName": "order.dia",
   "customOrderEditTitle": "Editor",
+  "customOrderEditTitleWithName": "{name} - Editor",
+  "@customOrderEditTitleWithName": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "customOrderModifiedName": "✦ {name}",
+  "@customOrderModifiedName": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "customOrderGroupReorder": "Group reordering",
   "customOrderPlaySoundTooltip": "Play the slide's music",
   "customOrderAdvanceAfterSoundTooltip": "Advance when the music ends",

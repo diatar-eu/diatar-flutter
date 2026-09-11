@@ -364,6 +364,8 @@ class DiatarMainController extends ChangeNotifier {
           enabled: s.enabled,
           baseName: normalizedBaseName,
           sourceType: s.sourceType,
+          cursor: s.cursor,
+          isModified: s.isModified,
         );
       }).toList();
       _activeOrderSetIndex = storedSets.activeIndex;
@@ -405,6 +407,7 @@ class DiatarMainController extends ChangeNotifier {
             enabled: true,
             baseName: _lastImportedCustomOrderBaseName,
             sourceType: customOrderState.sourceType,
+            isModified: false,
           ),
         ];
         _activeOrderSetIndex = 0;
@@ -450,6 +453,8 @@ class DiatarMainController extends ChangeNotifier {
             enabled: s.enabled,
             baseName: s.baseName,
             sourceType: s.sourceType,
+            cursor: s.cursor,
+            isModified: s.isModified,
           ),
         )
         .toList();
@@ -665,6 +670,7 @@ class DiatarMainController extends ChangeNotifier {
     _customOrderSets[index] = _customOrderSets[index].copyWith(
       name: trimmed,
       baseName: trimmed,
+      isModified: true,
     );
     if (index == _activeOrderSetIndex) {
       _lastImportedCustomOrderBaseName = trimmed;
@@ -2600,6 +2606,7 @@ class DiatarMainController extends ChangeNotifier {
     List<CustomOrderEntry> entries, {
     required bool activate,
     bool syncProjection = true,
+    bool markModified = true,
   }) async {
     final int previousCursor = _customOrderCursor;
     final CustomOrderEntry? previousEntry =
@@ -2608,6 +2615,12 @@ class DiatarMainController extends ChangeNotifier {
         : null;
 
     _customOrder = entries.map(normalizeEntry).toList();
+    if (markModified &&
+        _activeOrderSetIndex >= 0 &&
+        _activeOrderSetIndex < _customOrderSets.length) {
+      _customOrderSets[_activeOrderSetIndex] =
+          _customOrderSets[_activeOrderSetIndex].copyWith(isModified: true);
+    }
     if (_customOrder.isEmpty) {
       _diaVirtualBookSelected = false;
       _lastImportedCustomOrderBaseName = null;
@@ -3302,6 +3315,11 @@ class DiatarMainController extends ChangeNotifier {
       }
     }
     _customOrderSourceType = null;
+    if (_activeOrderSetIndex >= 0 &&
+        _activeOrderSetIndex < _customOrderSets.length) {
+      _customOrderSets[_activeOrderSetIndex] =
+          _customOrderSets[_activeOrderSetIndex].copyWith(isModified: false);
+    }
     await _persistCurrentCustomOrder();
     await _persistAllSets();
     _setStatus('statusOrderSaved', <String, String>{'path': path});
@@ -3510,7 +3528,7 @@ class DiatarMainController extends ChangeNotifier {
     if (mode == CustomOrderImportMode.overwriteActive &&
         _activeOrderSetIndex >= 0) {
       // Felülírjuk az éppen aktív diasort a betöltöttel.
-      await applyCustomOrder(imported, activate: activate);
+      await applyCustomOrder(imported, activate: activate, markModified: false);
       _lastImportedCustomOrderBaseName = baseName;
       _customOrderSourceType = null;
       _customOrderSets[_activeOrderSetIndex] =
@@ -3521,6 +3539,7 @@ class DiatarMainController extends ChangeNotifier {
             cursor: _customOrder.isEmpty
                 ? -1
                 : _customOrderCursor.clamp(0, _customOrder.length - 1),
+            isModified: false,
           );
       await _persistCurrentCustomOrder();
       await _persistAllSets();
@@ -3536,6 +3555,7 @@ class DiatarMainController extends ChangeNotifier {
         enabled: true,
         baseName: baseName,
         sourceType: null,
+        isModified: false,
       );
       _customOrderSets.add(newSet);
       _activeOrderSetIndex = _customOrderSets.length - 1;

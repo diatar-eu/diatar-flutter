@@ -601,6 +601,18 @@
   "diatarPlaylistFileTypeLabel": "Diatár playlist",
   "customOrderSuggestedFileName": "sorrend.dia",
   "customOrderEditTitle": "Szerkesztő",
+  "customOrderEditTitleWithName": "{name} - Szerkesztő",
+  "@customOrderEditTitleWithName": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "customOrderModifiedName": "✦ {name}",
+  "@customOrderModifiedName": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "customOrderGroupReorder": "Csoportos áthelyezés",
   "customOrderPlaySoundTooltip": "A dia zenéjének lejátszása",
   "customOrderAdvanceAfterSoundTooltip": "Továbblépés a zene végén",

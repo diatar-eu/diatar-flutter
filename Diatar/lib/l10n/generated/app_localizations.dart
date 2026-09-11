@@ -1631,6 +1631,18 @@ abstract class AppLocalizations {
   /// **'Szerkesztő'**
   String get customOrderEditTitle;
 
+  /// No description provided for @customOrderEditTitleWithName.
+  ///
+  /// In hu, this message translates to:
+  /// **'{name} - Szerkesztő'**
+  String customOrderEditTitleWithName(Object name);
+
+  /// No description provided for @customOrderModifiedName.
+  ///
+  /// In hu, this message translates to:
+  /// **'✦ {name}'**
+  String customOrderModifiedName(Object name);
+
   /// No description provided for @customOrderGroupReorder.
   ///
   /// In hu, this message translates to:

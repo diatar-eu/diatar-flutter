@@ -470,6 +470,19 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       builder: (BuildContext context, Widget? child) {
         _syncEntriesFromControllerIfNeeded();
         _ensureInsertSelectionValid();
+        final int activeSetIndex = controller.activeCustomOrderSetIndex;
+        final CustomOrderSet? activeSet =
+            activeSetIndex >= 0 &&
+                activeSetIndex < controller.customOrderSets.length
+            ? controller.customOrderSets[activeSetIndex]
+            : null;
+        final String editorTitle = activeSet == null
+            ? l10n.customOrderEditTitle
+            : l10n.customOrderEditTitleWithName(
+                activeSet.isModified
+                    ? l10n.customOrderModifiedName(activeSet.displayName)
+                    : activeSet.displayName,
+              );
         return Material(
           color: widget.embedded
               ? Colors.transparent
@@ -482,7 +495,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                   children: <Widget>[
                     Expanded(
                       child: Text(
-                        l10n.customOrderEditTitle,
+                        editorTitle,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -619,7 +632,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                               (CustomOrderSet set) => DropdownMenuItem<String>(
                                 value: set.id,
                                 child: Text(
-                                  set.displayName,
+                                  set.isModified
+                                      ? l10n.customOrderModifiedName(
+                                          set.displayName,
+                                        )
+                                      : set.displayName,
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                   style: set.enabled

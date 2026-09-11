@@ -262,9 +262,38 @@ void main() {
         expect(controller.customOrderSets.first.name, 'Új név');
         expect(controller.customOrderSets.first.baseName, 'Új név');
         expect(controller.customOrderSets.first.displayName, 'Új név');
+        expect(controller.customOrderSets.first.isModified, isFalse);
         expect(controller.suggestedCustomOrderBaseName, 'Új név');
       },
     );
+
+    test('tracks unsaved changes to a custom order set', () async {
+      final DiatarMainController controller = DiatarMainController();
+      final Directory directory = await Directory.systemTemp.createTemp(
+        'diatar_modified_order_test_',
+      );
+      final String path = '${directory.path}${Platform.pathSeparator}order.dia';
+      addTearDown(() => directory.delete(recursive: true));
+
+      await controller.createCustomOrderSet('Új diasor');
+      expect(controller.customOrderSets.single.isModified, isFalse);
+
+      await controller.applyCustomOrder(const <CustomOrderEntry>[
+        CustomOrderEntry(
+          fileName: '__custom_text__',
+          songIndex: -1,
+          verseIndex: 0,
+          label: '[Text] Test',
+          customTextTitle: 'Test',
+          customTextBody: 'Text',
+          customType: 'text',
+        ),
+      ], activate: true);
+      expect(controller.customOrderSets.single.isModified, isTrue);
+
+      await controller.exportCustomOrderToDia(path);
+      expect(controller.customOrderSets.single.isModified, isFalse);
+    });
 
     group('custom order sound settings', () {
       test('persists slide-specific sound flags', () {

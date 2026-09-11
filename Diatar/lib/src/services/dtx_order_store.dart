@@ -147,6 +147,7 @@ class StoredCustomOrderSet {
     this.baseName,
     this.sourceType,
     this.cursor = -1,
+    this.isModified = false,
   });
 
   final String id;
@@ -155,6 +156,7 @@ class StoredCustomOrderSet {
   final bool enabled;
   final String? baseName;
   final String? sourceType;
+  final bool isModified;
 
   /// A diasor utoljára ismert kurzorpozíciója. Visszamenőleges
   /// kompatibilitás: ha a tárolt JSON nem tartalmazza, -1 a default.
@@ -167,6 +169,7 @@ class StoredCustomOrderSet {
       'enabled': enabled,
       'entries': entries.map((StoredCustomOrderEntry e) => e.toJson()).toList(),
       'cursor': cursor,
+      'isModified': isModified,
     };
     if (baseName != null && baseName!.trim().isNotEmpty) {
       out['baseName'] = baseName!.trim();
@@ -202,6 +205,7 @@ class StoredCustomOrderSet {
     final Object? baseName = raw['baseName'];
     final Object? sourceType = raw['sourceType'];
     final Object? cursor = raw['cursor'];
+    final Object? isModified = raw['isModified'];
     return StoredCustomOrderSet(
       id: id,
       name: name,
@@ -210,6 +214,7 @@ class StoredCustomOrderSet {
       baseName: baseName is String ? baseName.trim() : null,
       sourceType: sourceType is String ? sourceType.trim() : null,
       cursor: cursor is num ? cursor.toInt() : -1,
+      isModified: isModified is bool ? isModified : false,
     );
   }
 }
