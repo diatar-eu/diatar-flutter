@@ -317,7 +317,9 @@ class MainActivity : FlutterActivity() {
 				} catch (_: Exception) {
 					// The provider does not support persisting the grant.
 				}
-				runOnUiThread { result.success(targetUri.toString()) }
+				runOnUiThread {
+					result.success(queryDisplayName(targetUri) ?: source.name)
+				}
 			} catch (e: Exception) {
 				runOnUiThread {
 					result.error("save_failed", e.localizedMessage ?: e.toString(), null)

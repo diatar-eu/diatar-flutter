@@ -2423,6 +2423,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     widget.onFileTransferProgress?.call(0);
     String? tempExportDir;
     final String fileName = _backupFileName(DateTime.now());
+    String savedFileName = fileName;
     final DiatarTransferCancellationToken cancellationToken =
         DiatarTransferCancellationToken();
     final ValueNotifier<_DiatarTransferProgress> progress =
@@ -2480,6 +2481,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             if (savedPath == null) {
               return;
             }
+            savedFileName = savedPath;
           } on MissingPluginException {
             await _saveDiatarBackupToDocumentsDirectory(
               fileName: fileName,
@@ -2495,13 +2497,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             return;
           }
           await FileSystemProvider.instance.file(zipPath).copy(location.path);
+          savedFileName = FileSystemProvider.instance.path.basename(
+            location.path,
+          );
         }
       }
 
       if (sectionContext.mounted) {
         await _showFileTransferMessage(
           sectionContext,
-          sectionContext.l10n.diatarExportSuccess(fileName),
+          sectionContext.l10n.diatarExportSuccess(savedFileName),
         );
       }
     } catch (error) {
