@@ -1880,6 +1880,24 @@ class AppLocalizationsHu extends AppLocalizations {
       'A kiválasztott fájl nem érvényes Diatár biztonsági mentés.';
 
   @override
+  String diatarTransferArchive(Object fileName) {
+    return 'ZIP fájl: $fileName';
+  }
+
+  @override
+  String diatarTransferCurrentFile(Object fileName) {
+    return 'Feldolgozás: $fileName';
+  }
+
+  @override
+  String diatarTransferProgress(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get diatarTransferCancelled => 'A műveletet megszakítottad.';
+
+  @override
   String diatarTransferError(Object error) {
     return 'A művelet nem sikerült: $error';
   }

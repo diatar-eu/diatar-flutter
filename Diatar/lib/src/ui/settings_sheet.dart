@@ -46,6 +46,26 @@ class CustomOrderSetOption {
 
 enum DiatarSettingsInitialSection { internet, localNetwork }
 
+class _DiatarTransferProgress {
+  const _DiatarTransferProgress({
+    required this.fileName,
+    this.entryName,
+    this.progress = 0,
+  });
+
+  final String fileName;
+  final String? entryName;
+  final double progress;
+
+  _DiatarTransferProgress copyWith({String? entryName, double? progress}) {
+    return _DiatarTransferProgress(
+      fileName: fileName,
+      entryName: entryName ?? this.entryName,
+      progress: progress ?? this.progress,
+    );
+  }
+}
+
 class DiatarSettingsSheet extends StatefulWidget {
   const DiatarSettingsSheet({
     super.key,
@@ -91,6 +111,9 @@ class DiatarSettingsSheet extends StatefulWidget {
 class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   static const MethodChannel _androidBackupSaveChannel = MethodChannel(
     'diatar.eu/dia_save',
+  );
+  static const MethodChannel _androidBackupSaveProgressChannel = MethodChannel(
+    'diatar.eu/dia_save_progress',
   );
   static final RegExp _simpleEmailPattern = RegExp(
     r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
@@ -2399,13 +2422,23 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     setBoth(() => _fileTransferRunning = true);
     widget.onFileTransferProgress?.call(0);
     String? tempExportDir;
+    final String fileName = _backupFileName(DateTime.now());
+    final DiatarTransferCancellationToken cancellationToken =
+        DiatarTransferCancellationToken();
+    final ValueNotifier<_DiatarTransferProgress> progress =
+        ValueNotifier<_DiatarTransferProgress>(
+          _DiatarTransferProgress(fileName: fileName),
+        );
+    _showDiatarTransferProgressDialog(
+      sectionContext,
+      progress: progress,
+      cancellationToken: cancellationToken,
+    );
     // A vezérlőablakot előrehozzuk, hogy a (macOS-on `runModal` alapú)
     // mentési panel megbízhatóan megjelenhessen; a vetítőablak jelenléte
     // nem zavarja, mivel a panel a fájlpárbeszédablak felett jelenik meg.
     await DesktopProjectorBridge.instance.prepareForNativeDialog();
     try {
-      final String fileName = _backupFileName(DateTime.now());
-
       if (kIsWeb) {
         final Uint8List zipData = await _exportImportService
             .createExportArchive();
@@ -2417,7 +2450,19 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         await exportFile.saveTo(fileName);
       } else {
         final String zipPath = await _exportImportService
-            .createExportArchiveFile(onProgress: widget.onFileTransferProgress);
+            .createExportArchiveFile(
+              onProgress: (double value) {
+                _updateDiatarTransferProgress(progress, value * 0.5);
+              },
+              onEntry: (String entryName) {
+                _updateDiatarTransferProgress(
+                  progress,
+                  progress.value.progress,
+                  entryName,
+                );
+              },
+              cancellationToken: cancellationToken,
+            );
         tempExportDir = FileSystemProvider.instance.file(zipPath).parent.path;
         if (defaultTargetPlatform == TargetPlatform.android) {
           try {
@@ -2425,6 +2470,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                 await _saveDiatarBackupWithAndroidSystemDialog(
                   fileName: fileName,
                   sourcePath: zipPath,
+                  onProgress: (double value) {
+                    _updateDiatarTransferProgress(
+                      progress,
+                      0.5 + (value * 0.5),
+                    );
+                  },
                 );
             if (savedPath == null) {
               return;
@@ -2448,10 +2499,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       }
 
       if (sectionContext.mounted) {
-        ScaffoldMessenger.of(sectionContext).showSnackBar(
-          SnackBar(
-            content: Text(sectionContext.l10n.diatarExportSuccess(fileName)),
-          ),
+        await _showFileTransferMessage(
+          sectionContext,
+          sectionContext.l10n.diatarExportSuccess(fileName),
         );
       }
     } catch (error) {
@@ -2474,6 +2524,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       // A fájlművelet (mentési panel, másolás) végeztével visszaállítjuk
       // a vezérlőablak fókuszát és a vetítőablak megjelenését.
       await DesktopProjectorBridge.instance.releaseFromNativeDialog();
+      if (sectionContext.mounted) {
+        _closeDiatarTransferProgressDialog(sectionContext);
+      }
+      progress.dispose();
       _finishFileTransfer(sectionContext.mounted, setBoth);
     }
   }
@@ -2481,11 +2535,31 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   Future<String?> _saveDiatarBackupWithAndroidSystemDialog({
     required String fileName,
     required String sourcePath,
-  }) {
-    return _androidBackupSaveChannel.invokeMethod<String>(
-      'saveBackupFile',
-      <String, Object?>{'fileName': fileName, 'path': sourcePath},
-    );
+    required ValueChanged<double> onProgress,
+  }) async {
+    _androidBackupSaveProgressChannel.setMethodCallHandler((
+      MethodCall call,
+    ) async {
+      if (call.method != 'backupSaveProgress') {
+        return;
+      }
+      final Map<Object?, Object?> values = Map<Object?, Object?>.from(
+        call.arguments as Map,
+      );
+      final int writtenBytes = values['writtenBytes']! as int;
+      final int totalBytes = values['totalBytes']! as int;
+      if (totalBytes > 0) {
+        onProgress(writtenBytes / totalBytes);
+      }
+    });
+    try {
+      return await _androidBackupSaveChannel.invokeMethod<String>(
+        'saveBackupFile',
+        <String, Object?>{'fileName': fileName, 'path': sourcePath},
+      );
+    } finally {
+      _androidBackupSaveProgressChannel.setMethodCallHandler(null);
+    }
   }
 
   Future<void> _saveDiatarBackupToDocumentsDirectory({
@@ -2506,6 +2580,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     String? tempArchivePath;
     setBoth(() => _fileTransferRunning = true);
     widget.onFileTransferProgress?.call(0);
+    DiatarTransferCancellationToken? cancellationToken;
+    ValueNotifier<_DiatarTransferProgress>? progress;
     try {
       final List<XFile> selectedFiles = await DesktopProjectorBridge.instance
           .runWithNativeDialog(
@@ -2517,6 +2593,19 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       if (selectedFile == null) {
         return;
       }
+      cancellationToken = DiatarTransferCancellationToken();
+      progress = ValueNotifier<_DiatarTransferProgress>(
+        _DiatarTransferProgress(fileName: selectedFile.name),
+      );
+      final ValueNotifier<_DiatarTransferProgress> transferProgress = progress;
+      if (!sectionContext.mounted) {
+        return;
+      }
+      _showDiatarTransferProgressDialog(
+        sectionContext,
+        progress: transferProgress,
+        cancellationToken: cancellationToken,
+      );
 
       final String selectedPath = selectedFile.path.trim();
       final bool hasDirectPath =
@@ -2538,11 +2627,31 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       final DiatarImportResult result = importPath != null
           ? await _exportImportService.importArchiveFile(
               importPath,
-              onProgress: widget.onFileTransferProgress,
+              onProgress: (double value) {
+                _updateDiatarTransferProgress(transferProgress, value);
+              },
+              onEntry: (String entryName) {
+                _updateDiatarTransferProgress(
+                  transferProgress,
+                  transferProgress.value.progress,
+                  entryName,
+                );
+              },
+              cancellationToken: cancellationToken,
             )
           : await _exportImportService.importArchive(
               zipData!,
-              onProgress: widget.onFileTransferProgress,
+              onProgress: (double value) {
+                _updateDiatarTransferProgress(transferProgress, value);
+              },
+              onEntry: (String entryName) {
+                _updateDiatarTransferProgress(
+                  transferProgress,
+                  transferProgress.value.progress,
+                  entryName,
+                );
+              },
+              cancellationToken: cancellationToken,
             );
 
       if (result.importedFileCount > 0) {
@@ -2553,12 +2662,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       }
 
       if (result.isSuccess) {
-        ScaffoldMessenger.of(sectionContext).showSnackBar(
-          SnackBar(
-            content: Text(
-              sectionContext.l10n.diatarImportSuccess(result.importedFileCount),
-            ),
-          ),
+        await _showFileTransferMessage(
+          sectionContext,
+          sectionContext.l10n.diatarImportSuccess(result.importedFileCount),
         );
       } else {
         await _showFileTransferError(sectionContext, result.errors.join('\n'));
@@ -2576,6 +2682,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           await tempArchive.delete();
         }
       }
+      if (sectionContext.mounted) {
+        _closeDiatarTransferProgressDialog(sectionContext);
+      }
+      progress?.dispose();
       _finishFileTransfer(sectionContext.mounted, setBoth);
     }
   }
@@ -2613,6 +2723,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           l10n.diatarExportSourceMissing,
         DiatarArchiveErrorCode.invalidArchive =>
           l10n.diatarImportInvalidArchive,
+        DiatarArchiveErrorCode.cancelled => l10n.diatarTransferCancelled,
       };
     } else {
       message = l10n.diatarTransferError(error.toString());
@@ -2632,6 +2743,109 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           ],
         );
       },
+    );
+  }
+
+  void _updateDiatarTransferProgress(
+    ValueNotifier<_DiatarTransferProgress> progress,
+    double value, [
+    String? entryName,
+  ]) {
+    progress.value = progress.value.copyWith(
+      progress: value,
+      entryName: entryName,
+    );
+    widget.onFileTransferProgress?.call(value);
+  }
+
+  void _showDiatarTransferProgressDialog(
+    BuildContext sectionContext, {
+    required ValueNotifier<_DiatarTransferProgress> progress,
+    required DiatarTransferCancellationToken cancellationToken,
+  }) {
+    unawaited(
+      showDialog<void>(
+        context: sectionContext,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          final AppLocalizations l10n = dialogContext.l10n;
+          return PopScope(
+            canPop: false,
+            child: AlertDialog(
+              title: Text(l10n.diatarDataTransferTitle),
+              content: ValueListenableBuilder<_DiatarTransferProgress>(
+                valueListenable: progress,
+                builder:
+                    (
+                      BuildContext context,
+                      _DiatarTransferProgress value,
+                      Widget? child,
+                    ) {
+                      final int percent = (value.progress * 100).round();
+                      return SizedBox(
+                        width: 360,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(l10n.diatarTransferArchive(value.fileName)),
+                            const SizedBox(height: 12),
+                            Text(
+                              l10n.diatarTransferCurrentFile(
+                                value.entryName ?? '-',
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 12),
+                            LinearProgressIndicator(value: value.progress),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(l10n.diatarTransferProgress(percent)),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: cancellationToken.isCancelled
+                      ? null
+                      : cancellationToken.cancel,
+                  child: Text(l10n.cancel),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _closeDiatarTransferProgressDialog(BuildContext sectionContext) {
+    if (sectionContext.mounted) {
+      Navigator.of(sectionContext, rootNavigator: true).pop();
+    }
+  }
+
+  Future<void> _showFileTransferMessage(
+    BuildContext sectionContext,
+    String message,
+  ) {
+    return showDialog<void>(
+      context: sectionContext,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(dialogContext.l10n.diatarDataTransferTitle),
+        content: Text(message),
+        actions: <Widget>[
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(dialogContext.l10n.ok),
+          ),
+        ],
+      ),
     );
   }
 

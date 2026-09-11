@@ -24,6 +24,7 @@ class MainActivity : FlutterActivity() {
 	private var pendingSaveBytes: ByteArray? = null
 	private var pendingSavePath: String? = null
 	private var pendingZipImportResult: MethodChannel.Result? = null
+	private var backupSaveProgressChannel: MethodChannel? = null
 
 	override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
 		super.configureFlutterEngine(flutterEngine)
@@ -35,6 +36,10 @@ class MainActivity : FlutterActivity() {
 					"saveBackupFile" -> startSaveBackupFlow(call, result)
 					else -> result.notImplemented()
 				}
+		backupSaveProgressChannel = MethodChannel(
+				flutterEngine.dartExecutor.binaryMessenger,
+				"diatar.eu/dia_save_progress"
+		)
 			}
 		MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ZIP_IMPORT_CHANNEL)
 			.setMethodCallHandler { call, result ->
@@ -241,17 +246,15 @@ class MainActivity : FlutterActivity() {
 		}
 
 		val targetUri = data.data
+		if (path != null) {
+			saveBackupFileAsync(result, targetUri!!, path)
+			return
+		}
 		try {
 			val stream = contentResolver.openOutputStream(targetUri!!)
 				?: throw IOException("Cannot open output stream for target URI.")
 			stream.use { out ->
-				if (path != null) {
-					java.io.File(path).inputStream().use { input ->
-						input.copyTo(out, bufferSize = 64 * 1024)
-					}
-				} else {
-					out.write(bytes!!)
-				}
+				out.write(bytes!!)
 				out.flush()
 			}
 			try {
@@ -265,18 +268,70 @@ class MainActivity : FlutterActivity() {
 				// session grant is enough for this save; later overwrites will
 				// fall back to the system picker if the grant is gone.
 			}
-			if (path != null) {
-				result.success(targetUri.toString())
-			} else {
-				result.success(
-					mapOf(
-						"uri" to targetUri.toString(),
-						"displayName" to queryDisplayName(targetUri)
-					)
+			result.success(
+				mapOf(
+					"uri" to targetUri.toString(),
+					"displayName" to queryDisplayName(targetUri)
 				)
-			}
+			)
 		} catch (e: Exception) {
 			result.error("save_failed", e.localizedMessage ?: e.toString(), null)
+		}
+	}
+
+	private fun saveBackupFileAsync(
+		result: MethodChannel.Result,
+		targetUri: Uri,
+		path: String
+	) {
+		Thread {
+			try {
+				val source = File(path)
+				val totalBytes = source.length()
+				var writtenBytes = 0L
+				var lastProgressAt = 0L
+				contentResolver.openOutputStream(targetUri, "wt")?.use { output ->
+					source.inputStream().use { input ->
+						val buffer = ByteArray(64 * 1024)
+						while (true) {
+							val count = input.read(buffer)
+							if (count < 0) break
+							output.write(buffer, 0, count)
+							writtenBytes += count
+							val now = System.currentTimeMillis()
+							if (now - lastProgressAt >= 100) {
+								sendBackupSaveProgress(writtenBytes, totalBytes)
+								lastProgressAt = now
+							}
+						}
+					}
+					output.flush()
+				} ?: throw IOException("Cannot open output stream for target URI.")
+				sendBackupSaveProgress(writtenBytes, totalBytes)
+				try {
+					contentResolver.takePersistableUriPermission(
+						targetUri,
+						Intent.FLAG_GRANT_READ_URI_PERMISSION or
+							Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+					)
+				} catch (_: Exception) {
+					// The provider does not support persisting the grant.
+				}
+				runOnUiThread { result.success(targetUri.toString()) }
+			} catch (e: Exception) {
+				runOnUiThread {
+					result.error("save_failed", e.localizedMessage ?: e.toString(), null)
+				}
+			}
+		}.start()
+	}
+
+	private fun sendBackupSaveProgress(writtenBytes: Long, totalBytes: Long) {
+		runOnUiThread {
+			backupSaveProgressChannel?.invokeMethod(
+				"backupSaveProgress",
+				mapOf("writtenBytes" to writtenBytes, "totalBytes" to totalBytes)
+			)
 		}
 	}
 

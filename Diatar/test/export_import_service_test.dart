@@ -51,10 +51,10 @@ void main() {
   });
 
   test('exports the complete diatar directory to a temp file', () async {
-    final Directory tempRoot =
-        await FileSystemProvider.instance.systemTempDirectory.createTemp(
-      'diatar_export_test_',
-    );
+    final Directory tempRoot = await FileSystemProvider
+        .instance
+        .systemTempDirectory
+        .createTemp('diatar_export_test_');
     addTearDown(() async {
       try {
         await tempRoot.delete(recursive: true);
@@ -83,9 +83,10 @@ void main() {
     );
     addTearDown(() async {
       try {
-        await FileSystemProvider.instance.file(zipPath).parent.delete(
-          recursive: true,
-        );
+        await FileSystemProvider.instance
+            .file(zipPath)
+            .parent
+            .delete(recursive: true);
       } catch (_) {
         // Ignore cleanup failures.
       }
@@ -109,6 +110,66 @@ void main() {
     );
     expect(progress, isNotEmpty);
     expect(progress.last, 1);
+  });
+
+  test('exports complete large files to a temp file', () async {
+    final Directory tempRoot = await FileSystemProvider
+        .instance
+        .systemTempDirectory
+        .createTemp('diatar_export_large_test_');
+    addTearDown(() async {
+      if (await tempRoot.exists()) {
+        await tempRoot.delete(recursive: true);
+      }
+    });
+    final ExportImportService diskService = ExportImportService(
+      documentsDirectoryPathProvider: () async => tempRoot.path,
+    );
+    final Uint8List content = Uint8List.fromList(
+      List<int>.generate(3 * 1024 * 1024 + 123, (int index) => index % 251),
+    );
+    final File source = FileSystemProvider.instance.file(
+      '${tempRoot.path}/diatar/DTXs/large.dtx',
+    );
+    await source.create(recursive: true);
+    await source.writeAsBytes(content);
+
+    final String zipPath = await diskService.createExportArchiveFile();
+    addTearDown(() async {
+      final Directory parent = FileSystemProvider.instance.file(zipPath).parent;
+      if (await parent.exists()) {
+        await parent.delete(recursive: true);
+      }
+    });
+
+    final Archive archive = ZipDecoder().decodeBytes(
+      await FileSystemProvider.instance.file(zipPath).readAsBytes(),
+    );
+    final ArchiveFile entry = archive.findFile('diatar/DTXs/large.dtx')!;
+    expect(entry.readBytes(), content);
+
+    final Directory restoreRoot = await FileSystemProvider
+        .instance
+        .systemTempDirectory
+        .createTemp('diatar_restore_large_test_');
+    addTearDown(() async {
+      if (await restoreRoot.exists()) {
+        await restoreRoot.delete(recursive: true);
+      }
+    });
+    final ExportImportService restoreService = ExportImportService(
+      documentsDirectoryPathProvider: () async => restoreRoot.path,
+    );
+    final DiatarImportResult result = await restoreService.importArchiveFile(
+      zipPath,
+    );
+    expect(result.errors, isEmpty);
+    expect(
+      await FileSystemProvider.instance
+          .file('${restoreRoot.path}/diatar/DTXs/large.dtx')
+          .readAsBytes(),
+      content,
+    );
   });
 
   test('overwrite policy replaces every existing file', () async {
@@ -144,9 +205,7 @@ void main() {
     });
 
     await expectLater(
-      service.importArchive(
-        bytes,
-      ),
+      service.importArchive(bytes),
       throwsA(
         isA<DiatarArchiveException>().having(
           (DiatarArchiveException error) => error.code,
@@ -194,13 +253,34 @@ void main() {
     expect(index, greaterThanOrEqualTo(0));
     final Uint8List corrupted = Uint8List.fromList(bytes);
     corrupted[index + needle.length ~/ 2] ^= 0xff;
+    final File target = fileSystem.file('/documents/diatar/DTXs/song.dtx');
+    await target.create(recursive: true);
+    await target.writeAsString('existing song');
 
-    final DiatarImportResult result = await service.importArchive(
-      corrupted,
-    );
+    final DiatarImportResult result = await service.importArchive(corrupted);
 
     expect(result.importedFileCount, 0);
     expect(result.errors, isNotEmpty);
+    expect(await target.readAsString(), 'existing song');
+  });
+
+  test('cancelling an import does not write archive files', () async {
+    final DiatarTransferCancellationToken cancellationToken =
+        DiatarTransferCancellationToken()..cancel();
+
+    await expectLater(
+      service.importArchive(
+        _zip(<String, List<int>>{'diatar/DTXs/song.dtx': utf8.encode('song')}),
+        cancellationToken: cancellationToken,
+      ),
+      throwsA(
+        isA<DiatarArchiveException>().having(
+          (DiatarArchiveException error) => error.code,
+          'code',
+          DiatarArchiveErrorCode.cancelled,
+        ),
+      ),
+    );
     expect(
       await fileSystem.file('/documents/diatar/DTXs/song.dtx').exists(),
       isFalse,

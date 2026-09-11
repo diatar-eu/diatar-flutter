@@ -3329,6 +3329,30 @@ abstract class AppLocalizations {
   /// **'A kiválasztott fájl nem érvényes Diatár biztonsági mentés.'**
   String get diatarImportInvalidArchive;
 
+  /// No description provided for @diatarTransferArchive.
+  ///
+  /// In hu, this message translates to:
+  /// **'ZIP fájl: {fileName}'**
+  String diatarTransferArchive(Object fileName);
+
+  /// No description provided for @diatarTransferCurrentFile.
+  ///
+  /// In hu, this message translates to:
+  /// **'Feldolgozás: {fileName}'**
+  String diatarTransferCurrentFile(Object fileName);
+
+  /// No description provided for @diatarTransferProgress.
+  ///
+  /// In hu, this message translates to:
+  /// **'{percent}%'**
+  String diatarTransferProgress(int percent);
+
+  /// No description provided for @diatarTransferCancelled.
+  ///
+  /// In hu, this message translates to:
+  /// **'A műveletet megszakítottad.'**
+  String get diatarTransferCancelled;
+
   /// No description provided for @diatarTransferError.
   ///
   /// In hu, this message translates to:

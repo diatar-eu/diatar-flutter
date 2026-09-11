@@ -1203,6 +1203,27 @@
   "diatarImportSkipAll": "Mellőzés",
   "diatarExportSourceMissing": "A belső diatar mappa nem található.",
   "diatarImportInvalidArchive": "A kiválasztott fájl nem érvényes Diatár biztonsági mentés.",
+  "diatarTransferArchive": "ZIP fájl: {fileName}",
+  "@diatarTransferArchive": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "diatarTransferCurrentFile": "Feldolgozás: {fileName}",
+  "@diatarTransferCurrentFile": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "diatarTransferProgress": "{percent}%",
+  "@diatarTransferProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "diatarTransferCancelled": "A műveletet megszakítottad.",
   "diatarTransferError": "A művelet nem sikerült: {error}",
   "@diatarTransferError": {
     "placeholders": {

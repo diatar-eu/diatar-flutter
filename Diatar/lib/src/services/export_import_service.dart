@@ -9,7 +9,11 @@ import 'package:path/path.dart' as path;
 import '../utils/file_system_provider.dart';
 import '../utils/path_helper.dart';
 
-enum DiatarArchiveErrorCode { sourceDirectoryMissing, invalidArchive }
+enum DiatarArchiveErrorCode {
+  sourceDirectoryMissing,
+  invalidArchive,
+  cancelled,
+}
 
 class DiatarArchiveException implements Exception {
   const DiatarArchiveException(this.code, [this.details]);
@@ -38,6 +42,29 @@ class DiatarImportResult {
 
 typedef DocumentsDirectoryPathProvider = Future<String> Function();
 typedef FileSystemPersister = Future<void> Function();
+typedef ArchiveEntryCallback = void Function(String entryName);
+
+class DiatarTransferCancellationToken {
+  bool _isCancelled = false;
+  void Function()? _onCancel;
+
+  bool get isCancelled => _isCancelled;
+
+  void cancel() {
+    if (_isCancelled) {
+      return;
+    }
+    _isCancelled = true;
+    _onCancel?.call();
+  }
+
+  void _setOnCancel(void Function()? onCancel) {
+    _onCancel = onCancel;
+    if (_isCancelled) {
+      _onCancel?.call();
+    }
+  }
+}
 
 class ExportImportService {
   ExportImportService({
@@ -108,18 +135,22 @@ class ExportImportService {
   /// returned file and its parent directory and must delete them when done.
   Future<String> createExportArchiveFile({
     void Function(double progress)? onProgress,
+    ArchiveEntryCallback? onEntry,
+    DiatarTransferCancellationToken? cancellationToken,
   }) async {
     final FileSystem fs = _fs;
     final String documentsPath = await _documentsDirectoryPathProvider();
     final Directory tempDir = await fs.systemTempDirectory.createTemp(
       'diatar_backup_',
     );
-    final String targetPath = fs.path.join(tempDir.path, 'diatar-backup.zip'    );
+    final String targetPath = fs.path.join(tempDir.path, 'diatar-backup.zip');
     try {
       await _streamExportArchiveTo(
         documentsPath: documentsPath,
         targetPath: targetPath,
         onProgress: onProgress,
+        onEntry: onEntry,
+        cancellationToken: cancellationToken,
       );
       return targetPath;
     } catch (_) {
@@ -135,12 +166,16 @@ class ExportImportService {
   Future<DiatarImportResult> importArchive(
     Uint8List zipData, {
     void Function(double progress)? onProgress,
+    ArchiveEntryCallback? onEntry,
+    DiatarTransferCancellationToken? cancellationToken,
   }) async {
     final _ReadArchive read = _readArchiveFromBytes(zipData);
     try {
       return await _importValidatedArchive(
         _validateCentralDirectory(read.headers),
         onProgress: onProgress,
+        onEntry: onEntry,
+        cancellationToken: cancellationToken,
       );
     } finally {
       await read.close();
@@ -150,12 +185,16 @@ class ExportImportService {
   Future<DiatarImportResult> importArchiveFile(
     String zipFilePath, {
     void Function(double progress)? onProgress,
+    ArchiveEntryCallback? onEntry,
+    DiatarTransferCancellationToken? cancellationToken,
   }) async {
     final _ReadArchive read = _readArchiveFromFilePath(zipFilePath);
     try {
       return await _importValidatedArchive(
         _validateCentralDirectory(read.headers),
         onProgress: onProgress,
+        onEntry: onEntry,
+        cancellationToken: cancellationToken,
       );
     } finally {
       await read.close();
@@ -206,6 +245,8 @@ class ExportImportService {
   Future<DiatarImportResult> _importValidatedArchive(
     _ValidatedArchive archive, {
     void Function(double progress)? onProgress,
+    ArchiveEntryCallback? onEntry,
+    DiatarTransferCancellationToken? cancellationToken,
   }) async {
     final Directory targetDirectory = await resolveDiatarDirectory();
     await targetDirectory.create(recursive: true);
@@ -215,8 +256,7 @@ class ExportImportService {
     int completedBytes = 0;
     final int totalBytes = archive.files.fold(
       0,
-      (int total, _ValidatedFile file) =>
-          total + file.header.uncompressedSize,
+      (int total, _ValidatedFile file) => total + file.header.uncompressedSize,
     );
     final List<String> errors = <String>[];
 
@@ -241,9 +281,14 @@ class ExportImportService {
     }
 
     for (final _ValidatedFile archivedFile in archive.files) {
+      _throwIfCancelled(cancellationToken);
+      onEntry?.call(archivedFile.relativePath);
       final File target = _targetFile(
         targetDirectory,
         archivedFile.relativePath,
+      );
+      final File temporaryTarget = _fs.file(
+        '${target.path}.importing-${DateTime.now().microsecondsSinceEpoch}',
       );
       try {
         await target.parent.create(recursive: true);
@@ -256,8 +301,9 @@ class ExportImportService {
         Object? failure;
         try {
           output = _FsOutputStream(
-            target,
+            temporaryTarget,
             onBytesWritten: (int bytesWritten) {
+              _throwIfCancelled(cancellationToken);
               if (totalBytes > 0) {
                 onProgress?.call(
                   ((completedBytes + bytesWritten) / totalBytes)
@@ -270,8 +316,10 @@ class ExportImportService {
           output.open();
           entry.decompress(output);
           final int computedCrc32 = output.crc32;
+          final int archiveCompatibleCrc32 = output.archiveCompatibleCrc32;
           final int expectedCrc32 = archivedFile.header.crc32;
-          if (computedCrc32 != expectedCrc32) {
+          if (computedCrc32 != expectedCrc32 &&
+              archiveCompatibleCrc32 != expectedCrc32) {
             throw FormatException(
               'CRC mismatch: expected $expectedCrc32, got $computedCrc32.',
             );
@@ -286,19 +334,23 @@ class ExportImportService {
 
         if (failure != null) {
           try {
-            if (await target.exists()) {
-              await target.delete();
+            if (await temporaryTarget.exists()) {
+              await temporaryTarget.delete();
             }
           } catch (_) {
             // Best effort cleanup of the partial file.
           }
           errors.add('${archivedFile.relativePath}: $failure');
         } else {
+          await _replaceTargetFile(temporaryTarget, target);
           importedFileCount++;
         }
       } catch (error) {
         errors.add('${archivedFile.relativePath}: $error');
       } finally {
+        if (await temporaryTarget.exists()) {
+          await temporaryTarget.delete();
+        }
         completedFileCount++;
         completedBytes += archivedFile.header.uncompressedSize;
         onProgress?.call(
@@ -306,6 +358,7 @@ class ExportImportService {
               ? completedBytes / totalBytes
               : completedFileCount / archive.files.length,
         );
+        _throwIfCancelled(cancellationToken);
       }
     }
 
@@ -321,6 +374,35 @@ class ExportImportService {
       importedFileCount: importedFileCount,
       errors: List<String>.unmodifiable(errors),
     );
+  }
+
+  void _throwIfCancelled(DiatarTransferCancellationToken? cancellationToken) {
+    if (cancellationToken?.isCancelled ?? false) {
+      throw const DiatarArchiveException(DiatarArchiveErrorCode.cancelled);
+    }
+  }
+
+  Future<void> _replaceTargetFile(File temporary, File target) async {
+    if (!await target.exists()) {
+      await temporary.rename(target.path);
+      return;
+    }
+
+    final File backup = _fs.file(
+      '${target.path}.backup-${DateTime.now().microsecondsSinceEpoch}',
+    );
+    await target.rename(backup.path);
+    try {
+      await temporary.rename(target.path);
+    } catch (_) {
+      if (await backup.exists()) {
+        await backup.rename(target.path);
+      }
+      rethrow;
+    }
+    if (await backup.exists()) {
+      await backup.delete();
+    }
   }
 
   _ValidatedArchive _validateCentralDirectory(List<ZipFileHeader> headers) {
@@ -356,9 +438,7 @@ class ExportImportService {
         if (isDirectory) {
           directories.add(relativePath);
         } else {
-          files.add(
-            _ValidatedFile(relativePath: relativePath, header: header),
-          );
+          files.add(_ValidatedFile(relativePath: relativePath, header: header));
         }
       }
     } catch (error) {
@@ -453,27 +533,38 @@ class _ReadArchive {
 /// bounded by a fixed chunk buffer instead of the uncompressed file size.
 class _FsOutputStream extends OutputStream {
   static const int _chunkSize = 64 * 1024;
+  static const int _archiveCrcChunkSize = 1024 * 1024;
 
-  _FsOutputStream(
-    File file, {
-    this.onBytesWritten,
-  })
-      : _file = file,
-        super(byteOrder: ByteOrder.littleEndian);
+  _FsOutputStream(File file, {this.onBytesWritten})
+    : _file = file,
+      super(byteOrder: ByteOrder.littleEndian);
 
   final File _file;
   final void Function(int bytesWritten)? onBytesWritten;
   final Uint8List _chunk = Uint8List(_chunkSize);
+  final Uint8List _archiveCrcChunk = Uint8List(_archiveCrcChunkSize);
   io.RandomAccessFile? _handle;
   int _chunkLength = 0;
+  int _archiveCrcChunkLength = 0;
   int _length = 0;
-  int _crc32 = 0;
+  int _crc32 = 0xffffffff;
+  int _archiveCompatibleCrc32 = 0;
 
   @override
   int get length => _length;
 
   /// CRC32 of all bytes written so far.
-  int get crc32 => _crc32;
+  int get crc32 {
+    _flushChunk();
+    return _crc32 ^ 0xffffffff;
+  }
+
+  /// CRC32 calculated with archive's legacy 1 MiB chunking behavior.
+  int get archiveCompatibleCrc32 {
+    _flushChunk();
+    _flushArchiveCrcChunk();
+    return _archiveCompatibleCrc32;
+  }
 
   /// Opens the underlying file for writing. Called before the first write so
   /// that empty entries still produce an (empty) file on disk.
@@ -486,15 +577,44 @@ class _FsOutputStream extends OutputStream {
     if (_chunkLength == 0) {
       return;
     }
-    final Uint8List bytes = Uint8List.sublistView(
-      _chunk,
-      0,
-      _chunkLength,
-    );
-    _crc32 = getCrc32(bytes, _crc32);
+    final Uint8List bytes = Uint8List.sublistView(_chunk, 0, _chunkLength);
+    for (final int byte in bytes) {
+      _crc32 = getCrc32Byte(_crc32, byte);
+    }
+    _writeArchiveCrcBytes(bytes);
     _handle!.writeFromSync(bytes);
     onBytesWritten?.call(_chunkLength);
     _chunkLength = 0;
+  }
+
+  void _writeArchiveCrcBytes(Uint8List bytes) {
+    int offset = 0;
+    while (offset < bytes.length) {
+      final int available = _archiveCrcChunk.length - _archiveCrcChunkLength;
+      final int count = (bytes.length - offset).clamp(0, available);
+      _archiveCrcChunk.setRange(
+        _archiveCrcChunkLength,
+        _archiveCrcChunkLength + count,
+        bytes,
+        offset,
+      );
+      _archiveCrcChunkLength += count;
+      offset += count;
+      if (_archiveCrcChunkLength == _archiveCrcChunk.length) {
+        _flushArchiveCrcChunk();
+      }
+    }
+  }
+
+  void _flushArchiveCrcChunk() {
+    if (_archiveCrcChunkLength == 0) {
+      return;
+    }
+    _archiveCompatibleCrc32 = getCrc32(
+      Uint8List.sublistView(_archiveCrcChunk, 0, _archiveCrcChunkLength),
+      _archiveCompatibleCrc32,
+    );
+    _archiveCrcChunkLength = 0;
   }
 
   @override
@@ -566,9 +686,12 @@ Future<void> _streamExportArchiveTo({
   required String documentsPath,
   required String targetPath,
   void Function(double progress)? onProgress,
+  ArchiveEntryCallback? onEntry,
+  DiatarTransferCancellationToken? cancellationToken,
 }) async {
   final ReceivePort receivePort = ReceivePort();
   final Completer<void> completed = Completer<void>();
+  Isolate? exportIsolate;
   late final StreamSubscription<dynamic> subscription;
   subscription = receivePort.listen((dynamic message) {
     final _ExportArchiveUpdate update = message as _ExportArchiveUpdate;
@@ -582,6 +705,9 @@ Future<void> _streamExportArchiveTo({
       }
       return;
     }
+    if (update.entryName != null) {
+      onEntry?.call(update.entryName!);
+    }
     if (update.complete) {
       if (!completed.isCompleted) {
         completed.complete();
@@ -591,7 +717,18 @@ Future<void> _streamExportArchiveTo({
     onProgress?.call(update.progress);
   });
   try {
-    await Isolate.spawn<_ExportArchiveRequest>(
+    cancellationToken?._setOnCancel(() {
+      exportIsolate?.kill(priority: Isolate.immediate);
+      if (!completed.isCompleted) {
+        completed.completeError(
+          const DiatarArchiveException(DiatarArchiveErrorCode.cancelled),
+        );
+      }
+    });
+    if (cancellationToken?.isCancelled ?? false) {
+      throw const DiatarArchiveException(DiatarArchiveErrorCode.cancelled);
+    }
+    exportIsolate = await Isolate.spawn<_ExportArchiveRequest>(
       _streamExportArchiveInIsolate,
       _ExportArchiveRequest(
         documentsPath: documentsPath,
@@ -601,6 +738,7 @@ Future<void> _streamExportArchiveTo({
     );
     await completed.future;
   } finally {
+    cancellationToken?._setOnCancel(null);
     await subscription.cancel();
     receivePort.close();
   }
@@ -619,20 +757,23 @@ class _ExportArchiveRequest {
 }
 
 class _ExportArchiveUpdate {
-  const _ExportArchiveUpdate.progress(this.progress)
+  const _ExportArchiveUpdate.progress(this.progress, {this.entryName})
     : complete = false,
       errorCode = null;
 
   const _ExportArchiveUpdate.complete()
     : progress = 1,
+      entryName = null,
       complete = true,
       errorCode = null;
 
   const _ExportArchiveUpdate.error(this.errorCode)
     : progress = 0,
+      entryName = null,
       complete = false;
 
   final double progress;
+  final String? entryName;
   final bool complete;
   final String? errorCode;
 }
@@ -671,7 +812,10 @@ Future<void> _streamExportArchiveInIsolate(
     int completedBytes = 0;
     try {
       for (final io.FileSystemEntity entity in entities) {
-        final String relativePath = path.relative(entity.path, from: source.path);
+        final String relativePath = path.relative(
+          entity.path,
+          from: source.path,
+        );
         final String archivePath = path.posix.joinAll(<String>[
           'diatar',
           ...path.split(relativePath),
@@ -679,6 +823,12 @@ Future<void> _streamExportArchiveInIsolate(
         if (entity is io.Directory) {
           encoder.add(ArchiveFile.directory('$archivePath/'));
         } else if (entity is io.File) {
+          request.sendPort.send(
+            _ExportArchiveUpdate.progress(
+              totalBytes > 0 ? completedBytes / totalBytes : 0,
+              entryName: archivePath,
+            ),
+          );
           final InputFileStream input = InputFileStream(
             entity.path,
             bufferSize: ExportImportService._streamBufferSize,

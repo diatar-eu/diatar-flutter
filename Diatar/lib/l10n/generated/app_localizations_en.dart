@@ -1875,6 +1875,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'The selected file is not a valid Diatar backup.';
 
   @override
+  String diatarTransferArchive(Object fileName) {
+    return 'ZIP file: $fileName';
+  }
+
+  @override
+  String diatarTransferCurrentFile(Object fileName) {
+    return 'Processing: $fileName';
+  }
+
+  @override
+  String diatarTransferProgress(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get diatarTransferCancelled => 'The operation was cancelled.';
+
+  @override
   String diatarTransferError(Object error) {
     return 'The operation failed: $error';
   }

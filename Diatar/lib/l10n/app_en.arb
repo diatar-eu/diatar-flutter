@@ -1202,6 +1202,27 @@
   "diatarImportSkipAll": "Skip",
   "diatarExportSourceMissing": "The internal diatar folder was not found.",
   "diatarImportInvalidArchive": "The selected file is not a valid Diatar backup.",
+  "diatarTransferArchive": "ZIP file: {fileName}",
+  "@diatarTransferArchive": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "diatarTransferCurrentFile": "Processing: {fileName}",
+  "@diatarTransferCurrentFile": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "diatarTransferProgress": "{percent}%",
+  "@diatarTransferProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "diatarTransferCancelled": "The operation was cancelled.",
   "diatarTransferError": "The operation failed: {error}",
   "@diatarTransferError": {
     "placeholders": {
