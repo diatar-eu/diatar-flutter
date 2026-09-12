@@ -81,7 +81,7 @@
       "state": {}
     }
   },
-  "cameraStreamTitle": "Kamera stream",
+  "cameraStreamTitle": "Kántorszem – Kamera stream",
   "cameraStreamSummary": "Kamera stream engedélyezve",
   "cameraStreamDevicesTitle": "Kamera forrás",
   "cameraStreamShortcutHint": "A vezérlő a helyi hálózaton keresztül kérheti a kameraképet.",

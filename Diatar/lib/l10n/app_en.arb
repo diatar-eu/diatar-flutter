@@ -1076,7 +1076,7 @@
   "projectorMonitor": "Projector display",
   "projectorEnabled": "Use projector window",
   "projectorEnabledHint": "Projects in a separate window on desktop. When off, the app acts only as a controller without a projector window.",
-  "cameraViewTitle": "Show camera view",
+  "cameraViewTitle": "Cantor's Eye – Show camera view",
   "cameraViewHint": "Shows the camera feed from the projector device over the local network.",
   "cameraSourceLabel": "Camera source",
   "cameraSourceHelp": "Select which client's camera the view waits for. When only one target is listed, it is used automatically.",

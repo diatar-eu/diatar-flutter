@@ -81,7 +81,7 @@
       "state": {}
     }
   },
-  "cameraStreamTitle": "Camera stream",
+  "cameraStreamTitle": "Cantor's Eye – Camera stream",
   "cameraStreamSummary": "Camera stream enabled",
   "cameraStreamDevicesTitle": "Camera source",
   "cameraStreamShortcutHint": "The controller can request the camera stream over the local network.",

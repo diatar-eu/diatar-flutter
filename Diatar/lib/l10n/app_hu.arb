@@ -1077,7 +1077,7 @@
   "projectorMonitor": "Vetítő kijelzője",
   "projectorEnabled": "Vetítőablak használata",
   "projectorEnabledHint": "Külön ablakban vetít asztali környezeten. Kikapcsolva a program csak vezérlőként működik vetítőablak nélkül.",
-  "cameraViewTitle": "Kamerakép mutatása",
+  "cameraViewTitle": "Kántorszem – Kamerakép mutatása",
   "cameraViewHint": "A vetítő eszköz kameraképét mutatja a helyi hálózaton keresztül.",
   "cameraSourceLabel": "Kamera forrása",
   "cameraSourceHelp": "Válaszd ki, melyik kliens kameraképét várja a nézet. Ha egyetlen célpont van megadva, az automatikusan használódik.",
