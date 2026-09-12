@@ -10,6 +10,8 @@ class SettingsStore {
   static const String _kTcpTargets = 'TcpTargets';
   static const String _kShowCameraView = 'ShowCameraView';
   static const String _kCameraTarget = 'CameraTarget';
+  static const String _kCameraViewWidth = 'CameraViewWidth';
+  static const String _kCameraViewHeight = 'CameraViewHeight';
   static const String _kUser = 'Username';
   static const String _kPassword = 'Password';
   static const String _kInternetRelayEnabled = 'InternetRelayEnabled';
@@ -244,6 +246,8 @@ class SettingsStore {
         prefs.getBool(_kTcpClientEnabled) ?? tcpTargets.isNotEmpty;
     final bool showCameraView = prefs.getBool(_kShowCameraView) ?? false;
     final String? cameraTarget = prefs.getString(_kCameraTarget);
+    final double cameraViewWidth = prefs.getDouble(_kCameraViewWidth) ?? 200;
+    final double cameraViewHeight = prefs.getDouble(_kCameraViewHeight) ?? 120;
     final Map<String, String> savedDesktopActionHotkeys = _decodeStringMap(
       prefs.getStringList(_kDesktopActionHotkeys),
     );
@@ -268,6 +272,8 @@ class SettingsStore {
       tcpTargets: tcpTargets,
       showCameraView: showCameraView,
       cameraTarget: cameraTarget,
+      cameraViewWidth: cameraViewWidth,
+      cameraViewHeight: cameraViewHeight,
       boot: false,
       borderToClip: false,
       clipL: 0,
@@ -356,6 +362,8 @@ class SettingsStore {
     await prefs.setBool(_kTcpClientEnabled, settings.tcpClientEnabled);
     await prefs.setStringList(_kTcpTargets, tcpTargets);
     await prefs.setBool(_kShowCameraView, settings.showCameraView);
+    await prefs.setDouble(_kCameraViewWidth, settings.cameraViewWidth);
+    await prefs.setDouble(_kCameraViewHeight, settings.cameraViewHeight);
     if (settings.cameraTarget != null) {
       await prefs.setString(_kCameraTarget, settings.cameraTarget!);
     } else {

@@ -1349,6 +1349,12 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setCameraViewSize(double width, double height) async {
+    settings = settings.copyWith(cameraViewWidth: width, cameraViewHeight: height);
+    notifyListeners();
+    await _settingsStore.save(settings);
+  }
+
   RTCVideoRenderer get cameraRenderer => _cameraView.renderer;
 
   Future<void> applySettings(AppSettings newSettings) async {

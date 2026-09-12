@@ -570,6 +570,16 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
   double? _landscapeDragControlsWidth;
   bool _presentationControlsVisible = false;
   bool _homeTopBarHidden = false;
+  Size? _cameraDragSize;
+  Size _cameraDragInitialSize = Size.zero;
+  Offset? _cameraDragStartPointer;
+
+  static const double _defaultCameraViewWidth = 200;
+  static const double _defaultCameraViewHeight = 120;
+  static const double _minCameraViewWidth = 160;
+  static const double _minCameraViewHeight = 90;
+  static const double _maxCameraViewWidth = 1280;
+  static const double _maxCameraViewHeight = 720;
 
   DiatarMainController get controller => widget.controller;
 
@@ -907,6 +917,12 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         child: Text(l10n.cameraViewHint, textAlign: TextAlign.center),
       );
     }
+    final Size boxSize =
+        _cameraDragSize ??
+        Size(
+          controller.settings.cameraViewWidth,
+          controller.settings.cameraViewHeight,
+        );
     return Material(
       color: theme.colorScheme.surfaceContainerHighest,
       elevation: 6,
@@ -917,14 +933,14 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             ? controller.stopCameraView
             : controller.requestCameraView,
         child: SizedBox(
-          width: 200,
-          height: 120,
+          width: boxSize.width,
+          height: boxSize.height,
           child: Stack(
             fit: StackFit.expand,
             children: <Widget>[
               child,
               Align(
-                alignment: Alignment.bottomRight,
+                alignment: Alignment.bottomLeft,
                 child: Padding(
                   padding: const EdgeInsets.all(4),
                   child: Icon(
@@ -936,7 +952,78 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                   ),
                 ),
               ),
+              Align(
+                alignment: Alignment.topLeft,
+                child: _buildCameraViewResizeGrip(theme),
+              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCameraViewResizeGrip(ThemeData theme) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanStart: (DragStartDetails details) {
+        _cameraDragInitialSize = Size(
+          controller.settings.cameraViewWidth,
+          controller.settings.cameraViewHeight,
+        );
+        _cameraDragStartPointer = details.globalPosition;
+      },
+      onPanUpdate: (DragUpdateDetails details) {
+        final Offset pointer = details.globalPosition;
+        final Offset start = _cameraDragStartPointer ?? pointer;
+        final double nextW = (_cameraDragInitialSize.width + start.dx - pointer.dx)
+            .clamp(_minCameraViewWidth, _maxCameraViewWidth);
+        final double nextH =
+            (_cameraDragInitialSize.height + start.dy - pointer.dy)
+                .clamp(_minCameraViewHeight, _maxCameraViewHeight);
+        final Size nextSize = Size(nextW, nextH);
+        if (_cameraDragSize == nextSize) {
+          return;
+        }
+        setState(() {
+          _cameraDragSize = nextSize;
+        });
+      },
+      onPanEnd: (_) {
+        final Size? dragged = _cameraDragSize;
+        setState(() {
+          _cameraDragSize = null;
+        });
+        if (dragged != null) {
+          unawaited(
+            controller.setCameraViewSize(dragged.width, dragged.height),
+          );
+        }
+      },
+      onPanCancel: () {
+        setState(() {
+          _cameraDragSize = null;
+        });
+      },
+      onLongPress: () {
+        unawaited(
+          controller.setCameraViewSize(
+            _defaultCameraViewWidth,
+            _defaultCameraViewHeight,
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface.withValues(alpha: 0.7),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.open_in_full,
+            size: 14,
+            color: theme.colorScheme.onSurface,
           ),
         ),
       ),

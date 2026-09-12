@@ -15,6 +15,8 @@ class AppSettings {
     this.mirror = false,
     this.showCameraView = false,
     this.cameraTarget,
+    this.cameraViewWidth = 200,
+    this.cameraViewHeight = 120,
     this.cameraStreamEnabled = false,
     this.cameraStreamDeviceId,
     this.rotateQuarterTurns = 0,
@@ -101,6 +103,8 @@ class AppSettings {
   final bool mirror;
   final bool showCameraView;
   final String? cameraTarget;
+  final double cameraViewWidth;
+  final double cameraViewHeight;
   final bool cameraStreamEnabled;
   final String? cameraStreamDeviceId;
   final int rotateQuarterTurns;
@@ -194,6 +198,8 @@ class AppSettings {
     bool? mirror,
     bool? showCameraView,
     String? cameraTarget,
+    double? cameraViewWidth,
+    double? cameraViewHeight,
     bool? cameraStreamEnabled,
     String? cameraStreamDeviceId,
     int? rotateQuarterTurns,
@@ -278,6 +284,8 @@ class AppSettings {
       mirror: mirror ?? this.mirror,
       showCameraView: showCameraView ?? this.showCameraView,
       cameraTarget: cameraTarget ?? this.cameraTarget,
+      cameraViewWidth: cameraViewWidth ?? this.cameraViewWidth,
+      cameraViewHeight: cameraViewHeight ?? this.cameraViewHeight,
       cameraStreamEnabled: cameraStreamEnabled ?? this.cameraStreamEnabled,
       cameraStreamDeviceId: cameraStreamDeviceId ?? this.cameraStreamDeviceId,
       rotateQuarterTurns: rotateQuarterTurns ?? this.rotateQuarterTurns,
