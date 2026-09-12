@@ -801,6 +801,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get showBackgroundImage => 'Show background image';
 
   @override
+  String get showPitchTuner => 'Pitch tuner';
+
+  @override
+  String get settingsPitchTunerTitle => 'Pitch tuner';
+
+  @override
+  String settingsPitchTunerSubtitle(Object status) {
+    return 'Pitch tuner: $status';
+  }
+
+  @override
+  String get settingsPitchTunerDescription =>
+      'Shows the sung pitch in a corner of the screen so you can tune your organ response.';
+
+  @override
+  String get pitchTunerEnabledTitle => 'Show sung pitch';
+
+  @override
+  String get pitchTunerEnabledHint =>
+      'When enabled, the detected note appears in the bottom-left corner.';
+
+  @override
+  String get pitchTunerEnabledHelp =>
+      'The tuner listens through the microphone and shows the nearest note (Hungarian names) with its deviation in cents. Note: it stops live subtitles while active.';
+
+  @override
+  String get pitchTunerNoSignal => '—';
+
+  @override
   String get wordHighlight => 'Word highlight';
 
   @override

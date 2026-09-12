@@ -62,6 +62,7 @@ dependencies:
   hive: ^2.2.3
   http: ^1.6.0
   path: ^1.9.1
+  record: ^6.2.1
   flutter_webrtc:
     path: patches/flutter_webrtc
 

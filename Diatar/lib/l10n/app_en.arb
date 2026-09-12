@@ -559,6 +559,19 @@
   "showChords": "Show chords",
   "showKotta": "Show notation",
   "showBackgroundImage": "Show background image",
+  "showPitchTuner": "Pitch tuner",
+  "settingsPitchTunerTitle": "Pitch tuner",
+  "settingsPitchTunerSubtitle": "Pitch tuner: {status}",
+  "@settingsPitchTunerSubtitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "settingsPitchTunerDescription": "Shows the sung pitch in a corner of the screen so you can tune your organ response.",
+  "pitchTunerEnabledTitle": "Show sung pitch",
+  "pitchTunerEnabledHint": "When enabled, the detected note appears in the bottom-left corner.",
+  "pitchTunerEnabledHelp": "The tuner listens through the microphone and shows the nearest note (Hungarian names) with its deviation in cents. Note: it stops live subtitles while active.",
+  "pitchTunerNoSignal": "—",
   "wordHighlight": "Word highlight",
   "boldText": "Bold text",
   "italicText": "Italic text",

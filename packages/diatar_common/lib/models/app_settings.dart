@@ -24,6 +24,7 @@ class AppSettings {
     this.wolTargets = const <String>[],
     this.wolBroadcastAddress = '255.255.255.255',
     this.wolPort = 9,
+    this.pitchTunerEnabled = false,
     this.mqttUser = '',
     this.mqttPassword = '',
     this.internetRelayEnabled = false,
@@ -116,6 +117,7 @@ class AppSettings {
   final List<String> wolTargets;
   final String wolBroadcastAddress;
   final int wolPort;
+  final bool pitchTunerEnabled;
   final String mqttUser;
   final String mqttPassword;
   final bool internetRelayEnabled;
@@ -215,6 +217,7 @@ class AppSettings {
     List<String>? wolTargets,
     String? wolBroadcastAddress,
     int? wolPort,
+    bool? pitchTunerEnabled,
     String? mqttUser,
     String? mqttPassword,
     bool? internetRelayEnabled,
@@ -305,6 +308,7 @@ class AppSettings {
       wolTargets: wolTargets ?? this.wolTargets,
       wolBroadcastAddress: wolBroadcastAddress ?? this.wolBroadcastAddress,
       wolPort: wolPort ?? this.wolPort,
+      pitchTunerEnabled: pitchTunerEnabled ?? this.pitchTunerEnabled,
       mqttUser: mqttUser ?? this.mqttUser,
       mqttPassword: mqttPassword ?? this.mqttPassword,
       internetRelayEnabled: internetRelayEnabled ?? this.internetRelayEnabled,
