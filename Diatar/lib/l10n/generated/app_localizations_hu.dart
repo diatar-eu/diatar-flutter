@@ -1180,6 +1180,70 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
+  String get settingsWolTitle => 'Wake on LAN';
+
+  @override
+  String settingsWolSubtitle(Object status, Object summary) {
+    return 'Wake on LAN: $status, célpontok: $summary';
+  }
+
+  @override
+  String get settingsWolDescription =>
+      'Célgépek felébresztése a helyi hálózaton egy UDP-n keresztül küldött varázscsomaggal (magic packet).';
+
+  @override
+  String get wolEnabledTitle => 'Wake on LAN bekapcsolása';
+
+  @override
+  String get wolEnabledHint =>
+      'Ha be van kapcsolva, az eszköztár gombjával minden célgépet felébreszthetsz.';
+
+  @override
+  String get wolTargetsLabel => 'Célgépek (MAC@IP[:port])';
+
+  @override
+  String get wolTargetsHint => 'AA:BB:CC:DD:EE:FF, soronként egy';
+
+  @override
+  String get wolTargetsHelp =>
+      'A puszta MAC-cím a lentebb beállított broadcast címre küldi az ébresztőt. A MAC után @IP vagy @IP:port hozzáadásával egy adott gépet közvetlenül ébreszthetsz.';
+
+  @override
+  String get wolBroadcastLabel => 'Broadcast cím';
+
+  @override
+  String get wolPortLabel => 'UDP port';
+
+  @override
+  String get wolNoTargets => 'Adj meg legalább egy célgépet.';
+
+  @override
+  String wolInvalidTarget(Object target) {
+    return 'Érvénytelen célpont: $target';
+  }
+
+  @override
+  String get wolInvalidBroadcast =>
+      'Érvénytelen broadcast cím. IPv4-címet adj meg, például 255.255.255.255.';
+
+  @override
+  String get wolInvalidPort =>
+      'Érvénytelen port. 1 és 65535 között használható érték.';
+
+  @override
+  String get wolTooltip => 'Wake on LAN';
+
+  @override
+  String wolMessageSent(int count) {
+    return 'Wake on LAN elküldve $count gépnek.';
+  }
+
+  @override
+  String wolMessageError(Object error) {
+    return 'Wake on LAN hiba: $error';
+  }
+
+  @override
   String settingsColorSummary(Object background, Object text) {
     return 'Háttér: $background, Szöveg: $text';
   }
@@ -1602,7 +1666,7 @@ class AppLocalizationsHu extends AppLocalizations {
       'Külön ablakban vetít asztali környezeten. Kikapcsolva a program csak vezérlőként működik vetítőablak nélkül.';
 
   @override
-  String get cameraViewTitle => 'Kamerakép mutatása';
+  String get cameraViewTitle => 'Kántorszem – Kamerakép mutatása';
 
   @override
   String get cameraViewHint =>

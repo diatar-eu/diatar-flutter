@@ -51,6 +51,7 @@ import '../services/settings_store.dart';
 import '../services/audio_service.dart';
 import '../services/tcp_sender_service.dart';
 import '../services/webrtc_camera_view_service.dart';
+import '../services/wol_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
 import '../services/zsolozsma_service.dart';
 import '../services/napi_lelki_batyu_service.dart';
@@ -216,6 +217,8 @@ class DiatarMainController extends ChangeNotifier {
     sendSignal: (CameraSignal signal, String? sourceKey) =>
         _sender.sendCameraSignal(signal, sourceKey: sourceKey),
   );
+
+  final WolService _wolService = WolService();
 
   bool cameraAvailable = false;
   bool cameraViewActive = false;
@@ -1353,6 +1356,29 @@ class DiatarMainController extends ChangeNotifier {
     settings = settings.copyWith(cameraViewWidth: width, cameraViewHeight: height);
     notifyListeners();
     await _settingsStore.save(settings);
+  }
+
+  Future<(int sent, String? error)> sendWakeOnLan() async {
+    if (!settings.wolEnabled) {
+      return (0, null);
+    }
+    final List<WolTarget> targets = settings.wolTargets
+        .map((String line) => parseWolTarget(line))
+        .whereType<WolTarget>()
+        .toList();
+    if (targets.isEmpty) {
+      return (0, null);
+    }
+    try {
+      await _wolService.sendWakeOnLan(
+        targets,
+        broadcastAddress: settings.wolBroadcastAddress,
+        defaultPort: settings.wolPort,
+      );
+      return (targets.length, null);
+    } catch (e) {
+      return (0, '$e');
+    }
   }
 
   RTCVideoRenderer get cameraRenderer => _cameraView.renderer;

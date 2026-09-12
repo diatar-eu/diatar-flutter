@@ -2117,6 +2117,108 @@ abstract class AppLocalizations {
   /// **'TCP kliens: {status}, célpontok: {summary}'**
   String settingsLocalNetworkSubtitle(Object status, Object summary);
 
+  /// No description provided for @settingsWolTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Wake on LAN'**
+  String get settingsWolTitle;
+
+  /// No description provided for @settingsWolSubtitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Wake on LAN: {status}, célpontok: {summary}'**
+  String settingsWolSubtitle(Object status, Object summary);
+
+  /// No description provided for @settingsWolDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'Célgépek felébresztése a helyi hálózaton egy UDP-n keresztül küldött varázscsomaggal (magic packet).'**
+  String get settingsWolDescription;
+
+  /// No description provided for @wolEnabledTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Wake on LAN bekapcsolása'**
+  String get wolEnabledTitle;
+
+  /// No description provided for @wolEnabledHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ha be van kapcsolva, az eszköztár gombjával minden célgépet felébreszthetsz.'**
+  String get wolEnabledHint;
+
+  /// No description provided for @wolTargetsLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Célgépek (MAC@IP[:port])'**
+  String get wolTargetsLabel;
+
+  /// No description provided for @wolTargetsHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'AA:BB:CC:DD:EE:FF, soronként egy'**
+  String get wolTargetsHint;
+
+  /// No description provided for @wolTargetsHelp.
+  ///
+  /// In hu, this message translates to:
+  /// **'A puszta MAC-cím a lentebb beállított broadcast címre küldi az ébresztőt. A MAC után @IP vagy @IP:port hozzáadásával egy adott gépet közvetlenül ébreszthetsz.'**
+  String get wolTargetsHelp;
+
+  /// No description provided for @wolBroadcastLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'Broadcast cím'**
+  String get wolBroadcastLabel;
+
+  /// No description provided for @wolPortLabel.
+  ///
+  /// In hu, this message translates to:
+  /// **'UDP port'**
+  String get wolPortLabel;
+
+  /// No description provided for @wolNoTargets.
+  ///
+  /// In hu, this message translates to:
+  /// **'Adj meg legalább egy célgépet.'**
+  String get wolNoTargets;
+
+  /// No description provided for @wolInvalidTarget.
+  ///
+  /// In hu, this message translates to:
+  /// **'Érvénytelen célpont: {target}'**
+  String wolInvalidTarget(Object target);
+
+  /// No description provided for @wolInvalidBroadcast.
+  ///
+  /// In hu, this message translates to:
+  /// **'Érvénytelen broadcast cím. IPv4-címet adj meg, például 255.255.255.255.'**
+  String get wolInvalidBroadcast;
+
+  /// No description provided for @wolInvalidPort.
+  ///
+  /// In hu, this message translates to:
+  /// **'Érvénytelen port. 1 és 65535 között használható érték.'**
+  String get wolInvalidPort;
+
+  /// No description provided for @wolTooltip.
+  ///
+  /// In hu, this message translates to:
+  /// **'Wake on LAN'**
+  String get wolTooltip;
+
+  /// No description provided for @wolMessageSent.
+  ///
+  /// In hu, this message translates to:
+  /// **'Wake on LAN elküldve {count} gépnek.'**
+  String wolMessageSent(int count);
+
+  /// No description provided for @wolMessageError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Wake on LAN hiba: {error}'**
+  String wolMessageError(Object error);
+
   /// No description provided for @settingsColorSummary.
   ///
   /// In hu, this message translates to:
@@ -2840,7 +2942,7 @@ abstract class AppLocalizations {
   /// No description provided for @cameraViewTitle.
   ///
   /// In hu, this message translates to:
-  /// **'Kamerakép mutatása'**
+  /// **'Kántorszem – Kamerakép mutatása'**
   String get cameraViewTitle;
 
   /// No description provided for @cameraViewHint.

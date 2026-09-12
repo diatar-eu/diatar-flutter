@@ -810,6 +810,46 @@
       "summary": {}
     }
   },
+  "settingsWolTitle": "Wake on LAN",
+  "settingsWolSubtitle": "Wake on LAN: {status}, célpontok: {summary}",
+  "@settingsWolSubtitle": {
+    "placeholders": {
+      "status": {},
+      "summary": {}
+    }
+  },
+  "settingsWolDescription": "Célgépek felébresztése a helyi hálózaton egy UDP-n keresztül küldött varázscsomaggal (magic packet).",
+  "wolEnabledTitle": "Wake on LAN bekapcsolása",
+  "wolEnabledHint": "Ha be van kapcsolva, az eszköztár gombjával minden célgépet felébreszthetsz.",
+  "wolTargetsLabel": "Célgépek (MAC@IP[:port])",
+  "wolTargetsHint": "AA:BB:CC:DD:EE:FF, soronként egy",
+  "wolTargetsHelp": "A puszta MAC-cím a lentebb beállított broadcast címre küldi az ébresztőt. A MAC után @IP vagy @IP:port hozzáadásával egy adott gépet közvetlenül ébreszthetsz.",
+  "wolBroadcastLabel": "Broadcast cím",
+  "wolPortLabel": "UDP port",
+  "wolNoTargets": "Adj meg legalább egy célgépet.",
+  "wolInvalidTarget": "Érvénytelen célpont: {target}",
+  "@wolInvalidTarget": {
+    "placeholders": {
+      "target": {}
+    }
+  },
+  "wolInvalidBroadcast": "Érvénytelen broadcast cím. IPv4-címet adj meg, például 255.255.255.255.",
+  "wolInvalidPort": "Érvénytelen port. 1 és 65535 között használható érték.",
+  "wolTooltip": "Wake on LAN",
+  "wolMessageSent": "Wake on LAN elküldve {count} gépnek.",
+  "@wolMessageSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wolMessageError": "Wake on LAN hiba: {error}",
+  "@wolMessageError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "settingsColorSummary": "Háttér: {background}, Szöveg: {text}",
   "@settingsColorSummary": {
     "placeholders": {

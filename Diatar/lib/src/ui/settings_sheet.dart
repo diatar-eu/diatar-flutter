@@ -26,6 +26,7 @@ import '../services/macos_file_panels.dart';
 import '../services/blank_image_storage.dart';
 import '../services/pic_plc_service.dart';
 import '../services/web_diavetito_url.dart';
+import '../services/wol_service.dart';
 import '../utils/friendly_path.dart';
 import 'desktop_hotkey.dart';
 import 'onboarding_sheet.dart';
@@ -162,6 +163,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late bool _desktopProjectorEnabled;
   late bool _showCameraView;
   late String? _cameraTarget;
+  late bool _wolEnabled;
+  late final TextEditingController _wolTargets;
+  late final TextEditingController _wolBroadcastAddress;
+  late final TextEditingController _wolPort;
   late bool _internetRelayEnabled;
   late bool _localNetworkEnabled;
   late bool _picPlcEnabled;
@@ -265,6 +270,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _desktopProjectorEnabled = s.desktopProjectorEnabled;
     _showCameraView = s.showCameraView;
     _cameraTarget = s.cameraTarget;
+    _wolEnabled = s.wolEnabled;
+    _wolTargets = TextEditingController(text: s.wolTargets.join('\n'));
+    _wolBroadcastAddress = TextEditingController(text: s.wolBroadcastAddress);
+    _wolPort = TextEditingController(text: s.wolPort.toString());
     _internetRelayEnabled = s.internetRelayEnabled;
     _localNetworkEnabled = s.tcpClientEnabled;
     _liveSubtitleDeviceId = s.liveSubtitleDeviceId;
@@ -344,6 +353,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   void dispose() {
     _search.dispose();
     _tcpTargets.dispose();
+    _wolTargets.dispose();
+    _wolBroadcastAddress.dispose();
+    _wolPort.dispose();
     _mqttUser.dispose();
     _mqttPassword.dispose();
     _szentirasApiKey.dispose();
@@ -381,6 +393,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final String tcpSummary = tcpTargets.isEmpty
         ? l10n.tcpNoTargets
         : l10n.tcpTargetsCount(tcpTargets.length);
+    final List<String> wolTargets = _parseWolTargets(_wolTargets.text);
+    final String wolSummary = wolTargets.isEmpty
+        ? l10n.tcpNoTargets
+        : l10n.tcpTargetsCount(wolTargets.length);
     final String languageLabel = _appLanguage.trim().isEmpty
         ? l10n.languageSystem
         : _languageLabel(context, _appLanguage);
@@ -401,6 +417,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
     final bool showLan =
         !kIsWeb && _matches(query, 'helyi halozat tcp ip port');
+    final bool showWol =
+        !kIsWeb &&
+        _matches(query, 'wake on lan wol ebreszto kapcsolat mac broadcast port');
     final bool showProjection = _matches(
       query,
       'vetites betu meret cim hatter opacity szinek szin',
@@ -443,6 +462,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final bool anyVisible =
         showInternet ||
         showLan ||
+        showWol ||
         showProjection ||
         showFiles ||
         showGeneral ||
@@ -546,6 +566,23 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       description: l10n.settingsLocalNetworkDescription,
                     ),
                   if (showLan && (showProjection || showFiles || showGeneral))
+                    const Divider(height: 1),
+                  if (showWol)
+                    _settingsTile(
+                      leading: const Icon(Icons.offline_bolt),
+                      title: Text(l10n.settingsWolTitle),
+                      subtitle: Text(
+                        l10n.settingsWolSubtitle(
+                          _wolEnabled
+                              ? l10n.internetStatusOn
+                              : l10n.internetStatusOff,
+                          wolSummary,
+                        ),
+                      ),
+                      onTap: _openWakeOnLanSettings,
+                      description: l10n.settingsWolDescription,
+                    ),
+                  if (showWol && (showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
                   if (showProjection)
                     _settingsTile(
@@ -1595,6 +1632,129 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ];
       },
     );
+  }
+
+  Future<void> _openWakeOnLanSettings() {
+    final bool originalWolEnabled = _wolEnabled;
+    final String originalWolTargets = _wolTargets.text;
+    final String originalWolBroadcastAddress = _wolBroadcastAddress.text;
+    final String originalWolPort = _wolPort.text;
+
+    return _openSectionSheet(
+      title: context.l10n.settingsWolTitle,
+      isDismissible: false,
+      enableDrag: false,
+      showCancelButton: true,
+      onConfirmClose: _applyWakeOnLanSettings,
+      onCancel: () {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _wolEnabled = originalWolEnabled;
+          _wolTargets.text = originalWolTargets;
+          _wolBroadcastAddress.text = originalWolBroadcastAddress;
+          _wolPort.text = originalWolPort;
+        });
+      },
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        final ThemeData theme = Theme.of(context);
+        return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _wolEnabled,
+            onChanged: (bool v) => setBoth(() => _wolEnabled = v),
+            title: Text(l10n.wolEnabledTitle),
+            subtitle: Text(l10n.wolEnabledHint),
+          ),
+          if (_wolEnabled) ...<Widget>[
+            const SizedBox(height: 8),
+            TextField(
+              controller: _wolTargets,
+              keyboardType: TextInputType.multiline,
+              minLines: 3,
+              maxLines: 8,
+              decoration: InputDecoration(
+                labelText: l10n.wolTargetsLabel,
+                hintText: l10n.wolTargetsHint,
+                hintStyle: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.wolTargetsHelp,
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _wolBroadcastAddress,
+              decoration: InputDecoration(labelText: l10n.wolBroadcastLabel),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _wolPort,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: l10n.wolPortLabel),
+            ),
+          ],
+        ];
+      },
+    );
+  }
+
+  bool _applyWakeOnLanSettings() {
+    final List<String> wolTargets = _parseWolTargets(_wolTargets.text);
+    final String broadcast = _wolBroadcastAddress.text.trim();
+    final int? port = int.tryParse(_wolPort.text.trim());
+    if (_wolEnabled) {
+      final String? error = _validateWolSettings(wolTargets, broadcast, port);
+      if (error != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
+        return false;
+      }
+    }
+    _wolTargets.text = wolTargets.join('\n');
+    final AppSettings updated = widget.initialSettings.copyWith(
+      wolEnabled: _wolEnabled,
+      wolTargets: wolTargets,
+      wolBroadcastAddress: broadcast.isEmpty
+          ? widget.initialSettings.wolBroadcastAddress
+          : broadcast,
+      wolPort: port ?? widget.initialSettings.wolPort,
+    );
+
+    unawaited(_applySettingsSafely(updated));
+    return true;
+  }
+
+  String? _validateWolSettings(
+    List<String> targets,
+    String broadcast,
+    int? port,
+  ) {
+    final l10n = context.l10n;
+    if (targets.isEmpty) {
+      return l10n.wolNoTargets;
+    }
+    for (final String line in targets) {
+      if (parseWolTarget(line) == null) {
+        return l10n.wolInvalidTarget(line);
+      }
+    }
+    if (!isValidIpv4(broadcast)) {
+      return l10n.wolInvalidBroadcast;
+    }
+    if (port == null || port < 1 || port > 65535) {
+      return l10n.wolInvalidPort;
+    }
+    return null;
   }
 
   bool _applyNetworkSettings() {
@@ -4152,6 +4312,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     return raw
         .split(RegExp(r'\r?\n'))
         .map((String e) => _normalizeTcpTarget(e.trim()))
+        .where((String e) => e.isNotEmpty)
+        .toList();
+  }
+
+  List<String> _parseWolTargets(String raw) {
+    return raw
+        .split(RegExp(r'\r?\n'))
+        .map((String e) => e.trim())
         .where((String e) => e.isNotEmpty)
         .toList();
   }

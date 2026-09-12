@@ -731,6 +731,12 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         onPressed: () => _openSearchSheet(context),
         icon: const Icon(Icons.search),
       ),
+      if (!kIsWeb && controller.settings.wolEnabled)
+        IconButton(
+          tooltip: l10n.wolTooltip,
+          onPressed: () => _sendWakeOnLan(context),
+          icon: const Icon(Icons.offline_bolt),
+        ),
       if (!kIsWeb && controller.settings.speechFeatureVisible)
         IconButton(
           tooltip: controller.liveSubtitlesActive
@@ -1955,6 +1961,20 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           );
         },
       ),
+    );
+  }
+
+  Future<void> _sendWakeOnLan(BuildContext context) async {
+    final (int sent, String? error) = await controller.sendWakeOnLan();
+    if (!context.mounted) {
+      return;
+    }
+    final l10n = context.l10n;
+    final String message = error == null
+        ? l10n.wolMessageSent(sent)
+        : l10n.wolMessageError(error);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 

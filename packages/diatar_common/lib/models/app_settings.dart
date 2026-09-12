@@ -20,6 +20,10 @@ class AppSettings {
     this.cameraStreamEnabled = false,
     this.cameraStreamDeviceId,
     this.rotateQuarterTurns = 0,
+    this.wolEnabled = false,
+    this.wolTargets = const <String>[],
+    this.wolBroadcastAddress = '255.255.255.255',
+    this.wolPort = 9,
     this.mqttUser = '',
     this.mqttPassword = '',
     this.internetRelayEnabled = false,
@@ -108,6 +112,10 @@ class AppSettings {
   final bool cameraStreamEnabled;
   final String? cameraStreamDeviceId;
   final int rotateQuarterTurns;
+  final bool wolEnabled;
+  final List<String> wolTargets;
+  final String wolBroadcastAddress;
+  final int wolPort;
   final String mqttUser;
   final String mqttPassword;
   final bool internetRelayEnabled;
@@ -203,6 +211,10 @@ class AppSettings {
     bool? cameraStreamEnabled,
     String? cameraStreamDeviceId,
     int? rotateQuarterTurns,
+    bool? wolEnabled,
+    List<String>? wolTargets,
+    String? wolBroadcastAddress,
+    int? wolPort,
     String? mqttUser,
     String? mqttPassword,
     bool? internetRelayEnabled,
@@ -289,6 +301,10 @@ class AppSettings {
       cameraStreamEnabled: cameraStreamEnabled ?? this.cameraStreamEnabled,
       cameraStreamDeviceId: cameraStreamDeviceId ?? this.cameraStreamDeviceId,
       rotateQuarterTurns: rotateQuarterTurns ?? this.rotateQuarterTurns,
+      wolEnabled: wolEnabled ?? this.wolEnabled,
+      wolTargets: wolTargets ?? this.wolTargets,
+      wolBroadcastAddress: wolBroadcastAddress ?? this.wolBroadcastAddress,
+      wolPort: wolPort ?? this.wolPort,
       mqttUser: mqttUser ?? this.mqttUser,
       mqttPassword: mqttPassword ?? this.mqttPassword,
       internetRelayEnabled: internetRelayEnabled ?? this.internetRelayEnabled,

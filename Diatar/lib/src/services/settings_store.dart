@@ -12,6 +12,10 @@ class SettingsStore {
   static const String _kCameraTarget = 'CameraTarget';
   static const String _kCameraViewWidth = 'CameraViewWidth';
   static const String _kCameraViewHeight = 'CameraViewHeight';
+  static const String _kWolEnabled = 'WolEnabled';
+  static const String _kWolTargets = 'WolTargets';
+  static const String _kWolBroadcastAddress = 'WolBroadcastAddress';
+  static const String _kWolPort = 'WolPort';
   static const String _kUser = 'Username';
   static const String _kPassword = 'Password';
   static const String _kInternetRelayEnabled = 'InternetRelayEnabled';
@@ -248,6 +252,12 @@ class SettingsStore {
     final String? cameraTarget = prefs.getString(_kCameraTarget);
     final double cameraViewWidth = prefs.getDouble(_kCameraViewWidth) ?? 200;
     final double cameraViewHeight = prefs.getDouble(_kCameraViewHeight) ?? 120;
+    final bool wolEnabled = prefs.getBool(_kWolEnabled) ?? false;
+    final List<String> wolTargets =
+        prefs.getStringList(_kWolTargets) ?? const <String>[];
+    final String wolBroadcastAddress =
+        prefs.getString(_kWolBroadcastAddress) ?? '255.255.255.255';
+    final int wolPort = prefs.getInt(_kWolPort) ?? 9;
     final Map<String, String> savedDesktopActionHotkeys = _decodeStringMap(
       prefs.getStringList(_kDesktopActionHotkeys),
     );
@@ -274,6 +284,10 @@ class SettingsStore {
       cameraTarget: cameraTarget,
       cameraViewWidth: cameraViewWidth,
       cameraViewHeight: cameraViewHeight,
+      wolEnabled: wolEnabled,
+      wolTargets: wolTargets,
+      wolBroadcastAddress: wolBroadcastAddress,
+      wolPort: wolPort,
       boot: false,
       borderToClip: false,
       clipL: 0,
@@ -364,6 +378,10 @@ class SettingsStore {
     await prefs.setBool(_kShowCameraView, settings.showCameraView);
     await prefs.setDouble(_kCameraViewWidth, settings.cameraViewWidth);
     await prefs.setDouble(_kCameraViewHeight, settings.cameraViewHeight);
+    await prefs.setBool(_kWolEnabled, settings.wolEnabled);
+    await prefs.setStringList(_kWolTargets, settings.wolTargets);
+    await prefs.setString(_kWolBroadcastAddress, settings.wolBroadcastAddress);
+    await prefs.setInt(_kWolPort, settings.wolPort);
     if (settings.cameraTarget != null) {
       await prefs.setString(_kCameraTarget, settings.cameraTarget!);
     } else {

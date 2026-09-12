@@ -1177,6 +1177,69 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get settingsWolTitle => 'Wake on LAN';
+
+  @override
+  String settingsWolSubtitle(Object status, Object summary) {
+    return 'Wake on LAN: $status, targets: $summary';
+  }
+
+  @override
+  String get settingsWolDescription =>
+      'Wake up target machines on your local network by sending a magic packet over UDP.';
+
+  @override
+  String get wolEnabledTitle => 'Enable Wake on LAN';
+
+  @override
+  String get wolEnabledHint =>
+      'When enabled, a toolbar button lets you wake all target machines.';
+
+  @override
+  String get wolTargetsLabel => 'Target machines (MAC@IP[:port])';
+
+  @override
+  String get wolTargetsHint => 'AA:BB:CC:DD:EE:FF, one per line';
+
+  @override
+  String get wolTargetsHelp =>
+      'A plain MAC address wakes the machine via the broadcast address below. Add @IP or @IP:port after the MAC to wake a single machine directly.';
+
+  @override
+  String get wolBroadcastLabel => 'Broadcast address';
+
+  @override
+  String get wolPortLabel => 'UDP port';
+
+  @override
+  String get wolNoTargets => 'Add at least one target machine.';
+
+  @override
+  String wolInvalidTarget(Object target) {
+    return 'Invalid target: $target';
+  }
+
+  @override
+  String get wolInvalidBroadcast =>
+      'Invalid broadcast address. Use an IPv4 address such as 255.255.255.255.';
+
+  @override
+  String get wolInvalidPort => 'Invalid port. Use a value between 1 and 65535.';
+
+  @override
+  String get wolTooltip => 'Wake on LAN';
+
+  @override
+  String wolMessageSent(int count) {
+    return 'Wake on LAN sent to $count machine(s).';
+  }
+
+  @override
+  String wolMessageError(Object error) {
+    return 'Wake on LAN failed: $error';
+  }
+
+  @override
   String settingsColorSummary(Object background, Object text) {
     return 'Background: $background, Text: $text';
   }
@@ -1598,7 +1661,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Projects in a separate window on desktop. When off, the app acts only as a controller without a projector window.';
 
   @override
-  String get cameraViewTitle => 'Show camera view';
+  String get cameraViewTitle => 'Cantor\'s Eye – Show camera view';
 
   @override
   String get cameraViewHint =>

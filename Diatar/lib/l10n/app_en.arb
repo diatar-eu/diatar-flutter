@@ -810,6 +810,46 @@
       "summary": {}
     }
   },
+  "settingsWolTitle": "Wake on LAN",
+  "settingsWolSubtitle": "Wake on LAN: {status}, targets: {summary}",
+  "@settingsWolSubtitle": {
+    "placeholders": {
+      "status": {},
+      "summary": {}
+    }
+  },
+  "settingsWolDescription": "Wake up target machines on your local network by sending a magic packet over UDP.",
+  "wolEnabledTitle": "Enable Wake on LAN",
+  "wolEnabledHint": "When enabled, a toolbar button lets you wake all target machines.",
+  "wolTargetsLabel": "Target machines (MAC@IP[:port])",
+  "wolTargetsHint": "AA:BB:CC:DD:EE:FF, one per line",
+  "wolTargetsHelp": "A plain MAC address wakes the machine via the broadcast address below. Add @IP or @IP:port after the MAC to wake a single machine directly.",
+  "wolBroadcastLabel": "Broadcast address",
+  "wolPortLabel": "UDP port",
+  "wolNoTargets": "Add at least one target machine.",
+  "wolInvalidTarget": "Invalid target: {target}",
+  "@wolInvalidTarget": {
+    "placeholders": {
+      "target": {}
+    }
+  },
+  "wolInvalidBroadcast": "Invalid broadcast address. Use an IPv4 address such as 255.255.255.255.",
+  "wolInvalidPort": "Invalid port. Use a value between 1 and 65535.",
+  "wolTooltip": "Wake on LAN",
+  "wolMessageSent": "Wake on LAN sent to {count} machine(s).",
+  "@wolMessageSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wolMessageError": "Wake on LAN failed: {error}",
+  "@wolMessageError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "settingsColorSummary": "Background: {background}, Text: {text}",
   "@settingsColorSummary": {
     "placeholders": {
