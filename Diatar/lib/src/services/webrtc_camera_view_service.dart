@@ -18,6 +18,7 @@ class WebrtcCameraViewService {
 
   bool _active = false;
   bool _remoteDescriptionSet = false;
+  bool _negotiating = false;
   String? _currentPeerKey;
 
   bool get active => _active;
@@ -76,28 +77,33 @@ class WebrtcCameraViewService {
     switch (signal.kind) {
       case CameraSignalKind.offer:
         if (signal.sdp != null) {
-          if (_peer != null) {
-            await _peer!.close();
-            _peer = null;
+          if (_negotiating) {
+            return;
           }
-          await init();
-          await _ensurePeer();
-          debugPrint('CAM answerer offer.len=${signal.sdp!.length}');
-          await _peer!.setRemoteDescription(
-            RTCSessionDescription(signal.sdp!, 'offer'),
-          );
-          _remoteDescriptionSet = true;
-          for (final RTCIceCandidate candidate in _pendingCandidates) {
-            await _peer!.addCandidate(candidate);
+          _negotiating = true;
+          try {
+            if (_peer == null) {
+              await _ensurePeer();
+            }
+            debugPrint('CAM answerer offer.len=${signal.sdp!.length}');
+            await _peer!.setRemoteDescription(
+              RTCSessionDescription(signal.sdp!, 'offer'),
+            );
+            _remoteDescriptionSet = true;
+            for (final RTCIceCandidate candidate in _pendingCandidates) {
+              await _peer!.addCandidate(candidate);
+            }
+            _pendingCandidates.clear();
+            final RTCSessionDescription answer = await _peer!.createAnswer();
+            debugPrint('CAM answerer answer.len=${answer.sdp?.length}');
+            await _peer!.setLocalDescription(answer);
+            unawaited(sendSignal(CameraSignal(
+              kind: CameraSignalKind.answer,
+              sdp: answer.sdp,
+            ), _currentPeerKey));
+          } finally {
+            _negotiating = false;
           }
-          _pendingCandidates.clear();
-          final RTCSessionDescription answer = await _peer!.createAnswer();
-          debugPrint('CAM answerer answer.len=${answer.sdp?.length}');
-          await _peer!.setLocalDescription(answer);
-          unawaited(sendSignal(CameraSignal(
-            kind: CameraSignalKind.answer,
-            sdp: answer.sdp,
-          ), _currentPeerKey));
         }
         break;
       case CameraSignalKind.ice:
@@ -163,6 +169,7 @@ class WebrtcCameraViewService {
   Future<void> stop({bool sendStop = true}) async {
     _active = false;
     _remoteDescriptionSet = false;
+    _negotiating = false;
     _pendingCandidates.clear();
     if (_peer != null) {
       await _peer!.close();

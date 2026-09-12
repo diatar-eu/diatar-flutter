@@ -247,11 +247,11 @@ class ProjectionController extends ChangeNotifier {
   }
 
   ProjectionFrame? _connectedProjectedFrame() {
-    if (!_transportConnected || !_hasDataForCurrentConnection) {
-      return null;
-    }
     if (globals.projecting && diaFrame != null) {
       return diaFrame;
+    }
+    if (!_transportConnected || !_hasDataForCurrentConnection) {
+      return null;
     }
     if (globals.isBlankPic && globals.showBlankPic && blankFrame != null) {
       return blankFrame;
@@ -547,10 +547,6 @@ class ProjectionController extends ChangeNotifier {
     }
     if (connected != isConnected) {
       _hasDataForCurrentConnection = false;
-      if (!isConnected) {
-        diaFrame = null;
-        blankFrame = null;
-      }
     }
     connected = isConnected;
     _syncNoConnectionLogo();
