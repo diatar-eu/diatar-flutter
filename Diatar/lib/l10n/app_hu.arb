@@ -559,6 +559,19 @@
   "showChords": "Akkordok mutatása",
   "showKotta": "Kotta mutatása",
   "showBackgroundImage": "Háttérkép mutatása",
+  "showPitchTuner": "Énekhang-hangoló",
+  "settingsPitchTunerTitle": "Énekhang-hangoló",
+  "settingsPitchTunerSubtitle": "Hangoló: {status}",
+  "@settingsPitchTunerSubtitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "settingsPitchTunerDescription": "A képernyő sarkában mutatja az énekelt hangot, így az orgonaválaszhoz pontosan tudsz hangolni.",
+  "pitchTunerEnabledTitle": "Énekelt hang mutatása",
+  "pitchTunerEnabledHint": "Ha be van kapcsolva, az észlelt hang a bal alsó sarokban jelenik meg.",
+  "pitchTunerEnabledHelp": "A hangoló a mikrofon hangjához legközelebbi hangot (magyar hangnevekkel) mutatja cent-eltéréssel. Megjegyzés: aktív állapotban leállítja az élő feliratolást.",
+  "pitchTunerNoSignal": "—",
   "wordHighlight": "Szókiemelés",
   "boldText": "Félkövér szöveg",
   "italicText": "Dőlt szöveg",

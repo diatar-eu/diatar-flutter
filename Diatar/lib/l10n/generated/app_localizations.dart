@@ -1439,6 +1439,54 @@ abstract class AppLocalizations {
   /// **'Háttérkép mutatása'**
   String get showBackgroundImage;
 
+  /// No description provided for @showPitchTuner.
+  ///
+  /// In hu, this message translates to:
+  /// **'Énekhang-hangoló'**
+  String get showPitchTuner;
+
+  /// No description provided for @settingsPitchTunerTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Énekhang-hangoló'**
+  String get settingsPitchTunerTitle;
+
+  /// No description provided for @settingsPitchTunerSubtitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Hangoló: {status}'**
+  String settingsPitchTunerSubtitle(Object status);
+
+  /// No description provided for @settingsPitchTunerDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'A képernyő sarkában mutatja az énekelt hangot, így az orgonaválaszhoz pontosan tudsz hangolni.'**
+  String get settingsPitchTunerDescription;
+
+  /// No description provided for @pitchTunerEnabledTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Énekelt hang mutatása'**
+  String get pitchTunerEnabledTitle;
+
+  /// No description provided for @pitchTunerEnabledHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ha be van kapcsolva, az észlelt hang a bal alsó sarokban jelenik meg.'**
+  String get pitchTunerEnabledHint;
+
+  /// No description provided for @pitchTunerEnabledHelp.
+  ///
+  /// In hu, this message translates to:
+  /// **'A hangoló a mikrofon hangjához legközelebbi hangot (magyar hangnevekkel) mutatja cent-eltéréssel. Megjegyzés: aktív állapotban leállítja az élő feliratolást.'**
+  String get pitchTunerEnabledHelp;
+
+  /// No description provided for @pitchTunerNoSignal.
+  ///
+  /// In hu, this message translates to:
+  /// **'—'**
+  String get pitchTunerNoSignal;
+
   /// No description provided for @wordHighlight.
   ///
   /// In hu, this message translates to:

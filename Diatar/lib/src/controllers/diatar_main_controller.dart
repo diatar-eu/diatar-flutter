@@ -52,6 +52,7 @@ import '../services/audio_service.dart';
 import '../services/tcp_sender_service.dart';
 import '../services/webrtc_camera_view_service.dart';
 import '../services/wol_service.dart';
+import '../services/pitch_tuner_service.dart';
 import '../services/zsolozsma_decode_breviar.dart';
 import '../services/zsolozsma_service.dart';
 import '../services/napi_lelki_batyu_service.dart';
@@ -219,6 +220,14 @@ class DiatarMainController extends ChangeNotifier {
   );
 
   final WolService _wolService = WolService();
+
+  bool pitchTunerActive = false;
+  String? pitchTunerError;
+  final ValueNotifier<PitchReading?> pitchReading =
+      ValueNotifier<PitchReading?>(null);
+  PitchTunerService? _pitchTuner;
+
+  PitchTunerService get _pitchTunerService => _pitchTuner ??= PitchTunerService();
 
   bool cameraAvailable = false;
   bool cameraViewActive = false;
@@ -1400,6 +1409,12 @@ class DiatarMainController extends ChangeNotifier {
       unawaited(requestCameraView());
     } else {
       _sender.setCameraTargetKey(cameraSourceKey);
+    }
+    if (settings.pitchTunerEnabled && !previousSettings.pitchTunerEnabled) {
+      unawaited(startPitchTuner());
+    } else if (!settings.pitchTunerEnabled &&
+        previousSettings.pitchTunerEnabled) {
+      unawaited(stopPitchTuner());
     }
     await _settingsStore.save(settings);
     await _updateSystemShutdownExitCommand();
@@ -4600,6 +4615,9 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> _startLiveSubtitles() async {
+    if (pitchTunerActive) {
+      await stopPitchTuner();
+    }
     final SpeechModelType modelType = SpeechModelType.values.firstWhere(
       (e) => e.name == settings.liveSubtitleModel,
       orElse: () => SpeechModelType.nemotron35_560ms,
@@ -4681,6 +4699,43 @@ class DiatarMainController extends ChangeNotifier {
     settings = settings.copyWith(liveSubtitlesEnabled: false);
     await _settingsStore.save(settings);
     await _sendLiveSubtitle('');
+    notifyListeners();
+  }
+
+  Future<void> startPitchTuner() async {
+    if (pitchTunerActive) {
+      return;
+    }
+    if (_liveSubtitlesActive) {
+      await _stopLiveSubtitles();
+    }
+    pitchTunerError = null;
+    try {
+      _pitchTunerService.onReading = (PitchReading? reading) {
+        pitchReading.value = reading;
+      };
+      _pitchTunerService.onError = (Object error) {
+        debugPrint('PitchTuner error: $error');
+        pitchTunerError = '$error';
+        pitchTunerActive = false;
+        notifyListeners();
+      };
+      await _pitchTunerService.start();
+      pitchTunerActive = true;
+      notifyListeners();
+    } catch (e, st) {
+      debugPrint('PitchTuner start failed: $e\n$st');
+      pitchTunerError = '$e';
+      pitchTunerActive = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> stopPitchTuner() async {
+    _pitchTunerService.onReading = null;
+    await _pitchTunerService.stop();
+    pitchTunerActive = false;
+    pitchReading.value = null;
     notifyListeners();
   }
 

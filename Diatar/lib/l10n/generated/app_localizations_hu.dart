@@ -804,6 +804,35 @@ class AppLocalizationsHu extends AppLocalizations {
   String get showBackgroundImage => 'Háttérkép mutatása';
 
   @override
+  String get showPitchTuner => 'Énekhang-hangoló';
+
+  @override
+  String get settingsPitchTunerTitle => 'Énekhang-hangoló';
+
+  @override
+  String settingsPitchTunerSubtitle(Object status) {
+    return 'Hangoló: $status';
+  }
+
+  @override
+  String get settingsPitchTunerDescription =>
+      'A képernyő sarkában mutatja az énekelt hangot, így az orgonaválaszhoz pontosan tudsz hangolni.';
+
+  @override
+  String get pitchTunerEnabledTitle => 'Énekelt hang mutatása';
+
+  @override
+  String get pitchTunerEnabledHint =>
+      'Ha be van kapcsolva, az észlelt hang a bal alsó sarokban jelenik meg.';
+
+  @override
+  String get pitchTunerEnabledHelp =>
+      'A hangoló a mikrofon hangjához legközelebbi hangot (magyar hangnevekkel) mutatja cent-eltéréssel. Megjegyzés: aktív állapotban leállítja az élő feliratolást.';
+
+  @override
+  String get pitchTunerNoSignal => '—';
+
+  @override
   String get wordHighlight => 'Szókiemelés';
 
   @override

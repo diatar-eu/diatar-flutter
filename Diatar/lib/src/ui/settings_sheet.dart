@@ -176,6 +176,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late String _liveSubtitleLanguage;
   late String _liveSubtitleModel;
   late bool _speechFeatureVisible;
+  late bool _pitchTunerEnabled;
   late Map<String, String> _desktopActionHotkeys;
   late Map<String, String> _desktopSongHotkeys;
   late Map<String, String> _desktopOrderSetHotkeys;
@@ -280,6 +281,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _liveSubtitleLanguage = s.liveSubtitleLanguage;
     _liveSubtitleModel = s.liveSubtitleModel;
     _speechFeatureVisible = s.speechFeatureVisible;
+    _pitchTunerEnabled = s.pitchTunerEnabled;
     _desktopActionHotkeys = Map<String, String>.from(s.desktopActionHotkeys);
     _desktopSongHotkeys = Map<String, String>.from(s.desktopSongHotkeys);
     _desktopOrderSetHotkeys = Map<String, String>.from(
@@ -435,6 +437,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final bool showSpeech =
         !kIsWeb &&
         _matches(query, 'beszedfelismero speech recognition mikrofon');
+    final bool showPitchTuner =
+        !kIsWeb &&
+        _matches(query, 'hangolo tuner hang zene orgona kantaor pitch tone');
     final bool showSystem = _matches(
       query,
       'rendszer kilepes leallas stop shutdown epstop epshutdown',
@@ -467,6 +472,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         showFiles ||
         showGeneral ||
         showSpeech ||
+        showPitchTuner ||
         showSystem ||
         showExternalCommands ||
         showHotkeys ||
@@ -634,6 +640,23 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openSpeechSettings,
                     ),
                   if (showSpeech &&
+                      (showExternalCommands || showSystem || showHotkeys))
+                    const Divider(height: 1),
+                  if (showPitchTuner)
+                    _settingsTile(
+                      leading: const Icon(Icons.graphic_eq),
+                      title: Text(l10n.settingsPitchTunerTitle),
+                      subtitle: Text(
+                        l10n.settingsPitchTunerSubtitle(
+                          _pitchTunerEnabled
+                              ? l10n.internetStatusOn
+                              : l10n.internetStatusOff,
+                        ),
+                      ),
+                      onTap: _openPitchTunerSettings,
+                      description: l10n.settingsPitchTunerDescription,
+                    ),
+                  if (showPitchTuner &&
                       (showExternalCommands || showSystem || showHotkeys))
                     const Divider(height: 1),
                   if (showExternalCommands)
@@ -1755,6 +1778,53 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       return l10n.wolInvalidPort;
     }
     return null;
+  }
+
+  Future<void> _openPitchTunerSettings() {
+    final bool originalPitchTunerEnabled = _pitchTunerEnabled;
+
+    return _openSectionSheet(
+      title: context.l10n.settingsPitchTunerTitle,
+      isDismissible: false,
+      enableDrag: false,
+      showCancelButton: true,
+      onConfirmClose: _applyPitchTunerSettings,
+      onCancel: () {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _pitchTunerEnabled = originalPitchTunerEnabled;
+        });
+      },
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _pitchTunerEnabled,
+            onChanged: (bool v) => setBoth(() => _pitchTunerEnabled = v),
+            title: Text(l10n.pitchTunerEnabledTitle),
+            subtitle: Text(l10n.pitchTunerEnabledHint),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.pitchTunerEnabledHelp,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ];
+      },
+    );
+  }
+
+  bool _applyPitchTunerSettings() {
+    final AppSettings updated = widget.initialSettings.copyWith(
+      pitchTunerEnabled: _pitchTunerEnabled,
+    );
+    unawaited(_applySettingsSafely(updated));
+    return true;
   }
 
   bool _applyNetworkSettings() {

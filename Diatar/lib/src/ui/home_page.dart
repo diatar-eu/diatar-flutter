@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:diatar_speech/diatar_speech.dart';
+import '../services/pitch_tuner_service.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -117,6 +118,7 @@ enum _ProjectionDisplayToggle {
   kotta,
   chords,
   backgroundImage,
+  pitchTuner,
   hideControlWindow,
 }
 
@@ -887,17 +889,25 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           );
 
           final Widget? cameraOverlay = _buildCameraOverlay(context);
-          if (cameraOverlay == null) {
+          final Widget? tunerOverlay = _buildPitchTunerOverlay(context);
+          if (cameraOverlay == null && tunerOverlay == null) {
             return _buildSimpleView(context);
           }
           return Stack(
             children: <Widget>[
               Positioned.fill(child: _buildSimpleView(context)),
-              Positioned(
-                right: 12,
-                bottom: 12,
-                child: cameraOverlay,
-              ),
+              if (cameraOverlay != null)
+                Positioned(
+                  right: 12,
+                  bottom: 12,
+                  child: cameraOverlay,
+                ),
+              if (tunerOverlay != null)
+                Positioned(
+                  left: 12,
+                  bottom: 12,
+                  child: tunerOverlay,
+                ),
             ],
           );
         },
@@ -966,6 +976,60 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget? _buildPitchTunerOverlay(BuildContext context) {
+    if (!controller.settings.pitchTunerEnabled) {
+      return null;
+    }
+    final ThemeData theme = Theme.of(context);
+    return ValueListenableBuilder<PitchReading?>(
+      valueListenable: controller.pitchReading,
+      builder: (BuildContext builderContext, PitchReading? reading, Widget? _) {
+        final bool noSignal = reading == null;
+        final bool inTune = reading != null && reading.cents.abs() <= 5;
+        final String noteText = noSignal
+            ? builderContext.l10n.pitchTunerNoSignal
+            : reading.noteName;
+        final String detailText = noSignal
+            ? ''
+            : '${reading.cents > 0 ? '+' : ''}'
+                  '${reading.cents.toStringAsFixed(0)} ¢   '
+                  '${reading.frequencyHz.toStringAsFixed(1)} Hz';
+        return Material(
+          color: theme.colorScheme.surfaceContainerHighest,
+          elevation: 6,
+          borderRadius: BorderRadius.circular(10),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  noteText,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: inTune
+                        ? const Color(0xFF388E3C)
+                        : theme.colorScheme.onSurface,
+                  ),
+                ),
+                if (detailText.isNotEmpty)
+                  Text(
+                    detailText,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1417,7 +1481,7 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             : theme.colorScheme.onSurfaceVariant;
         return Tooltip(
           message:
-              '${menuContext.l10n.useSound} / ${menuContext.l10n.advanceAfterMusic} / ${menuContext.l10n.showKotta} / ${menuContext.l10n.showChords} / ${menuContext.l10n.showBackgroundImage}',
+              '${menuContext.l10n.useSound} / ${menuContext.l10n.advanceAfterMusic} / ${menuContext.l10n.showKotta} / ${menuContext.l10n.showChords} / ${menuContext.l10n.showBackgroundImage} / ${menuContext.l10n.showPitchTuner}',
           child: InkResponse(
             radius: 20,
             onTap: () => unawaited(_showProjectionDisplayMenu(menuContext)),
@@ -1634,6 +1698,12 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
               checked: controller.settings.projShowBackgroundImage,
               child: Text(buttonContext.l10n.showBackgroundImage),
             ),
+            const PopupMenuDivider(),
+            CheckedPopupMenuItem<_ProjectionDisplayToggle>(
+              value: _ProjectionDisplayToggle.pitchTuner,
+              checked: controller.settings.pitchTunerEnabled,
+              child: Text(buttonContext.l10n.showPitchTuner),
+            ),
             if (controller.desktopProjectorEnabled) ...<
               PopupMenuEntry<_ProjectionDisplayToggle>
             >[
@@ -1669,6 +1739,12 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         );
       case _ProjectionDisplayToggle.backgroundImage:
         await controller.toggleBackgroundImageVisible();
+      case _ProjectionDisplayToggle.pitchTuner:
+        await controller.applySettings(
+          controller.settings.copyWith(
+            pitchTunerEnabled: !controller.settings.pitchTunerEnabled,
+          ),
+        );
       case _ProjectionDisplayToggle.hideControlWindow:
         await controller.hideControlWindow();
     }
