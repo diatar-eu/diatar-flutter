@@ -5,6 +5,8 @@ import 'dart:math' as math;
 
 import 'package:diatar_common/diatar_common.dart';
 import 'package:diatar_common/utils/transposition_utils.dart';
+import '../services/wireless_display_service.dart';
+import '../services/wireless_display_platform.dart';
 import 'package:diatar_speech/diatar_speech.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
@@ -219,6 +221,7 @@ class DiatarMainController extends ChangeNotifier {
   );
 
   final WolService _wolService = WolService();
+  final WirelessDisplayService _wirelessDisplayService = WirelessDisplayService.instance;
 
   bool cameraAvailable = false;
   bool cameraViewActive = false;
@@ -1118,6 +1121,7 @@ class DiatarMainController extends ChangeNotifier {
     await _desktopProjectorBridge.start(settings);
     cameraAvailable = _cameraView.available;
     await _cameraView.init();
+    await _wirelessDisplayService.initialize();
     _configureSender();
     await _applyTransport();
     unawaited(_checkStartupContentUpdates());
@@ -4807,6 +4811,15 @@ class DiatarMainController extends ChangeNotifier {
   String get liveSubtitleText => _liveSubtitleText;
   String? get liveSubtitleError => _liveSubtitleError;
 
+  // Wireless Display getters
+  bool get isWirelessDisplayConnected => _wirelessDisplayService.isConnected;
+  bool get isWirelessDisplayStreaming => _wirelessDisplayService.isStreaming;
+  String? get wirelessDisplayConnectedDeviceId => _wirelessDisplayService.connectedDeviceId;
+  List<WirelessDisplayDevice> get wirelessDisplayDevices => _wirelessDisplayService.devices;
+  WirelessDisplayConnectionState get wirelessDisplayConnectionState => _wirelessDisplayService.connectionState;
+  Stream<List<WirelessDisplayDevice>> get wirelessDisplayDevicesStream => _wirelessDisplayService.devicesStream;
+  Stream<WirelessDisplayConnectionState> get wirelessDisplayConnectionStateStream => _wirelessDisplayService.connectionStateStream;
+
   Future<void> toggleLiveSubtitles() async {
     if (_liveSubtitlesActive) {
       await _stopLiveSubtitles();
@@ -5637,6 +5650,52 @@ class DiatarMainController extends ChangeNotifier {
     return path.substring(dot + 1).toLowerCase();
   }
 
+  // Wireless Display methods
+  Future<void> startWirelessDisplay() async {
+    if (_wirelessDisplayService.isStreaming) return;
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    await _wirelessDisplayService.startStreaming(width: 1920, height: 1080, fps: 30);
+    notifyListeners();
+  }
+
+  Future<String?> get wirelessDisplayStreamUrl {
+    return _wirelessDisplayService.getStreamUrl();
+  }
+
+  Future<void> stopWirelessDisplay() async {
+    if (!_wirelessDisplayService.isStreaming) return;
+    await _wirelessDisplayService.stopStreaming();
+    await SystemChrome.setPreferredOrientations([]);
+    notifyListeners();
+  }
+
+  Future<void> connectWirelessDisplay(String deviceId) async {
+    await _wirelessDisplayService.connect(deviceId);
+    notifyListeners();
+  }
+
+  Future<void> disconnectWirelessDisplay() async {
+    await _wirelessDisplayService.disconnect();
+    notifyListeners();
+  }
+
+  Future<void> startWirelessDiscovery() async {
+    await _wirelessDisplayService.startDiscovery();
+    notifyListeners();
+  }
+
+  Future<void> stopWirelessDiscovery() async {
+    await _wirelessDisplayService.stopDiscovery();
+    notifyListeners();
+  }
+
+  Future<bool> showWirelessDisplayPicker() async {
+    return await _wirelessDisplayService.showSystemPicker();
+  }
+
   @override
   void dispose() {
     _picPlcPollTimer?.cancel();
@@ -5654,6 +5713,7 @@ class DiatarMainController extends ChangeNotifier {
     _sender.stop();
     _cameraView.dispose();
     _mqttSender.close();
+    unawaited(_wirelessDisplayService.dispose());
     super.dispose();
   }
 }

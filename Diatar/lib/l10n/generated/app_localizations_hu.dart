@@ -1244,6 +1244,39 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
+  String get settingsWirelessDisplayTitle =>
+      'Vezeték nélküli kijelző (Miracast / AirPlay)';
+
+  @override
+  String settingsWirelessDisplaySubtitle(Object status) {
+    return 'Vezeték nélküli kijelző: $status';
+  }
+
+  @override
+  String get settingsWirelessDisplayDescription =>
+      'A vetítés továbbítása Miracast (Android) vagy AirPlay (iOS) fogadóra.';
+
+  @override
+  String get wirelessDisplayEnabledTitle =>
+      'Vezeték nélküli kijelző engedélyezése';
+
+  @override
+  String get wirelessDisplayEnabledHint =>
+      'Ha be van kapcsolva, a vetítés továbbítódik a kiválasztott Miracast vagy AirPlay eszközre.';
+
+  @override
+  String get wirelessDisplayEnabledHelp =>
+      'A vetítés 1080p 30fps-ben kerül továbbításra Miracast (Android) vagy AirPlay (iOS) használatával. Hang nem kerül továbbításra.';
+
+  @override
+  String get wirelessDisplayConnectionError =>
+      'Nem sikerült csatlakozni a kiválasztott eszközhöz.';
+
+  @override
+  String get wirelessDisplayRtspUrl =>
+      'Közvetítési URL (írd be egy médialejátszóba vagy cast alkalmazásba)';
+
+  @override
   String settingsColorSummary(Object background, Object text) {
     return 'Háttér: $background, Szöveg: $text';
   }

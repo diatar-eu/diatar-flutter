@@ -1240,6 +1240,38 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get settingsWirelessDisplayTitle =>
+      'Wireless Display (Miracast / AirPlay)';
+
+  @override
+  String settingsWirelessDisplaySubtitle(Object status) {
+    return 'Wireless Display: $status';
+  }
+
+  @override
+  String get settingsWirelessDisplayDescription =>
+      'Stream the projection to a Miracast (Android) or AirPlay (iOS) receiver.';
+
+  @override
+  String get wirelessDisplayEnabledTitle => 'Enable Wireless Display';
+
+  @override
+  String get wirelessDisplayEnabledHint =>
+      'When enabled, the projection is streamed to the selected Miracast or AirPlay device.';
+
+  @override
+  String get wirelessDisplayEnabledHelp =>
+      'The projection is streamed at 1080p 30fps via Miracast (Android) or AirPlay (iOS). No audio is transmitted.';
+
+  @override
+  String get wirelessDisplayConnectionError =>
+      'Failed to connect to the selected device.';
+
+  @override
+  String get wirelessDisplayRtspUrl =>
+      'Streaming URL (enter in a media player or cast app)';
+
+  @override
   String settingsColorSummary(Object background, Object text) {
     return 'Background: $background, Text: $text';
   }

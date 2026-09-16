@@ -2219,6 +2219,54 @@ abstract class AppLocalizations {
   /// **'Wake on LAN hiba: {error}'**
   String wolMessageError(Object error);
 
+  /// No description provided for @settingsWirelessDisplayTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vezeték nélküli kijelző (Miracast / AirPlay)'**
+  String get settingsWirelessDisplayTitle;
+
+  /// No description provided for @settingsWirelessDisplaySubtitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vezeték nélküli kijelző: {status}'**
+  String settingsWirelessDisplaySubtitle(Object status);
+
+  /// No description provided for @settingsWirelessDisplayDescription.
+  ///
+  /// In hu, this message translates to:
+  /// **'A vetítés továbbítása Miracast (Android) vagy AirPlay (iOS) fogadóra.'**
+  String get settingsWirelessDisplayDescription;
+
+  /// No description provided for @wirelessDisplayEnabledTitle.
+  ///
+  /// In hu, this message translates to:
+  /// **'Vezeték nélküli kijelző engedélyezése'**
+  String get wirelessDisplayEnabledTitle;
+
+  /// No description provided for @wirelessDisplayEnabledHint.
+  ///
+  /// In hu, this message translates to:
+  /// **'Ha be van kapcsolva, a vetítés továbbítódik a kiválasztott Miracast vagy AirPlay eszközre.'**
+  String get wirelessDisplayEnabledHint;
+
+  /// No description provided for @wirelessDisplayEnabledHelp.
+  ///
+  /// In hu, this message translates to:
+  /// **'A vetítés 1080p 30fps-ben kerül továbbításra Miracast (Android) vagy AirPlay (iOS) használatával. Hang nem kerül továbbításra.'**
+  String get wirelessDisplayEnabledHelp;
+
+  /// No description provided for @wirelessDisplayConnectionError.
+  ///
+  /// In hu, this message translates to:
+  /// **'Nem sikerült csatlakozni a kiválasztott eszközhöz.'**
+  String get wirelessDisplayConnectionError;
+
+  /// No description provided for @wirelessDisplayRtspUrl.
+  ///
+  /// In hu, this message translates to:
+  /// **'Közvetítési URL (írd be egy médialejátszóba vagy cast alkalmazásba)'**
+  String get wirelessDisplayRtspUrl;
+
   /// No description provided for @settingsColorSummary.
   ///
   /// In hu, this message translates to:

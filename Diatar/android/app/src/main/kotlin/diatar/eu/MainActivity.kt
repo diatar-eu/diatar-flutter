@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import com.diatar.wirelessdisplay.WirelessDisplayPlugin
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodCall
@@ -54,6 +55,7 @@ class MainActivity : FlutterActivity() {
 
 	override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
 		super.configureFlutterEngine(flutterEngine)
+		flutterEngine.plugins.add(WirelessDisplayPlugin())
 		MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DIA_SAVE_CHANNEL)
 			.setMethodCallHandler { call, result ->
 				when (call.method) {
