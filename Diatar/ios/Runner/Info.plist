@@ -28,6 +28,19 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>A prédikáció élő feliratozásához szükséges a mikrofon használata.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Discover AirPlay devices on local network</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_airplay._tcp</string>
+		<string>_raop._tcp</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Screen recording for wireless display requires photo library access</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

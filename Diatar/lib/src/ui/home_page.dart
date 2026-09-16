@@ -18,6 +18,7 @@ import '../services/streaming_zip_service.dart';
 import '../services/android_zip_import_picker.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/macos_file_panels.dart';
+import '../services/wireless_display_frame_capture.dart';
 import '../utils/custom_entry_labels.dart';
 import '../utils/file_system_provider.dart';
 import '../utils/friendly_path.dart';
@@ -743,6 +744,19 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           tooltip: l10n.wolTooltip,
           onPressed: () => _sendWakeOnLan(context),
           icon: const Icon(Icons.offline_bolt),
+        ),
+      if (!kIsWeb && controller.settings.wirelessDisplayEnabled)
+        IconButton(
+          tooltip: l10n.settingsWirelessDisplayTitle,
+          onPressed: () => _toggleWirelessDisplay(context),
+          icon: Icon(
+            controller.isWirelessDisplayStreaming
+                ? Icons.cast_connected
+                : Icons.cast,
+            color: controller.isWirelessDisplayStreaming
+                ? const Color(0xFF388E3C)
+                : null,
+          ),
         ),
       if (!kIsWeb && controller.settings.speechFeatureVisible)
         IconButton(
@@ -1725,7 +1739,10 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
           return SizedBox(
             width: constraints.maxWidth,
             height: constraints.maxHeight,
-            child: preview,
+            child: RepaintBoundary(
+              key: WirelessDisplayFrameCapture.instance.projectionKey,
+              child: preview,
+            ),
           );
         },
       ),
@@ -2006,6 +2023,31 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _toggleWirelessDisplay(BuildContext context) async {
+    final l10n = context.l10n;
+    try {
+      if (controller.isWirelessDisplayStreaming) {
+        await controller.stopWirelessDisplay();
+        return;
+      }
+      await controller.showWirelessDisplayPicker();
+      await controller.startWirelessDisplay();
+      final String? url = await controller.wirelessDisplayStreamUrl;
+      if (!context.mounted || url == null || url.isEmpty) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${l10n.wirelessDisplayRtspUrl}: $url'),
+          duration: const Duration(seconds: 12),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.wirelessDisplayConnectionError)),
+      );
+    }
   }
 
   Future<void> _toggleLiveSubtitles(BuildContext context) async {

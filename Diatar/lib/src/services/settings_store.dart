@@ -16,6 +16,7 @@ class SettingsStore {
   static const String _kWolTargets = 'WolTargets';
   static const String _kWolBroadcastAddress = 'WolBroadcastAddress';
   static const String _kWolPort = 'WolPort';
+  static const String _kWirelessDisplayEnabled = 'WirelessDisplayEnabled';
   static const String _kUser = 'Username';
   static const String _kPassword = 'Password';
   static const String _kInternetRelayEnabled = 'InternetRelayEnabled';
@@ -269,6 +270,8 @@ class SettingsStore {
     final String wolBroadcastAddress =
         prefs.getString(_kWolBroadcastAddress) ?? '255.255.255.255';
     final int wolPort = prefs.getInt(_kWolPort) ?? 9;
+    final bool wirelessDisplayEnabled =
+        prefs.getBool(_kWirelessDisplayEnabled) ?? false;
     final Map<String, String> savedDesktopActionHotkeys = _decodeStringMap(
       prefs.getStringList(_kDesktopActionHotkeys),
     );
@@ -299,6 +302,7 @@ class SettingsStore {
       wolTargets: wolTargets,
       wolBroadcastAddress: wolBroadcastAddress,
       wolPort: wolPort,
+      wirelessDisplayEnabled: wirelessDisplayEnabled,
       boot: false,
       borderToClip: false,
       clipL: 0,
@@ -393,6 +397,7 @@ class SettingsStore {
     await prefs.setStringList(_kWolTargets, settings.wolTargets);
     await prefs.setString(_kWolBroadcastAddress, settings.wolBroadcastAddress);
     await prefs.setInt(_kWolPort, settings.wolPort);
+    await prefs.setBool(_kWirelessDisplayEnabled, settings.wirelessDisplayEnabled);
     if (settings.cameraTarget != null) {
       await prefs.setString(_kCameraTarget, settings.cameraTarget!);
     } else {

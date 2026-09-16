@@ -167,6 +167,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _wolTargets;
   late final TextEditingController _wolBroadcastAddress;
   late final TextEditingController _wolPort;
+  late bool _wirelessDisplayEnabled;
   late bool _internetRelayEnabled;
   late bool _localNetworkEnabled;
   late bool _picPlcEnabled;
@@ -274,6 +275,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _wolTargets = TextEditingController(text: s.wolTargets.join('\n'));
     _wolBroadcastAddress = TextEditingController(text: s.wolBroadcastAddress);
     _wolPort = TextEditingController(text: s.wolPort.toString());
+    _wirelessDisplayEnabled = s.wirelessDisplayEnabled;
     _internetRelayEnabled = s.internetRelayEnabled;
     _localNetworkEnabled = s.tcpClientEnabled;
     _liveSubtitleDeviceId = s.liveSubtitleDeviceId;
@@ -423,6 +425,12 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           query,
           'wake on lan wol ebreszto kapcsolat mac broadcast port',
         );
+    final bool showWirelessDisplay =
+        !kIsWeb &&
+        _matches(
+          query,
+          'wireless display miracast airplay vetites kijelzo',
+        );
     final bool showProjection = _matches(
       query,
       'vetites betu meret cim hatter opacity szinek szin',
@@ -466,6 +474,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         showInternet ||
         showLan ||
         showWol ||
+        showWirelessDisplay ||
         showProjection ||
         showFiles ||
         showGeneral ||
@@ -586,6 +595,22 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       description: l10n.settingsWolDescription,
                     ),
                   if (showWol && (showProjection || showFiles || showGeneral))
+                    const Divider(height: 1),
+                  if (showWirelessDisplay)
+                    _settingsTile(
+                      leading: const Icon(Icons.cast),
+                      title: Text(l10n.settingsWirelessDisplayTitle),
+                      subtitle: Text(
+                        l10n.settingsWirelessDisplaySubtitle(
+                          _wirelessDisplayEnabled
+                              ? l10n.internetStatusOn
+                              : l10n.internetStatusOff,
+                        ),
+                      ),
+                      onTap: _openWirelessDisplaySettings,
+                      description: l10n.settingsWirelessDisplayDescription,
+                    ),
+                  if (showWirelessDisplay && (showProjection || showFiles || showGeneral))
                     const Divider(height: 1),
                   if (showProjection)
                     _settingsTile(
@@ -1757,6 +1782,55 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       return l10n.wolInvalidPort;
     }
     return null;
+  }
+
+  Future<void> _openWirelessDisplaySettings() {
+    final bool originalWirelessDisplayEnabled = _wirelessDisplayEnabled;
+
+    return _openSectionSheet(
+      title: context.l10n.settingsWirelessDisplayTitle,
+      isDismissible: false,
+      enableDrag: false,
+      showCancelButton: true,
+      onConfirmClose: _applyWirelessDisplaySettings,
+      onCancel: () {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _wirelessDisplayEnabled = originalWirelessDisplayEnabled;
+        });
+      },
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        return <Widget>[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _wirelessDisplayEnabled,
+            onChanged: (bool v) => setBoth(() => _wirelessDisplayEnabled = v),
+            title: Text(l10n.wirelessDisplayEnabledTitle),
+            subtitle: Text(l10n.wirelessDisplayEnabledHint),
+          ),
+          if (_wirelessDisplayEnabled) ...<Widget>[
+            const SizedBox(height: 8),
+            Text(
+              l10n.wirelessDisplayEnabledHelp,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ];
+      },
+    );
+  }
+
+  bool _applyWirelessDisplaySettings() {
+    final AppSettings updated = widget.initialSettings.copyWith(
+      wirelessDisplayEnabled: _wirelessDisplayEnabled,
+    );
+    unawaited(_applySettingsSafely(updated));
+    return true;
   }
 
   bool _applyNetworkSettings() {

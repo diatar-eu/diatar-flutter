@@ -850,6 +850,19 @@
       "error": {}
     }
   },
+  "settingsWirelessDisplayTitle": "Vezeték nélküli kijelző (Miracast / AirPlay)",
+  "settingsWirelessDisplaySubtitle": "Vezeték nélküli kijelző: {status}",
+  "@settingsWirelessDisplaySubtitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "settingsWirelessDisplayDescription": "A vetítés továbbítása Miracast (Android) vagy AirPlay (iOS) fogadóra.",
+  "wirelessDisplayEnabledTitle": "Vezeték nélküli kijelző engedélyezése",
+  "wirelessDisplayEnabledHint": "Ha be van kapcsolva, a vetítés továbbítódik a kiválasztott Miracast vagy AirPlay eszközre.",
+  "wirelessDisplayEnabledHelp": "A vetítés 1080p 30fps-ben kerül továbbításra Miracast (Android) vagy AirPlay (iOS) használatával. Hang nem kerül továbbításra.",
+  "wirelessDisplayConnectionError": "Nem sikerült csatlakozni a kiválasztott eszközhöz.",
+  "wirelessDisplayRtspUrl": "Közvetítési URL (írd be egy médialejátszóba vagy cast alkalmazásba)",
   "settingsColorSummary": "Háttér: {background}, Szöveg: {text}",
   "@settingsColorSummary": {
     "placeholders": {

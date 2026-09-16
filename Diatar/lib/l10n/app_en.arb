@@ -850,6 +850,20 @@
       "error": {}
     }
   },
+  "settingsWirelessDisplayTitle": "Wireless Display (Miracast / AirPlay)",
+  "settingsWirelessDisplaySubtitle": "Wireless Display: {status}",
+  "@settingsWirelessDisplaySubtitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "settingsWirelessDisplayDescription": "Stream the projection to a Miracast (Android) or AirPlay (iOS) receiver.",
+  "wirelessDisplayEnabledTitle": "Enable Wireless Display",
+  "wirelessDisplayEnabledHint": "When enabled, the projection is streamed to the selected Miracast or AirPlay device.",
+  "wirelessDisplayEnabledHelp": "The projection is streamed at 1080p 30fps via Miracast (Android) or AirPlay (iOS). No audio is transmitted.",
+  "wirelessDisplayConnectionError": "Failed to connect to the selected device.",
+  "wirelessDisplayRtspUrl": "Streaming URL (enter in a media player or cast app)",
+  "settingsWirelessDisplayTitle": "Wireless Display (Miracast / AirPlay)",
   "settingsColorSummary": "Background: {background}, Text: {text}",
   "@settingsColorSummary": {
     "placeholders": {
