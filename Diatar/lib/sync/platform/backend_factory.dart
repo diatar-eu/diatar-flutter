@@ -1,17 +1,24 @@
 import 'package:flutter/foundation.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import 'android_sync_backend.dart';
 import 'sync_backend.dart';
 import 'windows_sync_backend.dart';
 
-SyncBackend createSyncBackend() {
+SyncBackend createSyncBackend(
+  AppLocalizations l10n,
+) {
   if (!kIsWeb) {
     switch (defaultTargetPlatform) {
       case TargetPlatform.windows:
-        return WindowsSyncBackend();
+        return WindowsSyncBackend(
+          l10n: l10n,
+        );
 
       case TargetPlatform.android:
-        return AndroidSyncBackend();
+        return AndroidSyncBackend(
+          l10n: l10n,
+        );
 
       default:
         break;
@@ -19,6 +26,6 @@ SyncBackend createSyncBackend() {
   }
 
   throw UnsupportedError(
-    'Ehhez a platformhoz még nincs szinkron backend.',
+    l10n.syncUnsupportedPlatform,
   );
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../models/folder_selection.dart';
 import '../models/sync_plan.dart';
 import '../models/sync_progress.dart';
@@ -23,14 +24,19 @@ class AndroidSyncBackend implements SyncBackend {
       _progressController =
       StreamController<SyncProgress>.broadcast();
 
-  AndroidSyncBackend() {
+  AndroidSyncBackend({
+    required this.l10n,
+  }) {
     _syncChannel.setMethodCallHandler(
       _handleSyncMethodCall,
     );
   }
 
+  final AppLocalizations l10n;
+
   @override
-  String get localFolderName => 'Android';
+  String get localFolderName =>
+      l10n.syncLocalFolderNameAndroid;
 
   @override
   bool get supportsUsbEject => true;
@@ -207,7 +213,7 @@ class AndroidSyncBackend implements SyncBackend {
 
     if (result == null) {
       throw Exception(
-        'A szinkronterv nem készült el.',
+        l10n.syncPreparePlanMissing,
       );
     }
 
@@ -247,7 +253,7 @@ class AndroidSyncBackend implements SyncBackend {
 
     if (result == null) {
       throw Exception(
-        'A szinkronizálás nem adott eredményt.',
+        l10n.syncExecuteResultMissing,
       );
     }
 

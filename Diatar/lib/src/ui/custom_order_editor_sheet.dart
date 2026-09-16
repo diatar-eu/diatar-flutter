@@ -747,7 +747,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                     OutlinedButton.icon(
                       onPressed: _openSync,
                       icon: const Icon(Icons.sync),
-                      label: const Text('Szinkron'),
+                      label: Text(l10n.syncButton),
                     ),
                   ],
                 ),

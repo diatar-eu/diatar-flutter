@@ -1445,5 +1445,240 @@
     "placeholders": {
       "path": {}
     }
-  }
+  },
+  "syncButton": "Sync",
+  "syncTitle": "Synchronization",
+  "syncFolderTitle": "{name} folder",
+  "@syncFolderTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "syncUsbFolderTitle": "USB drive folder",
+  "syncSelectFolderAction": "Select {name}",
+  "@syncSelectFolderAction": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "syncDirectionTitle": "Synchronization direction",
+  "syncDirectionLocalToUsb": "{name} → USB drive",
+  "@syncDirectionLocalToUsb": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "syncDirectionUsbToLocal": "USB drive → {name}",
+  "@syncDirectionUsbToLocal": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "syncMirrorMode": "Mirror mode — also delete on the target side",
+  "syncDryRun": "Dry run — do not modify files",
+  "syncPercent": "{percent}%",
+  "@syncPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "syncFilesProgress": "{processed} / {total} files",
+  "@syncFilesProgress": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "syncFilesScanned": "Scanned: {count} files",
+  "@syncFilesScanned": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncStartInProgress": "SYNCHRONIZATION IN PROGRESS...",
+  "syncStartDryRun": "START DRY RUN",
+  "syncStart": "SYNCHRONIZE",
+  "syncEjectUsb": "EJECT USB DRIVE",
+  "syncNotSelected": "Not selected",
+  "syncWaiting": "Waiting...",
+  "syncSelectFolderFailed": "Failed to select the folder.",
+  "syncSelectUsbFolderFailed": "Failed to select the USB drive folder.",
+  "syncMissingLocalFolder": "No local folder selected.",
+  "syncMissingUsbFolder": "No USB drive folder selected.",
+  "syncPreparing": "Preparing synchronization...",
+  "syncCancelled": "Synchronization cancelled.",
+  "syncDeleteNotAllowed": "Deletion was not allowed.",
+  "syncDryRunComplete": "Dry run complete.",
+  "syncComplete": "Synchronization complete.",
+  "syncCompleteWithErrors": "Synchronization complete with errors.",
+  "syncFailed": "Synchronization failed.",
+  "syncFirstTitle": "First synchronization",
+  "syncFirstMessage": "There is no previous sync state for this folder pair.\n\nThe first comparison may take longer because of this.\n\nDo you want to continue?",
+  "syncContinue": "Continue",
+  "syncDeleteConfirmTitle": "Confirm deletion",
+  "syncDeleteConfirmMessage": "{deleteCount} files will be deleted from the target during mirroring.\n\nTo copy/update: {copyCount} files\nNew files: {newFileCount}\nFiles to update: {updatedFileCount}\n\nAre you sure you want to continue?",
+  "@syncDeleteConfirmMessage": {
+    "placeholders": {
+      "deleteCount": {
+        "type": "int"
+      },
+      "copyCount": {
+        "type": "int"
+      },
+      "newFileCount": {
+        "type": "int"
+      },
+      "updatedFileCount": {
+        "type": "int"
+      }
+    }
+  },
+  "syncDeleteAndContinue": "Delete and continue",
+  "syncDryRunSummary": "Dry run — no files were modified.",
+  "syncResultNewFiles": "New files: {count}",
+  "@syncResultNewFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncResultUpdatedFiles": "Updated files: {count}",
+  "@syncResultUpdatedFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncResultDeletedFiles": "Deleted files: {count}",
+  "@syncResultDeletedFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncResultUnchangedFiles": "Unchanged files: {count}",
+  "@syncResultUnchangedFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncResultErrors": "Errors: {count}",
+  "@syncResultErrors": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncEjectStarted": "USB drive ejection started.",
+  "syncEjectFailed": "USB drive ejection failed.",
+  "syncUnsupportedPlatform": "This platform does not have a sync backend yet.",
+  "syncLocalFolderNameAndroid": "Android",
+  "syncLocalFolderNameComputer": "Computer",
+  "syncSelectFolderConfirmButton": "Select folder",
+  "syncPreparePlanMissing": "The sync plan was not created.",
+  "syncExecuteResultMissing": "Synchronization did not return a result.",
+  "syncWindowsPlanMissing": "No executable Windows sync plan is available.",
+  "syncWindowsDeleteRequired": "Synchronization requires deleting {count} files.",
+  "@syncWindowsDeleteRequired": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncWindowsResultMissing": "Windows synchronization did not return a result.",
+  "syncWindowsEngineMissing": "The Windows sync engine was not found:\n{path}",
+  "@syncWindowsEngineMissing": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "syncWindowsEngineFailed": "The Windows sync engine exited with an error (exit code {code}).",
+  "@syncWindowsEngineFailed": {
+    "placeholders": {
+      "code": {}
+    }
+  },
+  "syncScanning": "Scanning...",
+  "syncScanComplete": "Scan complete.",
+  "syncSourceScanning": "Scanning source...",
+  "syncTargetScanning": "Scanning target...",
+  "syncComparingChanges": "Comparing changes...",
+  "syncNoChanges": "There are no changes to synchronize.",
+  "syncDryRunNewFile": "Dry run — new file",
+  "syncDryRunUpdateFile": "Dry run — file to update",
+  "syncCopyingNewFile": "Copying new file",
+  "syncUpdatingFile": "Updating file",
+  "syncContinueAfterError": "Error — continuing...",
+  "syncDryRunDeleteFile": "Dry run — file to delete",
+  "syncDeletingExtraFile": "Deleting extra file",
+  "syncCheckingEmptyFolders": "Checking empty folders...",
+  "syncCheckingEmptyFoldersProgress": "Checking empty folders: {progress}",
+  "@syncCheckingEmptyFoldersProgress": {
+    "placeholders": {
+      "progress": {}
+    }
+  },
+  "syncSourceFolderOpenFailed": "The source folder could not be opened.",
+  "syncTargetFolderOpenFailed": "The target folder could not be opened.",
+  "syncSourceFolderMissing": "The source folder does not exist.",
+  "syncTargetFolderMissing": "The target folder does not exist.",
+  "syncSourceFolderUnavailable": "The source folder is no longer available.",
+  "syncTargetFolderUnavailable": "The target folder is no longer available.",
+  "syncSourceFolderMissingWithPath": "The source folder does not exist: {path}",
+  "@syncSourceFolderMissingWithPath": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "syncSameSourceTarget": "The source and target folders cannot be the same.",
+  "syncRobocopyError": "Robocopy failed with exit code {code}.",
+  "@syncRobocopyError": {
+    "placeholders": {
+      "code": {}
+    }
+  },
+  "syncFileDeleteFailed": "The file could not be deleted.",
+  "syncFileReadFailed": "The file could not be read.",
+  "syncInvalidFileName": "The file name is invalid.",
+  "syncOldTargetDeleteFailed": "The old target file could not be deleted: {fileName}",
+  "@syncOldTargetDeleteFailed": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "syncTargetFileCreateFailed": "The target file could not be created: {fileName}",
+  "@syncTargetFileCreateFailed": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "syncSourceFileReadFailed": "The source file could not be read: {fileName}",
+  "@syncSourceFileReadFailed": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "syncTargetFileWriteFailed": "The target file could not be written: {fileName}",
+  "@syncTargetFileWriteFailed": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "syncCopiedSizeMismatch": "The copied file size is invalid.",
+  "syncDeleteError": "Deletion error"
 }

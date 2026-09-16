@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../models/folder_selection.dart';
 import '../models/sync_plan.dart';
 import '../models/sync_progress.dart';
@@ -11,6 +12,12 @@ import '../models/sync_result.dart';
 import 'sync_backend.dart';
 
 class WindowsSyncBackend implements SyncBackend {
+  WindowsSyncBackend({
+    required this.l10n,
+  });
+
+  final AppLocalizations l10n;
+
   final StreamController<SyncProgress> _progressController =
       StreamController<SyncProgress>.broadcast();
 
@@ -19,7 +26,8 @@ class WindowsSyncBackend implements SyncBackend {
   String? _preparedTarget;
 
   @override
-  String get localFolderName => 'Számítógép';
+  String get localFolderName =>
+      l10n.syncLocalFolderNameComputer;
 
   @override
   bool get supportsUsbEject => false;
@@ -70,7 +78,8 @@ class WindowsSyncBackend implements SyncBackend {
   @override
   Future<FolderSelection?> selectLocalFolder() async {
     final path = await getDirectoryPath(
-      confirmButtonText: 'Mappa kiválasztása',
+      confirmButtonText:
+          l10n.syncSelectFolderConfirmButton,
     );
 
     if (path == null) {
@@ -93,7 +102,8 @@ class WindowsSyncBackend implements SyncBackend {
   @override
   Future<FolderSelection?> selectUsbFolder() async {
     final path = await getDirectoryPath(
-      confirmButtonText: 'Mappa kiválasztása',
+      confirmButtonText:
+          l10n.syncSelectFolderConfirmButton,
     );
 
     if (path == null) {
@@ -246,7 +256,7 @@ class WindowsSyncBackend implements SyncBackend {
 
     if (planMap.isEmpty) {
       throw Exception(
-        'A Windows szinkronterv nem készült el.',
+        l10n.syncWindowsPlanMissing,
       );
     }
 
@@ -278,7 +288,7 @@ class WindowsSyncBackend implements SyncBackend {
 
     if (preparedPlan == null || source == null || target == null) {
       throw Exception(
-        'Nincs végrehajtható Windows szinkronterv.',
+        l10n.syncWindowsPlanMissing,
       );
     }
 
@@ -287,8 +297,9 @@ class WindowsSyncBackend implements SyncBackend {
         preparedPlan.deleteCount > 0 &&
         !allowDelete) {
       throw Exception(
-        'A szinkronizálás '
-        '${preparedPlan.deleteCount} fájl törlését igényli.',
+        l10n.syncWindowsDeleteRequired(
+          preparedPlan.deleteCount,
+        ),
       );
     }
 
@@ -308,7 +319,7 @@ class WindowsSyncBackend implements SyncBackend {
 
       if (resultMap.isEmpty) {
         throw Exception(
-          'A Windows szinkronizálás nem adott eredményt.',
+          l10n.syncWindowsResultMissing,
         );
       }
 
@@ -348,7 +359,9 @@ class WindowsSyncBackend implements SyncBackend {
 
     if (!await engine.exists()) {
       throw Exception(
-        'Nem található a Windows szinkronmotor:\n${engine.path}',
+        l10n.syncWindowsEngineMissing(
+          engine.path,
+        ),
       );
     }
 
@@ -452,8 +465,9 @@ class WindowsSyncBackend implements SyncBackend {
         engineError ??
             (stderrText.isNotEmpty
                 ? stderrText
-                : 'A Windows szinkronmotor hibával leállt '
-                    '(exitcode=$exitCode).'),
+                : l10n.syncWindowsEngineFailed(
+                    '$exitCode',
+                  )),
       );
     }
 

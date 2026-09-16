@@ -1446,5 +1446,240 @@
     "placeholders": {
       "path": {}
     }
-  }
+  },
+  "syncButton": "Szinkron",
+  "syncTitle": "Szinkronizálás",
+  "syncFolderTitle": "{name} mappa",
+  "@syncFolderTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "syncUsbFolderTitle": "Pendrive mappa",
+  "syncSelectFolderAction": "{name} kiválasztása",
+  "@syncSelectFolderAction": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "syncDirectionTitle": "Szinkronizálás iránya",
+  "syncDirectionLocalToUsb": "{name} → Pendrive",
+  "@syncDirectionLocalToUsb": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "syncDirectionUsbToLocal": "Pendrive → {name}",
+  "@syncDirectionUsbToLocal": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "syncMirrorMode": "Tükrözés – töröl is a céloldalon",
+  "syncDryRun": "Próbaüzem – nem módosít fájlokat",
+  "syncPercent": "{percent}%",
+  "@syncPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "syncFilesProgress": "{processed} / {total} fájl",
+  "@syncFilesProgress": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "syncFilesScanned": "Átvizsgálva: {count} fájl",
+  "@syncFilesScanned": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncStartInProgress": "SZINKRONIZÁLÁS FOLYAMATBAN...",
+  "syncStartDryRun": "PRÓBA INDÍTÁSA",
+  "syncStart": "SZINKRONIZÁLÁS",
+  "syncEjectUsb": "PENDRIVE LEVÁLASZTÁSA",
+  "syncNotSelected": "Nincs kiválasztva",
+  "syncWaiting": "Várakozás...",
+  "syncSelectFolderFailed": "A mappa kiválasztása nem sikerült.",
+  "syncSelectUsbFolderFailed": "A pendrive mappa kiválasztása nem sikerült.",
+  "syncMissingLocalFolder": "Nincs kiválasztva a helyi mappa.",
+  "syncMissingUsbFolder": "Nincs kiválasztva a pendrive mappa.",
+  "syncPreparing": "Szinkronizálás előkészítése...",
+  "syncCancelled": "Szinkronizálás megszakítva.",
+  "syncDeleteNotAllowed": "A törlés nem lett engedélyezve.",
+  "syncDryRunComplete": "Próbaüzem kész.",
+  "syncComplete": "Szinkronizálás kész.",
+  "syncCompleteWithErrors": "Szinkronizálás kész, hibákkal.",
+  "syncFailed": "A szinkronizálás nem sikerült.",
+  "syncFirstTitle": "Első szinkronizálás",
+  "syncFirstMessage": "Ehhez a mappapárhoz még nincs korábbi szinkronállapot.\n\nAz első összehasonlítás emiatt hosszabb ideig tarthat.\n\nFolytatod?",
+  "syncContinue": "Folytatás",
+  "syncDeleteConfirmTitle": "Törlés megerősítése",
+  "syncDeleteConfirmMessage": "A tükrözés során a céloldalról {deleteCount} fájl törlődik.\n\nMásolandó/frissítendő: {copyCount} fájl\nÚj fájl: {newFileCount}\nFrissítendő fájl: {updatedFileCount}\n\nBiztosan folytatod?",
+  "@syncDeleteConfirmMessage": {
+    "placeholders": {
+      "deleteCount": {
+        "type": "int"
+      },
+      "copyCount": {
+        "type": "int"
+      },
+      "newFileCount": {
+        "type": "int"
+      },
+      "updatedFileCount": {
+        "type": "int"
+      }
+    }
+  },
+  "syncDeleteAndContinue": "TÖRLÉS ÉS FOLYTATÁS",
+  "syncDryRunSummary": "Próbaüzem – nem történt fájlmódosítás.",
+  "syncResultNewFiles": "Új fájlok: {count}",
+  "@syncResultNewFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncResultUpdatedFiles": "Frissített fájlok: {count}",
+  "@syncResultUpdatedFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncResultDeletedFiles": "Törölt fájlok: {count}",
+  "@syncResultDeletedFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncResultUnchangedFiles": "Változatlan fájlok: {count}",
+  "@syncResultUnchangedFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncResultErrors": "Hibák: {count}",
+  "@syncResultErrors": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncEjectStarted": "A pendrive leválasztása elindítva.",
+  "syncEjectFailed": "A pendrive leválasztása nem sikerült.",
+  "syncUnsupportedPlatform": "Ehhez a platformhoz még nincs szinkron backend.",
+  "syncLocalFolderNameAndroid": "Android",
+  "syncLocalFolderNameComputer": "Számítógép",
+  "syncSelectFolderConfirmButton": "Mappa kiválasztása",
+  "syncPreparePlanMissing": "A szinkronterv nem készült el.",
+  "syncExecuteResultMissing": "A szinkronizálás nem adott eredményt.",
+  "syncWindowsPlanMissing": "Nincs végrehajtható Windows szinkronterv.",
+  "syncWindowsDeleteRequired": "A szinkronizálás {count} fájl törlését igényli.",
+  "@syncWindowsDeleteRequired": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncWindowsResultMissing": "A Windows szinkronizálás nem adott eredményt.",
+  "syncWindowsEngineMissing": "Nem található a Windows szinkronmotor:\n{path}",
+  "@syncWindowsEngineMissing": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "syncWindowsEngineFailed": "A Windows szinkronmotor hibával leállt (exit code {code}).",
+  "@syncWindowsEngineFailed": {
+    "placeholders": {
+      "code": {}
+    }
+  },
+  "syncScanning": "Felmérés...",
+  "syncScanComplete": "Felmérés kész.",
+  "syncSourceScanning": "Forrás vizsgálata...",
+  "syncTargetScanning": "Cél vizsgálata...",
+  "syncComparingChanges": "Változások összehasonlítása...",
+  "syncNoChanges": "Nincs szinkronizálandó változás.",
+  "syncDryRunNewFile": "Próbaüzem – új fájl",
+  "syncDryRunUpdateFile": "Próbaüzem – frissítendő",
+  "syncCopyingNewFile": "Új fájl másolása",
+  "syncUpdatingFile": "Fájl frissítése",
+  "syncContinueAfterError": "Hiba – folytatás...",
+  "syncDryRunDeleteFile": "Próbaüzem – törlendő",
+  "syncDeletingExtraFile": "Felesleges fájl törlése",
+  "syncCheckingEmptyFolders": "Üres mappák ellenőrzése...",
+  "syncCheckingEmptyFoldersProgress": "Üres mappák ellenőrzése: {progress}",
+  "@syncCheckingEmptyFoldersProgress": {
+    "placeholders": {
+      "progress": {}
+    }
+  },
+  "syncSourceFolderOpenFailed": "A forrásmappa nem nyitható meg.",
+  "syncTargetFolderOpenFailed": "A célmappa nem nyitható meg.",
+  "syncSourceFolderMissing": "A forrásmappa nem létezik.",
+  "syncTargetFolderMissing": "A célmappa nem létezik.",
+  "syncSourceFolderUnavailable": "A forrásmappa már nem érhető el.",
+  "syncTargetFolderUnavailable": "A célmappa már nem érhető el.",
+  "syncSourceFolderMissingWithPath": "A forrás mappa nem létezik: {path}",
+  "@syncSourceFolderMissingWithPath": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "syncSameSourceTarget": "A forrás és a cél mappa nem lehet azonos.",
+  "syncRobocopyError": "Robocopy hiba, exit code {code}.",
+  "@syncRobocopyError": {
+    "placeholders": {
+      "code": {}
+    }
+  },
+  "syncFileDeleteFailed": "A fájl nem törölhető.",
+  "syncFileReadFailed": "A fájl nem olvasható.",
+  "syncInvalidFileName": "Érvénytelen fájlnév.",
+  "syncOldTargetDeleteFailed": "A régi célfájl nem törölhető: {fileName}",
+  "@syncOldTargetDeleteFailed": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "syncTargetFileCreateFailed": "A célfájl nem hozható létre: {fileName}",
+  "@syncTargetFileCreateFailed": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "syncSourceFileReadFailed": "A forrásfájl nem olvasható: {fileName}",
+  "@syncSourceFileReadFailed": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "syncTargetFileWriteFailed": "A célfájl nem írható: {fileName}",
+  "@syncTargetFileWriteFailed": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "syncCopiedSizeMismatch": "A másolt fájl mérete hibás.",
+  "syncDeleteError": "Törlési hiba"
 }

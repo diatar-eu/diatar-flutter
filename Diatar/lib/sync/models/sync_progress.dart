@@ -18,6 +18,6 @@ class SyncProgress {
     processedFiles: 0,
     totalFiles: 0,
     currentFile: '',
-    status: 'Várakozás...',
+    status: '',
   );
 }

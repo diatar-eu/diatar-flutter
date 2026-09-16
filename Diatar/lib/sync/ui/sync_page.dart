@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../src/l10n/l10n.dart';
 import '../models/folder_selection.dart';
 import '../models/sync_plan.dart';
 import '../models/sync_progress.dart';
@@ -29,6 +30,7 @@ class SyncPage extends StatefulWidget {
 
 class _SyncPageState extends State<SyncPage> {
   late final SyncBackend _backend;
+  bool _initialized = false;
 
   StreamSubscription<SyncProgress>?
       _progressSubscription;
@@ -47,24 +49,26 @@ class _SyncPageState extends State<SyncPage> {
   int _processedFiles = 0;
   int _totalFiles = 0;
 
-  String _statusText = 'Várakozás...';
+  String _statusText = '';
   String _currentFile = '';
   String _resultText = '';
 
   @override
-  void initState() {
-    super.initState();
-
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    _initialized = true;
     _backend =
         widget.backend ??
-        createSyncBackend();
-
+        createSyncBackend(context.l10n);
+    _statusText = context.l10n.syncWaiting;
     _progressSubscription =
         _backend.progress.listen(
       _handleProgress,
     );
-
-    _loadSavedFolders();
+    unawaited(_loadSavedFolders());
   }
 
   @override
@@ -74,19 +78,26 @@ class _SyncPageState extends State<SyncPage> {
   }
 
   String get _localFolderTitle =>
-      '${_backend.localFolderName} mappa';
+      context.l10n.syncFolderTitle(
+        _backend.localFolderName,
+      );
 
   String get _localToUsbTitle =>
-      '${_backend.localFolderName} → Pendrive';
+      context.l10n.syncDirectionLocalToUsb(
+        _backend.localFolderName,
+      );
 
   String get _usbToLocalTitle =>
-      'Pendrive → ${_backend.localFolderName}';
+      context.l10n.syncDirectionUsbToLocal(
+        _backend.localFolderName,
+      );
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sync'),
+        title: Text(l10n.syncButton),
       ),
       body: SafeArea(
         child: Center(
@@ -101,7 +112,7 @@ class _SyncPageState extends State<SyncPage> {
                     CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Szinkronizálás',
+                    l10n.syncTitle,
                     style: Theme.of(context)
                         .textTheme
                         .headlineMedium
@@ -131,7 +142,10 @@ class _SyncPageState extends State<SyncPage> {
                             ? null
                             : _selectLocalFolder,
                     child: Text(
-                      '$_localFolderTitle KIVÁLASZTÁSA'
+                      l10n
+                          .syncSelectFolderAction(
+                            _localFolderTitle,
+                          )
                           .toUpperCase(),
                     ),
                   ),
@@ -139,7 +153,7 @@ class _SyncPageState extends State<SyncPage> {
                   const SizedBox(height: 20),
 
                   _sectionTitle(
-                    'Pendrive mappa',
+                    l10n.syncUsbFolderTitle,
                   ),
 
                   const SizedBox(height: 5),
@@ -155,8 +169,12 @@ class _SyncPageState extends State<SyncPage> {
                         _syncRunning
                             ? null
                             : _selectUsbFolder,
-                    child: const Text(
-                      'PENDRIVE MAPPA KIVÁLASZTÁSA',
+                    child: Text(
+                      l10n
+                          .syncSelectFolderAction(
+                            l10n.syncUsbFolderTitle,
+                          )
+                          .toUpperCase(),
                     ),
                   ),
 
@@ -165,7 +183,7 @@ class _SyncPageState extends State<SyncPage> {
                   const SizedBox(height: 16),
 
                   _sectionTitle(
-                    'Szinkronizálás iránya',
+                    l10n.syncDirectionTitle,
                   ),
 
                   RadioGroup<SyncDirection>(
@@ -217,8 +235,8 @@ class _SyncPageState extends State<SyncPage> {
                     controlAffinity:
                         ListTileControlAffinity
                             .leading,
-                    title: const Text(
-                      'Tükrözés – töröl is a céloldalon',
+                    title: Text(
+                      l10n.syncMirrorMode,
                     ),
                     value: _mirrorMode,
                     onChanged:
@@ -239,8 +257,8 @@ class _SyncPageState extends State<SyncPage> {
                     controlAffinity:
                         ListTileControlAffinity
                             .leading,
-                    title: const Text(
-                      'Próbaüzem – nem módosít fájlokat',
+                    title: Text(
+                      l10n.syncDryRun,
                     ),
                     value: _dryRun,
                     onChanged:
@@ -282,7 +300,9 @@ class _SyncPageState extends State<SyncPage> {
                   const SizedBox(height: 10),
 
                   Text(
-                    '$_percent%',
+                    l10n.syncPercent(
+                      _percent,
+                    ),
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight:
@@ -292,13 +312,16 @@ class _SyncPageState extends State<SyncPage> {
 
                   if (_totalFiles > 0)
                     Text(
-                      '$_processedFiles / '
-                      '$_totalFiles fájl',
+                      l10n.syncFilesProgress(
+                        _processedFiles,
+                        _totalFiles,
+                      ),
                     )
                   else if (_processedFiles > 0)
                     Text(
-                      'Átvizsgálva: '
-                      '$_processedFiles fájl',
+                      l10n.syncFilesScanned(
+                        _processedFiles,
+                      ),
                     ),
 
                   const SizedBox(height: 8),
@@ -326,11 +349,10 @@ class _SyncPageState extends State<SyncPage> {
                             : _startSync,
                     child: Text(
                       _syncRunning
-                          ? 'SZINKRONIZÁLÁS '
-                              'FOLYAMATBAN...'
+                          ? l10n.syncStartInProgress
                           : _dryRun
-                              ? 'PRÓBA INDÍTÁSA'
-                              : 'SZINKRONIZÁLÁS',
+                              ? l10n.syncStartDryRun
+                              : l10n.syncStart,
                     ),
                   ),
 
@@ -342,8 +364,8 @@ class _SyncPageState extends State<SyncPage> {
                           _syncRunning
                               ? null
                               : _ejectUsb,
-                      child: const Text(
-                        'PENDRIVE LEVÁLASZTÁSA',
+                      child: Text(
+                        l10n.syncEjectUsb,
                       ),
                     ),
                   ],
@@ -375,7 +397,7 @@ class _SyncPageState extends State<SyncPage> {
   ) {
     return Text(
       folder?.displayName ??
-          'Nincs kiválasztva',
+          context.l10n.syncNotSelected,
       style: TextStyle(
         fontSize: 14,
         color:
@@ -404,7 +426,9 @@ class _SyncPageState extends State<SyncPage> {
       _currentFile =
           progress.currentFile;
       _statusText =
-          progress.status;
+          _localizeSyncText(
+            progress.status,
+          );
     });
   }
 
@@ -453,8 +477,8 @@ class _SyncPageState extends State<SyncPage> {
 
       setState(() {
         _statusText =
-            'A mappa kiválasztása '
-            'nem sikerült.';
+              context.l10n
+                  .syncSelectFolderFailed;
         _resultText =
             _errorText(e);
       });
@@ -484,8 +508,8 @@ class _SyncPageState extends State<SyncPage> {
 
       setState(() {
         _statusText =
-            'A pendrive mappa '
-            'kiválasztása nem sikerült.';
+            context.l10n
+                .syncSelectUsbFolderFailed;
         _resultText =
             _errorText(e);
       });
@@ -502,8 +526,8 @@ class _SyncPageState extends State<SyncPage> {
     if (local == null) {
       setState(() {
         _statusText =
-            'Nincs kiválasztva a '
-            'helyi mappa.';
+            context.l10n
+                .syncMissingLocalFolder;
       });
       return;
     }
@@ -511,8 +535,8 @@ class _SyncPageState extends State<SyncPage> {
     if (usb == null) {
       setState(() {
         _statusText =
-            'Nincs kiválasztva a '
-            'pendrive mappa.';
+            context.l10n
+                .syncMissingUsbFolder;
       });
       return;
     }
@@ -536,7 +560,7 @@ class _SyncPageState extends State<SyncPage> {
       _totalFiles = 0;
       _currentFile = '';
       _statusText =
-          'Szinkronizálás előkészítése...';
+          context.l10n.syncPreparing;
       _resultText = '';
     });
 
@@ -566,8 +590,8 @@ class _SyncPageState extends State<SyncPage> {
           setState(() {
             _syncRunning = false;
             _statusText =
-                'Szinkronizálás '
-                'megszakítva.';
+               context.l10n
+                   .syncCancelled;
           });
 
           return;
@@ -606,11 +630,11 @@ class _SyncPageState extends State<SyncPage> {
           setState(() {
             _syncRunning = false;
             _statusText =
-                'Szinkronizálás '
-                'megszakítva.';
+                context.l10n
+                    .syncCancelled;
             _resultText =
-                'A törlés nem lett '
-                'engedélyezve.';
+                context.l10n
+                    .syncDeleteNotAllowed;
           });
 
           return;
@@ -637,10 +661,12 @@ class _SyncPageState extends State<SyncPage> {
         _statusText =
             result.errors.isEmpty
                 ? result.dryRun
-                    ? 'Próbaüzem kész.'
-                    : 'Szinkronizálás kész.'
-                : 'Szinkronizálás kész, '
-                    'hibákkal.';
+                    ? context.l10n
+                        .syncDryRunComplete
+                    : context.l10n
+                        .syncComplete
+                : context.l10n
+                    .syncCompleteWithErrors;
 
         _resultText =
             _makeResultText(result);
@@ -654,8 +680,7 @@ class _SyncPageState extends State<SyncPage> {
       setState(() {
         _syncRunning = false;
         _statusText =
-            'A szinkronizálás '
-            'nem sikerült.';
+            context.l10n.syncFailed;
         _resultText =
             _errorText(e);
       });
@@ -669,15 +694,11 @@ class _SyncPageState extends State<SyncPage> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          title: const Text(
-            'Első szinkronizálás',
+          title: Text(
+            context.l10n.syncFirstTitle,
           ),
-          content: const Text(
-            'Ehhez a mappapárhoz még nincs '
-            'korábbi szinkronállapot.\n\n'
-            'Az első összehasonlítás emiatt '
-            'hosszabb ideig tarthat.\n\n'
-            'Folytatod?',
+          content: Text(
+            context.l10n.syncFirstMessage,
           ),
           actions: [
             TextButton(
@@ -685,8 +706,8 @@ class _SyncPageState extends State<SyncPage> {
                 Navigator.of(context)
                     .pop(false);
               },
-              child: const Text(
-                'MÉGSE',
+              child: Text(
+                context.l10n.cancel,
               ),
             ),
             FilledButton(
@@ -694,8 +715,8 @@ class _SyncPageState extends State<SyncPage> {
                 Navigator.of(context)
                     .pop(true);
               },
-              child: const Text(
-                'FOLYTATÁS',
+              child: Text(
+                context.l10n.syncContinue,
               ),
             ),
           ],
@@ -715,20 +736,16 @@ class _SyncPageState extends State<SyncPage> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          title: const Text(
-            'Törlés megerősítése',
+          title: Text(
+            context.l10n.syncDeleteConfirmTitle,
           ),
           content: Text(
-            'A tükrözés során a céloldalról '
-            '${plan.deleteCount} fájl '
-            'törlődik.\n\n'
-            'Másolandó/frissítendő: '
-            '${plan.copyCount} fájl\n'
-            'Új fájl: '
-            '${plan.newFileCount}\n'
-            'Frissítendő fájl: '
-            '${plan.updatedFileCount}\n\n'
-            'Biztosan folytatod?',
+            context.l10n.syncDeleteConfirmMessage(
+              plan.deleteCount,
+              plan.copyCount,
+              plan.newFileCount,
+              plan.updatedFileCount,
+            ),
           ),
           actions: [
             TextButton(
@@ -736,8 +753,8 @@ class _SyncPageState extends State<SyncPage> {
                 Navigator.of(context)
                     .pop(false);
               },
-              child: const Text(
-                'MÉGSE',
+              child: Text(
+                context.l10n.cancel,
               ),
             ),
             FilledButton(
@@ -745,8 +762,8 @@ class _SyncPageState extends State<SyncPage> {
                 Navigator.of(context)
                     .pop(true);
               },
-              child: const Text(
-                'TÖRLÉS ÉS FOLYTATÁS',
+              child: Text(
+                context.l10n.syncDeleteAndContinue,
               ),
             ),
           ],
@@ -765,41 +782,46 @@ class _SyncPageState extends State<SyncPage> {
 
     if (result.dryRun) {
       buffer.writeln(
-        'Próbaüzem – nem történt '
-        'fájlmódosítás.',
+        context.l10n.syncDryRunSummary,
       );
       buffer.writeln();
     }
 
     buffer.writeln(
-      'Új fájlok: '
-      '${result.newFiles}',
+      context.l10n.syncResultNewFiles(
+        result.newFiles,
+      ),
     );
 
     buffer.writeln(
-      'Frissített fájlok: '
-      '${result.updatedFiles}',
+      context.l10n.syncResultUpdatedFiles(
+        result.updatedFiles,
+      ),
     );
 
     buffer.writeln(
-      'Törölt fájlok: '
-      '${result.deletedFiles}',
+      context.l10n.syncResultDeletedFiles(
+        result.deletedFiles,
+      ),
     );
 
     buffer.writeln(
-      'Változatlan fájlok: '
-      '${result.unchangedFiles}',
+      context.l10n.syncResultUnchangedFiles(
+        result.unchangedFiles,
+      ),
     );
 
     if (result.errors.isNotEmpty) {
       buffer.writeln();
       buffer.writeln(
-        'Hibák: ${result.errors.length}',
+        context.l10n.syncResultErrors(
+          result.errors.length,
+        ),
       );
 
       for (final error in result.errors) {
         buffer.writeln(
-          '• $error',
+          '• ${_localizeSyncText(error)}',
         );
       }
     }
@@ -811,16 +833,20 @@ class _SyncPageState extends State<SyncPage> {
     Object error,
   ) {
     if (error is PlatformException) {
-      return error.message ??
-          error.code;
+      return _localizeSyncText(
+        error.message ??
+            error.code,
+      );
     }
 
-    return error
+    return _localizeSyncText(
+      error
         .toString()
         .replaceFirst(
           'Exception: ',
           '',
-        );
+        ),
+    );
   }
 
   void _resetStatus() {
@@ -828,7 +854,7 @@ class _SyncPageState extends State<SyncPage> {
     _processedFiles = 0;
     _totalFiles = 0;
     _currentFile = '';
-    _statusText = 'Várakozás...';
+    _statusText = context.l10n.syncWaiting;
     _resultText = '';
   }
 
@@ -843,10 +869,147 @@ class _SyncPageState extends State<SyncPage> {
     setState(() {
       _statusText =
           success
-              ? 'A pendrive leválasztása '
-                  'elindítva.'
-              : 'A pendrive leválasztása '
-                  'nem sikerült.';
+              ? context.l10n
+                  .syncEjectStarted
+              : context.l10n
+                  .syncEjectFailed;
     });
+  }
+
+  String _localizeSyncText(
+    String text,
+  ) {
+    final l10n = context.l10n;
+    switch (text) {
+      case '':
+        return text;
+      case 'Várakozás...':
+        return l10n.syncWaiting;
+      case 'Felmérés...':
+        return l10n.syncScanning;
+      case 'Felmérés kész.':
+        return l10n.syncScanComplete;
+      case 'Forrás vizsgálata...':
+        return l10n.syncSourceScanning;
+      case 'Cél vizsgálata...':
+        return l10n.syncTargetScanning;
+      case 'Változások összehasonlítása...':
+        return l10n.syncComparingChanges;
+      case 'Nincs szinkronizálandó változás.':
+        return l10n.syncNoChanges;
+      case 'Próbaüzem – új fájl':
+        return l10n.syncDryRunNewFile;
+      case 'Próbaüzem – frissítendő':
+        return l10n.syncDryRunUpdateFile;
+      case 'Új fájl másolása':
+        return l10n.syncCopyingNewFile;
+      case 'Fájl frissítése':
+        return l10n.syncUpdatingFile;
+      case 'Hiba – folytatás...':
+        return l10n.syncContinueAfterError;
+      case 'Próbaüzem – törlendő':
+        return l10n.syncDryRunDeleteFile;
+      case 'Felesleges fájl törlése':
+        return l10n.syncDeletingExtraFile;
+      case 'Üres mappák ellenőrzése...':
+        return l10n.syncCheckingEmptyFolders;
+      case 'Próbaüzem kész.':
+        return l10n.syncDryRunComplete;
+      case 'Szinkronizálás kész.':
+        return l10n.syncComplete;
+      case 'Szinkronizálás kész, hibákkal.':
+        return l10n.syncCompleteWithErrors;
+      case 'A forrásmappa nem nyitható meg.':
+        return l10n.syncSourceFolderOpenFailed;
+      case 'A célmappa nem nyitható meg.':
+        return l10n.syncTargetFolderOpenFailed;
+      case 'A forrásmappa nem létezik.':
+        return l10n.syncSourceFolderMissing;
+      case 'A célmappa nem létezik.':
+        return l10n.syncTargetFolderMissing;
+      case 'A forrásmappa már nem érhető el.':
+        return l10n.syncSourceFolderUnavailable;
+      case 'A célmappa már nem érhető el.':
+        return l10n.syncTargetFolderUnavailable;
+      case 'A fájl nem törölhető.':
+        return l10n.syncFileDeleteFailed;
+      case 'A fájl nem olvasható.':
+        return l10n.syncFileReadFailed;
+      case 'Érvénytelen fájlnév.':
+        return l10n.syncInvalidFileName;
+      case 'A másolt fájl mérete hibás.':
+        return l10n.syncCopiedSizeMismatch;
+      case 'törlési hiba':
+        return l10n.syncDeleteError;
+    }
+    const checkingEmptyFoldersPrefix =
+        'Üres mappák ellenőrzése: ';
+    if (text.startsWith(checkingEmptyFoldersPrefix)) {
+      return l10n.syncCheckingEmptyFoldersProgress(
+        text.substring(
+          checkingEmptyFoldersPrefix.length,
+        ),
+      );
+    }
+    const sourceFolderMissingWithPathPrefix =
+        'A forrás mappa nem létezik: ';
+    if (text.startsWith(sourceFolderMissingWithPathPrefix)) {
+      return l10n.syncSourceFolderMissingWithPath(
+        text.substring(
+          sourceFolderMissingWithPathPrefix.length,
+        ),
+      );
+    }
+    const oldTargetDeleteFailedPrefix =
+        'A régi célfájl nem törölhető: ';
+    if (text.startsWith(oldTargetDeleteFailedPrefix)) {
+      return l10n.syncOldTargetDeleteFailed(
+        text.substring(
+          oldTargetDeleteFailedPrefix.length,
+        ),
+      );
+    }
+    const targetFileCreateFailedPrefix =
+        'A célfájl nem hozható létre: ';
+    if (text.startsWith(targetFileCreateFailedPrefix)) {
+      return l10n.syncTargetFileCreateFailed(
+        text.substring(
+          targetFileCreateFailedPrefix.length,
+        ),
+      );
+    }
+    const sourceFileReadFailedPrefix =
+        'A forrásfájl nem olvasható: ';
+    if (text.startsWith(sourceFileReadFailedPrefix)) {
+      return l10n.syncSourceFileReadFailed(
+        text.substring(
+          sourceFileReadFailedPrefix.length,
+        ),
+      );
+    }
+    const targetFileWriteFailedPrefix =
+        'A célfájl nem írható: ';
+    if (text.startsWith(targetFileWriteFailedPrefix)) {
+      return l10n.syncTargetFileWriteFailed(
+        text.substring(
+          targetFileWriteFailedPrefix.length,
+        ),
+      );
+    }
+    const sameSourceTargetPrefix =
+        'A forrás és a cél mappa nem lehet azonos.';
+    if (text == sameSourceTargetPrefix) {
+      return l10n.syncSameSourceTarget;
+    }
+    const robocopyErrorPrefix =
+        'Robocopy hiba, exitcode=';
+    if (text.startsWith(robocopyErrorPrefix)) {
+      return l10n.syncRobocopyError(
+        text.substring(
+          robocopyErrorPrefix.length,
+        ),
+      );
+    }
+    return text;
   }
 }
