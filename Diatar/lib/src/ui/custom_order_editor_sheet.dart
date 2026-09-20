@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
@@ -9,6 +8,7 @@ import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import '../../sync/platform/backend_factory.dart';
 import '../../sync/ui/sync_page.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
@@ -61,6 +61,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   bool _canScrollHeaderActionsLeft = false;
   bool _canScrollHeaderActionsRight = false;
   bool _headerActionsRefreshScheduled = false;
+  bool _showSync = false;
   String? _selectedInsertBookFileName;
   int? _selectedInsertSongIndex;
   bool _groupReorder = true;
@@ -472,6 +473,21 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
   @override
   Widget build(BuildContext context) {
+    if (_showSync) {
+      return Material(
+        color: widget.embedded
+            ? Colors.transparent
+            : Theme.of(context).scaffoldBackgroundColor,
+        child: SyncPage(
+          onClose: () {
+            setState(() {
+              _showSync = false;
+            });
+          },
+        ),
+      );
+    }
+
     final l10n = context.l10n;
     return AnimatedBuilder(
       animation: controller,
@@ -744,11 +760,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                         icon: const Icon(Icons.close),
                         label: Text(l10n.close),
                       ),
-                    OutlinedButton.icon(
-                      onPressed: _openSync,
-                      icon: const Icon(Icons.sync),
-                      label: const Text('Szinkron'),
-                    ),
+                    if (isSyncSupported)
+                      OutlinedButton.icon(
+                        onPressed: _openSync,
+                        icon: const Icon(Icons.sync),
+                        label: const Text('Szinkron'),
+                      ),
                   ],
                 ),
               ),
@@ -759,25 +776,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     );
   }
 
-Future<void> _openSync() async {
-  await showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext dialogContext) {
-      final Size screenSize = MediaQuery.sizeOf(dialogContext);
-
-      return Dialog(
-        insetPadding: const EdgeInsets.all(24),
-        clipBehavior: Clip.antiAlias,
-        child: SizedBox(
-          width: min(600, screenSize.width - 48),
-          height: min(780, screenSize.height - 48),
-          child: const SyncPage(),
-        ),
-      );
-    },
-  );
-}
+  void _openSync() {
+    setState(() {
+      _showSync = true;
+    });
+  }
 
   Future<void> _openInsertVersesDialog() async {
     final List<DtxBook> books = controller.books
