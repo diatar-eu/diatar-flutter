@@ -1,5 +1,6 @@
 import 'package:diatar_common/diatar_common.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const InlineTextEditorLabels _editorLabels = InlineTextEditorLabels(
@@ -14,6 +15,8 @@ const InlineTextEditorLabels _editorLabels = InlineTextEditorLabels(
   preferredLineBreak: 'Preferred break',
   insertChord: 'Insert chord',
   editChord: 'Edit chord',
+  insertKotta: 'Insert notation',
+  editKotta: 'Edit notation',
 );
 
 const ChordEditorLabels _chordLabels = ChordEditorLabels(
@@ -27,6 +30,40 @@ const ChordEditorLabels _chordLabels = ChordEditorLabels(
   bassNote: 'Bass note',
   none: 'None',
   preview: 'Preview',
+  cancel: 'Cancel',
+  apply: 'Apply',
+);
+
+const KottaEditorLabels _kottaLabels = KottaEditorLabels(
+  insertTitle: 'Insert notation',
+  editTitle: 'Edit notation',
+  source: 'Notation commands',
+  sourceHint: 'Two-character commands',
+  invalidSource: 'Invalid notation',
+  preview: 'Preview',
+  clef: 'Clef',
+  keySignature: 'Key signature',
+  rhythm: 'Rhythm',
+  notes: 'Notes',
+  rests: 'Rests',
+  accidentals: 'Accidentals',
+  barlines: 'Barlines',
+  gClef: 'G clef',
+  fClef: 'F clef',
+  noKeySignature: 'None',
+  flats: 'Flats',
+  sharps: 'Sharps',
+  whole: 'Whole',
+  half: 'Half',
+  quarter: 'Quarter',
+  eighth: 'Eighth',
+  sixteenth: 'Sixteenth',
+  dotted: 'Dotted',
+  natural: 'Natural',
+  flat: 'Flat',
+  sharp: 'Sharp',
+  doubleFlat: 'Double flat',
+  doubleSharp: 'Double sharp',
   cancel: 'Cancel',
   apply: 'Apply',
 );
@@ -181,6 +218,69 @@ void main() {
     controller.dispose();
   });
 
+  test('exposes, inserts, and replaces notation as one right-bound object', () {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\?Kr41a;word');
+
+    expect(controller.kottaAtOffset(0)?.source, 'r41a');
+    expect(controller.kottaAtOffset(0)?.isConditional, isTrue);
+    expect(controller.textFollowingKottaAt(0), 'word');
+
+    controller.replaceKottaAt(0, 'r82a');
+    expect(controller.encodedText, r'\?Kr82a;word');
+
+    controller.selection = const TextSelection.collapsed(offset: 5);
+    controller.insertKotta('r41c');
+    expect(controller.encodedText, r'\?Kr82a;word\Kr41c;');
+    controller.dispose();
+  });
+
+  test('copies a complete associated word together with its notation', () {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\Kr41a;word next');
+    controller.selection = const TextSelection(baseOffset: 1, extentOffset: 5);
+
+    expect(controller.selectedDocument.encode(), r'\Kr41a;word');
+    expect(controller.selectedDocument.plainText, 'word');
+    controller.dispose();
+  });
+
+  test('inserts notation before selected text without replacing the text', () {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia('word');
+    controller.selection = const TextSelection(baseOffset: 0, extentOffset: 4);
+
+    controller.insertKotta('r41a');
+
+    expect(controller.encodedText, r'\Kr41a;word');
+    controller.dispose();
+  });
+
+  test('deleting a complete associated word also removes its notation', () {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\Kr41a;word next');
+    controller.value = const TextEditingValue(
+      text: '$inlineCommandPlaceholder next',
+      selection: TextSelection.collapsed(offset: 1),
+    );
+
+    expect(controller.text, ' next');
+    expect(controller.encodedText, ' next');
+    controller.dispose();
+  });
+
+  test('partially deleting associated text keeps its notation', () {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\Kr41a;word');
+    controller.value = const TextEditingValue(
+      text: '${inlineCommandPlaceholder}ord',
+      selection: TextSelection.collapsed(offset: 1),
+    );
+
+    expect(controller.encodedText, r'\Kr41a;ord');
+    controller.dispose();
+  });
+
   test('uses readable chord names in external clipboard representations', () {
     final InlineTextDocument document = InlineTextDocument.decode(
       r'Before \GAm7/G; after',
@@ -330,6 +430,7 @@ void main() {
             controller: controller,
             labels: _editorLabels,
             chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
             decoration: const InputDecoration(),
           ),
         ),
@@ -359,6 +460,7 @@ void main() {
             controller: controller,
             labels: _editorLabels,
             chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
             decoration: const InputDecoration(),
           ),
         ),
@@ -374,6 +476,99 @@ void main() {
 
     expect(find.text('Edit chord'), findsOneWidget);
     expect(controller.chordAtOffset(0)?.source, 'Am7');
+    controller.dispose();
+  });
+
+  testWidgets('notation toolbar inserts an atomic notation command', (
+    WidgetTester tester,
+  ) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia('word');
+    controller.selection = const TextSelection.collapsed(offset: 0);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InlineTextEditor(
+            controller: controller,
+            labels: _editorLabels,
+            chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
+            decoration: const InputDecoration(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Insert notation'));
+    await tester.pumpAndSettle();
+    expect(find.text('Insert notation'), findsOneWidget);
+
+    await tester.tap(find.text('G clef'));
+    await tester.pump();
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(controller.encodedText, r'\KkG;word');
+    expect(controller.kottaAtOffset(0)?.source, 'kG');
+    controller.dispose();
+  });
+
+  testWidgets('Ctrl+K opens the notation editor', (WidgetTester tester) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia('word');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InlineTextEditor(
+            controller: controller,
+            labels: _editorLabels,
+            chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
+            decoration: const InputDecoration(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(TextField));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Insert notation'), findsOneWidget);
+    controller.dispose();
+  });
+
+  testWidgets('double-clicking a notation marker opens it for editing', (
+    WidgetTester tester,
+  ) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\Kr41a;word');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InlineTextEditor(
+            controller: controller,
+            labels: _editorLabels,
+            chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
+            decoration: const InputDecoration(),
+          ),
+        ),
+      ),
+    );
+
+    final Finder marker = find.byKey(
+      const ValueKey<String>('inline-kotta-marker'),
+    );
+    expect(marker, findsOneWidget);
+    await tester.tap(marker);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(marker);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit notation'), findsOneWidget);
     controller.dispose();
   });
 }

@@ -29,6 +29,16 @@ akkord a szövegben vékony keretben, egyetlen elemként jelenik meg: egyben
 kijelölhető, kivágható, másolható, beilleszthető és törölhető. Dupla kattintással
 ismét megnyitható az akkordszerkesztő ablak.
 
+### Kotta a szöveges diákban
+
+A kotta helyét a szövegben egy keskeny, színes vonás jelzi. A jelölés a
+közvetlenül utána álló szótaghoz tartozik, ezért a teljes szótag másolásakor,
+kivágásakor vagy törlésekor a kotta is vele mozog. A kotta a szerkesztő
+eszköztárából vagy a **Ctrl+K** billentyűvel szúrható be; meglévő jelölésen
+ugyanez a billentyű, illetve a dupla kattintás nyitja meg a külön
+kottaszerkesztőt. Az ablak a kottát és a hozzá tartozó szöveget együtt,
+vetítési előnézetben mutatja.
+
 ## Export/Import
 
 - **Mentés** — `.dia` fájl mentése a lemezre
