@@ -84,6 +84,15 @@ class WindowController {
 
   Future<void> hide() => _callWindowMethod('window_hide', {});
 
+  Future<void> focus() => _callWindowMethod('window_focus', {});
+
+  Future<void> raiseToTop() => _callWindowMethod('window_raise', {});
+
+  Future<void> setClickTarget(String targetWindowId) =>
+      _callWindowMethod('window_set_click_target', {
+        'targetWindowId': targetWindowId,
+      });
+
   @optionalTypeArgs
   Future<T?> invokeMethod<T>(String method, [dynamic arguments]) =>
       _windowChannel.invokeMethod<T>(method, arguments);

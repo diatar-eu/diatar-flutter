@@ -13,6 +13,11 @@ G_DECLARE_FINAL_TYPE(WindowChannelPlugin,
 
 void window_channel_plugin_register_with_registrar(FlPluginRegistrar* registrar);
 
+gboolean window_channel_plugin_invoke_registered_method(
+    const gchar* channel,
+    const gchar* method,
+    FlValue* arguments);
+
 G_END_DECLS
 
 #endif  // DESKTOP_MULTI_WINDOW_LINUX_WINDOW_CHANNEL_PLUGIN_H_

@@ -164,6 +164,27 @@ class ChannelRegistry {
       bidirectional_channels_;
 };
 
+gboolean window_channel_plugin_invoke_registered_method(
+    const gchar* channel,
+    const gchar* method,
+    FlValue* arguments) {
+  WindowChannelPlugin* target =
+      ChannelRegistry::GetInstance().GetTarget(channel, nullptr);
+  if (target == nullptr) {
+    return FALSE;
+  }
+
+  g_autoptr(FlValue) payload = fl_value_new_map();
+  fl_value_set_string_take(payload, "channel", fl_value_new_string(channel));
+  fl_value_set_string_take(payload, "method", fl_value_new_string(method));
+  fl_value_set_string_take(
+      payload, "arguments",
+      arguments == nullptr ? fl_value_new_null() : fl_value_ref(arguments));
+  fl_method_channel_invoke_method(
+      target->channel, "methodCall", payload, nullptr, nullptr, nullptr);
+  return TRUE;
+}
+
 static void window_channel_plugin_dispose(GObject* object) {
   WindowChannelPlugin* self = (WindowChannelPlugin*)object;
 
