@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 enum ChordPartStyle { root, normal, superscript }
@@ -474,10 +477,12 @@ class ChordRenderer {
 }
 
 class ChordLayout {
-  ChordLayout._(List<ChordPart> parts, TextStyle style)
-    : _painters = <TextPainter>[
-        for (final ChordPart part in parts)
-          TextPainter(
+  ChordLayout._(List<ChordPart> parts, TextStyle style) {
+    final List<_ChordPartLayout> layouts = <_ChordPartLayout>[
+      for (final ChordPart part in parts)
+        _ChordPartLayout(
+          style: part.style,
+          painter: TextPainter(
             text: TextSpan(
               text: part.text,
               style: switch (part.style) {
@@ -492,26 +497,76 @@ class ChordLayout {
             ),
             textDirection: TextDirection.ltr,
           )..layout(),
-      ];
+        ),
+    ];
+    final double baseFontSize = style.fontSize ?? 14;
+    final double normalBaseline = layouts
+        .where(
+          (_ChordPartLayout part) => part.style != ChordPartStyle.superscript,
+        )
+        .map((_ChordPartLayout part) => part.baseline)
+        .fold(0, (double maximum, double value) => math.max(maximum, value));
+    final double superscriptBaseline = normalBaseline - baseFontSize * 0.5;
+    final List<double> rawTopOffsets = <double>[
+      for (final _ChordPartLayout part in layouts)
+        (part.style == ChordPartStyle.superscript
+                ? superscriptBaseline
+                : normalBaseline) -
+            part.baseline,
+    ];
+    final double minTop = rawTopOffsets.fold(
+      0,
+      (double minimum, double value) => math.min(minimum, value),
+    );
+    _parts = <_ChordPartLayout>[
+      for (int i = 0; i < layouts.length; i++)
+        layouts[i].withTop(rawTopOffsets[i] - minTop),
+    ];
+  }
 
-  final List<TextPainter> _painters;
+  late final List<_ChordPartLayout> _parts;
 
-  double get width => _painters.fold(
+  double get width => _parts.fold(
     0,
-    (double total, TextPainter painter) => total + painter.width,
+    (double total, _ChordPartLayout part) => total + part.painter.width,
   );
 
-  double get height => _painters.fold(
+  double get height => _parts.fold(
     0,
-    (double maximum, TextPainter painter) =>
-        maximum > painter.height ? maximum : painter.height,
+    (double maximum, _ChordPartLayout part) =>
+        math.max(maximum, part.top + part.painter.height),
   );
+
+  @visibleForTesting
+  List<double> get debugPartTopOffsets =>
+      _parts.map((_ChordPartLayout part) => part.top).toList();
 
   void paint(Canvas canvas, Offset offset) {
     double x = offset.dx;
-    for (final TextPainter painter in _painters) {
-      painter.paint(canvas, Offset(x, offset.dy));
-      x += painter.width;
+    for (final _ChordPartLayout part in _parts) {
+      part.painter.paint(canvas, Offset(x, offset.dy + part.top));
+      x += part.painter.width;
     }
+  }
+}
+
+class _ChordPartLayout {
+  const _ChordPartLayout({
+    required this.style,
+    required this.painter,
+    this.top = 0,
+  });
+
+  final ChordPartStyle style;
+  final TextPainter painter;
+  final double top;
+
+  double get baseline {
+    final List<ui.LineMetrics> metrics = painter.computeLineMetrics();
+    return metrics.isEmpty ? painter.height : metrics.first.baseline;
+  }
+
+  _ChordPartLayout withTop(double value) {
+    return _ChordPartLayout(style: style, painter: painter, top: value);
   }
 }

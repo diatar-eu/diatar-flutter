@@ -177,6 +177,78 @@ void main() {
     );
   });
 
+  test('chord modifiers are vertically raised as superscripts', () {
+    final ChordLayout layout = ChordRenderer.layout(
+      'C7+',
+      const TextStyle(fontSize: 32),
+    );
+
+    expect(layout.debugPartTopOffsets, hasLength(2));
+    expect(
+      layout.debugPartTopOffsets[1],
+      lessThan(layout.debugPartTopOffsets[0]),
+    );
+  });
+
+  test('chord widths participate in text row wrapping', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useAkkord: true),
+      settings: const AppSettings(receiverUseAkkord: true),
+    );
+    const double maxWidth = 75;
+    const String source = r'\GC7+;a \GC7+;b \GC7+;c';
+
+    final List<double> widths = painter.debugTextWrappedRowWidthsForLine(
+      source,
+      fontSize: 24,
+      maxWidth: maxWidth,
+    );
+
+    expect(widths.length, greaterThan(1));
+    expect(widths, everyElement(lessThanOrEqualTo(maxWidth + 0.5)));
+  });
+
+  test('standalone chords receive visible layout slots', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useAkkord: true),
+      settings: const AppSettings(receiverUseAkkord: true),
+    );
+
+    expect(painter.debugChordSourcesForLine(r'\GC;\GD7; \GAm;\GH7;'), <String>[
+      'C',
+      'D7',
+      'Am',
+      'H7',
+    ]);
+    expect(
+      painter
+          .debugTextWrappedRowWidthsForLine(
+            r'\GC;\GD7; \GAm;\GH7;',
+            fontSize: 24,
+            maxWidth: 90,
+          )
+          .length,
+      greaterThan(1),
+    );
+  });
+
+  test('adjacent chords after text remain separate chord objects', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useAkkord: true),
+      settings: const AppSettings(receiverUseAkkord: true),
+    );
+
+    expect(
+      painter.debugChordSourcesForLine(
+        r'a\GC;\GCm;\GC#;\GCo;\GC7;\GC7+; \GCm7+;',
+      ),
+      <String>['C', 'Cm', 'C#', 'Co', 'C7', 'C7+', 'Cm7+'],
+    );
+  });
+
   test('default app settings are valid', () {
     const AppSettings s = AppSettings();
     expect(s.maxCustomOrderSets, AppSettings.defaultMaxCustomOrderSets);

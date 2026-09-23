@@ -360,6 +360,35 @@ class ProjectorPainter extends CustomPainter {
         .toList();
   }
 
+  @visibleForTesting
+  List<double> debugTextWrappedRowWidthsForLine(
+    String source, {
+    double fontSize = 24,
+    double maxWidth = 120,
+  }) {
+    final List<_RenderLine> lines = _parseOneLine(source);
+    if (lines.isEmpty) {
+      return const <double>[];
+    }
+    return _buildTextRows(
+      lines.first,
+      fontSize,
+      maxWidth,
+    ).map((_TextRowLayout row) => row.width).toList();
+  }
+
+  @visibleForTesting
+  List<String> debugChordSourcesForLine(String source) {
+    final List<_RenderLine> lines = _parseOneLine(source);
+    if (lines.isEmpty) {
+      return const <String>[];
+    }
+    return <String>[
+      for (final _WordToken word in lines.first.words)
+        if ((word.chord ?? '').isNotEmpty) word.chord!,
+    ];
+  }
+
   List<double> debugKottaRowStartXsForLine(
     String source, {
     double fontSize = 24,
@@ -1163,10 +1192,6 @@ class ProjectorPainter extends CustomPainter {
           baseLine.words.any((w) => (w.kotta ?? '').isNotEmpty);
       final _RenderLine line;
       if (!isTitleLine && !hasKotta) {
-        final _RenderLine paddedLine = _applyChordPadding(
-          baseLine,
-          lineFontSize,
-        );
         final double continuationIndent = globals.hCenter
             ? 0
             : _textContinuationIndent(
@@ -1174,7 +1199,7 @@ class ProjectorPainter extends CustomPainter {
                 TextPainter(textDirection: TextDirection.ltr),
               );
         line = _splitOverlongWords(
-          paddedLine,
+          baseLine,
           lineFontSize,
           maxWidth,
           continuationIndent: continuationIndent,
@@ -1378,11 +1403,12 @@ class ProjectorPainter extends CustomPainter {
 
   TextPainter _buildTextRowMeasure(_RenderLine line, double fontSize) {
     final List<InlineSpan> spans = <InlineSpan>[];
+    final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
     for (final _WordToken word in line.words) {
       final Color baseColor = word.color ?? globals.txtColor;
       spans.add(
         TextSpan(
-          text: word.text + (word.spaceAfter ? ' ' : ''),
+          text: _wordLayoutDisplay(word, fontSize, measure),
           style: TextStyle(
             color: baseColor,
             fontSize: _effectiveWordFontSize(word, fontSize),
@@ -1462,6 +1488,7 @@ class ProjectorPainter extends CustomPainter {
   ) {
     final List<InlineSpan> spans = <InlineSpan>[];
     final List<_TextWordLayout> wordLayouts = <_TextWordLayout>[];
+    final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
     int offset = 0;
 
     for (int i = 0; i < rowLine.words.length; i++) {
@@ -1469,7 +1496,7 @@ class ProjectorPainter extends CustomPainter {
       final bool highlighted = i < rowHighlights.length
           ? rowHighlights[i]
           : false;
-      final String display = word.text + (word.spaceAfter ? ' ' : '');
+      final String display = _wordLayoutDisplay(word, fontSize, measure);
       final Color baseColor = word.color ?? globals.txtColor;
       spans.add(
         TextSpan(
@@ -1745,101 +1772,6 @@ class ProjectorPainter extends CustomPainter {
         ..color = color
         ..style = PaintingStyle.fill,
     );
-  }
-
-  _RenderLine _applyChordPadding(_RenderLine line, double fontSize) {
-    if (!globals.useAkkord ||
-        !settings.receiverUseAkkord ||
-        line.words.isEmpty) {
-      return line;
-    }
-
-    final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
-    bool changed = false;
-    final List<_WordToken> padded = <_WordToken>[];
-
-    for (final _WordToken word in line.words) {
-      final String chordText = (word.chord ?? '').trim();
-      if (chordText.isEmpty) {
-        padded.add(word);
-        continue;
-      }
-
-      measure.text = TextSpan(
-        text: word.text + (word.spaceAfter ? ' ' : ''),
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: (globals.boldText || word.bold)
-              ? FontWeight.bold
-              : FontWeight.normal,
-          fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
-        ),
-      );
-      measure.layout();
-      double textWidth = measure.width;
-
-      final ChordLayout chord = ChordRenderer.layout(
-        chordText,
-        TextStyle(
-          color: globals.txtColor,
-          fontSize: fontSize * (globals.akkordArany / 100.0),
-        ),
-      );
-      final double chordWidth = chord.width;
-
-      if (textWidth + 1 >= chordWidth) {
-        padded.add(word);
-        continue;
-      }
-
-      String paddedText = word.text;
-      int guard = 0;
-      while (textWidth + 1 < chordWidth && guard < 24) {
-        paddedText = '${paddedText}_';
-        measure.text = TextSpan(
-          text: paddedText + (word.spaceAfter ? ' ' : ''),
-          style: TextStyle(
-            fontSize: fontSize,
-            fontWeight: (globals.boldText || word.bold)
-                ? FontWeight.bold
-                : FontWeight.normal,
-            fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
-          ),
-        );
-        measure.layout();
-        textWidth = measure.width;
-        guard++;
-      }
-
-      if (paddedText != word.text) {
-        changed = true;
-        padded.add(
-          _WordToken(
-            text: paddedText,
-            bold: word.bold,
-            italic: word.italic,
-            underline: word.underline,
-            tieUnderline: word.tieUnderline,
-            strike: word.strike,
-            color: word.color,
-            chord: word.chord,
-            kotta: word.kotta,
-            spaceAfter: word.spaceAfter,
-            breakAfter: word.breakAfter,
-            preferredBreakAfter: word.preferredBreakAfter,
-            softHyphenAfter: word.softHyphenAfter,
-            fontScale: word.fontScale,
-          ),
-        );
-      } else {
-        padded.add(word);
-      }
-    }
-
-    if (!changed) {
-      return line;
-    }
-    return _RenderLine(words: padded);
   }
 
   _RenderLine _splitOverlongWords(
@@ -2147,18 +2079,6 @@ class ProjectorPainter extends CustomPainter {
     double cx = x;
     for (int i = 0; i < line.words.length; i++) {
       final _WordToken w = line.words[i];
-      final String display = w.text + (w.spaceAfter ? ' ' : '');
-      measure.text = TextSpan(
-        text: display,
-        style: TextStyle(
-          fontSize: _effectiveWordFontSize(w, fontSize),
-          fontWeight: (globals.boldText || w.bold)
-              ? FontWeight.bold
-              : FontWeight.normal,
-          fontStyle: w.italic ? FontStyle.italic : FontStyle.normal,
-        ),
-      );
-      measure.layout();
       if ((w.chord ?? '').isNotEmpty) {
         final ChordLayout chord = ChordRenderer.layout(
           w.chord!,
@@ -2169,7 +2089,7 @@ class ProjectorPainter extends CustomPainter {
         );
         chord.paint(canvas, Offset(cx, y - chord.height - 2));
       }
-      cx += measure.width;
+      cx += _measureWordDisplayWidth(w, fontSize, measure);
     }
   }
 
@@ -2970,9 +2890,10 @@ class ProjectorPainter extends CustomPainter {
 
       if (currentWordIndices.isNotEmpty &&
           (currentWidth + pendingWordWidth) > currentRowLimit) {
-        final List<int> combinedWordIndices = <int>[]
-          ..addAll(currentWordIndices)
-          ..addAll(pendingWordIndices);
+        final List<int> combinedWordIndices = <int>[
+          ...currentWordIndices,
+          ...pendingWordIndices,
+        ];
 
         int breakWordIndex = combinedWordIndices.last;
         int? preferredBreakIndex;
@@ -3122,7 +3043,7 @@ class ProjectorPainter extends CustomPainter {
     double fontSize,
     TextPainter measure,
   ) {
-    final String display = word.text + (word.spaceAfter ? ' ' : '');
+    final String display = _wordLayoutDisplay(word, fontSize, measure);
     final String cacheKey = [
       'w',
       display,
@@ -3151,6 +3072,55 @@ class ProjectorPainter extends CustomPainter {
       _wordWidthCache.remove(_wordWidthCache.keys.first);
     }
     return width;
+  }
+
+  String _wordLayoutDisplay(
+    _WordToken word,
+    double fontSize,
+    TextPainter measure,
+  ) {
+    String display = word.text + (word.spaceAfter ? ' ' : '');
+    final String chordText = (word.chord ?? '').trim();
+    if (!globals.useAkkord ||
+        !settings.receiverUseAkkord ||
+        chordText.isEmpty) {
+      return display;
+    }
+
+    final TextStyle textStyle = TextStyle(
+      fontSize: _effectiveWordFontSize(word, fontSize),
+      fontWeight: (globals.boldText || word.bold)
+          ? FontWeight.bold
+          : FontWeight.normal,
+      fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
+    );
+    measure.text = TextSpan(text: display, style: textStyle);
+    measure.layout();
+    final double textWidth = measure.width;
+    final double chordWidth = ChordRenderer.layout(
+      chordText,
+      TextStyle(
+        color: globals.txtColor,
+        fontSize: fontSize * (globals.akkordArany / 100.0),
+      ),
+    ).width;
+    if (textWidth + 0.5 >= chordWidth) {
+      return display;
+    }
+
+    measure.text = TextSpan(text: '\u00A0', style: textStyle);
+    measure.layout();
+    final double spaceWidth = math.max(0.5, measure.width);
+    final int spaceCount = ((chordWidth - textWidth) / spaceWidth).ceil();
+    display += List<String>.filled(spaceCount, '\u00A0').join();
+    measure.text = TextSpan(text: display, style: textStyle);
+    measure.layout();
+    while (measure.width + 0.5 < chordWidth) {
+      display += '\u00A0';
+      measure.text = TextSpan(text: display, style: textStyle);
+      measure.layout();
+    }
+    return display;
   }
 
   double _measureHyphenDisplayWidth(
@@ -3205,9 +3175,13 @@ class ProjectorPainter extends CustomPainter {
       globals.hCenter,
       globals.leftIndent,
       globals.boldText,
+      globals.useAkkord,
+      globals.akkordArany,
+      settings.receiverUseAkkord,
       for (final _WordToken word in line.words)
         [
           word.text,
+          word.chord,
           word.bold,
           word.italic,
           word.spaceAfter,
@@ -4749,12 +4723,38 @@ class ProjectorPainter extends CustomPainter {
     String? pendingChord;
     String? pendingKotta;
 
+    void flushPendingAsSpace() {
+      if ((pendingChord == null || pendingChord!.isEmpty) &&
+          (pendingKotta == null || pendingKotta!.isEmpty)) {
+        return;
+      }
+      words.add(
+        _WordToken(
+          text: '\u00A0',
+          bold: style.bold,
+          italic: style.italic,
+          underline: style.underline,
+          tieUnderline: style.tieUnderline,
+          strike: style.strike,
+          color: style.color,
+          chord: pendingChord,
+          kotta: pendingKotta,
+          breakAfter: true,
+        ),
+      );
+      pendingChord = null;
+      pendingKotta = null;
+    }
+
     void attachPendingToPrevWord() {
       if (words.isEmpty) {
         return;
       }
       if ((pendingChord == null || pendingChord!.isEmpty) &&
           (pendingKotta == null || pendingKotta!.isEmpty)) {
+        return;
+      }
+      if (words.last.isControlPlaceholder) {
         return;
       }
       final _WordToken last = words.removeLast();
@@ -4955,9 +4955,11 @@ class ProjectorPainter extends CustomPainter {
             continue;
           case 'G':
             flushWord();
-            attachPendingToPrevWord();
             final int end = src.indexOf(';', i);
             if (end > i) {
+              if (pendingChord != null && pendingChord!.isNotEmpty) {
+                flushPendingAsSpace();
+              }
               pendingChord = src.substring(i, end);
               i = end + 1;
             }
@@ -4990,6 +4992,9 @@ class ProjectorPainter extends CustomPainter {
               if (end > i) {
                 final String payload = src.substring(i, end);
                 if (sub == 'G') {
+                  if (pendingChord != null && pendingChord!.isNotEmpty) {
+                    flushPendingAsSpace();
+                  }
                   pendingChord = payload;
                 } else if (sub == 'K') {
                   pendingKotta = payload;
@@ -5009,6 +5014,9 @@ class ProjectorPainter extends CustomPainter {
       if (ch == ' ') {
         if (sb.isNotEmpty) {
           flushWord(addSpaceAfter: true, addBreakAfter: true);
+        } else if ((pendingChord ?? '').isNotEmpty ||
+            (pendingKotta ?? '').isNotEmpty) {
+          flushPendingAsSpace();
         } else {
           attachPendingToPrevWord();
           // Space can arrive right after an escaped control block (\K, \G, etc.).
@@ -5025,7 +5033,7 @@ class ProjectorPainter extends CustomPainter {
     }
 
     flushWord();
-    attachPendingToPrevWord();
+    flushPendingAsSpace();
     result.add(_RenderLine(words: List<_WordToken>.from(words)));
     return result;
   }
@@ -5242,6 +5250,9 @@ class _WordToken {
   final double fontScale;
 
   bool get countAsWord => text.trim().isNotEmpty;
+  bool get isControlPlaceholder =>
+      text == '\u00A0' &&
+      ((chord ?? '').isNotEmpty || (kotta ?? '').isNotEmpty);
 }
 
 class _WordStyle {
