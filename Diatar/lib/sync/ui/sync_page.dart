@@ -19,9 +19,11 @@ class SyncPage extends StatefulWidget {
   const SyncPage({
     super.key,
     this.backend,
+    this.onClose,
   });
 
   final SyncBackend? backend;
+  final VoidCallback? onClose;
 
   @override
   State<SyncPage> createState() => _SyncPageState();
@@ -86,7 +88,14 @@ class _SyncPageState extends State<SyncPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sync'),
+        leading: widget.onClose == null
+            ? null
+            : IconButton(
+                tooltip: 'Vissza az énekrend szerkesztőhöz',
+                onPressed: _syncRunning ? null : widget.onClose,
+                icon: const Icon(Icons.arrow_back),
+              ),
+        title: const Text('Szinkronizálás'),
       ),
       body: SafeArea(
         child: Center(
