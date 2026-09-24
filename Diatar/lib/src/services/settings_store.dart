@@ -12,6 +12,8 @@ class SettingsStore {
   static const String _kCameraTarget = 'CameraTarget';
   static const String _kCameraViewWidth = 'CameraViewWidth';
   static const String _kCameraViewHeight = 'CameraViewHeight';
+  static const String _kCameraViewPosX = 'CameraViewPosX';
+  static const String _kCameraViewPosY = 'CameraViewPosY';
   static const String _kWolEnabled = 'WolEnabled';
   static const String _kWolTargets = 'WolTargets';
   static const String _kWolBroadcastAddress = 'WolBroadcastAddress';
@@ -266,6 +268,8 @@ class SettingsStore {
     final String? cameraTarget = prefs.getString(_kCameraTarget);
     final double cameraViewWidth = prefs.getDouble(_kCameraViewWidth) ?? 200;
     final double cameraViewHeight = prefs.getDouble(_kCameraViewHeight) ?? 120;
+    final double cameraViewPosX = prefs.getDouble(_kCameraViewPosX) ?? 1.0;
+    final double cameraViewPosY = prefs.getDouble(_kCameraViewPosY) ?? 1.0;
     final bool wolEnabled = prefs.getBool(_kWolEnabled) ?? false;
     final List<String> wolTargets =
         prefs.getStringList(_kWolTargets) ?? const <String>[];
@@ -298,6 +302,8 @@ class SettingsStore {
       cameraTarget: cameraTarget,
       cameraViewWidth: cameraViewWidth,
       cameraViewHeight: cameraViewHeight,
+      cameraViewPosX: cameraViewPosX,
+      cameraViewPosY: cameraViewPosY,
       wolEnabled: wolEnabled,
       wolTargets: wolTargets,
       wolBroadcastAddress: wolBroadcastAddress,
@@ -401,6 +407,8 @@ class SettingsStore {
     await prefs.setBool(_kShowCameraView, settings.showCameraView);
     await prefs.setDouble(_kCameraViewWidth, settings.cameraViewWidth);
     await prefs.setDouble(_kCameraViewHeight, settings.cameraViewHeight);
+    await prefs.setDouble(_kCameraViewPosX, settings.cameraViewPosX);
+    await prefs.setDouble(_kCameraViewPosY, settings.cameraViewPosY);
     await prefs.setBool(_kWolEnabled, settings.wolEnabled);
     await prefs.setStringList(_kWolTargets, settings.wolTargets);
     await prefs.setString(_kWolBroadcastAddress, settings.wolBroadcastAddress);

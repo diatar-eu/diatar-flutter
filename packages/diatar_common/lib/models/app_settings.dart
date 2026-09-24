@@ -21,6 +21,8 @@ class AppSettings {
     this.cameraTarget,
     this.cameraViewWidth = 200,
     this.cameraViewHeight = 120,
+    this.cameraViewPosX = 1.0,
+    this.cameraViewPosY = 1.0,
     this.cameraStreamEnabled = false,
     this.cameraStreamDeviceId,
     this.rotateQuarterTurns = 0,
@@ -116,6 +118,8 @@ class AppSettings {
   final String? cameraTarget;
   final double cameraViewWidth;
   final double cameraViewHeight;
+  final double cameraViewPosX;
+  final double cameraViewPosY;
   final bool cameraStreamEnabled;
   final String? cameraStreamDeviceId;
   final int rotateQuarterTurns;
@@ -218,6 +222,8 @@ class AppSettings {
     String? cameraTarget,
     double? cameraViewWidth,
     double? cameraViewHeight,
+    double? cameraViewPosX,
+    double? cameraViewPosY,
     bool? cameraStreamEnabled,
     String? cameraStreamDeviceId,
     int? rotateQuarterTurns,
@@ -311,6 +317,8 @@ class AppSettings {
       cameraTarget: cameraTarget ?? this.cameraTarget,
       cameraViewWidth: cameraViewWidth ?? this.cameraViewWidth,
       cameraViewHeight: cameraViewHeight ?? this.cameraViewHeight,
+      cameraViewPosX: cameraViewPosX ?? this.cameraViewPosX,
+      cameraViewPosY: cameraViewPosY ?? this.cameraViewPosY,
       cameraStreamEnabled: cameraStreamEnabled ?? this.cameraStreamEnabled,
       cameraStreamDeviceId: cameraStreamDeviceId ?? this.cameraStreamDeviceId,
       rotateQuarterTurns: rotateQuarterTurns ?? this.rotateQuarterTurns,

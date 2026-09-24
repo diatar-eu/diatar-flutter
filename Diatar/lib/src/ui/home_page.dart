@@ -580,6 +580,9 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
   Size? _cameraDragSize;
   Size _cameraDragInitialSize = Size.zero;
   Offset? _cameraDragStartPointer;
+  Offset? _cameraMoveStartPointer;
+  Offset _cameraMoveInitialPosition = Offset.zero;
+  Offset? _cameraMoveDragPosition;
 
   static const double _defaultCameraViewWidth = 200;
   static const double _defaultCameraViewHeight = 120;
@@ -897,22 +900,61 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
             controller.updateScreenSize(width: screenW, height: screenH),
           );
 
-          final Widget? cameraOverlay = _buildCameraOverlay(context);
-          if (cameraOverlay == null) {
-            return _buildSimpleView(context);
-          }
-          return Stack(
-            children: <Widget>[
-              Positioned.fill(child: _buildSimpleView(context)),
-              Positioned(right: 12, bottom: 12, child: cameraOverlay),
-            ],
+          return LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final Size hostSize = Size(
+                constraints.maxWidth,
+                constraints.maxHeight,
+              );
+              final double freeW =
+                  (_cameraDragSize?.width ??
+                          controller.settings.cameraViewWidth) >=
+                      0
+                  ? (hostSize.width -
+                            (_cameraDragSize?.width ??
+                                controller.settings.cameraViewWidth))
+                        .clamp(0.0, double.infinity)
+                  : 0.0;
+              final double freeH =
+                  (_cameraDragSize?.height ??
+                          controller.settings.cameraViewHeight) >=
+                      0
+                  ? (hostSize.height -
+                            (_cameraDragSize?.height ??
+                                controller.settings.cameraViewHeight))
+                        .clamp(0.0, double.infinity)
+                  : 0.0;
+              final Widget? cameraOverlay = _buildCameraOverlay(
+                context,
+                hostSize: hostSize,
+              );
+              if (cameraOverlay == null) {
+                return _buildSimpleView(context);
+              }
+              final double left =
+                  ((_cameraMoveDragPosition?.dx ??
+                              controller.settings.cameraViewPosX) *
+                          freeW)
+                      .clamp(0.0, freeW);
+              final double top =
+                  ((_cameraMoveDragPosition?.dy ??
+                              controller.settings.cameraViewPosY) *
+                          freeH)
+                      .clamp(0.0, freeH);
+              return Stack(
+                children: <Widget>[
+                  Positioned.fill(child: _buildSimpleView(context)),
+                  Positioned(left: left, top: top, child: cameraOverlay),
+                ],
+              );
+            },
           );
         },
       ),
     );
   }
 
-  Widget? _buildCameraOverlay(BuildContext context) {
+  Widget? _buildCameraOverlay(BuildContext context, {required Size hostSize}) {
     if (!controller.settings.showCameraView || !controller.cameraAvailable) {
       return null;
     }
@@ -969,7 +1011,88 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
                 alignment: Alignment.topLeft,
                 child: _buildCameraViewResizeGrip(theme),
               ),
+              Align(
+                alignment: Alignment.topRight,
+                child: _buildCameraViewMoveGrip(theme, hostSize: hostSize),
+              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCameraViewMoveGrip(ThemeData theme, {required Size hostSize}) {
+    final double boxW =
+        _cameraDragSize?.width ?? controller.settings.cameraViewWidth;
+    final double boxH =
+        _cameraDragSize?.height ?? controller.settings.cameraViewHeight;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {},
+      onPanStart: (DragStartDetails details) {
+        _cameraMoveStartPointer = details.globalPosition;
+        _cameraMoveInitialPosition = Offset(
+          controller.settings.cameraViewPosX,
+          controller.settings.cameraViewPosY,
+        );
+      },
+      onPanUpdate: (DragUpdateDetails details) {
+        final Offset start = _cameraMoveStartPointer ?? details.globalPosition;
+        final double freeW = (hostSize.width - boxW).clamp(
+          0.0,
+          double.infinity,
+        );
+        final double freeH = (hostSize.height - boxH).clamp(
+          0.0,
+          double.infinity,
+        );
+        final double deltaX = freeW == 0.0
+            ? 0.0
+            : (details.globalPosition.dx - start.dx) / freeW;
+        final double deltaY = freeH == 0.0
+            ? 0.0
+            : (details.globalPosition.dy - start.dy) / freeH;
+        final Offset next = Offset(
+          (_cameraMoveInitialPosition.dx + deltaX).clamp(0.0, 1.0),
+          (_cameraMoveInitialPosition.dy + deltaY).clamp(0.0, 1.0),
+        );
+        if (_cameraMoveDragPosition == next) {
+          return;
+        }
+        setState(() {
+          _cameraMoveDragPosition = next;
+        });
+      },
+      onPanEnd: (_) {
+        final Offset? next = _cameraMoveDragPosition;
+        setState(() {
+          _cameraMoveDragPosition = null;
+        });
+        if (next == null) {
+          return;
+        }
+        unawaited(controller.setCameraViewPosition(next.dx, next.dy));
+      },
+      onPanCancel: () {
+        setState(() {
+          _cameraMoveDragPosition = null;
+        });
+      },
+      onLongPress: () {
+        // Vissza a jobb alsó sarokba (alapértelmezett pozíció).
+        unawaited(controller.setCameraViewPosition(1.0, 1.0));
+      },
+      child: Material(
+        color: theme.colorScheme.surfaceContainerHighest,
+        elevation: 4,
+        shape: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(5),
+          child: Icon(
+            Icons.open_with,
+            size: 16,
+            color: theme.colorScheme.onSurface,
           ),
         ),
       ),

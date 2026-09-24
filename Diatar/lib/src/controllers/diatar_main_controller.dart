@@ -1483,6 +1483,18 @@ class DiatarMainController extends ChangeNotifier {
     await _settingsStore.save(settings);
   }
 
+  /// A kántorszem (kameranézet) ablak relatív pozícióját állítja be 0..1
+  /// tartományban. A relatív értékek a szabad (az ablakot kivonó) területhez
+  /// képest értendők, így a főablak átméretezésekor az ablak a képben marad.
+  Future<void> setCameraViewPosition(double posX, double posY) async {
+    settings = settings.copyWith(
+      cameraViewPosX: posX,
+      cameraViewPosY: posY,
+    );
+    notifyListeners();
+    await _settingsStore.save(settings);
+  }
+
   Future<(int sent, String? error)> sendWakeOnLan() async {
     if (!settings.wolEnabled) {
       return (0, null);
