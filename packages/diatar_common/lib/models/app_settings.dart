@@ -1,6 +1,10 @@
 import 'package:flutter/widgets.dart';
 
 class AppSettings {
+  static const int minCustomOrderSets = 1;
+  static const int maxCustomOrderSetsLimit = 20;
+  static const int defaultMaxCustomOrderSets = 10;
+
   const AppSettings({
     this.port = 1024,
     this.tcpClientEnabled = true,
@@ -33,6 +37,7 @@ class AppSettings {
     this.diaExportPath = '',
     this.diaExportUri = '',
     this.diaExportFileName = '',
+    this.diaAutoSaveEnabled = false,
     this.projFontSize = 255,
     this.projTitleSize = 12,
     this.projLeftIndent = 2,
@@ -46,6 +51,7 @@ class AppSettings {
     this.projVCenter = true,
     this.projUseAkkord = false,
     this.projUseKotta = true,
+    this.projInverseKotta = false,
     this.projUseTitle = true,
     this.projKottaArany = 100,
     this.projAkkordArany = 100,
@@ -62,6 +68,7 @@ class AppSettings {
     this.landscapeControlsRatio,
     this.appThemeMode = 0,
     this.appLanguage = '',
+    this.maxCustomOrderSets = defaultMaxCustomOrderSets,
     this.projectionLocked = false,
     this.desktopProjectorEnabled = false,
     this.desktopProjectorMonitor = -1,
@@ -125,6 +132,7 @@ class AppSettings {
   final String diaExportPath;
   final String diaExportUri;
   final String diaExportFileName;
+  final bool diaAutoSaveEnabled;
   final int projFontSize;
   final int projTitleSize;
   final int projLeftIndent;
@@ -138,6 +146,7 @@ class AppSettings {
   final bool projVCenter;
   final bool projUseAkkord;
   final bool projUseKotta;
+  final bool projInverseKotta;
   final bool projUseTitle;
   final int projKottaArany;
   final int projAkkordArany;
@@ -154,6 +163,7 @@ class AppSettings {
   final double? landscapeControlsRatio;
   final int appThemeMode;
   final String appLanguage;
+  final int maxCustomOrderSets;
   final bool projectionLocked;
   final bool desktopProjectorEnabled;
   final int desktopProjectorMonitor;
@@ -224,6 +234,7 @@ class AppSettings {
     String? diaExportPath,
     String? diaExportUri,
     String? diaExportFileName,
+    bool? diaAutoSaveEnabled,
     int? projFontSize,
     int? projTitleSize,
     int? projLeftIndent,
@@ -237,6 +248,7 @@ class AppSettings {
     bool? projVCenter,
     bool? projUseAkkord,
     bool? projUseKotta,
+    bool? projInverseKotta,
     bool? projUseTitle,
     int? projKottaArany,
     int? projAkkordArany,
@@ -253,6 +265,7 @@ class AppSettings {
     double? landscapeControlsRatio,
     int? appThemeMode,
     String? appLanguage,
+    int? maxCustomOrderSets,
     bool? projectionLocked,
     bool? desktopProjectorEnabled,
     int? desktopProjectorMonitor,
@@ -314,6 +327,7 @@ class AppSettings {
       diaExportPath: diaExportPath ?? this.diaExportPath,
       diaExportUri: diaExportUri ?? this.diaExportUri,
       diaExportFileName: diaExportFileName ?? this.diaExportFileName,
+      diaAutoSaveEnabled: diaAutoSaveEnabled ?? this.diaAutoSaveEnabled,
       projFontSize: projFontSize ?? this.projFontSize,
       projTitleSize: projTitleSize ?? this.projTitleSize,
       projLeftIndent: projLeftIndent ?? this.projLeftIndent,
@@ -327,6 +341,7 @@ class AppSettings {
       projVCenter: projVCenter ?? this.projVCenter,
       projUseAkkord: projUseAkkord ?? this.projUseAkkord,
       projUseKotta: projUseKotta ?? this.projUseKotta,
+      projInverseKotta: projInverseKotta ?? this.projInverseKotta,
       projUseTitle: projUseTitle ?? this.projUseTitle,
       projKottaArany: projKottaArany ?? this.projKottaArany,
       projAkkordArany: projAkkordArany ?? this.projAkkordArany,
@@ -347,6 +362,7 @@ class AppSettings {
           landscapeControlsRatio ?? this.landscapeControlsRatio,
       appThemeMode: appThemeMode ?? this.appThemeMode,
       appLanguage: appLanguage ?? this.appLanguage,
+      maxCustomOrderSets: maxCustomOrderSets ?? this.maxCustomOrderSets,
       projectionLocked: projectionLocked ?? this.projectionLocked,
       desktopProjectorEnabled:
           desktopProjectorEnabled ?? this.desktopProjectorEnabled,
@@ -412,6 +428,7 @@ class AppSettings {
       'projVCenter': projVCenter,
       'projUseAkkord': projUseAkkord,
       'projUseKotta': projUseKotta,
+      'projInverseKotta': projInverseKotta,
       'projUseTitle': projUseTitle,
       'projKottaArany': projKottaArany,
       'projAkkordArany': projAkkordArany,
@@ -420,6 +437,7 @@ class AppSettings {
       'projBackTrans': projBackTrans,
       'projBlankTrans': projBlankTrans,
       'projShowBackgroundImage': projShowBackgroundImage,
+      'maxCustomOrderSets': maxCustomOrderSets,
       'desktopProjectorEnabled': desktopProjectorEnabled,
       'desktopProjectorMonitor': desktopProjectorMonitor,
       'externalCommandOnStart': externalCommandOnStart,
@@ -501,6 +519,7 @@ class AppSettings {
       projVCenter: boolValue('projVCenter', true),
       projUseAkkord: boolValue('projUseAkkord', false),
       projUseKotta: boolValue('projUseKotta', true),
+      projInverseKotta: boolValue('projInverseKotta', false),
       projUseTitle: boolValue('projUseTitle', true),
       projKottaArany: intValue('projKottaArany', 100),
       projAkkordArany: intValue('projAkkordArany', 100),
@@ -509,6 +528,10 @@ class AppSettings {
       projBackTrans: intValue('projBackTrans', 0),
       projBlankTrans: intValue('projBlankTrans', 0),
       projShowBackgroundImage: boolValue('projShowBackgroundImage', true),
+      maxCustomOrderSets: intValue(
+        'maxCustomOrderSets',
+        defaultMaxCustomOrderSets,
+      ).clamp(minCustomOrderSets, maxCustomOrderSetsLimit),
       desktopProjectorEnabled: boolValue('desktopProjectorEnabled', false),
       desktopProjectorMonitor: intValue('desktopProjectorMonitor', -1),
       externalCommandOnStart: map['externalCommandOnStart'] as String? ?? '',

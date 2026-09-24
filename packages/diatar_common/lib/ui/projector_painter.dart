@@ -9,7 +9,12 @@ import '../models/app_settings.dart';
 import '../models/projection_frame.dart';
 import '../models/projection_globals.dart';
 import '../models/records.dart';
+import '../services/aretino/aretino_render_cache.dart';
+import '../services/aretino/aretino_render_service.dart';
+import '../services/aretino/aretino_source.dart';
+import '../services/aretino/aretino_svg.dart';
 
+import 'chord_renderer.dart';
 import 'kotta_assets.dart';
 
 class HighlightRenderState {
@@ -49,7 +54,11 @@ class ProjectorPainter extends CustomPainter {
     this.logoTitle = '',
     this.logoSubtitle = '',
     this.onHighlightRenderState,
-  });
+    // An Aretino score is rendered off the paint path and arrives later, so
+    // every projector surface repaints when one becomes ready. The notifier
+    // only ever fires after a score render, so this costs nothing on a slide
+    // that has no notation.
+  }) : super(repaint: AretinoRenderCache.instance);
 
   final ProjectionFrame? frame;
   final ProjectionGlobals globals;
@@ -133,6 +142,14 @@ class ProjectorPainter extends CustomPainter {
       inheritedState: _KottaDrawState(),
     );
     return rows.map((row) => row.prefix.kotta).toList();
+  }
+
+  int debugKottaStaffLineCountForLine(String source) {
+    final List<_RenderLine> lines = _parseOneLine(source);
+    if (lines.isEmpty) {
+      return 5;
+    }
+    return _staffLineCountForLine(lines.first);
   }
 
   List<List<String>> debugKottaRowPrefixesForLines(
@@ -219,6 +236,48 @@ class ProjectorPainter extends CustomPainter {
   }
 
   @visibleForTesting
+  List<double> debugTieUnderlineEndAndDisplayXsForLine(
+    String source, {
+    double fontSize = 24,
+  }) {
+    final List<_RenderLine> lines = _parseOneLine(source);
+    if (lines.isEmpty) {
+      return const <double>[];
+    }
+    final _RenderLine line = lines.first;
+    final _TextRowPaintLayout layout = _buildTextRowPaintLayout(
+      line,
+      List<bool>.filled(line.words.length, false),
+      fontSize,
+    );
+    final int index = layout.wordLayouts.lastIndexWhere(
+      (_TextWordLayout word) => word.tieUnderline,
+    );
+    if (index < 0) {
+      return const <double>[];
+    }
+    final _TextWordLayout word = layout.wordLayouts[index];
+    final List<ui.TextBox> tieBoxes = layout.painter.getBoxesForSelection(
+      TextSelection(baseOffset: word.start, extentOffset: word.end),
+    );
+    final int displayEnd = index + 1 < layout.wordLayouts.length
+        ? layout.wordLayouts[index + 1].start
+        : layout.painter.plainText.length;
+    final List<ui.TextBox> displayBoxes = layout.painter.getBoxesForSelection(
+      TextSelection(baseOffset: word.start, extentOffset: displayEnd),
+    );
+    if (tieBoxes.isEmpty || displayBoxes.isEmpty) {
+      return const <double>[];
+    }
+    return <double>[tieBoxes.last.right, displayBoxes.last.right];
+  }
+
+  @visibleForTesting
+  double debugTieUnderlineTipOffset(double fontSize) {
+    return _tieUnderlineTipOffset(fontSize);
+  }
+
+  @visibleForTesting
   Offset debugSlurApexForPoints(
     List<Offset> points, {
     required bool down,
@@ -256,21 +315,14 @@ class ProjectorPainter extends CustomPainter {
         for (final _KottaRowLayout r in prepared.kottaRowsByLine[li]) {
           out.add(
             'K<${r.width.toStringAsFixed(1)}> '
-                '${r.words
-                      .map((w) =>
-                          line.words[w.wordIndex].text +
-                          (line.words[w.wordIndex].spaceAfter ? ' ' : ''))
-                      .join()}',
+            '${r.words.map((w) => line.words[w.wordIndex].text + (line.words[w.wordIndex].spaceAfter ? ' ' : '')).join()}',
           );
         }
       } else {
         for (final _TextRowLayout r in prepared.textRowsByLine[li]) {
           out.add(
             'T<${r.width.toStringAsFixed(1)}/W${size.width.toStringAsFixed(1)}/F${auto.fontSize.toStringAsFixed(1)}> '
-                '${r.wordIndices
-                      .map((int wi) => line.words[wi].text +
-                          (line.words[wi].spaceAfter ? ' ' : ''))
-                      .join()}${r.endHyphen ? '-' : ''}',
+            '${r.wordIndices.map((int wi) => line.words[wi].text + (line.words[wi].spaceAfter ? ' ' : '')).join()}${r.endHyphen ? '-' : ''}',
           );
         }
       }
@@ -306,6 +358,35 @@ class ProjectorPainter extends CustomPainter {
               (row.endHyphen ? '-' : ''),
         )
         .toList();
+  }
+
+  @visibleForTesting
+  List<double> debugTextWrappedRowWidthsForLine(
+    String source, {
+    double fontSize = 24,
+    double maxWidth = 120,
+  }) {
+    final List<_RenderLine> lines = _parseOneLine(source);
+    if (lines.isEmpty) {
+      return const <double>[];
+    }
+    return _buildTextRows(
+      lines.first,
+      fontSize,
+      maxWidth,
+    ).map((_TextRowLayout row) => row.width).toList();
+  }
+
+  @visibleForTesting
+  List<String> debugChordSourcesForLine(String source) {
+    final List<_RenderLine> lines = _parseOneLine(source);
+    if (lines.isEmpty) {
+      return const <String>[];
+    }
+    return <String>[
+      for (final _WordToken word in lines.first.words)
+        if ((word.chord ?? '').isNotEmpty) word.chord!,
+    ];
   }
 
   List<double> debugKottaRowStartXsForLine(
@@ -365,12 +446,7 @@ class ProjectorPainter extends CustomPainter {
       for (int i = 0; i < rows.length; i++)
         rowPrefixes[i].kotta.isNotEmpty || rows[i].inlinePrefix.kotta.isNotEmpty
             ? blockStartX + _kottaContinuationIndent(i, horizontalPad)
-            : _debugCenteredKottaStartX(
-                rows[i],
-                lines.first,
-                fontSize,
-                blockStartX + _kottaContinuationIndent(i, horizontalPad),
-              ),
+            : blockStartX + _kottaContinuationIndent(i, horizontalPad),
     ];
   }
 
@@ -565,9 +641,130 @@ class ProjectorPainter extends CustomPainter {
     );
   }
 
+  /// Draws a Gregorian chant slide. The background is already painted.
+  ///
+  /// Nothing is rendered here: a prepared score is looked up in
+  /// [AretinoRenderCache] and replayed, and a miss draws the words as plain
+  /// text while the render runs (Decision 6). A projector never shows an empty
+  /// screen waiting for JavaScript.
+  void _drawAretino(Canvas canvas, Size size, TextFrame frame, String source) {
+    _emitHighlightRenderState(maxWordIndex: 0, isFullyHighlighted: false);
+
+    final double titleHeight = _drawAretinoTitle(canvas, size, frame);
+    final Size target = Size(
+      math.max(40, size.width),
+      math.max(40, size.height - titleHeight),
+    );
+
+    final AretinoRenderKey key = AretinoRenderKey(
+      source: source,
+      width: target.width,
+      height: target.height,
+      style: AretinoStyle(lyricFontSize: globals.fontSize.toDouble()),
+    );
+    final AretinoRenderCache cache = AretinoRenderCache.instance;
+    final AretinoRendering? rendering = cache.lookup(key);
+    if (rendering == null) {
+      cache.request(key);
+      _drawAretinoLyrics(canvas, size, source, titleHeight);
+      return;
+    }
+
+    final double contentHeight = rendering.height;
+    double y =
+        titleHeight +
+        (globals.vCenter
+            ? math.max(0, (target.height - contentHeight) / 2)
+            : 0);
+    for (int i = 0; i < rendering.rows.length; i++) {
+      final AretinoPicture row = rendering.rows[i];
+      final double x = globals.hCenter
+          ? (size.width - row.size.width) / 2
+          : globals.leftIndent.toDouble();
+      canvas.save();
+      // Horizontally each row keeps the width it was laid out against, so the
+      // systems stay aligned with one another. Vertically they are stacked on
+      // their ink, since the room the library reserves above a staff for notes
+      // that may rise over it would otherwise show up as a gap under the
+      // previous system's lyrics.
+      canvas.translate(
+        x - row.viewBox.left,
+        y + rendering.rowTops[i] - row.inkBounds.top,
+      );
+      row.paint(canvas, inkColor: globals.txtColor);
+      canvas.restore();
+    }
+  }
+
+  /// Draws the slide title above a score, and returns the height it took.
+  double _drawAretinoTitle(Canvas canvas, Size size, TextFrame frame) {
+    if (globals.hideTitle || frame.record.title.trim().isEmpty) {
+      return 0;
+    }
+    final double fontSize = (globals.titleSize.toDouble() * 2.5).clamp(
+      8.0,
+      72.0,
+    );
+    final TextPainter tp = TextPainter(
+      text: TextSpan(
+        text: frame.record.title,
+        style: TextStyle(color: globals.txtColor, fontSize: fontSize),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: globals.hCenter ? TextAlign.center : TextAlign.left,
+    )..layout(maxWidth: math.max(40, size.width));
+    tp.paint(
+      canvas,
+      Offset(globals.hCenter ? (size.width - tp.width) / 2 : 0, 0),
+    );
+    final double height = tp.height;
+    tp.dispose();
+    return height;
+  }
+
+  /// The words of a chant, as plain text — what a slide shows while its score
+  /// is still rendering, and what it falls back to if the render fails.
+  void _drawAretinoLyrics(Canvas canvas, Size size, String source, double top) {
+    final List<String> lines = AretinoSource.lyricLines(source);
+    if (lines.isEmpty) {
+      return;
+    }
+    final TextPainter tp = TextPainter(
+      text: TextSpan(
+        text: lines.join('\n'),
+        style: TextStyle(
+          color: globals.txtColor,
+          fontSize: globals.fontSize.toDouble(),
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: globals.hCenter ? TextAlign.center : TextAlign.left,
+    )..layout(maxWidth: math.max(40, size.width));
+    final double available = math.max(0, size.height - top);
+    tp.paint(
+      canvas,
+      Offset(
+        globals.hCenter ? (size.width - tp.width) / 2 : 0,
+        top + (globals.vCenter ? math.max(0, (available - tp.height) / 2) : 0),
+      ),
+    );
+    tp.dispose();
+  }
+
   void _drawText(Canvas canvas, Size size, TextFrame frame) {
     final Color bg = _colorWithTransparency(globals.bkColor, globals.backTrans);
     canvas.drawRect(Offset.zero & size, Paint()..color = bg);
+
+    // A verse whose first line carries the `\?A` marker is a Gregorian chant in
+    // Aretino notation. It travels as ordinary verse text inside the same
+    // `text` record as everything else, and is rendered here, at this canvas's
+    // own size — which is what makes it reflow to whatever screen it lands on
+    // (plans/aretino-projection-v1.md, Decision 1).
+    final String? aretino = AretinoSource.extract(frame.record.lines);
+    if (aretino != null) {
+      _drawAretino(canvas, size, frame, aretino);
+      return;
+    }
 
     const double horizontalPad = 0;
     final double maxWidth = math.max(40, size.width);
@@ -995,10 +1192,6 @@ class ProjectorPainter extends CustomPainter {
           baseLine.words.any((w) => (w.kotta ?? '').isNotEmpty);
       final _RenderLine line;
       if (!isTitleLine && !hasKotta) {
-        final _RenderLine paddedLine = _applyChordPadding(
-          baseLine,
-          lineFontSize,
-        );
         final double continuationIndent = globals.hCenter
             ? 0
             : _textContinuationIndent(
@@ -1006,7 +1199,7 @@ class ProjectorPainter extends CustomPainter {
                 TextPainter(textDirection: TextDirection.ltr),
               );
         line = _splitOverlongWords(
-          paddedLine,
+          baseLine,
           lineFontSize,
           maxWidth,
           continuationIndent: continuationIndent,
@@ -1140,8 +1333,7 @@ class ProjectorPainter extends CustomPainter {
           final double lineTextHeight = prepared.lineHeightsByLine[i];
           if (rows.isEmpty) {
             totalHeight +=
-                prepared.chordBandByLine[i] +
-                lineTextHeight * lineSpacing;
+                prepared.chordBandByLine[i] + lineTextHeight * lineSpacing;
           } else {
             for (final _TextRowLayout row in rows) {
               totalHeight +=
@@ -1171,16 +1363,13 @@ class ProjectorPainter extends CustomPainter {
   }
 
   double _chordBandHeightForFont(double fontSize) {
-    final TextPainter chordMeasure = TextPainter(
-      text: TextSpan(
-        text: 'Ag',
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: fontSize * (globals.akkordArany / 100.0),
-        ),
+    final ChordLayout chordMeasure = ChordRenderer.layout(
+      'C7',
+      TextStyle(
+        color: globals.txtColor,
+        fontSize: fontSize * (globals.akkordArany / 100.0),
       ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+    );
     return chordMeasure.height + 2;
   }
 
@@ -1214,11 +1403,12 @@ class ProjectorPainter extends CustomPainter {
 
   TextPainter _buildTextRowMeasure(_RenderLine line, double fontSize) {
     final List<InlineSpan> spans = <InlineSpan>[];
+    final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
     for (final _WordToken word in line.words) {
       final Color baseColor = word.color ?? globals.txtColor;
       spans.add(
         TextSpan(
-          text: word.text + (word.spaceAfter ? ' ' : ''),
+          text: _wordLayoutDisplay(word, fontSize, measure),
           style: TextStyle(
             color: baseColor,
             fontSize: _effectiveWordFontSize(word, fontSize),
@@ -1298,6 +1488,7 @@ class ProjectorPainter extends CustomPainter {
   ) {
     final List<InlineSpan> spans = <InlineSpan>[];
     final List<_TextWordLayout> wordLayouts = <_TextWordLayout>[];
+    final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
     int offset = 0;
 
     for (int i = 0; i < rowLine.words.length; i++) {
@@ -1305,7 +1496,7 @@ class ProjectorPainter extends CustomPainter {
       final bool highlighted = i < rowHighlights.length
           ? rowHighlights[i]
           : false;
-      final String display = word.text + (word.spaceAfter ? ' ' : '');
+      final String display = _wordLayoutDisplay(word, fontSize, measure);
       final Color baseColor = word.color ?? globals.txtColor;
       spans.add(
         TextSpan(
@@ -1327,7 +1518,7 @@ class ProjectorPainter extends CustomPainter {
       wordLayouts.add(
         _TextWordLayout(
           start: offset,
-          end: offset + display.length,
+          end: offset + word.text.length,
           tieUnderline: word.tieUnderline,
           color: baseColor,
         ),
@@ -1358,11 +1549,8 @@ class ProjectorPainter extends CustomPainter {
     }
 
     final ui.LineMetrics metric = metrics.first;
-    final double underlineY =
-        y + metric.baseline + math.max(1.0, fontSize * 0.08);
-    final double thickness = math.max(1.0, fontSize * 0.045);
-    final double capLength = math.max(thickness * 2.5, fontSize * 0.22);
-    final double capLift = math.max(thickness * 1.8, fontSize * 0.11);
+    final double baselineY = y + metric.baseline;
+    final double textBottomY = baselineY + metric.descent;
 
     int index = 0;
     while (index < layout.wordLayouts.length) {
@@ -1406,48 +1594,16 @@ class ProjectorPainter extends CustomPainter {
 
       final double startX = x + startBoxes.first.left;
       final double endX = x + endBoxes.last.right;
-      final double bodyStart = continuedFromPrevious
-          ? startX
-          : math.min(startX + capLength, endX);
-      final double bodyEnd = continuesToNext
-          ? endX
-          : math.max(bodyStart, endX - capLength);
-
-      final Paint bodyPaint = Paint()
-        ..color = startLayout.color
-        ..strokeWidth = thickness
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.butt;
-      canvas.drawLine(
-        Offset(bodyStart, underlineY),
-        Offset(bodyEnd, underlineY),
-        bodyPaint,
+      _paintTieUnderline(
+        canvas,
+        startX: startX,
+        endX: endX,
+        tipY: baselineY + _tieUnderlineTipOffset(fontSize),
+        bottomY: textBottomY,
+        color: startLayout.color,
+        continuedFromPrevious: continuedFromPrevious,
+        continuesToNext: continuesToNext,
       );
-
-      if (!continuedFromPrevious) {
-        _paintTieCap(
-          canvas,
-          bodyStart,
-          startX,
-          underlineY,
-          capLift,
-          thickness,
-          startLayout.color,
-          left: true,
-        );
-      }
-      if (!continuesToNext) {
-        _paintTieCap(
-          canvas,
-          bodyEnd,
-          endX,
-          underlineY,
-          capLift,
-          thickness,
-          startLayout.color,
-          left: false,
-        );
-      }
 
       index = runEnd + 1;
     }
@@ -1475,11 +1631,8 @@ class ProjectorPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout();
     final ui.LineMetrics metric = measure.computeLineMetrics().first;
-    final double underlineY =
-        y + metric.baseline + math.max(1.0, fontSize * 0.08);
-    final double thickness = math.max(1.0, fontSize * 0.045);
-    final double capLength = math.max(thickness * 2.5, fontSize * 0.22);
-    final double capLift = math.max(thickness * 1.8, fontSize * 0.11);
+    final double baselineY = y + metric.baseline;
+    final double textBottomY = baselineY + metric.descent;
 
     int index = 0;
     while (index < slots.length) {
@@ -1505,87 +1658,113 @@ class ProjectorPainter extends CustomPainter {
           sourceWords[endSlot.wordIndex + 1].tieUnderline;
 
       final double startX = startSlot.left;
-      final double endX = endSlot.right;
-      final double bodyStart = continuedFromPrevious
-          ? startX
-          : math.min(startX + capLength, endX);
-      final double bodyEnd = continuesToNext
-          ? endX
-          : math.max(bodyStart, endX - capLength);
-
-      final Paint bodyPaint = Paint()
-        ..color = startSlot.color
-        ..strokeWidth = thickness
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.butt;
-      canvas.drawLine(
-        Offset(bodyStart, underlineY),
-        Offset(bodyEnd, underlineY),
-        bodyPaint,
+      final double endX = endSlot.tieRight;
+      _paintTieUnderline(
+        canvas,
+        startX: startX,
+        endX: endX,
+        tipY: baselineY + _tieUnderlineTipOffset(fontSize),
+        bottomY: textBottomY,
+        color: startSlot.color,
+        continuedFromPrevious: continuedFromPrevious,
+        continuesToNext: continuesToNext,
       );
-
-      if (!continuedFromPrevious) {
-        _paintTieCap(
-          canvas,
-          bodyStart,
-          startX,
-          underlineY,
-          capLift,
-          thickness,
-          startSlot.color,
-          left: true,
-        );
-      }
-      if (!continuesToNext) {
-        _paintTieCap(
-          canvas,
-          bodyEnd,
-          endX,
-          underlineY,
-          capLift,
-          thickness,
-          startSlot.color,
-          left: false,
-        );
-      }
 
       index = runEnd + 1;
     }
   }
 
-  void _paintTieCap(
-    Canvas canvas,
-    double bodyEdgeX,
-    double tipX,
-    double baselineY,
-    double capLift,
-    double thickness,
-    Color color, {
-    required bool left,
+  double _tieUnderlineTipOffset(double fontSize) {
+    final double underlineOffset = math.max(1.0, fontSize * 0.08);
+    final double thickness = math.max(1.0, fontSize * 0.045);
+    final double desiredOffset = math.max(0, (fontSize - 14) / 10);
+    return math.min(
+      desiredOffset,
+      math.max(0, underlineOffset - thickness / 2),
+    );
+  }
+
+  void _paintTieUnderline(
+    Canvas canvas, {
+    required double startX,
+    required double endX,
+    required double tipY,
+    required double bottomY,
+    required Color color,
+    required bool continuedFromPrevious,
+    required bool continuesToNext,
   }) {
-    final double direction = left ? -1.0 : 1.0;
-    final double controlX1 = bodyEdgeX + direction * thickness * 0.8;
-    final double controlX2 =
-        bodyEdgeX + direction * math.max(thickness * 1.6, capLift * 0.45);
-    final Path path = Path()
-      ..moveTo(bodyEdgeX, baselineY)
-      ..cubicTo(
-        controlX1,
-        baselineY - thickness * 0.15,
-        controlX2,
-        baselineY - capLift,
-        tipX,
-        baselineY - capLift * 0.95,
-      )
-      ..cubicTo(
-        controlX2,
-        baselineY - capLift * 0.15,
-        controlX1,
-        baselineY + thickness * 0.2,
-        bodyEdgeX,
-        baselineY,
-      )
-      ..close();
+    if (endX <= startX) {
+      return;
+    }
+
+    final double depth = math.max(1.0, bottomY - tipY);
+    final double topMiddleY = tipY + depth * 0.72;
+    final double middleX = continuedFromPrevious
+        ? startX
+        : continuesToNext
+        ? endX
+        : (startX + endX) / 2;
+    final Path path = Path();
+
+    if (continuedFromPrevious) {
+      path.moveTo(startX, bottomY);
+    } else {
+      final double control = math.min(depth, (middleX - startX) * 0.45);
+      path
+        ..moveTo(startX, tipY)
+        ..cubicTo(
+          startX + control,
+          tipY + control,
+          middleX - control,
+          bottomY,
+          middleX,
+          bottomY,
+        );
+    }
+
+    if (continuesToNext) {
+      path.lineTo(endX, bottomY);
+    } else {
+      final double control = math.min(depth, (endX - middleX) * 0.45);
+      path.cubicTo(
+        middleX + control,
+        bottomY,
+        endX - control,
+        tipY + control,
+        endX,
+        tipY,
+      );
+    }
+
+    if (continuesToNext) {
+      path.lineTo(endX, topMiddleY);
+    } else {
+      final double control = math.min(depth, (endX - middleX) * 0.45);
+      path.cubicTo(
+        endX - control,
+        tipY + depth * 0.55,
+        middleX + control,
+        topMiddleY,
+        middleX,
+        topMiddleY,
+      );
+    }
+
+    if (continuedFromPrevious) {
+      path.lineTo(startX, topMiddleY);
+    } else {
+      final double control = math.min(depth, (middleX - startX) * 0.45);
+      path.cubicTo(
+        middleX - control,
+        topMiddleY,
+        startX + control,
+        tipY + depth * 0.55,
+        startX,
+        tipY,
+      );
+    }
+    path.close();
 
     canvas.drawPath(
       path,
@@ -1593,102 +1772,6 @@ class ProjectorPainter extends CustomPainter {
         ..color = color
         ..style = PaintingStyle.fill,
     );
-  }
-
-  _RenderLine _applyChordPadding(_RenderLine line, double fontSize) {
-    if (!globals.useAkkord ||
-        !settings.receiverUseAkkord ||
-        line.words.isEmpty) {
-      return line;
-    }
-
-    final TextPainter measure = TextPainter(textDirection: TextDirection.ltr);
-    bool changed = false;
-    final List<_WordToken> padded = <_WordToken>[];
-
-    for (final _WordToken word in line.words) {
-      final String chordText = (word.chord ?? '').trim();
-      if (chordText.isEmpty) {
-        padded.add(word);
-        continue;
-      }
-
-      measure.text = TextSpan(
-        text: word.text + (word.spaceAfter ? ' ' : ''),
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: (globals.boldText || word.bold)
-              ? FontWeight.bold
-              : FontWeight.normal,
-          fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
-        ),
-      );
-      measure.layout();
-      double textWidth = measure.width;
-
-      measure.text = TextSpan(
-        text: chordText,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: fontSize * (globals.akkordArany / 100.0),
-        ),
-      );
-      measure.layout();
-      final double chordWidth = measure.width;
-
-      if (textWidth + 1 >= chordWidth) {
-        padded.add(word);
-        continue;
-      }
-
-      String paddedText = word.text;
-      int guard = 0;
-      while (textWidth + 1 < chordWidth && guard < 24) {
-        paddedText = '${paddedText}_';
-        measure.text = TextSpan(
-          text: paddedText + (word.spaceAfter ? ' ' : ''),
-          style: TextStyle(
-            fontSize: fontSize,
-            fontWeight: (globals.boldText || word.bold)
-                ? FontWeight.bold
-                : FontWeight.normal,
-            fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
-          ),
-        );
-        measure.layout();
-        textWidth = measure.width;
-        guard++;
-      }
-
-      if (paddedText != word.text) {
-        changed = true;
-        padded.add(
-          _WordToken(
-            text: paddedText,
-            bold: word.bold,
-            italic: word.italic,
-            underline: word.underline,
-            tieUnderline: word.tieUnderline,
-            strike: word.strike,
-            color: word.color,
-            chord: word.chord,
-            kotta: word.kotta,
-            spaceAfter: word.spaceAfter,
-            breakAfter: word.breakAfter,
-            preferredBreakAfter: word.preferredBreakAfter,
-            softHyphenAfter: word.softHyphenAfter,
-            fontScale: word.fontScale,
-          ),
-        );
-      } else {
-        padded.add(word);
-      }
-    }
-
-    if (!changed) {
-      return line;
-    }
-    return _RenderLine(words: padded);
   }
 
   _RenderLine _splitOverlongWords(
@@ -1821,11 +1904,16 @@ class ProjectorPainter extends CustomPainter {
     double maxWidth,
     TextPainter measure,
   ) {
-    final double textScale = (word.fontScale * (maxWidth / currentWidth))
-        .clamp(0.55, 1.0);
+    final double textScale = (word.fontScale * (maxWidth / currentWidth)).clamp(
+      0.55,
+      1.0,
+    );
     _WordToken candidate = _copyWithFontScale(word, textScale);
-    double scaledTextWidth =
-        _measureWordDisplayWidth(candidate, fontSize, measure);
+    double scaledTextWidth = _measureWordDisplayWidth(
+      candidate,
+      fontSize,
+      measure,
+    );
 
     // The melody glyphs do not scale with fontScale, so if the melody alone is
     // wider than the limit we cannot make it fit by shrinking.
@@ -1941,8 +2029,10 @@ class ProjectorPainter extends CustomPainter {
         measure.layout();
         final double singleWidth = measure.width;
         if (singleWidth > maxChunkWidth + 0.5) {
-          chunkScale =
-              (chunkScale * (maxChunkWidth / singleWidth)).clamp(0.5, 1.0);
+          chunkScale = (chunkScale * (maxChunkWidth / singleWidth)).clamp(
+            0.5,
+            1.0,
+          );
         }
       }
 
@@ -1989,33 +2079,17 @@ class ProjectorPainter extends CustomPainter {
     double cx = x;
     for (int i = 0; i < line.words.length; i++) {
       final _WordToken w = line.words[i];
-      final String display = w.text + (w.spaceAfter ? ' ' : '');
-      measure.text = TextSpan(
-        text: display,
-        style: TextStyle(
-          fontSize: _effectiveWordFontSize(w, fontSize),
-          fontWeight: (globals.boldText || w.bold)
-              ? FontWeight.bold
-              : FontWeight.normal,
-          fontStyle: w.italic ? FontStyle.italic : FontStyle.normal,
-        ),
-      );
-      measure.layout();
       if ((w.chord ?? '').isNotEmpty) {
-        final TextPainter chord = TextPainter(
-          text: TextSpan(
-            text: w.chord,
-            style: TextStyle(
-              color: globals.txtColor,
-              fontWeight: FontWeight.w600,
-              fontSize: fontSize * (globals.akkordArany / 100),
-            ),
+        final ChordLayout chord = ChordRenderer.layout(
+          w.chord!,
+          TextStyle(
+            color: globals.txtColor,
+            fontSize: fontSize * (globals.akkordArany / 100),
           ),
-          textDirection: TextDirection.ltr,
-        )..layout();
+        );
         chord.paint(canvas, Offset(cx, y - chord.height - 2));
       }
-      cx += measure.width;
+      cx += _measureWordDisplayWidth(w, fontSize, measure);
     }
   }
 
@@ -2043,7 +2117,7 @@ class ProjectorPainter extends CustomPainter {
     }
 
     final Paint staffPaint = Paint()
-      ..color = globals.txtColor
+      ..color = _kottaInkColor
       ..strokeWidth = 1;
 
     final _KottaDrawState lineState = _KottaDrawState();
@@ -2065,8 +2139,20 @@ class ProjectorPainter extends CustomPainter {
       final double rowX =
           blockStartX + _kottaContinuationIndent(rowIndex, continuationIndent);
       final double rowTop = baseTop + rowIndex * rowStep;
-      for (int i = 0; i < 5; i++) {
-        final double ly = rowTop + i * lineGap;
+      if (globals.inverzKotta) {
+        canvas.drawRect(
+          Rect.fromLTRB(
+            rowX,
+            rowTop - _kottaLedgerReserve(lineGap),
+            rowX + row.width,
+            rowTop + staffHeight + _kottaLedgerReserve(lineGap),
+          ),
+          Paint()..color = globals.txtColor,
+        );
+      }
+      final int staffLineCount = _staffLineCountForLine(line);
+      for (int i = 0; i < staffLineCount; i++) {
+        final double ly = rowTop + (5 - staffLineCount + i) * lineGap;
         canvas.drawLine(
           Offset(rowX, ly),
           Offset(rowX + row.width, ly),
@@ -2140,7 +2226,13 @@ class ProjectorPainter extends CustomPainter {
           blockStartX +
           _kottaContinuationIndent(rows.length - 1, continuationIndent);
       final double lastTop = baseTop + (rows.length - 1) * rowStep;
-      _drawForcedClosingBarline(canvas, lastX + last.width, lastTop, lineGap);
+      _drawForcedClosingBarline(
+        canvas,
+        lastX + last.width,
+        lastTop,
+        lineGap,
+        _staffLineCountForLine(line),
+      );
     }
 
     _endBeam(canvas, lineState, lineGap);
@@ -2156,9 +2248,29 @@ class ProjectorPainter extends CustomPainter {
     return lineGap * 4;
   }
 
+  int _staffLineCountForLine(_RenderLine line) {
+    for (final _WordToken word in line.words) {
+      final List<String> commands = _parseKottaCommands(
+        (word.kotta ?? '').trim(),
+      );
+      if (commands.isEmpty) {
+        continue;
+      }
+      final String first = commands.first;
+      if (first[0] == '-') {
+        return int.tryParse(first[1])?.clamp(1, 5).toInt() ?? 5;
+      }
+      return 5;
+    }
+    return 5;
+  }
+
   double _kottaLedgerReserve(double lineGap) {
     return lineGap * 2;
   }
+
+  Color get _kottaInkColor =>
+      globals.inverzKotta ? globals.bkColor : globals.txtColor;
 
   double _kottaStaffToTextGap(double lineGap) {
     // Keep enough clearance for lower ledger lines so they do not collide with lyrics.
@@ -2237,25 +2349,6 @@ class ProjectorPainter extends CustomPainter {
     return horizontalPad;
   }
 
-  double _debugCenteredKottaStartX(
-    _KottaRowLayout row,
-    _RenderLine line,
-    double fontSize,
-    double rowX,
-  ) {
-    if (row.words.isEmpty) {
-      return rowX;
-    }
-    final _KottaWordLayout firstSlot = row.words.first;
-    final String kotta = (line.words[firstSlot.wordIndex].kotta ?? '').trim();
-    if (kotta.isEmpty) {
-      return rowX;
-    }
-    final double lineGap = _kottaLineGap(fontSize);
-    final double rawWidth = _kottaRawWidth(kotta, lineGap, _KottaDrawState());
-    return rowX + (firstSlot.slotWidth - rawWidth) / 2.0;
-  }
-
   void _paintKottaAlignedTextRow(
     Canvas canvas,
     _RenderLine line,
@@ -2297,11 +2390,15 @@ class ProjectorPainter extends CustomPainter {
       )..layout();
       final double slotLeft = cx + inset;
       tp.paint(canvas, Offset(slotLeft, y));
+      final List<ui.TextBox> textBoxes = tp.getBoxesForSelection(
+        TextSelection(baseOffset: 0, extentOffset: w.text.length),
+      );
       slotLayouts.add(
         _KottaTextSlotLayout(
           wordIndex: slot.wordIndex,
           left: slotLeft,
           right: slotLeft + tp.width,
+          tieRight: slotLeft + (textBoxes.isEmpty ? 0 : textBoxes.last.right),
           baseline: y + tp.computeLineMetrics().first.baseline,
           tieUnderline: w.tieUnderline,
           color: baseColor,
@@ -2793,9 +2890,10 @@ class ProjectorPainter extends CustomPainter {
 
       if (currentWordIndices.isNotEmpty &&
           (currentWidth + pendingWordWidth) > currentRowLimit) {
-        final List<int> combinedWordIndices = <int>[]
-          ..addAll(currentWordIndices)
-          ..addAll(pendingWordIndices);
+        final List<int> combinedWordIndices = <int>[
+          ...currentWordIndices,
+          ...pendingWordIndices,
+        ];
 
         int breakWordIndex = combinedWordIndices.last;
         int? preferredBreakIndex;
@@ -2945,7 +3043,7 @@ class ProjectorPainter extends CustomPainter {
     double fontSize,
     TextPainter measure,
   ) {
-    final String display = word.text + (word.spaceAfter ? ' ' : '');
+    final String display = _wordLayoutDisplay(word, fontSize, measure);
     final String cacheKey = [
       'w',
       display,
@@ -2974,6 +3072,55 @@ class ProjectorPainter extends CustomPainter {
       _wordWidthCache.remove(_wordWidthCache.keys.first);
     }
     return width;
+  }
+
+  String _wordLayoutDisplay(
+    _WordToken word,
+    double fontSize,
+    TextPainter measure,
+  ) {
+    String display = word.text + (word.spaceAfter ? ' ' : '');
+    final String chordText = (word.chord ?? '').trim();
+    if (!globals.useAkkord ||
+        !settings.receiverUseAkkord ||
+        chordText.isEmpty) {
+      return display;
+    }
+
+    final TextStyle textStyle = TextStyle(
+      fontSize: _effectiveWordFontSize(word, fontSize),
+      fontWeight: (globals.boldText || word.bold)
+          ? FontWeight.bold
+          : FontWeight.normal,
+      fontStyle: word.italic ? FontStyle.italic : FontStyle.normal,
+    );
+    measure.text = TextSpan(text: display, style: textStyle);
+    measure.layout();
+    final double textWidth = measure.width;
+    final double chordWidth = ChordRenderer.layout(
+      chordText,
+      TextStyle(
+        color: globals.txtColor,
+        fontSize: fontSize * (globals.akkordArany / 100.0),
+      ),
+    ).width;
+    if (textWidth + 0.5 >= chordWidth) {
+      return display;
+    }
+
+    measure.text = TextSpan(text: '\u00A0', style: textStyle);
+    measure.layout();
+    final double spaceWidth = math.max(0.5, measure.width);
+    final int spaceCount = ((chordWidth - textWidth) / spaceWidth).ceil();
+    display += List<String>.filled(spaceCount, '\u00A0').join();
+    measure.text = TextSpan(text: display, style: textStyle);
+    measure.layout();
+    while (measure.width + 0.5 < chordWidth) {
+      display += '\u00A0';
+      measure.text = TextSpan(text: display, style: textStyle);
+      measure.layout();
+    }
+    return display;
   }
 
   double _measureHyphenDisplayWidth(
@@ -3028,9 +3175,13 @@ class ProjectorPainter extends CustomPainter {
       globals.hCenter,
       globals.leftIndent,
       globals.boldText,
+      globals.useAkkord,
+      globals.akkordArany,
+      settings.receiverUseAkkord,
       for (final _WordToken word in line.words)
         [
           word.text,
+          word.chord,
           word.bold,
           word.italic,
           word.spaceAfter,
@@ -3135,6 +3286,8 @@ class ProjectorPainter extends CustomPainter {
       state.tomor,
       state.gerenda,
       state.szaaratlan,
+      state.agogika,
+      state.staffLineCount,
       state.slurType,
       state.slurNext,
       state.deferFinalDoubleBarAtEnd,
@@ -3174,21 +3327,33 @@ class ProjectorPainter extends CustomPainter {
     double endX,
     double top,
     double lineGap,
+    int staffLineCount,
   ) {
     final Paint thin = Paint()
-      ..color = globals.txtColor
+      ..color = _kottaInkColor
       ..strokeWidth = 1.2;
     final Paint thick = Paint()
-      ..color = globals.txtColor
+      ..color = _kottaInkColor
       ..strokeWidth = 2.2;
 
-    final double y1 = top;
-    final double y2 = top + lineGap * 4;
+    final _KottaBarBounds bounds = _kottaBarBounds(
+      top,
+      lineGap,
+      staffLineCount,
+    );
     final double xThin = endX + lineGap * 0.35;
     final double xThick = endX + lineGap * 0.65;
 
-    canvas.drawLine(Offset(xThin, y1), Offset(xThin, y2), thin);
-    canvas.drawLine(Offset(xThick, y1), Offset(xThick, y2), thick);
+    canvas.drawLine(
+      Offset(xThin, bounds.top),
+      Offset(xThin, bounds.bottom),
+      thin,
+    );
+    canvas.drawLine(
+      Offset(xThick, bounds.top),
+      Offset(xThick, bounds.bottom),
+      thick,
+    );
   }
 
   void _drawSimpleKotta(
@@ -3220,15 +3385,16 @@ class ProjectorPainter extends CustomPainter {
       return;
     }
     const double scale = 1.0;
-    final double startX = x + (wordWidth - rawWidth) / 2.0;
+    final double startX = x;
     final _KottaDrawState drawState = state ?? _KottaDrawState();
 
     if (drawStaff) {
       final Paint staffPaint = Paint()
-        ..color = globals.txtColor
+        ..color = _kottaInkColor
         ..strokeWidth = 1;
-      for (int i = 0; i < 5; i++) {
-        final double y = top + i * lineGap;
+      final int staffLineCount = _staffLineCountForCommands(cmds);
+      for (int i = 0; i < staffLineCount; i++) {
+        final double y = top + (5 - staffLineCount + i) * lineGap;
         canvas.drawLine(Offset(x, y), Offset(x + wordWidth, y), staffPaint);
       }
     }
@@ -3255,6 +3421,13 @@ class ProjectorPainter extends CustomPainter {
     return out;
   }
 
+  int _staffLineCountForCommands(List<String> commands) {
+    if (commands.isEmpty || commands.first[0] != '-') {
+      return 5;
+    }
+    return int.tryParse(commands.first[1])?.clamp(1, 5).toInt() ?? 5;
+  }
+
   double _kottaWidthOf(String cmd, double lineGap, _KottaDrawState state) {
     final String c1 = cmd[0];
     final String c2 = cmd[1];
@@ -3271,10 +3444,15 @@ class ProjectorPainter extends CustomPainter {
       return 0;
     }
     if (c1 == '-') {
+      state.staffLineCount = int.tryParse(c2)?.clamp(1, 5).toInt() ?? 5;
       return 0;
     }
     if (c1 == 'm') {
       state.modosito = c2;
+      return 0;
+    }
+    if (c1 == 'a') {
+      state.agogika = c2;
       return 0;
     }
     if (c1 == 'k') {
@@ -3482,6 +3660,7 @@ class ProjectorPainter extends CustomPainter {
       return;
     }
     if (c1 == '-') {
+      state.staffLineCount = int.tryParse(c2)?.clamp(1, 5).toInt() ?? 5;
       return;
     }
 
@@ -3520,7 +3699,9 @@ class ProjectorPainter extends CustomPainter {
               _linePos(top, lineGap, 7) -
               lineGap * 0.5 * (1 + ('abcdefghi'.indexOf(c2)));
         }
-        final double rat = (lineGap * 4.0) / (v1 - v5);
+        final double rat = 'abcdefghi'.contains(c2)
+            ? lineGap / (_kcDkulcsV1 - _kcDkulcsV2)
+            : (lineGap * 4.0) / (v1 - v5);
         final double y1 = y0 - v5 * rat;
         final double x2 = x + w * rat;
         final double y2 = y1 + h * rat;
@@ -3608,6 +3789,10 @@ class ProjectorPainter extends CustomPainter {
       state.modosito = c2;
       return;
     }
+    if (c1 == 'a') {
+      state.agogika = c2;
+      return;
+    }
     if (c1 == 'r' || c1 == 'R') {
       if (c2 == 't') {
         state.tomor = c1 == 'R';
@@ -3627,6 +3812,13 @@ class ProjectorPainter extends CustomPainter {
       final double minWidth = _kottaMinWidth(lineGap);
       final double mw = state.tomor ? 0.0 : minWidth;
       double x1 = x + mw * 0.5;
+      final double? previousCompactHeadRight = state.lastCompactHeadRight;
+      if (state.tomor &&
+          state.modosito == ' ' &&
+          previousCompactHeadRight != null &&
+          !state.pontozott) {
+        x1 = previousCompactHeadRight;
+      }
       if (state.modosito != ' ') {
         final String? modName = switch (state.modosito) {
           '0' => 'feloldo',
@@ -3736,13 +3928,20 @@ class ProjectorPainter extends CustomPainter {
         Rect.fromLTRB(x1, ny1, nx2, ny2),
       );
       if (!drewHead) {
-        final Paint notePaint = Paint()..color = globals.txtColor;
+        final Paint notePaint = Paint()..color = _kottaInkColor;
         canvas.drawOval(Rect.fromLTRB(x1, ny1, nx2, ny2), notePaint);
       }
+      _drawCompactHeadConnector(
+        canvas,
+        state,
+        headLeft: x1,
+        headRight: nx2,
+        headCenterY: cy,
+      );
 
       // Ledger lines for notes outside the 5-line staff.
       final Paint ledgerPaint = Paint()
-        ..color = globals.txtColor
+        ..color = _kottaInkColor
         ..strokeWidth = 1.0;
       final double lx1 = nx - noteW * 0.75;
       final double lx2 = nx + noteW * 0.75;
@@ -3760,10 +3959,11 @@ class ProjectorPainter extends CustomPainter {
       }
 
       final bool stemDown = c2.toUpperCase() == c2;
-      if (state.ritmus == '2' ||
-          state.ritmus == '4' ||
-          state.ritmus == '8' ||
-          state.ritmus == '6') {
+      if (!state.szaaratlan &&
+          (state.ritmus == '2' ||
+              state.ritmus == '4' ||
+              state.ritmus == '8' ||
+              state.ritmus == '6')) {
         final double stemX = stemDown ? x1 : nx2;
         final double stemY2 = stemDown
             ? cy + lineGap * 3.2
@@ -3782,7 +3982,7 @@ class ProjectorPainter extends CustomPainter {
           );
         } else {
           final Paint stemPaint = Paint()
-            ..color = globals.txtColor
+            ..color = _kottaInkColor
             ..strokeWidth = 1.2;
           canvas.drawLine(Offset(stemX, cy), Offset(stemX, stemY2), stemPaint);
           if (state.ritmus == '8' || state.ritmus == '6') {
@@ -3801,23 +4001,27 @@ class ProjectorPainter extends CustomPainter {
         }
       }
 
+      _drawAgogika(
+        canvas,
+        state,
+        noteCenter: Offset(nx, cy),
+        stemDown: stemDown,
+        lineGap: lineGap,
+      );
       _trackSlurPoint(state, Offset(nx, cy));
       _trackTupletPoint(state, Offset(nx, cy), stemDown, lineGap, noteW);
 
       if (state.pontozott) {
+        final double dotSize = lineGap * 0.32;
         _drawKottaAsset(
           canvas,
           'pont',
-          Rect.fromLTWH(
-            nx2 + mw / 8.0,
-            cy - lineGap * 0.16,
-            lineGap * 0.32,
-            lineGap * 0.32,
-          ),
+          Rect.fromLTWH(nx2 + mw / 8.0, cy - dotSize, dotSize, dotSize),
         );
       }
 
       state.modosito = ' ';
+      state.agogika = ' ';
       return;
     }
     if (c1 == '|') {
@@ -3826,47 +4030,61 @@ class ProjectorPainter extends CustomPainter {
         return;
       }
       final Paint barPaint = Paint()
-        ..color = globals.txtColor
+        ..color = _kottaInkColor
         ..strokeWidth = 1.2;
+      final _KottaBarBounds barBounds = _kottaBarBounds(
+        top,
+        lineGap,
+        state.staffLineCount,
+      );
       if (c2 == '1' || c2 == '|') {
         if (c2 == '|') {
           canvas.drawLine(
-            Offset(x + lineGap * 0.8, top),
-            Offset(x + lineGap * 0.8, top + lineGap * 4),
+            Offset(x + lineGap * 0.8, barBounds.top),
+            Offset(x + lineGap * 0.8, barBounds.bottom),
             barPaint,
           );
           canvas.drawLine(
-            Offset(x + lineGap * 1.2, top),
-            Offset(x + lineGap * 1.2, top + lineGap * 4),
+            Offset(x + lineGap * 1.2, barBounds.top),
+            Offset(x + lineGap * 1.2, barBounds.bottom),
             barPaint,
           );
         } else {
           canvas.drawLine(
-            Offset(x + lineGap, top),
-            Offset(x + lineGap, top + lineGap * 4),
+            Offset(x + lineGap, barBounds.top),
+            Offset(x + lineGap, barBounds.bottom),
             barPaint,
           );
         }
       } else if (c2 == '.') {
         canvas.drawLine(
-          Offset(x + lineGap * 0.8, top),
-          Offset(x + lineGap * 0.8, top + lineGap * 4),
+          Offset(x + lineGap * 0.8, barBounds.top),
+          Offset(x + lineGap * 0.8, barBounds.bottom),
           barPaint,
         );
         canvas.drawLine(
-          Offset(x + lineGap * 1.2, top),
-          Offset(x + lineGap * 1.2, top + lineGap * 4),
+          Offset(x + lineGap * 1.2, barBounds.top),
+          Offset(x + lineGap * 1.2, barBounds.bottom),
           barPaint..strokeWidth = 2.0,
         );
       } else if (c2 == "'") {
         final double x0 = x + lineGap;
-        final double y1 = top - lineGap * 0.5;
+        final double y1 = barBounds.top - lineGap * 0.5;
         final double y2 = y1 + lineGap;
         canvas.drawLine(Offset(x0, y1), Offset(x0, y2), barPaint);
+      } else if (c2 == '!') {
+        final double x0 = x + lineGap;
+        canvas.drawLine(
+          Offset(x0, barBounds.top - lineGap * 0.5),
+          Offset(x0, barBounds.top + lineGap * 2.5),
+          barPaint,
+        );
+      } else if (c2 == '>' || c2 == ':' || c2 == '<') {
+        _drawRepeatBarline(canvas, c2, x, lineGap, barBounds, barPaint);
       } else {
         canvas.drawLine(
-          Offset(x + lineGap, top),
-          Offset(x + lineGap, top + lineGap * 4),
+          Offset(x + lineGap, barBounds.top),
+          Offset(x + lineGap, barBounds.bottom),
           barPaint,
         );
       }
@@ -3883,14 +4101,15 @@ class ProjectorPainter extends CustomPainter {
         _ => null,
       };
       if (restName != null) {
+        final _KottaRestGeometry geometry = _kottaRestGeometry(c2, lineGap);
         _drawKottaAsset(
           canvas,
           restName,
           Rect.fromLTWH(
-            x + lineGap * 0.3,
-            top + lineGap * 0.6,
-            lineGap * 1.4,
-            lineGap * 2.6,
+            x + geometry.leftOffset,
+            top + geometry.topOffset,
+            geometry.width,
+            geometry.height,
           ),
         );
         if (c1 == 'S') {
@@ -3907,6 +4126,215 @@ class ProjectorPainter extends CustomPainter {
         }
       }
     }
+  }
+
+  _KottaBarBounds _kottaBarBounds(
+    double top,
+    double lineGap,
+    int staffLineCount,
+  ) {
+    if (staffLineCount <= 1) {
+      return _KottaBarBounds(top + lineGap * 3.5, top + lineGap * 4.5);
+    }
+    return _KottaBarBounds(
+      top + (5 - staffLineCount) * lineGap,
+      top + lineGap * 4,
+    );
+  }
+
+  _KottaRestGeometry _kottaRestGeometry(String rhythm, double lineGap) {
+    switch (rhythm) {
+      case '1':
+        final double scale = lineGap / _kcSzunet1V;
+        return _KottaRestGeometry(
+          leftOffset: _kcSzunet1W * scale / 2,
+          topOffset: lineGap,
+          width: _kcSzunet1W * scale,
+          height: _kcSzunet1H * scale,
+        );
+      case '2':
+        final double scale = lineGap / _kcSzunet2V;
+        final double height = _kcSzunet2H * scale;
+        return _KottaRestGeometry(
+          leftOffset: _kcSzunet2W * scale / 2,
+          topOffset: lineGap * 2 - height,
+          width: _kcSzunet2W * scale,
+          height: height,
+        );
+      case '4':
+        final double scale = 2 * lineGap / (_kcSzunet4V2 - _kcSzunet4V4);
+        return _KottaRestGeometry(
+          leftOffset: lineGap * 0.3,
+          topOffset: lineGap - _kcSzunet4V4 * scale,
+          width: _kcSzunet4W * scale,
+          height: _kcSzunet4H * scale,
+        );
+      case '8':
+        final double scale = 2 * lineGap / (_kcSzunet8V2 - _kcSzunet8V4);
+        return _KottaRestGeometry(
+          leftOffset: lineGap * 0.3,
+          topOffset: lineGap - _kcSzunet8V4 * scale,
+          width: _kcSzunet8W * scale,
+          height: _kcSzunet8H * scale,
+        );
+      default:
+        final double scale = 2 * lineGap / (_kcSzunet16V2 - _kcSzunet16V4);
+        return _KottaRestGeometry(
+          leftOffset: lineGap * 0.3,
+          topOffset: lineGap - _kcSzunet16V4 * scale,
+          width: _kcSzunet16W * scale,
+          height: _kcSzunet16H * scale,
+        );
+    }
+  }
+
+  void _drawCompactHeadConnector(
+    Canvas canvas,
+    _KottaDrawState state, {
+    required double headLeft,
+    required double headRight,
+    required double headCenterY,
+  }) {
+    if (state.lastCompactHeadRight != null &&
+        state.lastCompactHeadCenterY != null &&
+        (state.lastCompactHeadRight! - headLeft).abs() < 0.01) {
+      canvas.drawLine(
+        Offset(headLeft, state.lastCompactHeadCenterY!),
+        Offset(headLeft, headCenterY),
+        Paint()
+          ..color = _kottaInkColor
+          ..strokeWidth = 1,
+      );
+    }
+    state.lastCompactHeadRight = state.tomor && !state.pontozott
+        ? headRight
+        : null;
+    state.lastCompactHeadCenterY = state.lastCompactHeadRight == null
+        ? null
+        : headCenterY;
+  }
+
+  void _drawRepeatBarline(
+    Canvas canvas,
+    String kind,
+    double x,
+    double lineGap,
+    _KottaBarBounds bounds,
+    Paint thinPaint,
+  ) {
+    final double y1 = bounds.top;
+    final double y2 = bounds.bottom;
+    final double centerY = (y1 + y2) / 2;
+    final double unit = lineGap * 0.45;
+    final Paint thickPaint = Paint()
+      ..color = _kottaInkColor
+      ..strokeWidth = math.max(2.0, thinPaint.strokeWidth * 2);
+
+    void line(double lineX, Paint paint) {
+      canvas.drawLine(Offset(lineX, y1), Offset(lineX, y2), paint);
+    }
+
+    void dots(double dotX) {
+      final Paint dotPaint = Paint()..color = _kottaInkColor;
+      final double radius = math.max(1.0, lineGap * 0.13);
+      canvas.drawCircle(
+        Offset(dotX, centerY - lineGap * 0.5),
+        radius,
+        dotPaint,
+      );
+      canvas.drawCircle(
+        Offset(dotX, centerY + lineGap * 0.5),
+        radius,
+        dotPaint,
+      );
+    }
+
+    final double centerX = x + lineGap;
+    switch (kind) {
+      case '>':
+        line(centerX, thinPaint);
+        line(centerX - unit * 2, thickPaint);
+        dots(centerX + unit * 2);
+        break;
+      case ':':
+        line(centerX, thickPaint);
+        line(centerX - unit, thinPaint);
+        line(centerX + unit, thinPaint);
+        dots(centerX - unit * 2.5);
+        dots(centerX + unit * 2.5);
+        break;
+      case '<':
+        line(centerX, thinPaint);
+        line(centerX + unit, thickPaint);
+        dots(centerX - unit * 2);
+        break;
+    }
+  }
+
+  void _drawAgogika(
+    Canvas canvas,
+    _KottaDrawState state, {
+    required Offset noteCenter,
+    required bool stemDown,
+    required double lineGap,
+  }) {
+    final String? assetName = switch (state.agogika) {
+      '-' => 'tenuto',
+      '.' => 'pont',
+      '>' => 'marcato1',
+      '^' => 'marcato2',
+      'K' => stemDown ? 'koronale' : 'koronafel',
+      'm' => 'mordent1',
+      'M' => 'mordent2',
+      't' => 'trilla1',
+      'T' => 'trilla2',
+      _ => null,
+    };
+    if (assetName == null) {
+      return;
+    }
+
+    final ui.Image? image = KottaAssets.image(assetName);
+    final _AgogikaMetrics metrics = _agogikaMetrics(assetName, image);
+    final double height = metrics.height * lineGap / metrics.lineGap;
+    final double width = metrics.width * lineGap / metrics.lineGap;
+    double y = noteCenter.dy + (stemDown ? -lineGap : lineGap);
+    if (state.agogika == '-' || state.agogika == '.') {
+      y += height;
+    }
+    _drawKottaAsset(
+      canvas,
+      assetName,
+      Rect.fromCenter(
+        center: Offset(noteCenter.dx, y),
+        width: width,
+        height: height,
+      ),
+    );
+  }
+
+  _AgogikaMetrics _agogikaMetrics(String assetName, ui.Image? image) {
+    final _AgogikaMetrics fallback = switch (assetName) {
+      'tenuto' => const _AgogikaMetrics(66, 13, 53),
+      'pont' => const _AgogikaMetrics(25, 25, 80),
+      'marcato1' => const _AgogikaMetrics(128, 130, 135),
+      'marcato2' => const _AgogikaMetrics(128, 130, 111),
+      'koronafel' => const _AgogikaMetrics(169, 95, 99),
+      'koronale' => const _AgogikaMetrics(169, 95, 109),
+      'mordent1' => const _AgogikaMetrics(91, 103, 103),
+      'mordent2' => const _AgogikaMetrics(91, 112, 112),
+      'trilla1' => const _AgogikaMetrics(100, 83, 83),
+      'trilla2' => const _AgogikaMetrics(100, 107, 107),
+      _ => const _AgogikaMetrics(1, 1, 1),
+    };
+    if (image == null) {
+      return fallback;
+    }
+    return _AgogikaMetrics(
+      image.width.toDouble(),
+      image.height.toDouble(),
+      fallback.lineGap,
+    );
   }
 
   void _trackSlurPoint(_KottaDrawState state, Offset noteCenter) {
@@ -3949,7 +4377,8 @@ class ProjectorPainter extends CustomPainter {
       lineGap: lineGap,
     );
     final double edgeOffset = math.max(1.0, lineGap * 0.25);
-    final double innerY = apex.dy + slurYOffset + (down ? -edgeOffset : edgeOffset);
+    final double innerY =
+        apex.dy + slurYOffset + (down ? -edgeOffset : edgeOffset);
     final Offset c1 = Offset((s.dx * 3 + e.dx) / 4, apex.dy + slurYOffset);
     final Offset c2 = Offset((s.dx + e.dx * 3) / 4, apex.dy + slurYOffset);
     final Offset start = Offset(s.dx, s.dy + slurYOffset);
@@ -3957,16 +4386,9 @@ class ProjectorPainter extends CustomPainter {
     final Path p = Path()
       ..moveTo(start.dx, start.dy)
       ..cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, end.dx, end.dy)
-      ..cubicTo(
-        c2.dx,
-        innerY,
-        c1.dx,
-        innerY,
-        start.dx,
-        start.dy,
-      )
+      ..cubicTo(c2.dx, innerY, c1.dx, innerY, start.dx, start.dy)
       ..close();
-    canvas.drawPath(p, Paint()..color = globals.txtColor);
+    canvas.drawPath(p, Paint()..color = _kottaInkColor);
     state.slurType = ' ';
     state.slurNext = ' ';
     state.slurStart = null;
@@ -4065,7 +4487,7 @@ class ProjectorPainter extends CustomPainter {
         : endY;
 
     final Paint p = Paint()
-      ..color = globals.txtColor
+      ..color = _kottaInkColor
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
     canvas.drawLine(Offset(startX, startLineY), Offset(endX, endLineY), p);
@@ -4109,7 +4531,7 @@ class ProjectorPainter extends CustomPainter {
           Offset(s.x, s.yHead),
           Offset(s.x, s.yTip),
           Paint()
-            ..color = globals.txtColor
+            ..color = _kottaInkColor
             ..strokeWidth = 1.2,
         );
         _drawStandaloneFlag(canvas, s, lineGap);
@@ -4123,7 +4545,7 @@ class ProjectorPainter extends CustomPainter {
     final bool down = first.down;
     final double beamThickness = lineGap * 0.45;
     final Paint beamPaint = Paint()
-      ..color = globals.txtColor
+      ..color = _kottaInkColor
       ..strokeWidth = beamThickness;
     canvas.drawLine(
       Offset(first.x, first.yTip),
@@ -4144,7 +4566,7 @@ class ProjectorPainter extends CustomPainter {
         Offset(s.x, s.yHead),
         Offset(s.x, yEnd),
         Paint()
-          ..color = globals.txtColor
+          ..color = _kottaInkColor
           ..strokeWidth = 1.2,
       );
     }
@@ -4209,7 +4631,7 @@ class ProjectorPainter extends CustomPainter {
       img.height.toDouble(),
     );
     final Paint p = Paint()
-      ..colorFilter = ColorFilter.mode(globals.txtColor, BlendMode.srcIn);
+      ..colorFilter = ColorFilter.mode(_kottaInkColor, BlendMode.srcIn);
     canvas.drawImageRect(img, src, dst, p);
     return true;
   }
@@ -4301,12 +4723,38 @@ class ProjectorPainter extends CustomPainter {
     String? pendingChord;
     String? pendingKotta;
 
+    void flushPendingAsSpace() {
+      if ((pendingChord == null || pendingChord!.isEmpty) &&
+          (pendingKotta == null || pendingKotta!.isEmpty)) {
+        return;
+      }
+      words.add(
+        _WordToken(
+          text: '\u00A0',
+          bold: style.bold,
+          italic: style.italic,
+          underline: style.underline,
+          tieUnderline: style.tieUnderline,
+          strike: style.strike,
+          color: style.color,
+          chord: pendingChord,
+          kotta: pendingKotta,
+          breakAfter: true,
+        ),
+      );
+      pendingChord = null;
+      pendingKotta = null;
+    }
+
     void attachPendingToPrevWord() {
       if (words.isEmpty) {
         return;
       }
       if ((pendingChord == null || pendingChord!.isEmpty) &&
           (pendingKotta == null || pendingKotta!.isEmpty)) {
+        return;
+      }
+      if (words.last.isControlPlaceholder) {
         return;
       }
       final _WordToken last = words.removeLast();
@@ -4507,9 +4955,11 @@ class ProjectorPainter extends CustomPainter {
             continue;
           case 'G':
             flushWord();
-            attachPendingToPrevWord();
             final int end = src.indexOf(';', i);
             if (end > i) {
+              if (pendingChord != null && pendingChord!.isNotEmpty) {
+                flushPendingAsSpace();
+              }
               pendingChord = src.substring(i, end);
               i = end + 1;
             }
@@ -4542,6 +4992,9 @@ class ProjectorPainter extends CustomPainter {
               if (end > i) {
                 final String payload = src.substring(i, end);
                 if (sub == 'G') {
+                  if (pendingChord != null && pendingChord!.isNotEmpty) {
+                    flushPendingAsSpace();
+                  }
                   pendingChord = payload;
                 } else if (sub == 'K') {
                   pendingKotta = payload;
@@ -4561,6 +5014,9 @@ class ProjectorPainter extends CustomPainter {
       if (ch == ' ') {
         if (sb.isNotEmpty) {
           flushWord(addSpaceAfter: true, addBreakAfter: true);
+        } else if ((pendingChord ?? '').isNotEmpty ||
+            (pendingKotta ?? '').isNotEmpty) {
+          flushPendingAsSpace();
         } else {
           attachPendingToPrevWord();
           // Space can arrive right after an escaped control block (\K, \G, etc.).
@@ -4577,7 +5033,7 @@ class ProjectorPainter extends CustomPainter {
     }
 
     flushWord();
-    attachPendingToPrevWord();
+    flushPendingAsSpace();
     result.add(_RenderLine(words: List<_WordToken>.from(words)));
     return result;
   }
@@ -4794,6 +5250,9 @@ class _WordToken {
   final double fontScale;
 
   bool get countAsWord => text.trim().isNotEmpty;
+  bool get isControlPlaceholder =>
+      text == '\u00A0' &&
+      ((chord ?? '').isNotEmpty || (kotta ?? '').isNotEmpty);
 }
 
 class _WordStyle {
@@ -4805,6 +5264,35 @@ class _WordStyle {
   Color? color;
 }
 
+class _AgogikaMetrics {
+  const _AgogikaMetrics(this.width, this.height, this.lineGap);
+
+  final double width;
+  final double height;
+  final double lineGap;
+}
+
+class _KottaBarBounds {
+  const _KottaBarBounds(this.top, this.bottom);
+
+  final double top;
+  final double bottom;
+}
+
+class _KottaRestGeometry {
+  const _KottaRestGeometry({
+    required this.leftOffset,
+    required this.topOffset,
+    required this.width,
+    required this.height,
+  });
+
+  final double leftOffset;
+  final double topOffset;
+  final double width;
+  final double height;
+}
+
 class _KottaDrawState {
   String kulcs = ' ';
   int elojegy = 0;
@@ -4814,6 +5302,10 @@ class _KottaDrawState {
   bool tomor = false;
   bool gerenda = false;
   bool szaaratlan = false;
+  double? lastCompactHeadRight;
+  double? lastCompactHeadCenterY;
+  String agogika = ' ';
+  int staffLineCount = 5;
   String slurType = ' ';
   String slurNext = ' ';
   Offset? slurStart;
@@ -4835,6 +5327,10 @@ class _KottaDrawState {
     c.tomor = tomor;
     c.gerenda = gerenda;
     c.szaaratlan = szaaratlan;
+    c.lastCompactHeadRight = lastCompactHeadRight;
+    c.lastCompactHeadCenterY = lastCompactHeadCenterY;
+    c.agogika = agogika;
+    c.staffLineCount = staffLineCount;
     c.slurType = slurType;
     c.slurNext = slurNext;
     c.slurStart = slurStart;
@@ -4965,6 +5461,7 @@ class _KottaTextSlotLayout {
     required this.wordIndex,
     required this.left,
     required this.right,
+    required this.tieRight,
     required this.baseline,
     required this.tieUnderline,
     required this.color,
@@ -4974,6 +5471,7 @@ class _KottaTextSlotLayout {
   final int wordIndex;
   final double left;
   final double right;
+  final double tieRight;
   final double baseline;
   final bool tieUnderline;
   final Color color;
@@ -5098,6 +5596,11 @@ const double _kcSzunet2W = 125.0;
 const double _kcSzunet4W = 81.0;
 const double _kcSzunet8W = 58.0;
 const double _kcSzunet16W = 77.0;
+const double _kcSzunet1H = 33.0;
+const double _kcSzunet2H = 33.0;
+const double _kcSzunet4H = 202.0;
+const double _kcSzunet8H = 122.0;
+const double _kcSzunet16H = 141.0;
 const double _kcSzunet1V = 60.0;
 const double _kcSzunet2V = 60.0;
 const double _kcSzunet4V2 = 175.0;

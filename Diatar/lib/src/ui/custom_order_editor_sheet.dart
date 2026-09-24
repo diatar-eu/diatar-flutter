@@ -62,6 +62,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   bool _canScrollHeaderActionsRight = false;
   bool _headerActionsRefreshScheduled = false;
   bool _showSync = false;
+  bool _allowPop = false;
+  bool _closing = false;
+  Future<void>? _autoSaveFuture;
   String? _selectedInsertBookFileName;
   int? _selectedInsertSongIndex;
   bool _groupReorder = true;
@@ -460,10 +463,16 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateHeaderActionsScrollIndicators();
     });
+    if (_supportsDiaAutoSave) {
+      controller.registerCustomOrderEditorAutoSave(_autoSaveModifiedOrders);
+    }
   }
 
   @override
   void dispose() {
+    if (_supportsDiaAutoSave) {
+      controller.unregisterCustomOrderEditorAutoSave();
+    }
     _headerActionsScrollController
       ..removeListener(_updateHeaderActionsScrollIndicators)
       ..dispose();
@@ -489,7 +498,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
 
     final l10n = context.l10n;
-    return AnimatedBuilder(
+    final Widget editor = AnimatedBuilder(
       animation: controller,
       builder: (BuildContext context, Widget? child) {
         _syncEntriesFromControllerIfNeeded();
@@ -756,7 +765,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                     ),
                     if (!widget.embedded)
                       OutlinedButton.icon(
-                        onPressed: widget.onClose,
+                        onPressed: _closeEditor,
                         icon: const Icon(Icons.close),
                         label: Text(l10n.close),
                       ),
@@ -774,12 +783,114 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         );
       },
     );
+    return PopScope(
+      canPop: widget.embedded || _allowPop,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (!didPop && !widget.embedded) {
+          unawaited(_closeEditor());
+        }
+      },
+      child: editor,
+    );
   }
 
   void _openSync() {
     setState(() {
       _showSync = true;
     });
+  bool get _supportsDiaAutoSave =>
+      !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+
+  Future<void> _closeEditor() async {
+    if (_closing) {
+      return;
+    }
+    _closing = true;
+    await _autoSaveModifiedOrders();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _allowPop = true);
+    await WidgetsBinding.instance.endOfFrame;
+    if (mounted) {
+      widget.onClose?.call();
+    }
+  }
+
+  Future<void> _autoSaveModifiedOrders() {
+    return _autoSaveFuture ??= _performAutoSaveModifiedOrders().whenComplete(
+      () => _autoSaveFuture = null,
+    );
+  }
+
+  Future<void> _performAutoSaveModifiedOrders() async {
+    if (!_supportsDiaAutoSave || !controller.settings.diaAutoSaveEnabled) {
+      return;
+    }
+    try {
+      await _commitEntries();
+    } catch (error) {
+      if (mounted) {
+        await _showDiaSaveErrorDialog(error);
+      }
+      return;
+    }
+    final List<String> modifiedSetIds = controller.customOrderSets
+        .where((CustomOrderSet set) => set.isModified)
+        .map((CustomOrderSet set) => set.id)
+        .toList(growable: false);
+    for (final String setId in modifiedSetIds) {
+      final CustomOrderSet? set = _customOrderSetById(setId);
+      if (set == null || !set.isModified) {
+        continue;
+      }
+      final String targetPath = (set.diaFilePath ?? '').trim();
+      if (targetPath.isEmpty ||
+          targetPath.toLowerCase().startsWith('content://')) {
+        await _exportDia(setId);
+        continue;
+      }
+      try {
+        await controller.exportCustomOrderToDia(
+          targetPath,
+          embedImages: set.embedImages,
+          customOrderSetId: setId,
+        );
+      } catch (error) {
+        if (mounted) {
+          await _showDiaSaveErrorDialog(error);
+        }
+      }
+    }
+  }
+
+  CustomOrderSet? _customOrderSetById(String id) {
+    for (final CustomOrderSet set in controller.customOrderSets) {
+      if (set.id == id) {
+        return set;
+      }
+    }
+    return null;
+  }
+
+  Future<void> _openSync() async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        final Size screenSize = MediaQuery.sizeOf(dialogContext);
+
+        return Dialog(
+          insetPadding: const EdgeInsets.all(24),
+          clipBehavior: Clip.antiAlias,
+          child: SizedBox(
+            width: min(600, screenSize.width - 48),
+            height: min(780, screenSize.height - 48),
+            child: const SyncPage(),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _openInsertVersesDialog() async {
@@ -1523,7 +1634,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                                 title: _buildTitleWithFirstLine(
                                   title: verses[i].name,
                                   firstLine: firstMeaningfulLine(
-                                    verses[i].lines,
+                                    verses[i].textLines,
                                   ),
                                 ),
                                 onChanged: (bool? value) {
@@ -1577,6 +1688,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<void> _commitEntries() async {
+    if (_sameEntries(_entries, controller.customOrder)) {
+      return;
+    }
     await controller.applyCustomOrder(
       _entries,
       activate: true,
@@ -1800,17 +1914,30 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     if (!mounted) {
       return;
     }
+    if (controller.customOrderLimitExceeded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.customOrderLimitExceededWarning)),
+      );
+    }
     setState(() {
       _entries = List<CustomOrderEntry>.from(controller.customOrder);
     });
   }
 
-  Future<void> _exportDia() async {
+  Future<void> _exportDia([String? customOrderSetId]) async {
     final l10n = context.l10n;
     try {
       await _commitEntries();
+      final CustomOrderSet? targetSet = customOrderSetId == null
+          ? null
+          : _customOrderSetById(customOrderSetId);
+      if (customOrderSetId != null && targetSet == null) {
+        return;
+      }
+      final List<CustomOrderEntry> entriesToSave =
+          targetSet?.entries ?? _entries;
       final bool embedImages =
-          _entries.any((CustomOrderEntry entry) => entry.isCustomImage)
+          entriesToSave.any((CustomOrderEntry entry) => entry.isCustomImage)
           ? await _askEmbedDiaImages()
           : false;
       if (!mounted) {
@@ -1819,11 +1946,14 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
       String? targetPath;
       bool nativeSaveDialogAvailable = true;
-      final String fallbackBaseName = controller.customOrderLooksLikeZsolozsma
+      final String fallbackBaseName =
+          customOrderSetId == null && controller.customOrderLooksLikeZsolozsma
           ? l10n.zsolozsmaTooltip
           : l10n.customOrderUnnamedFileName;
       final String defaultBaseName = _normalizeDiaBaseName(
-        controller.suggestedCustomOrderBaseName ?? fallbackBaseName,
+        targetSet?.displayName ??
+            controller.suggestedCustomOrderBaseName ??
+            fallbackBaseName,
         fallback: l10n.customOrderUnnamedFileName,
       );
       final String defaultFileName = '$defaultBaseName.dia';
@@ -1849,6 +1979,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
           await controller.markCustomOrderDiaExportSaved(
             saved.uri,
             explicitName: saved.renameFromName,
+            embedImages: embedImages,
           );
         } catch (_) {
           // A fÄ‚Ë‡jl mentÄ‚Â©se megtÄ‚Â¶rtÄ‚Â©nt; a diasor-nÄ‚Â©v frissÄ‚Â­tÄ‚Â©se csak mellÄ‚Â©khatÄ‚Ë‡s.
@@ -1941,6 +2072,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       final String outPath = await controller.exportCustomOrderToDia(
         targetPath,
         embedImages: embedImages,
+        customOrderSetId: customOrderSetId,
       );
       if (!mounted) {
         return;
@@ -2308,7 +2440,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     if (file == null) {
       return;
     }
-    final CustomOrderImportMode? mode = await _askImportMode();
+    final CustomOrderImportMode? mode =
+        controller.settings.maxCustomOrderSets == AppSettings.minCustomOrderSets
+        ? controller.activeCustomOrderSetHasHotkey
+              ? CustomOrderImportMode.addNew
+              : CustomOrderImportMode.overwriteActive
+        : await _askImportMode();
     if (mode == null) {
       return;
     }
@@ -2324,9 +2461,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     setState(() {
       _entries = List<CustomOrderEntry>.from(controller.customOrder);
     });
+    final String message = controller.customOrderLimitExceeded
+        ? context.l10n.customOrderLimitExceededWarning
+        : context.l10n.loadedCount(count);
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(context.l10n.loadedCount(count))));
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _buildCurrentOrderList() {
@@ -2897,6 +3037,22 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
                 nonBreakingSpace: l10n.nonBreakingSpace,
                 nonBreakingHyphen: l10n.nonBreakingHyphen,
                 preferredLineBreak: l10n.preferredLineBreak,
+                insertChord: l10n.insertChord,
+                editChord: l10n.editChord,
+              ),
+              chordEditorLabels: ChordEditorLabels(
+                insertTitle: l10n.chordEditorInsertTitle,
+                editTitle: l10n.chordEditorEditTitle,
+                rootNote: l10n.chordEditorRootNote,
+                quality: l10n.chordEditorQuality,
+                major: l10n.chordEditorMajor,
+                minor: l10n.chordEditorMinor,
+                modifier: l10n.chordEditorModifier,
+                bassNote: l10n.chordEditorBassNote,
+                none: l10n.chordEditorNone,
+                preview: l10n.chordEditorPreview,
+                cancel: l10n.cancel,
+                apply: l10n.apply,
               ),
               decoration: InputDecoration(labelText: l10n.textSlideBodyLabel),
               minLines: 4,

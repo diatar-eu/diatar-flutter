@@ -3,12 +3,255 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:diatar_common/diatar_common.dart';
+import 'package:diatar_common/utils/transposition_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('Diatar chords use Hungarian note names and styled parts', () {
+    final DiatarChord chord = DiatarChord.tryParse('H-7+/C+')!;
+
+    expect(chord.parts.map((ChordPart part) => part.text), <String>[
+      'B',
+      '7+',
+      '/',
+      'C',
+      'is',
+    ]);
+    expect(chord.parts.map((ChordPart part) => part.style), <ChordPartStyle>[
+      ChordPartStyle.root,
+      ChordPartStyle.superscript,
+      ChordPartStyle.normal,
+      ChordPartStyle.normal,
+      ChordPartStyle.normal,
+    ]);
+  });
+
+  test('Diatar chords spell flat and sharp notes consistently', () {
+    expect(
+      DiatarChord.tryParse('C-')!.parts.map((ChordPart part) => part.text),
+      <String>['C', 'es'],
+    );
+    expect(
+      DiatarChord.tryParse('A-')!.parts.map((ChordPart part) => part.text),
+      <String>['A', 's'],
+    );
+    expect(
+      DiatarChord.tryParse('F+')!.parts.map((ChordPart part) => part.text),
+      <String>['F', 'is'],
+    );
+    expect(DiatarChord.tryParse('Cm#'), isNull);
+  });
+
+  test('Diatar chords support every documented modifier', () {
+    const Map<String, String> modifiers = <String, String>{
+      '': '',
+      '#': '+',
+      'o': 'o',
+      '7': '7',
+      '7+': '7+',
+      'o7': 'o/7',
+      'o7-': 'o/7-',
+      'o7+': 'o/7+',
+      '#7': '+/7',
+      '#7+': '+/7+',
+      '6': '6',
+      '79': '7/9',
+      '79-': '7/9-',
+      '79+': '7/9+',
+      '#79': '+/7/9',
+      '#79+': '+/7/9+',
+      '7+9': '7+/9',
+      '7+9+': '7+/9+',
+      '#7+9': '+/7+/9',
+      '#7+9+': '+/7+/9+',
+      'o79': 'o/7/9',
+      'o79-': 'o/7/9-',
+      '9': '9',
+      '9-': '9-',
+      '9+': '9+',
+      '#9': '+/9',
+      '#9+': '+/9+',
+      'o9': 'o/9',
+      'o9-': 'o/9-',
+      '4': '4',
+      '2': '2',
+      '47': '4/7',
+      '27': '2/7',
+      '49': '4/9',
+      '49-': '4/9-',
+      '49+': '4/9+',
+    };
+
+    for (final MapEntry<String, String> modifier in modifiers.entries) {
+      final DiatarChord? chord = DiatarChord.tryParse('C${modifier.key}');
+      expect(chord, isNotNull, reason: 'C${modifier.key}');
+      expect(
+        chord!.parts.map((ChordPart part) => part.text).join(),
+        'C${modifier.value}',
+        reason: 'C${modifier.key}',
+      );
+    }
+  });
+
+  test('Diatar chords accept only the documented minor combinations', () {
+    const Set<String> accepted = <String>{
+      '',
+      '7',
+      '7+',
+      '6',
+      '79',
+      '79-',
+      '7+9',
+      '9',
+      '9-',
+    };
+    const List<String> modifiers = <String>[
+      '',
+      '#',
+      'o',
+      '7',
+      '7+',
+      'o7',
+      'o7-',
+      'o7+',
+      '#7',
+      '#7+',
+      '6',
+      '79',
+      '79-',
+      '79+',
+      '#79',
+      '#79+',
+      '7+9',
+      '7+9+',
+      '#7+9',
+      '#7+9+',
+      'o79',
+      'o79-',
+      '9',
+      '9-',
+      '9+',
+      '#9',
+      '#9+',
+      'o9',
+      'o9-',
+      '4',
+      '2',
+      '47',
+      '27',
+      '49',
+      '49-',
+      '49+',
+    ];
+
+    for (final String modifier in modifiers) {
+      expect(
+        DiatarChord.tryParse('Cm$modifier'),
+        accepted.contains(modifier) ? isNotNull : isNull,
+        reason: 'Cm$modifier',
+      );
+    }
+  });
+
+  test('Diatar chord transposition handles compact accidentals and bass', () {
+    expect(TranspositionUtils.transposeChord('C+', 1), 'D');
+    expect(TranspositionUtils.transposeChord('H7', 1), 'C7');
+    expect(TranspositionUtils.transposeChord('H-7', 2), 'C7');
+    expect(TranspositionUtils.transposeChord('Cm7/G', 2), 'Dm7/A');
+    expect(TranspositionUtils.transposeChord('C7/H', -1), 'H7/A+');
+    expect(TranspositionUtils.transposeChord('C27/G', 2), 'D27/A');
+  });
+
+  test('Diatar chord transposition preserves modifiers and flat spelling', () {
+    expect(TranspositionUtils.transposeChord('C#', 2), 'D#');
+    expect(TranspositionUtils.transposeChord('E-7+/H-', 2), 'F7+/C');
+    expect(TranspositionUtils.transposeChord('Dbmaj7', 2), 'Ebmaj7');
+    expect(TranspositionUtils.transposeChord('not a chord', 3), 'not a chord');
+  });
+
+  test('line transposition updates Diatar chord roots and bass notes', () {
+    expect(
+      TranspositionUtils.transposeLine(r'\GC+7/H-;Szoveg', 1),
+      r'\GD7/H;Szoveg',
+    );
+  });
+
+  test('chord modifiers are vertically raised as superscripts', () {
+    final ChordLayout layout = ChordRenderer.layout(
+      'C7+',
+      const TextStyle(fontSize: 32),
+    );
+
+    expect(layout.debugPartTopOffsets, hasLength(2));
+    expect(
+      layout.debugPartTopOffsets[1],
+      lessThan(layout.debugPartTopOffsets[0]),
+    );
+  });
+
+  test('chord widths participate in text row wrapping', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useAkkord: true),
+      settings: const AppSettings(receiverUseAkkord: true),
+    );
+    const double maxWidth = 75;
+    const String source = r'\GC7+;a \GC7+;b \GC7+;c';
+
+    final List<double> widths = painter.debugTextWrappedRowWidthsForLine(
+      source,
+      fontSize: 24,
+      maxWidth: maxWidth,
+    );
+
+    expect(widths.length, greaterThan(1));
+    expect(widths, everyElement(lessThanOrEqualTo(maxWidth + 0.5)));
+  });
+
+  test('standalone chords receive visible layout slots', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useAkkord: true),
+      settings: const AppSettings(receiverUseAkkord: true),
+    );
+
+    expect(painter.debugChordSourcesForLine(r'\GC;\GD7; \GAm;\GH7;'), <String>[
+      'C',
+      'D7',
+      'Am',
+      'H7',
+    ]);
+    expect(
+      painter
+          .debugTextWrappedRowWidthsForLine(
+            r'\GC;\GD7; \GAm;\GH7;',
+            fontSize: 24,
+            maxWidth: 90,
+          )
+          .length,
+      greaterThan(1),
+    );
+  });
+
+  test('adjacent chords after text remain separate chord objects', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useAkkord: true),
+      settings: const AppSettings(receiverUseAkkord: true),
+    );
+
+    expect(
+      painter.debugChordSourcesForLine(
+        r'a\GC;\GCm;\GC#;\GCo;\GC7;\GC7+; \GCm7+;',
+      ),
+      <String>['C', 'Cm', 'C#', 'Co', 'C7', 'C7+', 'Cm7+'],
+    );
+  });
+
   test('default app settings are valid', () {
     const AppSettings s = AppSettings();
+    expect(s.maxCustomOrderSets, AppSettings.defaultMaxCustomOrderSets);
     expect(s.port, 1024);
     expect(s.tcpEnabled, false);
     expect(
@@ -58,6 +301,20 @@ void main() {
     expect(state.projecting, isFalse);
     expect(state.isBlankPic, isTrue);
     expect(state.showBlankPic, isTrue);
+  });
+
+  test('state record preserves inverse notation colors', () {
+    const ProjectionGlobals globals = ProjectionGlobals(inverzKotta: true);
+
+    final Uint8List bytes = encodeStateRecord(
+      globals,
+      projecting: false,
+      wordToHighlight: 0,
+    );
+    final RecStateRecord state = RecStateRecord.fromBytes(bytes);
+
+    expect(bytes[323], 1);
+    expect(state.inverzKotta, isTrue);
   });
 
   test('packet parser rebuilds records from split chunks', () {
@@ -204,6 +461,17 @@ void main() {
     expect(prefixes.skip(1), everyElement('kGE2'));
   });
 
+  test('kotta honors the initial staff line count command', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    expect(painter.debugKottaStaffLineCountForLine(r'\K-3r41a;Alfa'), 3);
+    expect(painter.debugKottaStaffLineCountForLine(r'\Kr41a;Alfa'), 5);
+  });
+
   test('real eneklo egyhaz sample repeats clef and key signature', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
@@ -336,6 +604,33 @@ void main() {
     expect(textStartXs.first, greaterThan(rowStartXs.first));
   });
 
+  test('kotta starts at the same position as its following lyric', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    final List<double> kottaStartXs = painter.debugKottaVisibleStartXsForLine(
+      r'\Kr41a;Alfa',
+      fontSize: 24,
+      maxWidth: 320,
+      sizeWidth: 360,
+      horizontalPad: 16,
+    );
+    final List<double> textStartXs = painter.debugKottaTextStartXsForLine(
+      r'\Kr41a;Alfa',
+      fontSize: 24,
+      maxWidth: 320,
+      sizeWidth: 360,
+      horizontalPad: 16,
+    );
+
+    expect(kottaStartXs, hasLength(1));
+    expect(textStartXs, hasLength(1));
+    expect(kottaStartXs.single, textStartXs.single);
+  });
+
   test('kotta-separated parts of a word receive a baseline connector', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
@@ -425,6 +720,32 @@ void main() {
     expect(continuations.first.first, false);
     expect(continuations.last.last, false);
     expect(continuations.any((List<bool> pair) => pair[0] && pair[1]), true);
+  });
+
+  test('tie underline ends before the trailing word space', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(),
+      settings: const AppSettings(),
+    );
+
+    final List<double> ends = painter.debugTieUnderlineEndAndDisplayXsForLine(
+      r'\(word\) next',
+    );
+
+    expect(ends, hasLength(2));
+    expect(ends[0], lessThan(ends[1]));
+  });
+
+  test('tie underline tips stay at or below the text baseline', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(),
+      settings: const AppSettings(),
+    );
+
+    expect(painter.debugTieUnderlineTipOffset(12), 0);
+    expect(painter.debugTieUnderlineTipOffset(24), greaterThanOrEqualTo(1));
   });
 
   test('slur apex moves away from intermediate notes', () {
@@ -690,69 +1011,30 @@ void main() {
     );
   });
 
-  test(
-    'plain multiline text rows never extend past the container width',
-    () {
-      final ProjectorPainter painter = ProjectorPainter(
-        frame: null,
-        globals: const ProjectionGlobals(useKotta: false, hCenter: true),
-        settings: const AppSettings(receiverUseKotta: false),
-      );
-      const List<String> texts = <String>[
-        'paradicsomkertben',
-        'Megszentségteleníthetetlenségeskedéseitekert',
-        'torvenyeinek egy masik szo ide',
-        'SZVU 1/2 paradicsomkertben',
-      ];
-      for (final String text in texts) {
-        for (final double width in <double>[60, 100, 180, 220, 300]) {
-          final List<String> rows = painter.debugFullPipelineRowsForRecord(
-            size: ui.Size(width, 800),
-            record: RecTextRecord(
-              scholaLine: '',
-              title: '',
-              lines: <String>[text],
-            ),
-          );
-          for (final String row in rows) {
-            final RegExpMatch? m = RegExp(r'T<([0-9.]+)/').firstMatch(row);
-            if (m == null) {
-              continue;
-            }
-            final double rowWidth = double.parse(m.group(1)!);
-            expect(
-              rowWidth,
-              lessThanOrEqualTo(width + 1),
-              reason: 'text row overflow: $row',
-            );
-          }
-        }
-      }
-    },
-  );
-
-  test(
-    'overlong kotta words are shrunk so no kotta row exceeds the width',
-    () {
-      final ProjectorPainter painter = ProjectorPainter(
-        frame: null,
-        globals: const ProjectionGlobals(useKotta: true, hCenter: false),
-        settings: const AppSettings(receiverUseKotta: true),
-      );
-      for (final double width in <double>[300, 400, 500]) {
+  test('plain multiline text rows never extend past the container width', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: false, hCenter: true),
+      settings: const AppSettings(receiverUseKotta: false),
+    );
+    const List<String> texts = <String>[
+      'paradicsomkertben',
+      'Megszentségteleníthetetlenségeskedéseitekert',
+      'torvenyeinek egy masik szo ide',
+      'SZVU 1/2 paradicsomkertben',
+    ];
+    for (final String text in texts) {
+      for (final double width in <double>[60, 100, 180, 220, 300]) {
         final List<String> rows = painter.debugFullPipelineRowsForRecord(
-          size: ui.Size(width, 640),
+          size: ui.Size(width, 800),
           record: RecTextRecord(
             scholaLine: '',
             title: '',
-            lines: <String>[
-              r'\Kr34a;paradicsomkertben hosszúvégződéssel szó',
-            ],
+            lines: <String>[text],
           ),
         );
-        expect(rows, isNotEmpty, reason: 'expected at least one kotta row');
         for (final String row in rows) {
-          final RegExpMatch? m = RegExp(r'K<([0-9.]+)>').firstMatch(row);
+          final RegExpMatch? m = RegExp(r'T<([0-9.]+)/').firstMatch(row);
           if (m == null) {
             continue;
           }
@@ -760,11 +1042,42 @@ void main() {
           expect(
             rowWidth,
             lessThanOrEqualTo(width + 1),
-            reason: 'kotta row overflow: $row (container $width)',
+            reason: 'text row overflow: $row',
           );
         }
-        expect(rows.first.contains('paradicsomkertben'), isTrue);
       }
-    },
-  );
+    }
+  });
+
+  test('overlong kotta words are shrunk so no kotta row exceeds the width', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true, hCenter: false),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+    for (final double width in <double>[300, 400, 500]) {
+      final List<String> rows = painter.debugFullPipelineRowsForRecord(
+        size: ui.Size(width, 640),
+        record: RecTextRecord(
+          scholaLine: '',
+          title: '',
+          lines: <String>[r'\Kr34a;paradicsomkertben hosszúvégződéssel szó'],
+        ),
+      );
+      expect(rows, isNotEmpty, reason: 'expected at least one kotta row');
+      for (final String row in rows) {
+        final RegExpMatch? m = RegExp(r'K<([0-9.]+)>').firstMatch(row);
+        if (m == null) {
+          continue;
+        }
+        final double rowWidth = double.parse(m.group(1)!);
+        expect(
+          rowWidth,
+          lessThanOrEqualTo(width + 1),
+          reason: 'kotta row overflow: $row (container $width)',
+        );
+      }
+      expect(rows.first.contains('paradicsomkertben'), isTrue);
+    }
+  });
 }

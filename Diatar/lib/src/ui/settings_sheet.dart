@@ -149,11 +149,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late int _projBlankTrans;
   late int _appThemeMode;
   late String _appLanguage;
+  late int _maxCustomOrderSets;
+  late bool _diaAutoSaveEnabled;
   late bool _homeShowHighlightControls;
   late bool _projHCenter;
   late bool _projVCenter;
   late bool _projUseAkkord;
   late bool _projUseKotta;
+  late bool _projInverseKotta;
   late bool _projShowBackgroundImage;
   late bool _useSound;
   late bool _advanceAfterMusic;
@@ -219,6 +222,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _szentirasApiKey = TextEditingController(text: s.szentirasApiKey);
     _blankPicPath = TextEditingController(text: s.blankPicPath);
     _diaExportPath = TextEditingController(text: s.diaExportPath);
+    _diaAutoSaveEnabled = s.diaAutoSaveEnabled;
     _picPlcPort = TextEditingController(
       text: widget.initialPicPlcConfiguration.port,
     );
@@ -256,11 +260,16 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projBlankTrans = s.projBlankTrans.clamp(0, 100);
     _appThemeMode = s.appThemeMode.clamp(0, 1);
     _appLanguage = _isSupportedLanguage(s.appLanguage) ? s.appLanguage : '';
+    _maxCustomOrderSets = s.maxCustomOrderSets.clamp(
+      AppSettings.minCustomOrderSets,
+      AppSettings.maxCustomOrderSetsLimit,
+    );
     _homeShowHighlightControls = s.homeShowHighlightControls;
     _projHCenter = s.projHCenter;
     _projVCenter = s.projVCenter;
     _projUseAkkord = s.projUseAkkord;
     _projUseKotta = s.projUseKotta;
+    _projInverseKotta = s.projInverseKotta;
     _projShowBackgroundImage = s.projShowBackgroundImage;
     _useSound = s.useSound;
     _advanceAfterMusic = s.advanceAfterMusic;
@@ -1886,6 +1895,22 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             ],
             onChanged: (String? v) => setBoth(() => _appLanguage = v ?? ''),
           ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.customOrderSetCount),
+            subtitle: Slider(
+              value: _maxCustomOrderSets.toDouble(),
+              min: AppSettings.minCustomOrderSets.toDouble(),
+              max: AppSettings.maxCustomOrderSetsLimit.toDouble(),
+              divisions:
+                  AppSettings.maxCustomOrderSetsLimit -
+                  AppSettings.minCustomOrderSets,
+              label: _maxCustomOrderSets.toString(),
+              onChanged: (double value) =>
+                  setBoth(() => _maxCustomOrderSets = value.round()),
+            ),
+            trailing: Text(_maxCustomOrderSets.toString()),
+          ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: _useSound,
@@ -1911,6 +1936,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
             value: _projUseKotta,
             onChanged: (bool v) => setBoth(() => _projUseKotta = v),
             title: Text(l10n.showKotta),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projInverseKotta,
+            onChanged: _projUseKotta
+                ? (bool v) => setBoth(() => _projInverseKotta = v)
+                : null,
+            title: Text(l10n.inverseKottaColors),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -2584,6 +2617,15 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               onPick: () async {
                 await _pickDiaExportFolder();
                 setBoth(() {});
+              },
+            ),
+          if (_isDesktopPlatform())
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.diaAutoSave),
+              value: _diaAutoSaveEnabled,
+              onChanged: (bool value) {
+                setBoth(() => _diaAutoSaveEnabled = value);
               },
             ),
           const SizedBox(height: 16),
@@ -4209,6 +4251,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       dtxPath: '',
       blankPicPath: _blankPicPath.text.trim(),
       diaExportPath: _diaExportPath.text.trim(),
+      diaAutoSaveEnabled: _diaAutoSaveEnabled,
       projFontSize: _parseInt(
         _projFontSize.text,
         widget.initialSettings.projFontSize,
@@ -4256,6 +4299,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       projVCenter: _projVCenter,
       projUseAkkord: _projUseAkkord,
       projUseKotta: _projUseKotta,
+      projInverseKotta: _projInverseKotta,
       projShowBackgroundImage: _projShowBackgroundImage,
       projUseTitle: _projUseTitle,
       projKottaArany: _projKottaArany.clamp(10, 200),
@@ -4266,6 +4310,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       homeShowHighlightControls: _homeShowHighlightControls,
       appThemeMode: _appThemeMode.clamp(0, 1),
       appLanguage: _appLanguage,
+      maxCustomOrderSets: _maxCustomOrderSets.clamp(
+        AppSettings.minCustomOrderSets,
+        AppSettings.maxCustomOrderSetsLimit,
+      ),
       desktopProjectorEnabled: _desktopProjectorEnabled,
       desktopProjectorMonitor: _desktopProjectorMonitor,
       desktopActionHotkeys: Map<String, String>.from(_desktopActionHotkeys),

@@ -106,6 +106,13 @@ class FlutterWindow: NSObject {
         case "window_hide":
             window.orderOut(nil)
             result(nil)
+        case "window_focus":
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            result(nil)
+        case "window_raise":
+            window.orderFrontRegardless()
+            result(nil)
         default:
             result(FlutterError(code: "-1", message: "unknown method \(method)", details: nil))
         }

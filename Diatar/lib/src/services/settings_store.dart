@@ -24,6 +24,7 @@ class SettingsStore {
   static const String _kDiaExportPath = 'DiaExportPath';
   static const String _kDiaExportUri = 'DiaExportUri';
   static const String _kDiaExportFileName = 'DiaExportFileName';
+  static const String _kDiaAutoSaveEnabled = 'DiaAutoSaveEnabled';
   static const String _kBkColor = 'BkColor';
   static const String _kTxColor = 'TxColor';
   static const String _kBlankColor = 'BlankColor';
@@ -40,6 +41,7 @@ class SettingsStore {
   static const String _kProjVCenter = 'ProjVCenter';
   static const String _kProjUseAkkord = 'ProjUseAkkord';
   static const String _kProjUseKotta = 'ProjUseKotta';
+  static const String _kProjInverseKotta = 'ProjInverseKotta';
   static const String _kProjUseTitle = 'ProjUseTitle';
   static const String _kProjKottaArany = 'ProjKottaArany';
   static const String _kProjAkkordArany = 'ProjAkkordArany';
@@ -57,6 +59,7 @@ class SettingsStore {
   static const String _kLandscapeControlsRatio = 'LandscapeControlsRatio';
   static const String _kAppThemeMode = 'AppThemeMode';
   static const String _kAppLanguage = 'AppLanguage';
+  static const String _kMaxCustomOrderSets = 'MaxCustomOrderSets';
   static const String _kProjectionLocked = 'ProjectionLocked';
   static const String _kDesktopProjectorEnabled = 'DesktopProjectorEnabled';
   static const String _kDesktopProjectorMonitor = 'DesktopProjectorMonitor';
@@ -316,6 +319,7 @@ class SettingsStore {
       diaExportPath: prefs.getString(_kDiaExportPath) ?? '',
       diaExportUri: prefs.getString(_kDiaExportUri) ?? '',
       diaExportFileName: prefs.getString(_kDiaExportFileName) ?? '',
+      diaAutoSaveEnabled: prefs.getBool(_kDiaAutoSaveEnabled) ?? false,
       projFontSize: prefs.getInt(_kProjFontSize) ?? 250,
       projTitleSize: prefs.getInt(_kProjTitleSize) ?? 12,
       projLeftIndent: prefs.getInt(_kProjLeftIndent) ?? 2,
@@ -329,6 +333,7 @@ class SettingsStore {
       projVCenter: prefs.getBool(_kProjVCenter) ?? true,
       projUseAkkord: prefs.getBool(_kProjUseAkkord) ?? false,
       projUseKotta: prefs.getBool(_kProjUseKotta) ?? true,
+      projInverseKotta: prefs.getBool(_kProjInverseKotta) ?? false,
       projUseTitle: prefs.getBool(_kProjUseTitle) ?? true,
       projKottaArany: prefs.getInt(_kProjKottaArany) ?? 100,
       projAkkordArany: prefs.getInt(_kProjAkkordArany) ?? 100,
@@ -347,6 +352,13 @@ class SettingsStore {
       landscapeControlsRatio: prefs.getDouble(_kLandscapeControlsRatio),
       appThemeMode: prefs.getInt(_kAppThemeMode) ?? 0,
       appLanguage: prefs.getString(_kAppLanguage) ?? '',
+      maxCustomOrderSets:
+          (prefs.getInt(_kMaxCustomOrderSets) ??
+                  AppSettings.defaultMaxCustomOrderSets)
+              .clamp(
+                AppSettings.minCustomOrderSets,
+                AppSettings.maxCustomOrderSetsLimit,
+              ),
       projectionLocked: prefs.getBool(_kProjectionLocked) ?? false,
       desktopProjectorEnabled: prefs.getBool(_kDesktopProjectorEnabled) ?? true,
       desktopProjectorMonitor: prefs.getInt(_kDesktopProjectorMonitor) ?? -1,
@@ -411,6 +423,7 @@ class SettingsStore {
     await prefs.setString(_kDiaExportPath, settings.diaExportPath);
     await prefs.setString(_kDiaExportUri, settings.diaExportUri);
     await prefs.setString(_kDiaExportFileName, settings.diaExportFileName);
+    await prefs.setBool(_kDiaAutoSaveEnabled, settings.diaAutoSaveEnabled);
     await prefs.setInt(_kProjFontSize, settings.projFontSize);
     await prefs.setInt(_kProjTitleSize, settings.projTitleSize);
     await prefs.setInt(_kProjLeftIndent, settings.projLeftIndent);
@@ -423,6 +436,7 @@ class SettingsStore {
     await prefs.setBool(_kProjVCenter, settings.projVCenter);
     await prefs.setBool(_kProjUseAkkord, settings.projUseAkkord);
     await prefs.setBool(_kProjUseKotta, settings.projUseKotta);
+    await prefs.setBool(_kProjInverseKotta, settings.projInverseKotta);
     await prefs.setBool(_kProjUseTitle, settings.projUseTitle);
     await prefs.setInt(_kProjKottaArany, settings.projKottaArany);
     await prefs.setInt(_kProjAkkordArany, settings.projAkkordArany);
@@ -453,6 +467,7 @@ class SettingsStore {
     }
     await prefs.setInt(_kAppThemeMode, settings.appThemeMode);
     await prefs.setString(_kAppLanguage, settings.appLanguage);
+    await prefs.setInt(_kMaxCustomOrderSets, settings.maxCustomOrderSets);
     await prefs.setBool(_kProjectionLocked, settings.projectionLocked);
     await prefs.setBool(
       _kDesktopProjectorEnabled,

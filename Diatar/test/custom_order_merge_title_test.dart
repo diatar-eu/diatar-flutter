@@ -57,6 +57,108 @@ void main() {
       expect(merged, 'Kötet: ének/vers1, vers2');
     });
 
+    group('song order summary', () {
+      test('groups consecutive verses and omits skipped entries', () {
+        const List<DtxBook> books = <DtxBook>[
+          DtxBook(
+            fileName: 'book.dtx',
+            title: 'Teljes kötetnév',
+            nick: 'Rövid',
+            songs: <DtxSong>[
+              DtxSong(
+                title: '42',
+                verses: <DtxVerse>[
+                  DtxVerse(name: '1', lines: <String>[]),
+                  DtxVerse(name: '2', lines: <String>[]),
+                ],
+              ),
+            ],
+          ),
+        ];
+        const List<CustomOrderEntry> entries = <CustomOrderEntry>[
+          CustomOrderEntry(
+            fileName: 'book.dtx',
+            songIndex: 0,
+            verseIndex: 0,
+            label: '',
+          ),
+          CustomOrderEntry(
+            fileName: 'book.dtx',
+            songIndex: 0,
+            verseIndex: 1,
+            label: '',
+          ),
+          CustomOrderEntry(
+            fileName: '__custom_image__',
+            songIndex: -2,
+            verseIndex: 0,
+            label: '',
+            customImagePath: r'C:\images\cover.png',
+            customType: 'image',
+          ),
+          CustomOrderEntry(
+            fileName: 'book.dtx',
+            songIndex: 0,
+            verseIndex: 0,
+            label: '',
+            skipped: true,
+          ),
+          CustomOrderEntry(
+            fileName: 'book.dtx',
+            songIndex: 0,
+            verseIndex: 0,
+            label: '',
+          ),
+        ];
+
+        expect(
+          DiatarMainController.buildSongOrderLines(
+            entries: entries,
+            books: books,
+          ),
+          <String>['Rövid: 42/1, 2', 'cover.png', 'Rövid: 42/1'],
+        );
+      });
+
+      test('starts a new line after a separator', () {
+        const List<DtxBook> books = <DtxBook>[
+          DtxBook(
+            fileName: 'book.dtx',
+            title: 'Kötet',
+            songs: <DtxSong>[
+              DtxSong(
+                title: 'Ének',
+                verses: <DtxVerse>[DtxVerse(name: '1', lines: <String>[])],
+              ),
+            ],
+          ),
+        ];
+        const CustomOrderEntry song = CustomOrderEntry(
+          fileName: 'book.dtx',
+          songIndex: 0,
+          verseIndex: 0,
+          label: '',
+        );
+
+        expect(
+          DiatarMainController.buildSongOrderLines(
+            entries: <CustomOrderEntry>[
+              song,
+              CustomOrderEntry(
+                fileName: CustomOrderEntry.separatorFileName,
+                songIndex: CustomOrderEntry.separatorSongIndex,
+                verseIndex: 0,
+                label: '',
+              ),
+              song,
+            ],
+            books: books,
+          ),
+          <String>['Kötet: Ének/1', 'Kötet: Ének/1'],
+        );
+      });
+    });
+
     group('custom order skipped slides', () {
       const CustomOrderNavigationPolicy navigation =
           CustomOrderNavigationPolicy();
@@ -261,6 +363,10 @@ void main() {
         expect(controller.customOrderSets.first.name, 'Új név');
         expect(controller.customOrderSets.first.baseName, 'Új név');
         expect(controller.customOrderSets.first.displayName, 'Új név');
+        expect(
+          controller.customOrderSets.first.diaFilePath,
+          'C:/Temp/Új név.dia',
+        );
         expect(controller.customOrderSets.first.isModified, isFalse);
         expect(controller.suggestedCustomOrderBaseName, 'Új név');
       },
@@ -310,6 +416,59 @@ void main() {
       expect(controller.customOrderSets.single.enabled, isFalse);
     });
 
+    test(
+      'evicts the least recently used set when creating one at the limit',
+      () async {
+        final DiatarMainController controller = DiatarMainController()
+          ..settings = const AppSettings(maxCustomOrderSets: 2);
+
+        await controller.createCustomOrderSet('First');
+        await Future<void>.delayed(const Duration(milliseconds: 2));
+        await controller.createCustomOrderSet('Second');
+        await Future<void>.delayed(const Duration(milliseconds: 2));
+        await controller.setActiveCustomOrderSet(0);
+        await Future<void>.delayed(const Duration(milliseconds: 2));
+        await controller.createCustomOrderSet('Third');
+
+        expect(controller.customOrderSets.map((set) => set.name), <String>[
+          'First',
+          'Third',
+        ]);
+      },
+    );
+
+    test('keeps only the newly created set when the limit is one', () async {
+      final DiatarMainController controller = DiatarMainController()
+        ..settings = const AppSettings(maxCustomOrderSets: 1);
+
+      await controller.createCustomOrderSet('First');
+      await controller.createCustomOrderSet('Second');
+
+      expect(controller.customOrderSets, hasLength(1));
+      expect(controller.customOrderSets.single.name, 'Second');
+    });
+
+    test('keeps hotkey sets and reports a temporary limit overflow', () async {
+      final DiatarMainController controller = DiatarMainController()
+        ..settings = const AppSettings(
+          maxCustomOrderSets: 1,
+          desktopOrderSetHotkeys: <String, String>{'F1': 'protected'},
+        );
+      await controller.createCustomOrderSet('Protected');
+      final String protectedId = controller.customOrderSets.single.id;
+      controller.settings = controller.settings.copyWith(
+        desktopOrderSetHotkeys: <String, String>{'F1': protectedId},
+      );
+
+      await controller.createCustomOrderSet('New');
+
+      expect(controller.customOrderSets.map((set) => set.name), <String>[
+        'Protected',
+        'New',
+      ]);
+      expect(controller.customOrderLimitExceeded, isTrue);
+    });
+
     test('tracks unsaved changes to a custom order set', () async {
       final DiatarMainController controller = DiatarMainController();
       final Directory directory = await Directory.systemTemp.createTemp(
@@ -337,6 +496,88 @@ void main() {
       await controller.exportCustomOrderToDia(path);
       expect(controller.customOrderSets.single.isModified, isFalse);
     });
+
+    test(
+      'exports a modified inactive set without changing the active set',
+      () async {
+        final DiatarMainController controller = DiatarMainController();
+        final Directory directory = await Directory.systemTemp.createTemp(
+          'diatar_inactive_order_export_test_',
+        );
+        final String initialPath =
+            '${directory.path}${Platform.pathSeparator}first-initial.dia';
+        final String autoSavePath =
+            '${directory.path}${Platform.pathSeparator}first-autosave.dia';
+        addTearDown(() => directory.delete(recursive: true));
+
+        await controller.createCustomOrderSet('First');
+        await controller.applyCustomOrder(const <CustomOrderEntry>[
+          CustomOrderEntry(
+            fileName: '__custom_text__',
+            songIndex: -1,
+            verseIndex: 0,
+            label: '[Text] First',
+            customTextTitle: 'First',
+            customTextBody: 'Initial text',
+            customType: 'text',
+          ),
+        ], activate: true);
+        final String firstId = controller.activeCustomOrderSetId!;
+        await controller.exportCustomOrderToDia(initialPath);
+
+        await controller.createCustomOrderSet('Second');
+        await controller.applyCustomOrder(const <CustomOrderEntry>[
+          CustomOrderEntry(
+            fileName: '__custom_text__',
+            songIndex: -1,
+            verseIndex: 0,
+            label: '[Text] Second',
+            customTextTitle: 'Second',
+            customTextBody: 'Second text',
+            customType: 'text',
+          ),
+        ], activate: true);
+        final String secondId = controller.activeCustomOrderSetId!;
+
+        await controller.setActiveCustomOrderSetById(firstId);
+        await controller.applyCustomOrder(const <CustomOrderEntry>[
+          CustomOrderEntry(
+            fileName: '__custom_text__',
+            songIndex: -1,
+            verseIndex: 0,
+            label: '[Text] First',
+            customTextTitle: 'First',
+            customTextBody: 'Updated text',
+            customType: 'text',
+          ),
+        ], activate: true);
+        await controller.setActiveCustomOrderSetById(secondId);
+
+        await controller.exportCustomOrderToDia(
+          autoSavePath,
+          customOrderSetId: firstId,
+        );
+
+        expect(controller.activeCustomOrderSetId, secondId);
+        expect(
+          await File(autoSavePath).readAsString(),
+          contains('line0=Updated text'),
+        );
+        expect(
+          await File(autoSavePath).readAsString(),
+          isNot(contains('Second text')),
+        );
+        final firstSet = controller.customOrderSets.singleWhere(
+          (set) => set.id == firstId,
+        );
+        final secondSet = controller.customOrderSets.singleWhere(
+          (set) => set.id == secondId,
+        );
+        expect(firstSet.diaFilePath, autoSavePath);
+        expect(firstSet.isModified, isFalse);
+        expect(secondSet.isModified, isTrue);
+      },
+    );
 
     group('custom order sound settings', () {
       test('persists slide-specific sound flags', () {
@@ -650,12 +891,12 @@ class _BlockingMqttSender extends MqttSenderService {
   Future<void> clearRetainedMessages() async {}
 
   @override
-  Future<void> close() async {}
+  Future<void> close({bool clearRetained = true}) async {}
 }
 
 class _TrackingTcpSender extends TcpSenderService {
   _TrackingTcpSender()
-      : super(onStatusChanged: (_) {}, onError: (_, __) {}, onCamera: (_, _) {});
+    : super(onStatusChanged: (_) {}, onError: (_, __) {}, onCamera: (_, _) {});
 
   bool restartCalled = false;
 

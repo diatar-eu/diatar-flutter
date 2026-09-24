@@ -30,6 +30,12 @@ class FlutterWindow {
 
   void Hide();
 
+  void Focus();
+
+  void Raise();
+
+  void SetClickTarget(const std::string& target_window_id);
+
   void HandleWindowMethod(const gchar* method,
                           FlValue* arguments,
                           FlMethodCall* method_call);
@@ -39,6 +45,7 @@ class FlutterWindow {
   std::string window_argument_;
   GtkWidget* window_ = nullptr;
   FlMethodChannel* channel_ = nullptr;
+  std::string click_target_window_id_;
 };
 
 #endif  // DESKTOP_MULTI_WINDOW_WINDOWS_FLUTTER_WINDOW_H_

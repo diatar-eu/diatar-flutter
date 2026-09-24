@@ -40,14 +40,21 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     debugLabel: 'desktop-projector-hotkeys',
   );
   WindowController? _currentWindowController;
+  WindowController? _controlWindowController;
   int _mainMonitor = -1;
   bool _windowReady = false;
+  bool _restoreControlOnFocus = false;
 
   @override
   void initState() {
     super.initState();
     // The projector runs in a separate Flutter engine, so its notation
     // images must be loaded independently from the main window.
+    // Booting the JavaScript engine is the expensive part of an Aretino
+    // slide, not rendering one, so it happens here rather than on the first
+    // chant (plans/aretino-projection-v1.md, Decision 6).
+    unawaited(AretinoRenderService.instance.ensureLoaded());
+
     unawaited(
       KottaAssets.ensureLoaded().then((_) {
         if (mounted) {
@@ -84,6 +91,7 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     );
     final int requestedMonitor = (args['monitor'] as int?) ?? widget.monitor;
     _mainMonitor = (args['mainMonitor'] as int?) ?? -1;
+    _setControlWindowId(args['controlWindowId']);
     _controller.applyMonitor(requestedMonitor);
     _controller.onClose = _shutdown;
     await windowController.setWindowMethodHandler((MethodCall call) async {
@@ -172,6 +180,19 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
       return null;
     }
 
+    if (call.method == 'controlWindow') {
+      final Map<String, dynamic> payload = Map<String, dynamic>.from(
+        call.arguments as Map,
+      );
+      _setControlWindowId(payload['windowId']);
+      return null;
+    }
+
+    if (call.method == 'controlHidden') {
+      _restoreControlOnFocus = call.arguments == true;
+      return null;
+    }
+
     final int previousMonitor = _controller.monitor;
     final dynamic result = await _controller.handleMethodCall(call);
     if (call.method == 'settings' && previousMonitor != _controller.monitor) {
@@ -215,8 +236,27 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
   }
 
   Future<void> _requestControlForeground() async {
+    await _invokeControlMethod('focusControl');
+  }
+
+  void _setControlWindowId(Object? value) {
+    if (value is String && value.isNotEmpty) {
+      _controlWindowController = WindowController.fromWindowId(value);
+    }
+  }
+
+  Future<void> _invokeControlMethod(String method, [Object? arguments]) async {
     try {
-      await _controlChannel.invokeMethod('focusControl');
+      final WindowController? controller = _controlWindowController;
+      if (controller != null) {
+        await controller.invokeMethod(method, arguments);
+        return;
+      }
+    } catch (_) {
+      // A megosztott csatorna kompatibilitási tartalékút marad.
+    }
+    try {
+      await _controlChannel.invokeMethod(method, arguments);
     } catch (_) {
       // nem kritikus
     }
@@ -307,13 +347,20 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
   @override
   void onWindowClose() => _shutdown();
 
+  @override
+  void onWindowFocus() {
+    if (_restoreControlOnFocus) {
+      unawaited(_onProjectionTap());
+    }
+  }
+
   /// A vetítésbe való kattintáskor visszahozzuk a vezérlő (fő) ablakot.
   Future<void> _onProjectionTap() async {
-    try {
-      await _controlChannel.invokeMethod('showControl');
-    } catch (_) {
-      // nem kritikus
+    if (!_restoreControlOnFocus) {
+      return;
     }
+    _restoreControlOnFocus = false;
+    await _invokeControlMethod('showControl');
   }
 
   KeyEventResult _onHotkeyEvent(FocusNode node, KeyEvent event) {
@@ -324,7 +371,7 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     if (actionId == null) {
       return KeyEventResult.ignored;
     }
-    unawaited(_controlChannel.invokeMethod<void>('hotkeyAction', actionId));
+    unawaited(_invokeControlMethod('hotkeyAction', actionId));
     return KeyEventResult.handled;
   }
 
@@ -344,6 +391,7 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
               body: MouseRegion(
                 cursor: SystemMouseCursors.none,
                 child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: _onProjectionTap,
                   child: CustomPaint(
                     painter: ProjectorPainter(

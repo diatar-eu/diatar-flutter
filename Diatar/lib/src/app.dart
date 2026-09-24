@@ -51,6 +51,11 @@ class _DiatarAppState extends State<DiatarApp>
     }
     unawaited(_enableImmersiveMode());
     unawaited(_controller.init());
+    // Booting the JavaScript engine is the expensive part of an Aretino
+    // slide, not rendering one, so it happens here rather than on the first
+    // chant (plans/aretino-projection-v1.md, Decision 6).
+    unawaited(AretinoRenderService.instance.ensureLoaded());
+
     unawaited(
       KottaAssets.ensureLoaded().then((_) {
         if (mounted) {
@@ -147,9 +152,9 @@ class _DiatarAppState extends State<DiatarApp>
           darkTheme: _theme(Brightness.dark),
           themeMode: themeMode,
           // A DesktopHotkeysLayer-t (gyorsbillentyűket kezelő Focus réteget)
-          // mindig csatlakoztatjuk, hogy a billentyűk akkor is működjenek,
-          // ha a vezérlő ablak el van rejtve. Ilyenkor csak az ablak
-          // tartalma üres (és a kurzor el van rejtve), maga a réteg megmarad.
+          // mindig csatlakoztatjuk. Windowson a rejtett vezérlőablak továbbra
+          // is ezen keresztül kezeli a billentyűket; Linuxon a fókuszt kapó
+          // vetítőablak továbbítja ugyanazokat az akciókat.
           home: _wrapExitGuard(
             DesktopHotkeysLayer(
               controller: _controller,

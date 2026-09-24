@@ -32,6 +32,7 @@ class DesktopProjectorBridge {
   );
 
   WindowController? _windowController;
+  WindowController? _mainWindowController;
   bool _starting = false;
   bool _enabled = false;
   Future<void> _settingsTransition = Future<void>.value();
@@ -74,10 +75,34 @@ class DesktopProjectorBridge {
       await _closeProjectorWindowsBestEffort();
       return;
     }
+    await _ensureMainWindowControlHandler();
     await _controlChannel.setMethodCallHandler(_handleControlMethodCall);
     await _adoptExistingProjectorWindow();
     await _ensureProjectorWindow();
+    await _sendControlWindowReference();
     await _invoke('settings', settings.toMap(), cache: () {});
+  }
+
+  Future<void> _ensureMainWindowControlHandler() async {
+    _mainWindowController ??= await WindowController.fromCurrentEngine();
+    await _mainWindowController?.setWindowMethodHandler(
+      _handleControlMethodCall,
+    );
+  }
+
+  Future<void> _sendControlWindowReference() async {
+    final String? windowId = _mainWindowController?.windowId;
+    if (windowId == null || windowId.isEmpty) {
+      return;
+    }
+    if (_isLinux) {
+      await _windowController
+          ?.setClickTarget(windowId)
+          .timeout(_windowOpTimeout);
+    }
+    await _invoke('controlWindow', <String, String>{
+      'windowId': windowId,
+    }, cache: () {});
   }
 
   Future<dynamic> _handleControlMethodCall(MethodCall call) async {
@@ -142,8 +167,10 @@ class DesktopProjectorBridge {
     // Állapotváltás: be/ki kapcsolás azonnali hatálya.
     if (newEnabled) {
       _enabled = true;
+      await _ensureMainWindowControlHandler();
       await _adoptExistingProjectorWindow();
       await _ensureProjectorWindow();
+      await _sendControlWindowReference();
       await _invoke('settings', settings.toMap(), cache: () {});
     } else {
       // Az `_enabled` jelzőt azonnal lekapcsoljuk, hogy bármely közben futó
@@ -261,11 +288,30 @@ class DesktopProjectorBridge {
   /// Elrejti a vezérlő (fő) ablakot, ha a vetítő ablakkal azonos
   /// monitoron vagyunk, hogy a vetítés látszódjon.
   ///
-  /// Ablakmozgatás/átméretezés nélkül átlátszóvá tesszük, és átadjuk az
-  /// egéreseményeket a vetítőablaknak. Win10 alatt ez stabilabb, mert elkerüli
-  /// a DPI/surface deszinkront, ami torz visszarajzolást okozhat.
+  /// Windowson ablakmozgatás/átméretezés nélkül átlátszóvá tesszük, és
+  /// átadjuk az egéreseményeket a vetítőablaknak. Ez elkerüli a DPI/surface
+  /// deszinkront, ami torz visszarajzolást okozhat.
+  ///
+  /// Linuxon a főablak fókuszban marad, a vetítőablakot pedig fölé emeljük.
+  /// Így a gyorsbillentyűket továbbra is a főablak kezeli, miközben annak
+  /// üres tartalmát teljesen eltakarja a vetítés.
   Future<void> hideControlWindow() async {
     if (!_enabled) {
+      return;
+    }
+    if (_isLinux) {
+      final WindowController? projector = _windowController;
+      if (projector == null) {
+        return;
+      }
+      try {
+        await _channel
+            .invokeMethod('controlHidden', true)
+            .timeout(_windowOpTimeout);
+        await projector.raiseToTop().timeout(_windowOpTimeout);
+      } catch (_) {
+        await _restoreControlWindow();
+      }
       return;
     }
     try {
@@ -378,6 +424,8 @@ class DesktopProjectorBridge {
   Future<void> dispose() async {
     await _closeWindow();
     await _controlChannel.setMethodCallHandler(null);
+    await _mainWindowController?.setWindowMethodHandler(null);
+    _mainWindowController = null;
     _enabled = false;
   }
 
@@ -529,6 +577,7 @@ class DesktopProjectorBridge {
   Future<void> _recoverProjectorWindow() async {
     await _adoptExistingProjectorWindow();
     await _ensureProjectorWindow();
+    await _sendControlWindowReference();
     await _invoke('settings', _lastSettings.toMap(), cache: () {});
   }
 
@@ -546,6 +595,7 @@ class DesktopProjectorBridge {
             'businessId': _businessId,
             'monitor': _lastSettings.desktopProjectorMonitor,
             'mainMonitor': mainMonitor,
+            'controlWindowId': _mainWindowController?.windowId,
           }),
         ),
       );

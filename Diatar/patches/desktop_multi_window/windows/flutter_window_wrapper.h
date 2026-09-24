@@ -51,6 +51,19 @@ class FlutterWindowWrapper {
         ::ShowWindow(hwnd_, SW_HIDE);
       }
       result->Success();
+    } else if (method == "window_focus") {
+      if (hwnd_) {
+        ::ShowWindow(hwnd_, SW_SHOW);
+        ::SetForegroundWindow(hwnd_);
+        ::SetFocus(hwnd_);
+      }
+      result->Success();
+    } else if (method == "window_raise") {
+      if (hwnd_) {
+        ::SetWindowPos(hwnd_, HWND_TOP, 0, 0, 0, 0,
+                       SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+      }
+      result->Success();
     } else {
       result->Error("-1", "unknown method: " + method);
     }

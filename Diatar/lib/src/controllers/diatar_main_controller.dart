@@ -20,6 +20,7 @@ import '../core/custom_order/custom_order_normalizer.dart';
 import '../core/custom_order/custom_order_navigation_policy.dart';
 import '../core/custom_order/custom_order_bootstrap_policy.dart';
 import '../core/custom_order/custom_order_entry_mapper.dart';
+import '../core/custom_order/custom_order_set_limit_policy.dart';
 import '../core/custom_order/entry_label_service.dart';
 import '../core/custom_order/entry_match_policy.dart';
 import '../core/custom_order/entry_resolver.dart';
@@ -147,6 +148,8 @@ class DiatarMainController extends ChangeNotifier {
       const CustomOrderNavigationPolicy();
   final CustomOrderBootstrapPolicy _customOrderBootstrapPolicy =
       const CustomOrderBootstrapPolicy();
+  final CustomOrderSetLimitPolicy _customOrderSetLimitPolicy =
+      const CustomOrderSetLimitPolicy();
   final CustomOrderEntryMapper _customOrderEntryMapper =
       const CustomOrderEntryMapper();
   final ProjectionGlobalsPolicy _projectionGlobalsPolicy =
@@ -238,6 +241,7 @@ class DiatarMainController extends ChangeNotifier {
   bool _highlightFullyRendered = false;
   bool showing = false;
   bool _exitRequested = false;
+  Future<void> Function()? _customOrderEditorAutoSave;
   bool loading = false;
   bool pendingOnboarding = false;
   AppSettings settings = const AppSettings();
@@ -286,6 +290,8 @@ class DiatarMainController extends ChangeNotifier {
   bool _musicSelectionConfigured = false;
   List<CustomOrderEntry> _customOrder = <CustomOrderEntry>[];
   bool customOrderActive = false;
+  String? _songOrderTitle;
+  List<String> _songOrderLines = const <String>[];
   int _customOrderCursor = -1;
   int _projectedCustomCursor = -1;
   String? _lastImportedCustomOrderBaseName;
@@ -310,6 +316,7 @@ class DiatarMainController extends ChangeNotifier {
 
   /// Egyedi azonosító-generálás új diasorokhez.
   int _customOrderSetIdCounter = 0;
+  bool _customOrderLimitExceeded = false;
 
   CustomOrderSet? get _activeOrderSet {
     if (_activeOrderSetIndex < 0 ||
@@ -321,6 +328,12 @@ class DiatarMainController extends ChangeNotifier {
 
   /// Az aktív diasor egyedi azonosítója, vagy null ha nincs betöltve.
   String? get activeCustomOrderSetId => _activeOrderSet?.id;
+  bool get customOrderLimitExceeded => _customOrderLimitExceeded;
+  bool get activeCustomOrderSetHasHotkey {
+    final String? activeId = activeCustomOrderSetId;
+    return activeId != null &&
+        settings.desktopOrderSetHotkeys.containsValue(activeId);
+  }
 
   String _nextCustomOrderSetId() {
     _customOrderSetIdCounter++;
@@ -332,7 +345,47 @@ class DiatarMainController extends ChangeNotifier {
       id: _nextCustomOrderSetId(),
       name: '',
       entries: const <CustomOrderEntry>[],
+      lastUsed: DateTime.now().microsecondsSinceEpoch,
     );
+  }
+
+  void _touchCustomOrderSet(int index) {
+    if (index < 0 || index >= _customOrderSets.length) {
+      return;
+    }
+    _customOrderSets[index] = _customOrderSets[index].copyWith(
+      lastUsed: DateTime.now().microsecondsSinceEpoch,
+    );
+  }
+
+  void _touchActiveCustomOrderSet() {
+    _touchCustomOrderSet(_activeOrderSetIndex);
+  }
+
+  bool _makeRoomForCustomOrderSet() {
+    final int maximumCount = settings.maxCustomOrderSets.clamp(
+      AppSettings.minCustomOrderSets,
+      AppSettings.maxCustomOrderSetsLimit,
+    );
+    final Set<String> protectedIds = settings.desktopOrderSetHotkeys.values
+        .toSet();
+    while (_customOrderSets.length >= maximumCount) {
+      final int index = _customOrderSetLimitPolicy.evictionIndex(
+        _customOrderSets,
+        maximumCount: maximumCount,
+        protectedIds: protectedIds,
+      );
+      if (index < 0) {
+        return true;
+      }
+      _customOrderSets.removeAt(index);
+      if (_activeOrderSetIndex > index) {
+        _activeOrderSetIndex--;
+      } else if (_activeOrderSetIndex == index) {
+        _activeOrderSetIndex = -1;
+      }
+    }
+    return false;
   }
 
   void _ensureCustomOrderSet() {
@@ -393,8 +446,11 @@ class DiatarMainController extends ChangeNotifier {
           enabled: s.enabled,
           baseName: normalizedBaseName,
           sourceType: s.sourceType,
+          diaFilePath: s.diaFilePath,
+          embedImages: s.embedImages,
           cursor: s.cursor,
           isModified: s.isModified,
+          lastUsed: s.lastUsed,
         );
       }).toList();
       _activeOrderSetIndex = storedSets.activeIndex;
@@ -483,8 +539,11 @@ class DiatarMainController extends ChangeNotifier {
             enabled: s.enabled,
             baseName: s.baseName,
             sourceType: s.sourceType,
+            diaFilePath: s.diaFilePath,
+            embedImages: s.embedImages,
             cursor: s.cursor,
             isModified: s.isModified,
+            lastUsed: s.lastUsed,
           ),
         )
         .toList();
@@ -503,8 +562,10 @@ class DiatarMainController extends ChangeNotifier {
     if (index == _activeOrderSetIndex && _activeOrderSetIndex >= 0) {
       return;
     }
+    _dismissSongOrderPreview();
     _persistActiveSetToSets();
     _activeOrderSetIndex = index;
+    _touchActiveCustomOrderSet();
     final CustomOrderSet set = _customOrderSets[index];
     _customOrder = List<CustomOrderEntry>.from(set.entries);
     _lastImportedCustomOrderBaseName = set.baseName;
@@ -536,6 +597,14 @@ class DiatarMainController extends ChangeNotifier {
   /// A betöltött diasorok (saját diasorok) listája, csak olvashatóan.
   List<CustomOrderSet> get customOrderSets =>
       List<CustomOrderSet>.unmodifiable(_customOrderSets);
+
+  void registerCustomOrderEditorAutoSave(Future<void> Function() callback) {
+    _customOrderEditorAutoSave = callback;
+  }
+
+  void unregisterCustomOrderEditorAutoSave() {
+    _customOrderEditorAutoSave = null;
+  }
 
   /// Az éppen aktív diasor indexe a [customOrderSets] listában (-1 ha nincs).
   int get activeCustomOrderSetIndex => _activeOrderSetIndex;
@@ -606,9 +675,11 @@ class DiatarMainController extends ChangeNotifier {
     if (index < 0 || index >= _customOrderSets.length) {
       return;
     }
+    _dismissSongOrderPreview();
     final bool currentlyEnabled = _customOrderSets[index].enabled;
     _customOrderSets[index] = _customOrderSets[index].copyWith(
       enabled: !currentlyEnabled,
+      lastUsed: DateTime.now().microsecondsSinceEpoch,
     );
     if (index == _activeOrderSetIndex) {
       customOrderActive = !currentlyEnabled && _customOrder.isNotEmpty;
@@ -623,6 +694,7 @@ class DiatarMainController extends ChangeNotifier {
     if (index < 0 || index >= _customOrderSets.length) {
       return;
     }
+    _dismissSongOrderPreview();
     final bool wasActive = index == _activeOrderSetIndex;
     _customOrderSets.removeAt(index);
     if (_customOrderSets.isEmpty) {
@@ -685,6 +757,7 @@ class DiatarMainController extends ChangeNotifier {
       name: trimmed,
       baseName: trimmed,
       isModified: true,
+      lastUsed: DateTime.now().microsecondsSinceEpoch,
     );
     if (index == _activeOrderSetIndex) {
       _lastImportedCustomOrderBaseName = trimmed;
@@ -701,12 +774,15 @@ class DiatarMainController extends ChangeNotifier {
     if (trimmed.isEmpty) {
       return;
     }
+    _dismissSongOrderPreview();
     _persistActiveSetToSets();
+    _customOrderLimitExceeded = _makeRoomForCustomOrderSet();
     final CustomOrderSet newSet = CustomOrderSet(
       id: _nextCustomOrderSetId(),
       name: trimmed,
       entries: const <CustomOrderEntry>[],
       enabled: true,
+      lastUsed: DateTime.now().microsecondsSinceEpoch,
     );
     _customOrderSets.add(newSet);
     _activeOrderSetIndex = _customOrderSets.length - 1;
@@ -1114,7 +1190,7 @@ class DiatarMainController extends ChangeNotifier {
     await _cameraView.init();
     _configureSender();
     await _applyTransport();
-    unawaited(_checkStartupDtxUpdates());
+    unawaited(_checkStartupContentUpdates());
     await _tryAutoLoadTodayDia();
     if (customOrderActive &&
         _customOrderCursor >= 0 &&
@@ -1233,27 +1309,70 @@ class DiatarMainController extends ChangeNotifier {
     await prefs.setStringList(key, normalized);
   }
 
-  Future<void> _checkStartupDtxUpdates() async {
+  @visibleForTesting
+  static bool hasEligibleStartupDtxUpdate(Iterable<DtxManageItem> items) {
+    return items.any(
+      (DtxManageItem managed) =>
+          managed.item.isOfficial &&
+          managed.item.isInstalled &&
+          managed.item.updateAvailable &&
+          !managed.excluded,
+    );
+  }
+
+  @visibleForTesting
+  static bool hasEligibleStartupDtzUpdate(Iterable<DtzManageItem> items) {
+    return items.any(
+      (DtzManageItem managed) =>
+          managed.item.isOfficial &&
+          managed.item.isInstalled &&
+          managed.item.updateAvailable &&
+          !managed.excluded,
+    );
+  }
+
+  Future<void> _checkStartupContentUpdates() async {
     if (_startupDownloadDialogHandled || _startupDownloadDialogRequested) {
       return;
     }
-    try {
-      final List<DtxManageItem> items = await loadDtxManagerItems();
-      final bool hasInstalledUpdate = items.any(
-        (DtxManageItem managed) =>
-            managed.item.isOfficial &&
-            managed.item.isInstalled &&
-            managed.item.updateAvailable,
-      );
-      if (!hasInstalledUpdate ||
-          _startupDownloadDialogHandled ||
-          _startupDownloadDialogRequested) {
-        return;
-      }
+
+    final List<bool> updateChecks = await Future.wait<bool>(<Future<bool>>[
+      _hasStartupDtxUpdate(),
+      _hasStartupDtzUpdate(),
+      _hasStartupMusicUpdate(),
+    ]);
+    if (updateChecks.any((bool hasUpdate) => hasUpdate) &&
+        !_startupDownloadDialogHandled &&
+        !_startupDownloadDialogRequested) {
       _startupDownloadDialogRequested = true;
       notifyListeners();
-    } catch (_) {
-      // Offline or remote list failure should not block startup.
+    }
+  }
+
+  Future<bool> _hasStartupDtxUpdate() async {
+    try {
+      return hasEligibleStartupDtxUpdate(await loadDtxManagerItems());
+    } catch (error) {
+      debugPrint('Unable to check DTX updates at startup: $error');
+      return false;
+    }
+  }
+
+  Future<bool> _hasStartupDtzUpdate() async {
+    try {
+      return hasEligibleStartupDtzUpdate(await loadDtzManagerItems());
+    } catch (error) {
+      debugPrint('Unable to check score updates at startup: $error');
+      return false;
+    }
+  }
+
+  Future<bool> _hasStartupMusicUpdate() async {
+    try {
+      return hasEligibleStartupDtzUpdate(await loadMusicManagerItems());
+    } catch (error) {
+      debugPrint('Unable to check music updates at startup: $error');
+      return false;
     }
   }
 
@@ -2328,6 +2447,145 @@ class DiatarMainController extends ChangeNotifier {
 
   List<CustomOrderEntry> get customOrder =>
       List<CustomOrderEntry>.unmodifiable(_customOrder);
+  bool get songOrderVisible => _songOrderTitle != null;
+  String? get songOrderTitle => _songOrderTitle;
+  List<String> get songOrderLines => List<String>.unmodifiable(_songOrderLines);
+
+  bool _dismissSongOrderPreview() {
+    if (!songOrderVisible) {
+      return false;
+    }
+    _songOrderTitle = null;
+    _songOrderLines = const <String>[];
+    return true;
+  }
+
+  @visibleForTesting
+  static List<String> buildSongOrderLines({
+    required List<CustomOrderEntry> entries,
+    required List<DtxBook> books,
+  }) {
+    final List<String> lines = <String>[];
+    String? previousBookFile;
+    int? previousSongIndex;
+
+    void endSongGroup() {
+      previousBookFile = null;
+      previousSongIndex = null;
+    }
+
+    for (final CustomOrderEntry entry in entries) {
+      if (entry.skipped) {
+        continue;
+      }
+      if (entry.isSeparator) {
+        endSongGroup();
+        continue;
+      }
+      if (entry.isCustomImage) {
+        final List<String> segments = (entry.customImagePath ?? '')
+            .trim()
+            .replaceAll('\\', '/')
+            .split('/')
+            .where((String segment) => segment.isNotEmpty)
+            .toList();
+        final String imageName = segments.isEmpty
+            ? entry.label.trim()
+            : segments.last;
+        if (imageName.isNotEmpty) {
+          lines.add(imageName);
+        }
+        endSongGroup();
+        continue;
+      }
+      if (!entry.isSongEntry) {
+        endSongGroup();
+        continue;
+      }
+
+      final int bookIndex = books.indexWhere(
+        (DtxBook book) => book.fileName == entry.fileName,
+      );
+      if (bookIndex < 0) {
+        endSongGroup();
+        continue;
+      }
+      final DtxBook book = books[bookIndex];
+      if (entry.songIndex < 0 || entry.songIndex >= book.songs.length) {
+        endSongGroup();
+        continue;
+      }
+      final DtxSong song = book.songs[entry.songIndex];
+      final int verseIndex = entry.verseIndex.clamp(
+        0,
+        song.verses.isEmpty ? 0 : song.verses.length - 1,
+      );
+      final String verse = song.verses.isEmpty
+          ? ''
+          : song.verses[verseIndex].name.trim();
+      final bool continuesPreviousSong =
+          previousBookFile == entry.fileName &&
+          previousSongIndex == entry.songIndex;
+      if (continuesPreviousSong) {
+        if (verse.isNotEmpty) {
+          lines[lines.length - 1] = '${lines.last}, $verse';
+        }
+      } else {
+        final String songLabel = '${book.displayName}: ${song.title}';
+        lines.add(verse.isEmpty ? songLabel : '$songLabel/$verse');
+      }
+      previousBookFile = entry.fileName;
+      previousSongIndex = entry.songIndex;
+    }
+    return lines;
+  }
+
+  Future<void> showSongOrder(String title) async {
+    if (_customOrder.isEmpty) {
+      return;
+    }
+    _songOrderTitle = title;
+    _songOrderLines = buildSongOrderLines(entries: _customOrder, books: books);
+    highPos = 0;
+    _resetHighlightRenderState();
+    _projectedCustomCursor = -1;
+    _clearCustomMergeSoundSequence();
+    globals = globals.copyWith(projecting: showing, wordToHighlight: 0);
+    if (_projectionOutputLocked) {
+      notifyListeners();
+      return;
+    }
+    final List<String> payloadLines = _songOrderLines.isEmpty
+        ? const <String>['']
+        : _songOrderLines;
+    await _desktopProjectorBridge.sendState(
+      globals,
+      showing: showing,
+      wordToHighlight: 0,
+    );
+    await _desktopProjectorBridge.sendText(title: title, lines: payloadLines);
+    if (mqttActive) {
+      await _mqttSender.sendState(
+        globals,
+        showing: showing,
+        wordToHighlight: 0,
+      );
+      await _mqttSender.sendText(title: title, lines: payloadLines);
+    }
+    if (tcpConfigured) {
+      await _sender.sendState(globals, showing: showing, wordToHighlight: 0);
+      await _sender.sendText(
+        title: title,
+        lines: payloadLines,
+        wordToHighlight: 0,
+      );
+      await _sender.sendIdle();
+    }
+    await _desktopProjectorBridge.sendIdle();
+    _refreshSenderFlags();
+    notifyListeners();
+  }
+
   int get customOrderCursor => _customOrderCursor;
   int get selectedCustomOrderCursor {
     if (_projectedCustomCursor >= 0 &&
@@ -2462,6 +2720,7 @@ class DiatarMainController extends ChangeNotifier {
     if (index < 0 || index >= _customOrder.length) {
       return;
     }
+    _dismissSongOrderPreview();
     _selectByCustomOrderCursor(index, sync: true);
   }
 
@@ -2469,6 +2728,7 @@ class DiatarMainController extends ChangeNotifier {
     if (index < 0 || index >= _customOrder.length) {
       return;
     }
+    _dismissSongOrderPreview();
     customOrderActive = _customOrder.isNotEmpty;
     _diaVirtualBookSelected = _customOrder.isNotEmpty;
     _selectByCustomOrderCursor(index, sync: true);
@@ -2478,6 +2738,7 @@ class DiatarMainController extends ChangeNotifier {
     if (index < 0 || index >= _customOrder.length) {
       return;
     }
+    final bool songOrderWasVisible = _dismissSongOrderPreview();
     customOrderActive = _customOrder.isNotEmpty;
     _diaVirtualBookSelected = _customOrder.isNotEmpty;
     _customOrderCursor = index;
@@ -2485,6 +2746,9 @@ class DiatarMainController extends ChangeNotifier {
       'label': _customOrder[index].label,
     });
     notifyListeners();
+    if (songOrderWasVisible) {
+      unawaited(_syncCurrentDia());
+    }
   }
 
   void selectDiaVirtualBook() {
@@ -2714,6 +2978,8 @@ class DiatarMainController extends ChangeNotifier {
     bool syncProjection = true,
     bool markModified = true,
   }) async {
+    final bool shouldSyncProjection =
+        syncProjection || _dismissSongOrderPreview();
     _ensureCustomOrderSet();
     final int previousCursor = _customOrderCursor;
     final CustomOrderEntry? previousEntry =
@@ -2722,6 +2988,7 @@ class DiatarMainController extends ChangeNotifier {
         : null;
 
     _customOrder = entries.map(normalizeEntry).toList();
+    _touchActiveCustomOrderSet();
     if (markModified &&
         _activeOrderSetIndex >= 0 &&
         _activeOrderSetIndex < _customOrderSets.length) {
@@ -2748,13 +3015,13 @@ class DiatarMainController extends ChangeNotifier {
       } else {
         _customOrderCursor = -1;
       }
-      if (syncProjection && _customOrderCursor >= 0) {
+      if (shouldSyncProjection && _customOrderCursor >= 0) {
         _selectByCustomOrderCursor(_customOrderCursor, sync: false);
       }
       await _persistCurrentCustomOrder();
       _persistActiveSetToSets();
       await _persistAllSets();
-      if (syncProjection &&
+      if (shouldSyncProjection &&
           _customOrderCursor >= 0 &&
           _customOrderCursor < _customOrder.length &&
           !_customOrder[_customOrderCursor].isSongEntry) {
@@ -2762,7 +3029,7 @@ class DiatarMainController extends ChangeNotifier {
           _customOrder[_customOrderCursor],
           cursor: _customOrderCursor,
         );
-      } else if (syncProjection) {
+      } else if (shouldSyncProjection) {
         await _syncCurrentDia();
       } else {
         notifyListeners();
@@ -2778,6 +3045,7 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> syncProjectionToCurrentDia() async {
+    _dismissSongOrderPreview();
     _projectedCustomCursor = -1;
     if (customOrderActive &&
         _customOrderCursor >= 0 &&
@@ -2792,6 +3060,8 @@ class DiatarMainController extends ChangeNotifier {
     CustomOrderEntry rawEntry, {
     int? preferredCursor,
   }) async {
+    _touchActiveCustomOrderSet();
+    unawaited(_persistAllSets());
     final CustomOrderEntry entry = normalizeEntry(rawEntry);
     if (!entry.isSongEntry) {
       int targetCursor = preferredCursor ?? _customOrder.indexOf(entry);
@@ -2913,6 +3183,11 @@ class DiatarMainController extends ChangeNotifier {
         _selectByCustomOrderCursor(prev, sync: true);
         return;
       }
+    }
+
+    if (sync) {
+      _touchActiveCustomOrderSet();
+      unawaited(_persistAllSets());
     }
 
     if (!entry.isSongEntry) {
@@ -3263,6 +3538,7 @@ class DiatarMainController extends ChangeNotifier {
     String path, {
     bool recordSave = true,
     bool embedImages = false,
+    String? customOrderSetId,
   }) async {
     final String safePath = path.toLowerCase().endsWith('.dia')
         ? path
@@ -3272,7 +3548,18 @@ class DiatarMainController extends ChangeNotifier {
     if (!await diaDir.exists()) {
       await diaDir.create(recursive: true);
     }
-    final List<CustomOrderEntry> exportable = _customOrder
+    final int targetSetIndex = customOrderSetId == null
+        ? _activeOrderSetIndex
+        : _customOrderSets.indexWhere(
+            (CustomOrderSet set) => set.id == customOrderSetId,
+          );
+    if (customOrderSetId != null && targetSetIndex < 0) {
+      throw StateError('Unknown custom order set: $customOrderSetId');
+    }
+    final List<CustomOrderEntry> sourceEntries = targetSetIndex >= 0
+        ? _customOrderSets[targetSetIndex].entries
+        : _customOrder;
+    final List<CustomOrderEntry> exportable = sourceEntries
         .map(normalizeEntry)
         .toList();
     final Map<String, Uint8List> embeddedImages = <String, Uint8List>{};
@@ -3373,7 +3660,11 @@ class DiatarMainController extends ChangeNotifier {
 
     await diaFile.writeAsString(out.toString(), encoding: utf8);
     if (recordSave) {
-      await markCustomOrderDiaExportSaved(safePath);
+      await markCustomOrderDiaExportSaved(
+        safePath,
+        embedImages: embedImages,
+        customOrderSetId: customOrderSetId,
+      );
     }
     return safePath;
   }
@@ -3381,7 +3672,17 @@ class DiatarMainController extends ChangeNotifier {
   Future<void> markCustomOrderDiaExportSaved(
     String path, {
     String? explicitName,
+    bool embedImages = false,
+    String? customOrderSetId,
   }) async {
+    final int targetSetIndex = customOrderSetId == null
+        ? _activeOrderSetIndex
+        : _customOrderSets.indexWhere(
+            (CustomOrderSet set) => set.id == customOrderSetId,
+          );
+    if (customOrderSetId != null && targetSetIndex < 0) {
+      throw StateError('Unknown custom order set: $customOrderSetId');
+    }
     String? cleanName;
     if (explicitName != null && explicitName.trim().isNotEmpty) {
       // Androidon a rendszer mentési ablakából a valódi fájlnevet kapjuk
@@ -3408,26 +3709,34 @@ class DiatarMainController extends ChangeNotifier {
     }
     if (cleanName != null) {
       final String normalizedName = cleanName.trim();
-      _lastImportedCustomOrderBaseName = normalizedName.isEmpty
-          ? null
-          : normalizedName;
-      if (_activeOrderSetIndex >= 0 &&
-          _activeOrderSetIndex < _customOrderSets.length) {
-        _customOrderSets[_activeOrderSetIndex] =
-            _customOrderSets[_activeOrderSetIndex].copyWith(
+      if (targetSetIndex >= 0 && targetSetIndex < _customOrderSets.length) {
+        _customOrderSets[targetSetIndex] = _customOrderSets[targetSetIndex]
+            .copyWith(
               name: normalizedName,
               baseName: normalizedName,
-              sourceType: null,
+              clearSourceType: true,
             );
       }
+      if (targetSetIndex == _activeOrderSetIndex) {
+        _lastImportedCustomOrderBaseName = normalizedName.isEmpty
+            ? null
+            : normalizedName;
+      }
     }
-    _customOrderSourceType = null;
-    if (_activeOrderSetIndex >= 0 &&
-        _activeOrderSetIndex < _customOrderSets.length) {
-      _customOrderSets[_activeOrderSetIndex] =
-          _customOrderSets[_activeOrderSetIndex].copyWith(isModified: false);
+    if (targetSetIndex == _activeOrderSetIndex) {
+      _customOrderSourceType = null;
     }
-    await _persistCurrentCustomOrder();
+    if (targetSetIndex >= 0 && targetSetIndex < _customOrderSets.length) {
+      _customOrderSets[targetSetIndex] = _customOrderSets[targetSetIndex]
+          .copyWith(
+            diaFilePath: path,
+            embedImages: embedImages,
+            isModified: false,
+          );
+    }
+    if (targetSetIndex == _activeOrderSetIndex) {
+      await _persistCurrentCustomOrder();
+    }
     await _persistAllSets();
     _setStatus('statusOrderSaved', <String, String>{'path': path});
     notifyListeners();
@@ -3439,6 +3748,7 @@ class DiatarMainController extends ChangeNotifier {
     String? sourceFileName,
     CustomOrderImportMode mode = CustomOrderImportMode.addNew,
   }) async {
+    _customOrderLimitExceeded = false;
     final File f = FileSystemProvider.instance.file(path);
     if (!await f.exists()) {
       _setStatus('statusDiaFileMissing', <String, String>{'path': path});
@@ -3642,7 +3952,9 @@ class DiatarMainController extends ChangeNotifier {
           _customOrderSets[_activeOrderSetIndex].copyWith(
             name: baseName ?? _customOrderSets[_activeOrderSetIndex].name,
             baseName: baseName,
-            sourceType: null,
+            clearSourceType: true,
+            diaFilePath: path,
+            embedImages: embeddedImageDirectory != null,
             cursor: _customOrder.isEmpty
                 ? -1
                 : _customOrderCursor.clamp(0, _customOrder.length - 1),
@@ -3655,6 +3967,7 @@ class DiatarMainController extends ChangeNotifier {
       // Előbb elmentjük az eddigi aktív diasor kurzorát, mielőtt
       // átváltunk az újonnan betöltöttre.
       _persistActiveSetToSets();
+      _customOrderLimitExceeded = _makeRoomForCustomOrderSet();
       final CustomOrderSet newSet = CustomOrderSet(
         id: _nextCustomOrderSetId(),
         name: baseName ?? '',
@@ -3662,7 +3975,10 @@ class DiatarMainController extends ChangeNotifier {
         enabled: true,
         baseName: baseName,
         sourceType: null,
+        diaFilePath: path,
+        embedImages: embeddedImageDirectory != null,
         isModified: false,
+        lastUsed: DateTime.now().microsecondsSinceEpoch,
       );
       _customOrderSets.add(newSet);
       _activeOrderSetIndex = _customOrderSets.length - 1;
@@ -4034,6 +4350,7 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
 
+    _dismissSongOrderPreview();
     if (customOrderActive) {
       _persistActiveSetToSets();
       customOrderActive = false;
@@ -4087,6 +4404,7 @@ class DiatarMainController extends ChangeNotifier {
     if (s == null || max < 0) {
       return;
     }
+    _dismissSongOrderPreview();
     songIndex = value.clamp(0, max);
     verseIndex = 0;
     highPos = 0;
@@ -4132,6 +4450,7 @@ class DiatarMainController extends ChangeNotifier {
     if (s == null || s.verses.isEmpty) {
       return;
     }
+    _dismissSongOrderPreview();
     verseIndex = value.clamp(0, s.verses.length - 1);
     highPos = 0;
     _resetHighlightRenderState();
@@ -4164,6 +4483,7 @@ class DiatarMainController extends ChangeNotifier {
         ? 0
         : targetVerseIndex.clamp(0, s.verses.length - 1);
 
+    _dismissSongOrderPreview();
     _diaVirtualBookSelected = false;
     bookIndex = bIx;
     songIndex = sIx;
@@ -4188,6 +4508,10 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void nextVerse() {
+    if (_dismissSongOrderPreview()) {
+      unawaited(_syncCurrentDia());
+      return;
+    }
     if (diaVirtualBookSelected) {
       final int exactIdx = _currentCustomOrderIndex();
       if (exactIdx >= 0) {
@@ -4255,6 +4579,10 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void prevVerse() {
+    if (_dismissSongOrderPreview()) {
+      unawaited(_syncCurrentDia());
+      return;
+    }
     if (diaVirtualBookSelected) {
       final int exactIdx = _currentCustomOrderIndex();
       if (exactIdx >= 0) {
@@ -4321,6 +4649,10 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void nextSong() {
+    if (_dismissSongOrderPreview()) {
+      unawaited(_syncCurrentDia());
+      return;
+    }
     if (diaVirtualBookSelected) {
       final int? nextIdx = _findNextDiaSongGroupStart();
       if (nextIdx == null) {
@@ -4340,6 +4672,10 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   void prevSong() {
+    if (_dismissSongOrderPreview()) {
+      unawaited(_syncCurrentDia());
+      return;
+    }
     if (diaVirtualBookSelected) {
       final int currentGroupStart = _currentDiaGroupStartIndex();
       final int currentIndex = _currentCustomOrderIndex();
@@ -4848,6 +5184,8 @@ class DiatarMainController extends ChangeNotifier {
     CustomOrderEntry entry, {
     required int cursor,
   }) async {
+    _touchActiveCustomOrderSet();
+    unawaited(_persistAllSets());
     _projectedCustomCursor = cursor;
 
     if (entry.isSeparator) {
@@ -4913,9 +5251,11 @@ class DiatarMainController extends ChangeNotifier {
   }
 
   Future<void> _appendCustomOrderEntry(CustomOrderEntry entry) async {
+    _dismissSongOrderPreview();
     _customOrder = <CustomOrderEntry>[..._customOrder, entry];
     customOrderActive = _customOrder.isNotEmpty;
     _customOrderCursor = _customOrder.length - 1;
+    _touchActiveCustomOrderSet();
     await _persistCurrentCustomOrder();
     _persistActiveSetToSets();
     await _persistAllSets();
@@ -5362,6 +5702,10 @@ class DiatarMainController extends ChangeNotifier {
       return;
     }
     _exitRequested = true;
+    final Future<void> Function()? autoSave = _customOrderEditorAutoSave;
+    if (settings.diaAutoSaveEnabled && autoSave != null) {
+      await autoSave();
+    }
     await _runExternalCommand(settings.externalCommandOnExit);
     try {
       await _mqttSender.clearRetainedMessages();

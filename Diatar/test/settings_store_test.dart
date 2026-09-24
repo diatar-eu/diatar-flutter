@@ -78,6 +78,43 @@ void main() {
     expect(reloaded.landscapeControlsRatio, 0.42);
   });
 
+  test('defaults and persists the maximum slideshow count', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final SettingsStore store = SettingsStore();
+
+    expect((await store.load()).maxCustomOrderSets, 10);
+    await store.save((await store.load()).copyWith(maxCustomOrderSets: 17));
+
+    expect((await store.load()).maxCustomOrderSets, 17);
+  });
+
+  test('clamps an invalid stored maximum slideshow count', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'MaxCustomOrderSets': 99,
+    });
+
+    expect((await SettingsStore().load()).maxCustomOrderSets, 20);
+  });
+
+  test('persists inverse notation colors round-trip', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final SettingsStore store = SettingsStore();
+
+    await store.save((await store.load()).copyWith(projInverseKotta: true));
+
+    expect((await store.load()).projInverseKotta, isTrue);
+  });
+
+  test('defaults and persists DIA automatic saving', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final SettingsStore store = SettingsStore();
+
+    expect((await store.load()).diaAutoSaveEnabled, isFalse);
+    await store.save((await store.load()).copyWith(diaAutoSaveEnabled: true));
+
+    expect((await store.load()).diaAutoSaveEnabled, isTrue);
+  });
+
   test('persists control photo view state round-trip', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final SettingsStore store = SettingsStore();
