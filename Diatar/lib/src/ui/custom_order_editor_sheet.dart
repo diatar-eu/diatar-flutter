@@ -798,6 +798,8 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     setState(() {
       _showSync = true;
     });
+  }
+
   bool get _supportsDiaAutoSave =>
       !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
 
@@ -871,26 +873,6 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       }
     }
     return null;
-  }
-
-  Future<void> _openSync() async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        final Size screenSize = MediaQuery.sizeOf(dialogContext);
-
-        return Dialog(
-          insetPadding: const EdgeInsets.all(24),
-          clipBehavior: Clip.antiAlias,
-          child: SizedBox(
-            width: min(600, screenSize.width - 48),
-            height: min(780, screenSize.height - 48),
-            child: const SyncPage(),
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _openInsertVersesDialog() async {
