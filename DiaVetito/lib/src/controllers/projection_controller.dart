@@ -741,7 +741,11 @@ class ProjectionController extends ChangeNotifier {
     _lifecycleListener?.dispose();
     _logoTimer?.cancel();
     _server.stop(emitConnection: false);
-    _camera.dispose();
+    // `ChangeNotifier.dispose` is synchronous, so the teardown is started and
+    // marked as deliberately not awaited — a failure inside it has nowhere
+    // useful to go, and the camera service already swallows the one that used
+    // to escape here.
+    unawaited(_camera.dispose());
     _mqtt.dispose();
     super.dispose();
   }

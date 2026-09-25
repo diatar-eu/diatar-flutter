@@ -5790,7 +5790,9 @@ class DiatarMainController extends ChangeNotifier {
     _audioPlaybackCompletionSubscription.cancel();
     _speechRecognizer?.dispose();
     _sender.stop();
-    _cameraView.dispose();
+    // `ChangeNotifier.dispose` is synchronous; the teardown is started and
+    // marked as deliberately not awaited.
+    unawaited(_cameraView.dispose());
     _mqttSender.close();
     super.dispose();
   }

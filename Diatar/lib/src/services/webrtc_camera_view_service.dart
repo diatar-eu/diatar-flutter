@@ -19,16 +19,41 @@ class WebrtcCameraViewService {
   bool _active = false;
   bool _remoteDescriptionSet = false;
   bool _negotiating = false;
+  bool _disposed = false;
+
+  /// Whether the texture came up. `RTCVideoRenderer.srcObject` says so only by
+  /// throwing, and it is assigned to from a platform callback that has nowhere
+  /// to report a failure — see [_setRendererStream].
+  bool _rendererReady = false;
+
+  /// The in-flight or finished [RTCVideoRenderer.initialize] call.
+  ///
+  /// One renderer may only be initialised once, here. The plugin's own
+  /// `initialize()` awaits a completer that the first call completes only on
+  /// success, so a second call after a failure waits on a completer nobody will
+  /// ever complete — it hangs, rather than reporting the failure again. The
+  /// getter and [init] both want the texture up, so they share this.
+  Future<void>? _rendererInitializing;
   String? _currentPeerKey;
 
   bool get active => _active;
   bool get available => _available();
+
+  /// The texture the camera picture is drawn into, built on first read.
+  ///
+  /// Created on demand because the camera view is only built when the setting is
+  /// on. Assigned before initialising, so two reads in one build cannot produce
+  /// two textures, and kept across [dispose] so a late read cannot conjure one
+  /// that nobody will ever release.
   RTCVideoRenderer get renderer {
-    if (_renderer == null) {
-      _renderer = RTCVideoRenderer();
-      unawaited(_renderer!.initialize());
+    final RTCVideoRenderer? existing = _renderer;
+    if (existing != null) {
+      return existing;
     }
-    return _renderer!;
+    final RTCVideoRenderer renderer = RTCVideoRenderer();
+    _renderer = renderer;
+    unawaited(_ensureRendererInitialized(renderer));
+    return renderer;
   }
 
   bool _available() {
@@ -47,16 +72,34 @@ class WebrtcCameraViewService {
     }
   }
 
+  /// Brings the texture up once, and records whether it made it.
+  ///
+  /// A texture that fails is reported and stepped over rather than thrown: the
+  /// camera is a picture-in-picture overlay, and [init] is awaited on the
+  /// startup path, so letting this escape would take the whole app down over an
+  /// optional overlay on a platform that cannot give it a texture.
+  Future<void> _ensureRendererInitialized(RTCVideoRenderer renderer) =>
+      _rendererInitializing ??= _initializeRenderer(renderer);
+
+  Future<void> _initializeRenderer(RTCVideoRenderer renderer) async {
+    try {
+      await renderer.initialize();
+      // [dispose] may have run while the texture was coming up. A renderer
+      // that is gone must not be marked ready.
+      _rendererReady = !_disposed;
+    } catch (error) {
+      debugPrint('CAM answerer texture init failed: $error');
+    }
+  }
+
+  /// Brings the texture up. Safe to call more than once: a texture that is
+  /// already there is left alone rather than replaced, because the camera view
+  /// is holding it and a swap would pull the picture out from under it.
   Future<void> init() async {
-    if (_active) {
+    if (_active || _disposed || _renderer != null) {
       return;
     }
-    if (_renderer != null) {
-      await _renderer!.dispose();
-    }
-    final RTCVideoRenderer renderer = RTCVideoRenderer();
-    _renderer = renderer;
-    await renderer.initialize();
+    await _ensureRendererInitialized(renderer);
   }
 
   Future<void> requestStart() async {
@@ -152,9 +195,9 @@ class WebrtcCameraViewService {
     peer.onTrack = (RTCTrackEvent event) {
       debugPrint('CAM answerer onTrack ${event.track.kind}');
       if (event.track.kind == 'video') {
-        _renderer!.srcObject = event.streams.isNotEmpty
-            ? event.streams.first
-            : null;
+        _setRendererStream(
+          event.streams.isNotEmpty ? event.streams.first : null,
+        );
         _active = true;
       }
     };
@@ -164,6 +207,28 @@ class WebrtcCameraViewService {
     peer.onIceConnectionState = (RTCIceConnectionState state) {
       debugPrint('CAM answerer iceConn $state');
     };
+  }
+
+  /// Hands the incoming stream to the texture, if there is a texture to hand it
+  /// to.
+  ///
+  /// This runs in a platform callback, which has nowhere to report a failure
+  /// to, and `RTCVideoRenderer.srcObject` throws when the texture was never
+  /// initialised — the renderer is built on demand, so the stream can land
+  /// before its `initialize()` has finished. A texture that is not ready costs
+  /// the picture-in-picture overlay and nothing else: the stream is received
+  /// either way, and the next read of [renderer] or the next [init] brings the
+  /// texture up.
+  void _setRendererStream(MediaStream? stream) {
+    final RTCVideoRenderer? renderer = _renderer;
+    if (renderer == null || !_rendererReady) {
+      return;
+    }
+    try {
+      renderer.srcObject = stream;
+    } catch (error) {
+      debugPrint('CAM answerer texture not ready: $error');
+    }
   }
 
   Future<void> stop({bool sendStop = true}) async {
@@ -182,7 +247,19 @@ class WebrtcCameraViewService {
     }
   }
 
+  /// Tears the connection down.
+  ///
+  /// The texture is deliberately left alone. [dispose] is called while the
+  /// window is still being torn down, and `RTCVideoView` listens to the
+  /// renderer through a `ValueListenableBuilder` — disposing it out from under
+  /// a mounted view is a worse failure than the one being avoided. The
+  /// platform frees the texture when the engine goes, which is what happens
+  /// next either way.
   Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
     await stop(sendStop: false);
   }
 }
