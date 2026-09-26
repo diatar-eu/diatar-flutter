@@ -1354,23 +1354,32 @@ class ProjectorPainter extends CustomPainter {
   }
 
   double _lineChordBandHeight(_RenderLine line, double fontSize) {
-    if (!globals.useAkkord ||
-        !settings.receiverUseAkkord ||
-        !line.words.any((w) => (w.chord ?? '').isNotEmpty)) {
+    if (!globals.useAkkord || !settings.receiverUseAkkord) {
       return 0;
     }
-    return _chordBandHeightForFont(fontSize);
+    return _chordBandHeightForFont(
+      fontSize,
+      line.words
+          .map((w) => w.chord ?? '')
+          .where((String chord) => chord.isNotEmpty),
+    );
   }
 
-  double _chordBandHeightForFont(double fontSize) {
-    final ChordLayout chordMeasure = ChordRenderer.layout(
-      'C7',
-      TextStyle(
-        color: globals.txtColor,
-        fontSize: fontSize * (globals.akkordArany / 100.0),
-      ),
+  /// Measures the tallest chord of [chords] in the selected notation, so the
+  /// band tracks the actual spellings rather than one fixed sample.
+  double _chordBandHeightForFont(double fontSize, Iterable<String> chords) {
+    final TextStyle chordStyle = TextStyle(
+      color: globals.txtColor,
+      fontSize: fontSize * (globals.akkordArany / 100.0),
     );
-    return chordMeasure.height + 2;
+    double tallest = 0;
+    for (final String chord in chords) {
+      final double height = _chordLayout(chord, chordStyle).height;
+      if (height > tallest) {
+        tallest = height;
+      }
+    }
+    return tallest + 2;
   }
 
   double _rowChordBandHeight(
@@ -1381,14 +1390,13 @@ class ProjectorPainter extends CustomPainter {
     if (!globals.useAkkord || !settings.receiverUseAkkord) {
       return 0;
     }
-    for (final int wi in row.wordIndices) {
-      if (wi >= 0 &&
-          wi < line.words.length &&
-          (line.words[wi].chord ?? '').isNotEmpty) {
-        return _chordBandHeightForFont(fontSize);
-      }
-    }
-    return 0;
+    return _chordBandHeightForFont(
+      fontSize,
+      row.wordIndices
+          .where((int wi) => wi >= 0 && wi < line.words.length)
+          .map((int wi) => line.words[wi].chord ?? '')
+          .where((String chord) => chord.isNotEmpty),
+    );
   }
 
   double _measureTextRowHeight(_RenderLine line, double fontSize) {
@@ -2063,6 +2071,19 @@ class ProjectorPainter extends CustomPainter {
     return parts;
   }
 
+  /// Lays out a chord with the notation the sender selected. The options ride
+  /// along in the state record, so a receiver renders them without any
+  /// settings of its own.
+  ChordLayout _chordLayout(String source, TextStyle style) {
+    return ChordRenderer.layout(
+      source,
+      style,
+      notation: chordNotationFromStorage(globals.akkordNotation),
+      optionalSeventh: globals.akkordOptionalSeventh,
+      minorAsDash: globals.akkordMinorAsDash,
+    );
+  }
+
   void _paintChords(
     Canvas canvas,
     _RenderLine line,
@@ -2080,7 +2101,7 @@ class ProjectorPainter extends CustomPainter {
     for (int i = 0; i < line.words.length; i++) {
       final _WordToken w = line.words[i];
       if ((w.chord ?? '').isNotEmpty) {
-        final ChordLayout chord = ChordRenderer.layout(
+        final ChordLayout chord = _chordLayout(
           w.chord!,
           TextStyle(
             color: globals.txtColor,
@@ -3097,7 +3118,7 @@ class ProjectorPainter extends CustomPainter {
     measure.text = TextSpan(text: display, style: textStyle);
     measure.layout();
     final double textWidth = measure.width;
-    final double chordWidth = ChordRenderer.layout(
+    final double chordWidth = _chordLayout(
       chordText,
       TextStyle(
         color: globals.txtColor,
@@ -3177,6 +3198,9 @@ class ProjectorPainter extends CustomPainter {
       globals.boldText,
       globals.useAkkord,
       globals.akkordArany,
+      globals.akkordNotation,
+      globals.akkordOptionalSeventh,
+      globals.akkordMinorAsDash,
       settings.receiverUseAkkord,
       for (final _WordToken word in line.words)
         [
@@ -3242,6 +3266,9 @@ class ProjectorPainter extends CustomPainter {
       globals.useAkkord,
       globals.useKotta,
       globals.hideTitle,
+      globals.akkordNotation,
+      globals.akkordOptionalSeventh,
+      globals.akkordMinorAsDash,
       settings.receiverUseAkkord,
       settings.receiverUseKotta,
       frame.record.title,
@@ -3269,6 +3296,9 @@ class ProjectorPainter extends CustomPainter {
       globals.hideTitle,
       globals.kottaArany,
       globals.akkordArany,
+      globals.akkordNotation,
+      globals.akkordOptionalSeventh,
+      globals.akkordMinorAsDash,
       settings.receiverUseAkkord,
       settings.receiverUseKotta,
       frame.record.title,
@@ -5198,6 +5228,9 @@ class ProjectorPainter extends CustomPainter {
         a.bgMode == b.bgMode &&
         a.kottaArany == b.kottaArany &&
         a.akkordArany == b.akkordArany &&
+        a.akkordNotation == b.akkordNotation &&
+        a.akkordOptionalSeventh == b.akkordOptionalSeventh &&
+        a.akkordMinorAsDash == b.akkordMinorAsDash &&
         a.backTrans == b.backTrans &&
         a.blankTrans == b.blankTrans &&
         a.borderToClip == b.borderToClip &&

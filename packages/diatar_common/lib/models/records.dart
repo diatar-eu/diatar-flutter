@@ -48,14 +48,14 @@ int _readIntLE(Uint8List data, int ofs) {
 
 bool _readBool(Uint8List data, int ofs) => ofs < data.length && data[ofs] != 0;
 
+int _readUint8(Uint8List data, int ofs) => ofs < data.length ? data[ofs] : 0;
+
 Color _readColor(Uint8List data, int ofs) {
   if (ofs + 2 >= data.length) {
     return const Color(0xFF000000);
   }
-  final int argb = 0xFF000000 |
-      (data[ofs] << 16) |
-      (data[ofs + 1] << 8) |
-      data[ofs + 2];
+  final int argb =
+      0xFF000000 | (data[ofs] << 16) | (data[ofs + 1] << 8) | data[ofs + 2];
   return Color(argb);
 }
 
@@ -103,6 +103,9 @@ class RecStateRecord {
     required this.bgMode,
     required this.kottaArany,
     required this.akkordArany,
+    required this.akkordNotation,
+    required this.akkordOptionalSeventh,
+    required this.akkordMinorAsDash,
     required this.backTrans,
     required this.blankTrans,
     required this.boldText,
@@ -139,6 +142,12 @@ class RecStateRecord {
   final int bgMode;
   final int kottaArany;
   final int akkordArany;
+
+  /// Storage form of `ChordNotation`. Zero on a legacy sender that predates
+  /// the chord notation options.
+  final int akkordNotation;
+  final bool akkordOptionalSeventh;
+  final bool akkordMinorAsDash;
   final int backTrans;
   final int blankTrans;
   final bool boldText;
@@ -176,6 +185,11 @@ class RecStateRecord {
       bgMode: _readIntLE(data, 324),
       kottaArany: _readIntLE(data, 332),
       akkordArany: _readIntLE(data, 336),
+      // Appended after the original 349-byte layout; the readers above return
+      // zero when a legacy sender stops short.
+      akkordNotation: _readUint8(data, 349).clamp(0, 2),
+      akkordOptionalSeventh: _readBool(data, 350),
+      akkordMinorAsDash: _readBool(data, 351),
       backTrans: _readIntLE(data, 340),
       blankTrans: _readIntLE(data, 344),
       boldText: _readBool(data, 348),
@@ -202,8 +216,9 @@ class RecTextRecord {
     final List<String> parts = normalized.split('\r');
     final String schola = parts.isNotEmpty ? parts[0] : '';
     final String title = parts.length > 1 ? parts[1] : '';
-    final List<String> body =
-        parts.length > 2 ? parts.sublist(2).where((e) => e.isNotEmpty).toList() : <String>[];
+    final List<String> body = parts.length > 2
+        ? parts.sublist(2).where((e) => e.isNotEmpty).toList()
+        : <String>[];
     return RecTextRecord(scholaLine: schola, title: title, lines: body);
   }
 }
@@ -239,7 +254,10 @@ Uint8List encodeScreenSizeRecord({
   return body;
 }
 
-Uint8List encodeTextRecord({required String title, required List<String> lines}) {
+Uint8List encodeTextRecord({
+  required String title,
+  required List<String> lines,
+}) {
   final List<int> bytes = <int>[13, ...utf8.encode(title)];
   for (final String line in lines) {
     bytes.add(13);

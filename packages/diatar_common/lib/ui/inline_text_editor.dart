@@ -871,6 +871,13 @@ class InlineTextEditingController extends TextEditingController {
   bool _isRichClipboardPasteInProgress = false;
   Timer? _richClipboardPasteTimer;
 
+  /// How the chord chips are drawn, kept here because [buildTextSpan] is a
+  /// [TextEditingController] override and cannot take extra arguments. The
+  /// owning [InlineTextEditor] keeps it in sync with its own settings.
+  ChordNotation chordNotation = ChordNotation.symbolic;
+  bool chordOptionalSeventh = false;
+  bool chordMinorAsDash = false;
+
   String get encodedText => _document.encode();
 
   InlineTextDocument get selectedDocument =>
@@ -1160,6 +1167,9 @@ class InlineTextEditingController extends TextEditingController {
                 backgroundColor: valid
                     ? colors.surfaceContainerLowest
                     : colors.errorContainer,
+                notation: chordNotation,
+                optionalSeventh: chordOptionalSeventh,
+                minorAsDash: chordMinorAsDash,
               ),
             ),
           ),
@@ -1225,6 +1235,9 @@ class InlineTextEditor extends StatefulWidget {
     this.focusNode,
     this.minLines,
     this.maxLines,
+    this.chordNotation = ChordNotation.symbolic,
+    this.chordOptionalSeventh = false,
+    this.chordMinorAsDash = false,
   });
 
   final InlineTextEditingController controller;
@@ -1234,6 +1247,12 @@ class InlineTextEditor extends StatefulWidget {
   final FocusNode? focusNode;
   final int? minLines;
   final int? maxLines;
+
+  /// Display options for the chord chips, so the editor preview matches what
+  /// the projection will show.
+  final ChordNotation chordNotation;
+  final bool chordOptionalSeventh;
+  final bool chordMinorAsDash;
 
   @override
   State<InlineTextEditor> createState() => _InlineTextEditorState();
@@ -1252,6 +1271,26 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
     super.initState();
     _ownsFocusNode = widget.focusNode == null;
     _focusNode = widget.focusNode ?? FocusNode(onKeyEvent: _handleKeyEvent);
+    _syncChordDisplay();
+  }
+
+  @override
+  void didUpdateWidget(InlineTextEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.chordNotation != widget.chordNotation ||
+        oldWidget.chordOptionalSeventh != widget.chordOptionalSeventh ||
+        oldWidget.chordMinorAsDash != widget.chordMinorAsDash) {
+      _syncChordDisplay();
+    }
+  }
+
+  /// Pushes the display options into the controller, which is where
+  /// `buildTextSpan` can read them from.
+  void _syncChordDisplay() {
+    final InlineTextEditingController controller = widget.controller;
+    controller.chordNotation = widget.chordNotation;
+    controller.chordOptionalSeventh = widget.chordOptionalSeventh;
+    controller.chordMinorAsDash = widget.chordMinorAsDash;
   }
 
   @override
@@ -1360,6 +1399,9 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
       final String? source = await showChordEditorDialog(
         context: context,
         labels: widget.chordEditorLabels,
+        notation: widget.chordNotation,
+        optionalSeventh: widget.chordOptionalSeventh,
+        minorAsDash: widget.chordMinorAsDash,
       );
       if (source != null && mounted) {
         widget.controller.insertChord(source);
@@ -1380,6 +1422,9 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
         context: context,
         labels: widget.chordEditorLabels,
         initialSource: chord.source,
+        notation: widget.chordNotation,
+        optionalSeventh: widget.chordOptionalSeventh,
+        minorAsDash: widget.chordMinorAsDash,
       );
       if (source != null && mounted) {
         widget.controller.replaceChordAt(chord.offset, source);

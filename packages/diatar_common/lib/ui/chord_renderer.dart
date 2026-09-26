@@ -22,6 +22,26 @@ enum ChordNotation {
   numeric,
 }
 
+/// Storage form of [ChordNotation] used by the settings map and by the
+/// projection state record. It is written out explicitly so the numbers stay
+/// stable even if the enum is ever reordered.
+int chordNotationToStorage(ChordNotation notation) {
+  return switch (notation) {
+    ChordNotation.symbolic => 0,
+    ChordNotation.textual => 1,
+    ChordNotation.numeric => 2,
+  };
+}
+
+/// Inverse of [chordNotationToStorage]; unknown values fall back to symbolic.
+ChordNotation chordNotationFromStorage(int value) {
+  return switch (value) {
+    1 => ChordNotation.textual,
+    2 => ChordNotation.numeric,
+    _ => ChordNotation.symbolic,
+  };
+}
+
 class ChordPart {
   const ChordPart(this.text, this.style);
 

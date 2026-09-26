@@ -144,6 +144,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late int _projSpacingStep;
   late int _projKottaArany;
   late int _projAkkordArany;
+  late int _projAkkordNotation;
+  late bool _projAkkordOptionalSeventh;
+  late bool _projAkkordMinorAsDash;
   late int _projBgMode;
   late int _projBackTrans;
   late int _projBlankTrans;
@@ -255,6 +258,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projSpacingStep = s.projSpacingStep.clamp(0, 10);
     _projKottaArany = s.projKottaArany.clamp(10, 200);
     _projAkkordArany = s.projAkkordArany.clamp(10, 200);
+    _projAkkordNotation = s.projAkkordNotation.clamp(0, 2);
+    _projAkkordOptionalSeventh = s.projAkkordOptionalSeventh;
+    _projAkkordMinorAsDash = s.projAkkordMinorAsDash;
     _projBgMode = s.projBgMode.clamp(0, 4);
     _projBackTrans = s.projBackTrans.clamp(0, 100);
     _projBlankTrans = s.projBlankTrans.clamp(0, 100);
@@ -440,6 +446,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       query,
       'enektar fajlok dtx hatterkep hatter kep blank export import backup biztonsagi mentes zip',
     );
+    final bool showChords = _matches(
+      query,
+      'akkord chord jelolesmod szimbolumos szoveges szamjegyes notation symbolic textual numeric moll szeptim heted',
+    );
     final bool showGeneral = _matches(
       query,
       'altalanos tema nyelv language gorgetheto akkord kotta hatterkep szokiemeles',
@@ -478,6 +488,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         showProjection ||
         showFiles ||
         showGeneral ||
+        showChords ||
         showSpeech ||
         showSystem ||
         showExternalCommands ||
@@ -610,7 +621,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       description: l10n.projectionSettingsDescription,
                     ),
                   if (showProjection &&
-                      (showFiles || showGeneral || showSpeech || showHotkeys))
+                      (showFiles ||
+                          showGeneral ||
+                          showChords ||
+                          showSpeech ||
+                          showHotkeys))
                     const Divider(height: 1),
                   if (showFiles)
                     _settingsTile(
@@ -620,7 +635,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openFileSettings,
                       description: l10n.settingsFilesDescription,
                     ),
-                  if (showFiles && (showGeneral || showSpeech || showHotkeys))
+                  if (showFiles &&
+                      (showGeneral || showChords || showSpeech || showHotkeys))
                     const Divider(height: 1),
                   if (showGeneral)
                     _settingsTile(
@@ -632,7 +648,20 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openGeneralSettings,
                       description: l10n.settingsGeneralDescription,
                     ),
-                  if (showGeneral &&
+                  if (showGeneral && showChords) const Divider(height: 1),
+                  if (showChords)
+                    _settingsTile(
+                      leading: const Icon(Icons.music_note_outlined),
+                      title: Text(l10n.settingsChordsTitle),
+                      subtitle: Text(
+                        _projUseAkkord
+                            ? l10n.settingsChordsSummary
+                            : l10n.chordNotationOff,
+                      ),
+                      onTap: _openChordSettings,
+                      description: l10n.settingsChordsDescription,
+                    ),
+                  if (showChords &&
                       (showSpeech ||
                           showExternalCommands ||
                           showSystem ||
@@ -1860,6 +1889,86 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
     unawaited(_applySettingsSafely(updated));
     return true;
+  }
+
+  Future<void> _openChordSettings() {
+    return _openSectionSheet(
+      title: context.l10n.settingsChordsTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        // Each label spells out the chords it produces, so the choice is not a
+        // guess from a word alone.
+        final List<Widget> notationTiles =
+            <(int, String)>[
+              (
+                chordNotationToStorage(ChordNotation.symbolic),
+                l10n.chordNotationSymbolic,
+              ),
+              (
+                chordNotationToStorage(ChordNotation.textual),
+                l10n.chordNotationTextual,
+              ),
+              (
+                chordNotationToStorage(ChordNotation.numeric),
+                l10n.chordNotationNumeric,
+              ),
+            ].map(((int, String) option) {
+              return RadioListTile<String>(
+                contentPadding: EdgeInsets.zero,
+                value: option.$1.toString(),
+                enabled: _projUseAkkord,
+                title: Text(option.$2),
+              );
+            }).toList();
+
+        return <Widget>[
+          // First on purpose: it is the master switch for everything below.
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projUseAkkord,
+            onChanged: (bool v) => setBoth(() => _projUseAkkord = v),
+            title: Text(l10n.showChords),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.chordNotationLabel,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          Text(
+            l10n.chordNotationHint,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          RadioGroup<String>(
+            groupValue: _projAkkordNotation.toString(),
+            onChanged: (String? v) =>
+                setBoth(() => _projAkkordNotation = int.parse(v ?? '0')),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: notationTiles,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projAkkordOptionalSeventh,
+            onChanged: _projUseAkkord
+                ? (bool v) => setBoth(() => _projAkkordOptionalSeventh = v)
+                : null,
+            title: Text(l10n.chordOptionalSeventh),
+            subtitle: Text(l10n.chordOptionalSeventhHint),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projAkkordMinorAsDash,
+            onChanged: _projUseAkkord
+                ? (bool v) => setBoth(() => _projAkkordMinorAsDash = v)
+                : null,
+            title: Text(l10n.chordMinorAsDash),
+            subtitle: Text(l10n.chordMinorAsDashHint),
+          ),
+        ];
+      },
+    );
   }
 
   Future<void> _openGeneralSettings() {
@@ -4304,6 +4413,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       projUseTitle: _projUseTitle,
       projKottaArany: _projKottaArany.clamp(10, 200),
       projAkkordArany: _projAkkordArany.clamp(10, 200),
+      projAkkordNotation: _projAkkordNotation.clamp(0, 2),
+      projAkkordOptionalSeventh: _projAkkordOptionalSeventh,
+      projAkkordMinorAsDash: _projAkkordMinorAsDash,
       projBgMode: _projBgMode.clamp(0, 4),
       projBackTrans: _projBackTrans.clamp(0, 100),
       projBlankTrans: _projBlankTrans.clamp(0, 100),

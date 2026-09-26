@@ -57,6 +57,9 @@ class AppSettings {
     this.projUseTitle = true,
     this.projKottaArany = 100,
     this.projAkkordArany = 100,
+    this.projAkkordNotation = 0,
+    this.projAkkordOptionalSeventh = false,
+    this.projAkkordMinorAsDash = false,
     this.projBoldText = false,
     this.projBgMode = 1,
     this.projBackTrans = 0,
@@ -154,6 +157,16 @@ class AppSettings {
   final bool projUseTitle;
   final int projKottaArany;
   final int projAkkordArany;
+
+  /// Storage form of `ChordNotation`: 0 symbolic, 1 textual, 2 numeric.
+  final int projAkkordNotation;
+
+  /// Whether the seventh is spelled out for qualities that imply it.
+  final bool projAkkordOptionalSeventh;
+
+  /// Whether the minor marker is written as `-` instead of `m`.
+  final bool projAkkordMinorAsDash;
+
   final bool projBoldText;
   final int projBgMode;
   final int projBackTrans;
@@ -258,6 +271,9 @@ class AppSettings {
     bool? projUseTitle,
     int? projKottaArany,
     int? projAkkordArany,
+    int? projAkkordNotation,
+    bool? projAkkordOptionalSeventh,
+    bool? projAkkordMinorAsDash,
     bool? projBoldText,
     int? projBgMode,
     int? projBackTrans,
@@ -353,6 +369,11 @@ class AppSettings {
       projUseTitle: projUseTitle ?? this.projUseTitle,
       projKottaArany: projKottaArany ?? this.projKottaArany,
       projAkkordArany: projAkkordArany ?? this.projAkkordArany,
+      projAkkordNotation: projAkkordNotation ?? this.projAkkordNotation,
+      projAkkordOptionalSeventh:
+          projAkkordOptionalSeventh ?? this.projAkkordOptionalSeventh,
+      projAkkordMinorAsDash:
+          projAkkordMinorAsDash ?? this.projAkkordMinorAsDash,
       projBoldText: projBoldText ?? this.projBoldText,
       projBgMode: projBgMode ?? this.projBgMode,
       projBackTrans: projBackTrans ?? this.projBackTrans,
@@ -440,6 +461,9 @@ class AppSettings {
       'projUseTitle': projUseTitle,
       'projKottaArany': projKottaArany,
       'projAkkordArany': projAkkordArany,
+      'projAkkordNotation': projAkkordNotation,
+      'projAkkordOptionalSeventh': projAkkordOptionalSeventh,
+      'projAkkordMinorAsDash': projAkkordMinorAsDash,
       'projBoldText': projBoldText,
       'projBgMode': projBgMode,
       'projBackTrans': projBackTrans,
@@ -531,6 +555,9 @@ class AppSettings {
       projUseTitle: boolValue('projUseTitle', true),
       projKottaArany: intValue('projKottaArany', 100),
       projAkkordArany: intValue('projAkkordArany', 100),
+      projAkkordNotation: intValue('projAkkordNotation', 0).clamp(0, 2),
+      projAkkordOptionalSeventh: boolValue('projAkkordOptionalSeventh', false),
+      projAkkordMinorAsDash: boolValue('projAkkordMinorAsDash', false),
       projBoldText: boolValue('projBoldText', false),
       projBgMode: intValue('projBgMode', 0),
       projBackTrans: intValue('projBackTrans', 0),

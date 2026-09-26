@@ -1279,7 +1279,13 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   Future<void> _openCustomTextSlideDialog() async {
     final _TextSlideInput? input = await showDialog<_TextSlideInput>(
       context: context,
-      builder: (BuildContext context) => const _CustomTextSlideDialog(),
+      builder: (BuildContext context) => _CustomTextSlideDialog(
+        chordNotation: chordNotationFromStorage(
+          controller.settings.projAkkordNotation,
+        ),
+        chordOptionalSeventh: controller.settings.projAkkordOptionalSeventh,
+        chordMinorAsDash: controller.settings.projAkkordMinorAsDash,
+      ),
     );
     if (input == null || !mounted) {
       return;
@@ -1333,6 +1339,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         dialogTitle: context.l10n.customOrderEditTextSlideTitle,
         initialTitle: entry.customTextTitle ?? '',
         initialBody: entry.customTextBody ?? '',
+        chordNotation: chordNotationFromStorage(
+          controller.settings.projAkkordNotation,
+        ),
+        chordOptionalSeventh: controller.settings.projAkkordOptionalSeventh,
+        chordMinorAsDash: controller.settings.projAkkordMinorAsDash,
       ),
     );
     if (input == null || !mounted) {
@@ -2957,11 +2968,20 @@ class _CustomTextSlideDialog extends StatefulWidget {
     this.dialogTitle,
     this.initialTitle = '',
     this.initialBody = '',
+    this.chordNotation = ChordNotation.symbolic,
+    this.chordOptionalSeventh = false,
+    this.chordMinorAsDash = false,
   });
 
   final String? dialogTitle;
   final String initialTitle;
   final String initialBody;
+
+  /// Display options for the chord chips, so the editor preview matches the
+  /// projection settings.
+  final ChordNotation chordNotation;
+  final bool chordOptionalSeventh;
+  final bool chordMinorAsDash;
 
   @override
   State<_CustomTextSlideDialog> createState() => _CustomTextSlideDialogState();
@@ -3039,6 +3059,9 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
               decoration: InputDecoration(labelText: l10n.textSlideBodyLabel),
               minLines: 4,
               maxLines: 8,
+              chordNotation: widget.chordNotation,
+              chordOptionalSeventh: widget.chordOptionalSeventh,
+              chordMinorAsDash: widget.chordMinorAsDash,
             ),
           ],
         ),

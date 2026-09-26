@@ -36,6 +36,9 @@ class ProjectionGlobals {
     this.bgMode = 0,
     this.kottaArany = 100,
     this.akkordArany = 100,
+    this.akkordNotation = 0,
+    this.akkordOptionalSeventh = false,
+    this.akkordMinorAsDash = false,
     this.backTrans = 0,
     this.blankTrans = 0,
     this.borderToClip = false,
@@ -73,6 +76,16 @@ class ProjectionGlobals {
   final int bgMode;
   final int kottaArany;
   final int akkordArany;
+
+  /// Storage form of `ChordNotation`: 0 symbolic, 1 textual, 2 numeric.
+  final int akkordNotation;
+
+  /// Whether the seventh is spelled out for qualities that imply it.
+  final bool akkordOptionalSeventh;
+
+  /// Whether the minor marker is written as `-` instead of `m`.
+  final bool akkordMinorAsDash;
+
   final int backTrans;
   final int blankTrans;
   final bool borderToClip;
@@ -110,6 +123,9 @@ class ProjectionGlobals {
     int? bgMode,
     int? kottaArany,
     int? akkordArany,
+    int? akkordNotation,
+    bool? akkordOptionalSeventh,
+    bool? akkordMinorAsDash,
     int? backTrans,
     int? blankTrans,
     bool? borderToClip,
@@ -147,6 +163,10 @@ class ProjectionGlobals {
       bgMode: bgMode ?? this.bgMode,
       kottaArany: kottaArany ?? this.kottaArany,
       akkordArany: akkordArany ?? this.akkordArany,
+      akkordNotation: akkordNotation ?? this.akkordNotation,
+      akkordOptionalSeventh:
+          akkordOptionalSeventh ?? this.akkordOptionalSeventh,
+      akkordMinorAsDash: akkordMinorAsDash ?? this.akkordMinorAsDash,
       backTrans: backTrans ?? this.backTrans,
       blankTrans: blankTrans ?? this.blankTrans,
       borderToClip: borderToClip ?? this.borderToClip,
@@ -187,6 +207,9 @@ class ProjectionGlobals {
       bgMode: r.bgMode,
       kottaArany: r.kottaArany,
       akkordArany: r.akkordArany,
+      akkordNotation: r.akkordNotation,
+      akkordOptionalSeventh: r.akkordOptionalSeventh,
+      akkordMinorAsDash: r.akkordMinorAsDash,
       backTrans: r.backTrans,
       blankTrans: r.blankTrans,
       boldText: r.boldText,
@@ -194,13 +217,18 @@ class ProjectionGlobals {
   }
 }
 
+/// Wire record size. Bytes 0..348 are the original fixed layout; the tail is
+/// appended by newer senders and must stay optional when reading, so a legacy
+/// sender still decodes and a legacy receiver simply ignores the extra bytes.
+const int _stateRecordSize = 352;
+
 Uint8List encodeStateRecord(
   ProjectionGlobals globals, {
   required bool projecting,
   required int wordToHighlight,
   int? endProgram,
 }) {
-  final Uint8List body = Uint8List(349);
+  final Uint8List body = Uint8List(_stateRecordSize);
 
   void writeColor(int ofs, Color color) {
     body[ofs] = (color.r * 255.0).round() & 0xFF;
@@ -261,5 +289,8 @@ Uint8List encodeStateRecord(
   writeInt(340, globals.backTrans);
   writeInt(344, globals.blankTrans);
   writeBool(348, globals.boldText);
+  body[349] = globals.akkordNotation.clamp(0, 2);
+  writeBool(350, globals.akkordOptionalSeventh);
+  writeBool(351, globals.akkordMinorAsDash);
   return body;
 }

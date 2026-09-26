@@ -36,19 +36,36 @@ Future<String?> showChordEditorDialog({
   required BuildContext context,
   required ChordEditorLabels labels,
   String? initialSource,
+  ChordNotation notation = ChordNotation.symbolic,
+  bool optionalSeventh = false,
+  bool minorAsDash = false,
 }) {
   return showDialog<String>(
     context: context,
-    builder: (BuildContext context) =>
-        _ChordEditorDialog(labels: labels, initialSource: initialSource),
+    builder: (BuildContext context) => _ChordEditorDialog(
+      labels: labels,
+      initialSource: initialSource,
+      notation: notation,
+      optionalSeventh: optionalSeventh,
+      minorAsDash: minorAsDash,
+    ),
   );
 }
 
 class _ChordEditorDialog extends StatefulWidget {
-  const _ChordEditorDialog({required this.labels, this.initialSource});
+  const _ChordEditorDialog({
+    required this.labels,
+    this.initialSource,
+    this.notation = ChordNotation.symbolic,
+    this.optionalSeventh = false,
+    this.minorAsDash = false,
+  });
 
   final ChordEditorLabels labels;
   final String? initialSource;
+  final ChordNotation notation;
+  final bool optionalSeventh;
+  final bool minorAsDash;
 
   @override
   State<_ChordEditorDialog> createState() => _ChordEditorDialogState();
@@ -107,18 +124,26 @@ class _ChordEditorDialogState extends State<_ChordEditorDialog> {
       '$_root${_minor ? 'm' : ''}$_modifier${_bass == null ? '' : '/$_bass'}';
 
   String _noteLabel(String source) {
-    return DiatarChord.tryParse(
-      source,
-    )!.parts().map((ChordPart part) => part.text).join();
+    return DiatarChord.tryParse(source)!
+        .parts(notation: widget.notation)
+        .map((ChordPart part) => part.text)
+        .join();
   }
 
+  /// The dropdown lists the quality as it will actually be written, in the
+  /// notation the user picked.
   String _modifierLabel(String modifier) {
     if (modifier.isEmpty) {
       return widget.labels.none;
     }
-    return DiatarChord.tryParse(
-      'C$modifier',
-    )!.parts().skip(1).map((ChordPart part) => part.text).join();
+    return DiatarChord.tryParse('C$modifier')!
+        .parts(
+          notation: widget.notation,
+          optionalSeventh: widget.optionalSeventh,
+        )
+        .skip(1)
+        .map((ChordPart part) => part.text)
+        .join();
   }
 
   @override
@@ -228,6 +253,9 @@ class _ChordEditorDialogState extends State<_ChordEditorDialog> {
                     horizontal: 10,
                     vertical: 6,
                   ),
+                  notation: widget.notation,
+                  optionalSeventh: widget.optionalSeventh,
+                  minorAsDash: widget.minorAsDash,
                 ),
               ),
             ],

@@ -539,6 +539,132 @@ void main() {
     expect(state.inverzKotta, isTrue);
   });
 
+  test('chord display options survive copy and map conversions', () {
+    const AppSettings settings = AppSettings(
+      projAkkordNotation: 2,
+      projAkkordOptionalSeventh: true,
+      projAkkordMinorAsDash: true,
+    );
+
+    expect(settings.copyWith().projAkkordNotation, 2);
+    expect(settings.copyWith().projAkkordOptionalSeventh, isTrue);
+    expect(settings.copyWith().projAkkordMinorAsDash, isTrue);
+
+    final AppSettings restored = AppSettings.fromMap(settings.toMap());
+    expect(restored.projAkkordNotation, 2);
+    expect(restored.projAkkordOptionalSeventh, isTrue);
+    expect(restored.projAkkordMinorAsDash, isTrue);
+  });
+
+  test('an out of range chord notation in storage is clamped', () {
+    expect(
+      AppSettings.fromMap(
+        const AppSettings(projAkkordNotation: 7).toMap(),
+      ).projAkkordNotation,
+      2,
+    );
+    expect(
+      AppSettings.fromMap(
+        const AppSettings(projAkkordNotation: -3).toMap(),
+      ).projAkkordNotation,
+      0,
+    );
+  });
+
+  test('state record carries the chord display options to the receiver', () {
+    const ProjectionGlobals globals = ProjectionGlobals(
+      useAkkord: true,
+      akkordNotation: 2,
+      akkordOptionalSeventh: true,
+      akkordMinorAsDash: true,
+    );
+
+    final Uint8List bytes = encodeStateRecord(
+      globals,
+      projecting: false,
+      wordToHighlight: 0,
+    );
+    final RecStateRecord state = RecStateRecord.fromBytes(bytes);
+
+    expect(state.akkordNotation, 2);
+    expect(state.akkordOptionalSeventh, isTrue);
+    expect(state.akkordMinorAsDash, isTrue);
+
+    // And they reach the render globals the painter actually reads.
+    final ProjectionGlobals restored = const ProjectionGlobals().fromState(
+      state,
+    );
+    expect(restored.akkordNotation, 2);
+    expect(restored.akkordOptionalSeventh, isTrue);
+    expect(restored.akkordMinorAsDash, isTrue);
+  });
+
+  test('a legacy state record decodes with the chord options defaulted', () {
+    // What a sender from before the chord options produced.
+    final Uint8List bytes = encodeStateRecord(
+      const ProjectionGlobals(useAkkord: true),
+      projecting: false,
+      wordToHighlight: 0,
+    ).sublist(0, 349);
+
+    final RecStateRecord state = RecStateRecord.fromBytes(bytes);
+
+    expect(state.akkordNotation, 0);
+    expect(state.akkordOptionalSeventh, isFalse);
+    expect(state.akkordMinorAsDash, isFalse);
+  });
+
+  test('the notation storage codes round-trip and clamp', () {
+    for (final ChordNotation notation in ChordNotation.values) {
+      expect(
+        chordNotationFromStorage(chordNotationToStorage(notation)),
+        notation,
+      );
+    }
+    expect(chordNotationFromStorage(-1), ChordNotation.symbolic);
+    expect(chordNotationFromStorage(9), ChordNotation.symbolic);
+  });
+
+  test(
+    'the projection renders chords in the notation from the state record',
+    () {
+      // Textual spells the diminished 'C°' as 'Cdim', and the test font gives
+      // every character the same advance, so the row has to grow.
+      const String source = r'\GCo;a';
+      const AppSettings settings = AppSettings(receiverUseAkkord: true);
+
+      double widthFor(int notation) {
+        return ProjectorPainter(
+          frame: null,
+          globals: ProjectionGlobals(useAkkord: true, akkordNotation: notation),
+          settings: settings,
+        ).debugTextWrappedRowWidthsForLine(source, maxWidth: 100000).single;
+      }
+
+      expect(widthFor(1), greaterThan(widthFor(0)));
+      // Numeric spells it 'Cm♭5', which is longer than 'C°' as well.
+      expect(widthFor(2), greaterThan(widthFor(0)));
+    },
+  );
+
+  test('the optional seventh switch widens the projection chords', () {
+    // 'C△' gains a trailing '7', so the row has to grow.
+    const String source = r'\GC7+;a';
+
+    double widthFor(bool optionalSeventh) {
+      return ProjectorPainter(
+        frame: null,
+        globals: ProjectionGlobals(
+          useAkkord: true,
+          akkordOptionalSeventh: optionalSeventh,
+        ),
+        settings: const AppSettings(receiverUseAkkord: true),
+      ).debugTextWrappedRowWidthsForLine(source, maxWidth: 100000).single;
+    }
+
+    expect(widthFor(true), greaterThan(widthFor(false)));
+  });
+
   test('packet parser rebuilds records from split chunks', () {
     final ProjectionPacketParser parser = ProjectionPacketParser();
     final Uint8List payload = Uint8List.fromList(
