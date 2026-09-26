@@ -108,5 +108,6 @@ imported unconditionally from shared code.
   `Diatar/pubspec.yaml` and `DiaVetito/pubspec.yaml`, add a line to
   `release-notes/<App>/hu/release_notes.txt`, and update `docs/` if the change
   is visible to users.
-- `HIDDEN.md` lists features currently commented out in `home_page.dart`.
-  Check it before concluding something is unimplemented.
+- `HIDDEN.md` lists UI that has finished work behind it but no way to reach
+  it — not commented-out code. Check it before concluding something is
+  unimplemented.

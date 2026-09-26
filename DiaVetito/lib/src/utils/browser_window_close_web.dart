@@ -1,27 +1,27 @@
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 
 Future<bool> tryCloseBrowserWindowImpl() async {
   try {
-    html.window.close();
+    web.window.close();
     await Future<void>.delayed(const Duration(milliseconds: 120));
-    if (html.window.closed == true) {
+    if (web.window.closed) {
       return true;
     }
 
     // Some browsers allow closing only script-opened windows.
-    html.window.open('', '_self');
-    html.window.close();
+    web.window.open('', '_self');
+    web.window.close();
     await Future<void>.delayed(const Duration(milliseconds: 120));
-    if (html.window.closed == true) {
+    if (web.window.closed) {
       return true;
     }
 
     final Uri launcherUri = Uri.base.resolve('../');
-    html.window.location.assign(launcherUri.toString());
+    web.window.location.assign(launcherUri.toString());
     return false;
   } catch (_) {
     final Uri launcherUri = Uri.base.resolve('../');
-    html.window.location.assign(launcherUri.toString());
+    web.window.location.assign(launcherUri.toString());
     return false;
   }
 }

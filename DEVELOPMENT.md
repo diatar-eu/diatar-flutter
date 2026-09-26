@@ -172,5 +172,6 @@ feedback loop — prefer adding a test over launching the app.
   run it once. The exception is `DiaVetito/tvos/`, whose registrant is written
   by the `flutter-tvos` fork that only the CI macOS runner has, so it stays
   checked in.
-- **`HIDDEN.md`** lists UI features currently commented out in
-  `home_page.dart`. Check it before concluding a feature is missing.
+- **`HIDDEN.md`** lists UI that has finished work behind it but no way to
+  reach it — not commented-out code. Check it before concluding a feature is
+  missing.
