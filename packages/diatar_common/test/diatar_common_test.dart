@@ -8,17 +8,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('Diatar chords use Hungarian note names and styled parts', () {
+  test('Diatar chords split into a bold root and a superscripted quality', () {
     final DiatarChord chord = DiatarChord.tryParse('H-7+/C+')!;
 
-    expect(chord.parts.map((ChordPart part) => part.text), <String>[
+    expect(chord.parts().map((ChordPart part) => part.text), <String>[
       'B',
-      '7+',
+      '△',
       '/',
       'C',
-      'is',
+      '#',
     ]);
-    expect(chord.parts.map((ChordPart part) => part.style), <ChordPartStyle>[
+    expect(chord.parts().map((ChordPart part) => part.style), <ChordPartStyle>[
       ChordPartStyle.root,
       ChordPartStyle.superscript,
       ChordPartStyle.normal,
@@ -29,69 +29,291 @@ void main() {
 
   test('Diatar chords spell flat and sharp notes consistently', () {
     expect(
-      DiatarChord.tryParse('C-')!.parts.map((ChordPart part) => part.text),
-      <String>['C', 'es'],
+      DiatarChord.tryParse('C-')!.parts().map((ChordPart part) => part.text),
+      <String>['C', '♭'],
     );
     expect(
-      DiatarChord.tryParse('A-')!.parts.map((ChordPart part) => part.text),
-      <String>['A', 's'],
+      DiatarChord.tryParse('A-')!.parts().map((ChordPart part) => part.text),
+      <String>['A', '♭'],
     );
     expect(
-      DiatarChord.tryParse('F+')!.parts.map((ChordPart part) => part.text),
-      <String>['F', 'is'],
+      DiatarChord.tryParse('F+')!.parts().map((ChordPart part) => part.text),
+      <String>['F', '#'],
     );
     expect(DiatarChord.tryParse('Cm#'), isNull);
   });
 
-  test('Diatar chords support every documented modifier', () {
+  test('root letter, accidental and minor marker are all bold', () {
+    expect(
+      DiatarChord.tryParse('D-')!.parts().map((ChordPart part) => part.style),
+      <ChordPartStyle>[ChordPartStyle.root, ChordPartStyle.root],
+    );
+    expect(
+      DiatarChord.tryParse('Cm')!.parts().map((ChordPart part) => part.style),
+      <ChordPartStyle>[ChordPartStyle.root, ChordPartStyle.root],
+    );
+    expect(
+      DiatarChord.tryParse('D-m7')!.parts().map((ChordPart part) => part.style),
+      <ChordPartStyle>[
+        ChordPartStyle.root,
+        ChordPartStyle.root,
+        ChordPartStyle.root,
+        ChordPartStyle.superscript,
+      ],
+    );
+  });
+
+  test('the minor marker can be spelled as a dash', () {
+    expect(
+      DiatarChord.tryParse(
+        'Cm7',
+      )!.parts(minorAsDash: true).map((ChordPart part) => part.text),
+      <String>['C', '-', '7'],
+    );
+    expect(
+      DiatarChord.tryParse('Cm7')!.parts().map((ChordPart part) => part.text),
+      <String>['C', 'm', '7'],
+    );
+  });
+
+  test('symbolic notation renders every documented modifier', () {
     const Map<String, String> modifiers = <String, String>{
-      '': '',
-      '#': '+',
-      'o': 'o',
-      '7': '7',
-      '7+': '7+',
-      'o7': 'o/7',
-      'o7-': 'o/7-',
-      'o7+': 'o/7+',
-      '#7': '+/7',
-      '#7+': '+/7+',
-      '6': '6',
-      '79': '7/9',
-      '79-': '7/9-',
-      '79+': '7/9+',
-      '#79': '+/7/9',
-      '#79+': '+/7/9+',
-      '7+9': '7+/9',
-      '7+9+': '7+/9+',
-      '#7+9': '+/7+/9',
-      '#7+9+': '+/7+/9+',
-      'o79': 'o/7/9',
-      'o79-': 'o/7/9-',
-      '9': '9',
-      '9-': '9-',
-      '9+': '9+',
-      '#9': '+/9',
-      '#9+': '+/9+',
-      'o9': 'o/9',
-      'o9-': 'o/9-',
-      '4': '4',
-      '2': '2',
-      '47': '4/7',
-      '27': '2/7',
-      '49': '4/9',
-      '49-': '4/9-',
-      '49+': '4/9+',
+      '': 'C',
+      '#': 'C+',
+      'o': 'C°',
+      '7': 'C7',
+      '7+': 'C△',
+      'o7': 'Cø',
+      'o7-': 'C°7',
+      'o7+': 'C°△',
+      '#7': 'C+7',
+      '#7+': 'C+△',
+      '6': 'C6',
+      '79': 'C9',
+      '79-': 'C♭9',
+      '79+': 'C#9',
+      '#79': 'C+9',
+      '#79+': 'C+#9',
+      '7+9': 'C△9',
+      '7+9+': 'C△#9',
+      '#7+9': 'C+△9',
+      '#7+9+': 'C+△#9',
+      'o79': 'Cø9',
+      'o79-': 'Cø♭9',
+      '9': 'Cadd9',
+      '9-': 'Cadd♭9',
+      '9+': 'Cadd#9',
+      '#9': 'C+add9',
+      '#9+': 'C+add#9',
+      'o9': 'C°add9',
+      'o9-': 'C°add♭9',
+      '4': 'Csus4',
+      '2': 'Csus2',
+      '47': 'C7sus4',
+      '27': 'C7sus2',
+      '49': 'C9sus4',
+      '49-': 'C♭9sus4',
+      '49+': 'C#9sus4',
     };
 
     for (final MapEntry<String, String> modifier in modifiers.entries) {
       final DiatarChord? chord = DiatarChord.tryParse('C${modifier.key}');
       expect(chord, isNotNull, reason: 'C${modifier.key}');
       expect(
-        chord!.parts.map((ChordPart part) => part.text).join(),
-        'C${modifier.value}',
+        chord!.parts().map((ChordPart part) => part.text).join(),
+        modifier.value,
         reason: 'C${modifier.key}',
       );
     }
+  });
+
+  test('textual notation renders words and falls back to symbolic', () {
+    const Map<String, String> own = <String, String>{
+      '#': 'Caug',
+      'o': 'Cdim',
+      '7+': 'Cmaj',
+      'o7': 'Cm7♭5',
+      'o7-': 'Cdim7',
+      'o7+': 'Cdim(maj)',
+      '#7': 'Caug7',
+      '#7+': 'Caug(maj)',
+      '#79': 'Caug9',
+      '#79+': 'Caug#9',
+      '7+9': 'Cmaj9',
+      '7+9+': 'Cmaj#9',
+      '#7+9': 'Caug(maj9)',
+      '#7+9+': 'Caug(maj#9)',
+      'o79': 'Cm9♭5',
+      'o79-': 'Cm♭9♭5',
+      '#9': 'Caug(add9)',
+      '#9+': 'Caug(add#9)',
+      'o9': 'Cdim(add9)',
+      'o9-': 'Cdim(add♭9)',
+    };
+    // The sheet has no textual spelling for these, so the symbolic one stands.
+    const Map<String, String> fallback = <String, String>{
+      '7': 'C7',
+      '6': 'C6',
+      '79': 'C9',
+      '79-': 'C♭9',
+      '79+': 'C#9',
+      '9': 'Cadd9',
+      '9-': 'Cadd♭9',
+      '9+': 'Cadd#9',
+      '4': 'Csus4',
+      '2': 'Csus2',
+      '47': 'C7sus4',
+      '27': 'C7sus2',
+      '49': 'C9sus4',
+      '49-': 'C♭9sus4',
+      '49+': 'C#9sus4',
+    };
+
+    for (final MapEntry<String, String> modifier in own.entries) {
+      expect(
+        DiatarChord.tryParse('C${modifier.key}')!
+            .parts(notation: ChordNotation.textual)
+            .map((ChordPart part) => part.text)
+            .join(),
+        modifier.value,
+        reason: 'C${modifier.key}',
+      );
+    }
+
+    for (final MapEntry<String, String> modifier in fallback.entries) {
+      expect(
+        DiatarChord.tryParse('C${modifier.key}')!
+            .parts(notation: ChordNotation.textual)
+            .map((ChordPart part) => part.text)
+            .join(),
+        modifier.value,
+        reason: 'C${modifier.key}',
+      );
+    }
+  });
+
+  test('numeric notation falls back to textual and then to symbolic', () {
+    const Map<String, String> own = <String, String>{
+      '#': 'C#5',
+      'o': 'Cm♭5',
+      'o7-': 'C♭7♭5',
+      'o7+': 'Cmmaj7♭5',
+      '#7': 'C7#5',
+      '#7+': 'Cmaj7#5',
+      '#79': 'C9#5',
+      '#79+': 'C#9#5',
+      '#7+9': 'Cmaj9#5',
+      '#7+9+': 'Cmaj#9#5',
+    };
+    // No numeric spelling: textual is used instead.
+    const Map<String, String> textual = <String, String>{
+      '7+': 'Cmaj',
+      'o7': 'Cm7♭5',
+      '7+9': 'Cmaj9',
+      '7+9+': 'Cmaj#9',
+      'o79': 'Cm9♭5',
+      'o79-': 'Cm♭9♭5',
+      '#9': 'Caug(add9)',
+      '#9+': 'Caug(add#9)',
+      'o9': 'Cdim(add9)',
+      'o9-': 'Cdim(add♭9)',
+    };
+    // Neither numeric nor textual: symbolic is used.
+    const Map<String, String> symbolic = <String, String>{
+      '7': 'C7',
+      '6': 'C6',
+      '79': 'C9',
+      '79-': 'C♭9',
+      '79+': 'C#9',
+      '9': 'Cadd9',
+      '9-': 'Cadd♭9',
+      '9+': 'Cadd#9',
+      '4': 'Csus4',
+      '2': 'Csus2',
+      '47': 'C7sus4',
+      '27': 'C7sus2',
+      '49': 'C9sus4',
+      '49-': 'C♭9sus4',
+      '49+': 'C#9sus4',
+    };
+
+    for (final MapEntry<String, String> modifier in own.entries) {
+      expect(
+        DiatarChord.tryParse('C${modifier.key}')!
+            .parts(notation: ChordNotation.numeric)
+            .map((ChordPart part) => part.text)
+            .join(),
+        modifier.value,
+        reason: 'C${modifier.key}',
+      );
+    }
+
+    for (final MapEntry<String, String> modifier in textual.entries) {
+      expect(
+        DiatarChord.tryParse('C${modifier.key}')!
+            .parts(notation: ChordNotation.numeric)
+            .map((ChordPart part) => part.text)
+            .join(),
+        modifier.value,
+        reason: 'C${modifier.key}',
+      );
+    }
+
+    for (final MapEntry<String, String> modifier in symbolic.entries) {
+      expect(
+        DiatarChord.tryParse('C${modifier.key}')!
+            .parts(notation: ChordNotation.numeric)
+            .map((ChordPart part) => part.text)
+            .join(),
+        modifier.value,
+        reason: 'C${modifier.key}',
+      );
+    }
+  });
+
+  test('the optional seventh reveals only the implicit sevens', () {
+    String render(
+      String source, {
+      ChordNotation notation = ChordNotation.symbolic,
+      bool optionalSeventh = true,
+    }) {
+      return DiatarChord.tryParse(source)!
+          .parts(notation: notation, optionalSeventh: optionalSeventh)
+          .map((ChordPart part) => part.text)
+          .join();
+    }
+
+    expect(render('C7+'), 'C△7');
+    expect(render('Cm7+'), 'Cm△7');
+    expect(render('Co7+'), 'C°△7');
+    expect(render('C#7+'), 'C+△7');
+
+    expect(render('C7+', notation: ChordNotation.textual), 'Cmaj7');
+    expect(render('Co7+', notation: ChordNotation.textual), 'Cdim(maj7)');
+    expect(render('C#7+', notation: ChordNotation.textual), 'Caug(maj7)');
+
+    // Numeric already spells the seventh out.
+    expect(render('C7+', notation: ChordNotation.numeric), 'Cmaj7');
+    expect(render('Co7+', notation: ChordNotation.numeric), 'Cmmaj7♭5');
+
+    // Qualities that already show a seventh are untouched.
+    expect(render('C7'), 'C7');
+    expect(render('Co7'), 'Cø');
+    expect(render('Co7-'), 'C°7');
+    expect(render('C7+', optionalSeventh: false), 'C△');
+  });
+
+  test('diminished and half-diminished use the sheet glyphs', () {
+    // The degree sign is already a small raised circle on the baseline, while
+    // the slashed circle needs real superscript positioning.
+    expect(
+      DiatarChord.tryParse('Co')!.parts().map((ChordPart part) => part.style),
+      <ChordPartStyle>[ChordPartStyle.root, ChordPartStyle.normal],
+    );
+    expect(
+      DiatarChord.tryParse('Co7')!.parts().map((ChordPart part) => part.style),
+      <ChordPartStyle>[ChordPartStyle.root, ChordPartStyle.superscript],
+    );
   });
 
   test('Diatar chords accept only the documented minor combinations', () {

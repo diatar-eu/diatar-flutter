@@ -109,7 +109,7 @@ class _ChordEditorDialogState extends State<_ChordEditorDialog> {
   String _noteLabel(String source) {
     return DiatarChord.tryParse(
       source,
-    )!.parts.map((ChordPart part) => part.text).join();
+    )!.parts().map((ChordPart part) => part.text).join();
   }
 
   String _modifierLabel(String modifier) {
@@ -118,7 +118,7 @@ class _ChordEditorDialogState extends State<_ChordEditorDialog> {
     }
     return DiatarChord.tryParse(
       'C$modifier',
-    )!.parts.skip(1).map((ChordPart part) => part.text).join();
+    )!.parts().skip(1).map((ChordPart part) => part.text).join();
   }
 
   @override
