@@ -27,6 +27,7 @@ import '../services/blank_image_storage.dart';
 import '../services/pic_plc_service.dart';
 import '../services/web_diavetito_url.dart';
 import '../services/wol_service.dart';
+import '../core/settings/internet_credentials_policy.dart';
 import '../utils/friendly_path.dart';
 import 'desktop_hotkey.dart';
 import 'onboarding_sheet.dart';
@@ -72,6 +73,7 @@ class DiatarSettingsSheet extends StatefulWidget {
     super.key,
     required this.initialSettings,
     required this.initialPicPlcConfiguration,
+    this.secretKeyProtectedByPlatform = true,
     required this.onApply,
     required this.onApplyPicPlc,
     required this.onExitRequested,
@@ -100,6 +102,11 @@ class DiatarSettingsSheet extends StatefulWidget {
   final List<SongHotkeyOption> Function()? availableSongsLoader;
   final List<CustomOrderSetOption> availableOrderSets;
   final List<CustomOrderSetOption> Function()? availableOrderSetsLoader;
+
+  /// Whether the stored secrets are protected by the platform keystore, as
+  /// opposed to the degraded settings-file fallback. The internet section
+  /// warns when this is false.
+  final bool secretKeyProtectedByPlatform;
   final DiatarSettingsInitialSection? initialSection;
   final bool closeAfterInitialSectionClose;
   final VoidCallback? onDownloadBooksRequested;
@@ -123,7 +130,17 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _search;
   late final TextEditingController _tcpTargets;
   late final TextEditingController _mqttUser;
-  late final TextEditingController _mqttPassword;
+
+  /// Only ever holds a *newly typed* password. The stored one is deliberately
+  /// never loaded here, so it cannot be read back out of the settings.
+  final TextEditingController _mqttPassword = TextEditingController();
+
+  /// Whether a password was stored when this sheet opened, i.e. the stored
+  /// password the field above must not disturb.
+  late bool _mqttPasswordStored;
+
+  /// Set by the "remove password" button; cancels out a typed password.
+  bool _mqttPasswordRemovalRequested = false;
   late final TextEditingController _blankPicPath;
   late final TextEditingController _diaExportPath;
   late final TextEditingController _picPlcPort;
@@ -191,7 +208,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   String _selectedSongHotkeyOptionId = '';
   bool _availableOrderSetsResolved = false;
   String _selectedOrderSetOptionId = '';
-  bool _showInternetPassword = false;
   bool _internetActionRunning = false;
   late final TextEditingController _szentirasApiKey;
   void Function(void Function())? _setInternetSectionState;
@@ -221,7 +237,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _search = TextEditingController();
     _tcpTargets = TextEditingController(text: s.tcpTargets.join('\n'));
     _mqttUser = TextEditingController(text: s.mqttUser);
-    _mqttPassword = TextEditingController(text: s.mqttPassword);
+    _mqttPasswordStored = s.mqttPassword.isNotEmpty;
     _szentirasApiKey = TextEditingController(text: s.szentirasApiKey);
     _blankPicPath = TextEditingController(text: s.blankPicPath);
     _diaExportPath = TextEditingController(text: s.diaExportPath);
@@ -846,7 +862,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final bool originalInternetRelayEnabled = _internetRelayEnabled;
     final String originalMqttUser = _mqttUser.text;
     final String originalMqttPassword = _mqttPassword.text;
-    final bool originalShowInternetPassword = _showInternetPassword;
+    final bool originalMqttPasswordStored = _mqttPasswordStored;
+    final bool originalMqttPasswordRemovalRequested =
+        _mqttPasswordRemovalRequested;
 
     return _openSectionSheet(
       title: context.l10n.settingsInternetTitle,
@@ -860,7 +878,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           _internetRelayEnabled = originalInternetRelayEnabled;
           _mqttUser.text = originalMqttUser;
           _mqttPassword.text = originalMqttPassword;
-          _showInternetPassword = originalShowInternetPassword;
+          _mqttPasswordStored = originalMqttPasswordStored;
+          _mqttPasswordRemovalRequested = originalMqttPasswordRemovalRequested;
         });
       },
       builder: (BuildContext context, void Function(void Function()) setBoth) {
@@ -898,29 +917,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               ),
             ],
           ),
-          TextField(
-            controller: _mqttPassword,
-            enabled: _internetRelayEnabled,
-            obscureText: !_showInternetPassword,
-            decoration: InputDecoration(
-              labelText: l10n.userFieldPassword,
-              suffixIcon: IconButton(
-                tooltip: _showInternetPassword
-                    ? l10n.passwordHideTooltip
-                    : l10n.passwordShowTooltip,
-                onPressed: _internetRelayEnabled
-                    ? () => setBoth(
-                        () => _showInternetPassword = !_showInternetPassword,
-                      )
-                    : null,
-                icon: Icon(
-                  _showInternetPassword
-                      ? Icons.visibility_off
-                      : Icons.visibility,
-                ),
-              ),
-            ),
-          ),
+          _buildMqttPasswordField(context, l10n, setBoth),
           const SizedBox(height: 10),
           const Divider(height: 1),
           const SizedBox(height: 10),
@@ -972,6 +969,99 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ];
       },
     ).whenComplete(() => _setInternetSectionState = null);
+  }
+
+  /// The password field for the internet section.
+  ///
+  /// It is never pre-filled: the stored password is not handed to this sheet at
+  /// all, so there is nothing here to read back. The field only means "type a
+  /// new password to replace the stored one", and the label underneath says
+  /// whether one is stored at all.
+  Widget _buildMqttPasswordField(
+    BuildContext context,
+    AppLocalizations l10n,
+    void Function(void Function()) setBoth,
+  ) {
+    final bool removalRequested = _mqttPasswordRemovalRequested;
+    final bool stored = _mqttPasswordStored && !removalRequested;
+    final bool pendingNew = _mqttPassword.text.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        TextField(
+          controller: _mqttPassword,
+          enabled: _internetRelayEnabled,
+          obscureText: true,
+          onChanged: (_) => setBoth(() {}),
+          decoration: InputDecoration(
+            labelText: pendingNew
+                ? l10n.userFieldNewPassword
+                : l10n.userFieldPassword,
+            helperText: l10n.internetPasswordStoredHint,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: <Widget>[
+            Icon(
+              removalRequested
+                  ? Icons.lock_open
+                  : stored
+                  ? Icons.lock
+                  : Icons.lock_outline,
+              size: 18,
+              color: removalRequested
+                  ? Theme.of(context).colorScheme.error
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                removalRequested
+                    ? l10n.internetPasswordRemoved
+                    : stored
+                    ? l10n.internetPasswordStored
+                    : l10n.internetPasswordNotStored,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+        if (stored && !pendingNew) ...<Widget>[
+          const SizedBox(height: 4),
+          TextButton.icon(
+            onPressed: _internetRelayEnabled
+                ? () => setBoth(() => _mqttPasswordRemovalRequested = true)
+                : null,
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: Text(l10n.internetPasswordRemove),
+          ),
+        ],
+        if (stored && !widget.secretKeyProtectedByPlatform) ...<Widget>[
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Icon(
+                Icons.warning_amber_rounded,
+                size: 18,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  l10n.internetPasswordStorageWarning,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
   }
 
   Future<void> _registerUser() async {
@@ -1799,7 +1889,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   bool _applyNetworkSettings() {
     final String mqttUser = _mqttUser.text.trim();
-    final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
+    final String mqttPassword = _resolveMqttPassword(mqttUser);
     final List<String> tcpTargets = kIsWeb
         ? const <String>[]
         : _parseTcpTargets(_tcpTargets.text);
@@ -4300,9 +4390,22 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     });
   }
 
+  /// The password to hand to the settings: a newly typed one, the stored one
+  /// when the field was left alone, or nothing when the user asked to remove
+  /// it. See `InternetCredentialsPolicy`.
+  String _resolveMqttPassword(String mqttUser) {
+    return const InternetCredentialsPolicy().resolvePassword(
+      storedPassword: widget.initialSettings.mqttPassword,
+      enteredPassword: _mqttPassword.text,
+      removalRequested: _mqttPasswordRemovalRequested,
+      relayEnabled: _internetRelayEnabled,
+      mqttUser: mqttUser,
+    );
+  }
+
   Future<void> _save() async {
     final String mqttUser = _mqttUser.text.trim();
-    final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
+    final String mqttPassword = _resolveMqttPassword(mqttUser);
     final List<String> tcpTargets = kIsWeb
         ? const <String>[]
         : _parseTcpTargets(_tcpTargets.text);

@@ -24,6 +24,11 @@ These rules are mandatory for all AI edits in this repository.
 - In code, use `AppLocalizations` accessors (for example: `l10n.someKey`) instead of string literals.
 - If a new screen/dialog/button/title is added, first add localization keys, then use those keys in UI code.
 
+## Version control
+- Never run `git commit` or `git push` in this repository, not even for a single small fix. Leave the work in the working tree; the owner reviews and commits it by hand.
+- Do not bump `version:` in either `pubspec.yaml`, and do not edit `release-notes/` — those belong to the owner's commit, not to the edit.
+- Do not hand-edit `pubspec.lock`. If a lock looks wrong, the Flutter SDK is wrong; see [DEVELOPMENT.md](../DEVELOPMENT.md).
+
 ## Pull request expectations
 - Every UI text change must include corresponding ARB updates.
 - Every new/changed key must be present in both `en` and `hu` for the affected app.

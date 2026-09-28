@@ -96,6 +96,34 @@ order format, handled under `src/core/dia/`.
 DiaVetítő ships a web build, so `dart:io` and FFI-backed packages cannot be
 imported unconditionally from shared code.
 
+## Version control
+
+**Never commit, and never push. Not even a single tidy "fixup" commit, and not
+"just this one while I'm here".**
+
+The repository owner reviews and commits by hand, once everything is together
+and works the way they want it. An agent that commits takes that decision away
+from them, and a history is hard to unpick afterwards.
+
+- Leave changes in the working tree. `git add` is fine only if you are about to
+  `git status`-check something, and even then, prefer not.
+- Never `git push`, never `git commit --amend`, never `git rebase`, never
+  `git reset --hard`, never `git stash` anything you did not create in this
+  session.
+- Do not stage-and-hold. A working tree the owner can read with `git diff` and
+  `git status` is the deliverable.
+- If a task seems to need a commit — to isolate a risky change, to test two
+  variants — use `git stash push -- <the one file you touched>` and
+  `git stash pop` around that single check, and leave the tree exactly as you
+  found it. This is the one sanctioned exception, and it is a verification
+  technique, not a workflow.
+- Report what changed and where; let the owner commit. Saying "ready to commit"
+  with a `git status` summary is the expected hand-off.
+
+Version bumps and release-notes lines are part of committing, so they are the
+owner's too. Do not edit `version:` in either `pubspec.yaml` or touch
+`release-notes/`; mention them in your report instead.
+
 ## Conventions
 
 - Tests live in `<app>/test/` and run without a device; the full suite takes

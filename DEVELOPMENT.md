@@ -11,6 +11,32 @@ the committed `pubspec.lock` files were generated with. Building with a
 noticeably older stable can fail inside the vendored `patches/` plugins, which
 track recent embedder APIs.
 
+### The SDK is pinned, not merely current
+
+On a machine set up for this project, the `stable` branch of the Flutter SDK is
+pointed at the 3.47.4 tag — the same technique the Linux arm64 CI job uses
+(`git checkout -B stable <commit>` in `deploy.yml`). It was **not** installed by
+running `flutter upgrade`.
+
+That distinction matters, because `flutter upgrade` moves the branch pointer to
+whatever stable is current (3.47.5 as of this writing), and a Dart patch bump
+inside the 3.47.x line is already enough to change which package versions are
+allowed. The result is silent: every `flutter` command runs an implicit
+`pub get`, and five packages (`intl`, `matcher`, `meta`, `test_api`,
+`vector_math`) get rewritten to older versions. `git status` then shows lock
+churn on a tree nobody touched. See §7.
+
+To move the pin deliberately:
+
+```bash
+cd <flutter-sdk>
+git fetch --no-tags origin tag <version>   # one tag, not --tags: the repo is huge
+git checkout -B stable <version>           # stays on the branch, no detached HEAD
+```
+
+That is reversible with the same command and the old version. Stay on a branch
+rather than a detached HEAD so `flutter upgrade` still works from there.
+
 ### Linux (including WSL2)
 
 Install via git clone — it is the only method that lets you switch versions
@@ -66,10 +92,16 @@ needs the GStreamer development headers, or CMake fails with
 ```bash
 sudo apt update
 sudo apt install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-14-dev \
-  libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+  libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libsecret-1-dev libjsoncpp-dev
 ```
 
 (On older Ubuntu releases use `libstdc++-12-dev`.)
+
+`libsecret-1-dev` and `libjsoncpp-dev` are what `flutter_secure_storage`'s Linux
+implementation links against, and Diatár needs them to build. Without them the
+Linux build fails at the CMake configure step, and a Linux machine with no
+keyring daemon would fall back to the settings-file secret storage — see
+[Diatar/lib/src/services/secret_store.dart](Diatar/lib/src/services/secret_store.dart).
 
 Optional: `flutter_webrtc` warns at configure time if `libpulse` is missing and
 disables Linux system-audio loopback capture, so
@@ -175,3 +207,49 @@ feedback loop — prefer adding a test over launching the app.
 - **`HIDDEN.md`** lists UI that has finished work behind it but no way to
   reach it — not commented-out code. Check it before concluding a feature is
   missing.
+
+## 7. Traps
+
+Things that cost real time to rediscover, because nothing in the code or the
+tooling points at them.
+
+- **Never hand-edit a `pubspec.lock`.** If one looks wrong, the SDK is wrong.
+  §1 says how the SDK is pinned; check `flutter --version` before touching the
+  lock. A hand-fixed lock is not a fix, it is a lock that will be rewritten by
+  the next `flutter` command. The one legitimate exception is promoting a
+  package from `dependency: transitive` to `dependency: "direct main"` after
+  adding it to `pubspec.yaml` — but verify it by running `flutter pub get` and
+  confirming that it produces no other change.
+- **A `pubspec.lock` can be wrong in the repository itself.** `Diatar`'s and
+  `DiaVetito`'s did not agree: `intl` was 0.20.2 in one and 0.20.3 in the
+  other, because one had been regenerated on an older SDK and never restored.
+  Both are committed, and CI does not commit a `pub get`, so a mismatch survives
+  indefinitely. When the SDK is right, a `pub get` that reports `Changed N
+  dependencies!` is telling you the committed lock is stale — that is a finding
+  to report, not noise to revert.
+- **`packages/diatar_common/pubspec.lock` is gitignored on purpose**
+  (`packages/diatar_common/.gitignore`). `diatar_common` is a path dependency,
+  and for those the *consuming app's* lock governs resolution; a lock inside the
+  package would only matter to a `flutter test` run from inside it, where it may
+  resolve freely. Do not "fix" this by committing it.
+- **`RTCVideoRenderer.initialize()` hangs after a failure.**
+  `flutter_webrtc`'s implementation awaits a completer that the first call
+  completes *only on success*, and leaves `_initializing` set when the platform
+  call throws. Every later `initialize()` on that renderer then waits on a
+  completer nobody will ever complete — a hang, not a second error. So initialise
+  a renderer exactly once and share the `Future`: see
+  `Diatar/lib/src/services/webrtc_camera_view_service.dart` and its
+  `webrtc_camera_view_service_test.dart`. The same trap produced a 30-second
+  test timeout that looked like nothing at all was wrong.
+- **`RTCVideoRenderer.srcObject` reports its state only by throwing**, a bare
+  `String`, both when the renderer was never initialised and when it is already
+  disposed. Nothing reads it back, so a service that assigns to it from a
+  platform callback — `onTrack`, a dispose path — has to track whether the
+  texture came up itself. That is why both camera services carry a
+  `_rendererReady` flag.
+- **Do not dispose a `RTCVideoRenderer` while a `RTCVideoView` may be mounted.**
+  `RTCVideoView` subscribes through a `ValueListenableBuilder`, so tearing the
+  renderer down during window teardown makes the widget's own `dispose` call
+  `removeListener` on a disposed `ChangeNotifier` — a new crash in the path you
+  were trying to clean up. Both camera services deliberately leave the texture
+  alone and let the engine go with the process.

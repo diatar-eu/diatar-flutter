@@ -49,6 +49,7 @@ import '../services/sender_callback_coordinator.dart';
 import '../services/sender_transport_coordinator.dart';
 import '../services/song_search_service.dart';
 import '../services/settings_store.dart';
+import '../services/secret_store.dart';
 import '../services/audio_service.dart';
 import '../services/tcp_sender_service.dart';
 import '../services/webrtc_camera_view_service.dart';
@@ -256,6 +257,14 @@ class DiatarMainController extends ChangeNotifier {
   DateTime? mqttConnectAttemptAt;
 
   PicPlcConfiguration get picPlcConfiguration => _picPlcConfiguration;
+
+  /// Whether the stored secrets are protected by the platform keystore. False
+  /// means the machine has no secure store available and the settings are
+  /// holding the key next to the ciphertext; the internet settings section
+  /// says so.
+  bool get secretKeyProtectedByPlatform =>
+      _settingsStore.secretKeyProtection ==
+      SecretKeyProtection.platformKeystore;
 
   DiatarMainController() {
     _audioPlaybackCompletionSubscription = _audioService.onPlaybackComplete
