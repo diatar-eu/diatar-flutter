@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../core/hotkeys/desktop_hotkey_dispatch.dart';
+
 class DesktopProjectorBridge {
   DesktopProjectorBridge._();
 
@@ -18,9 +20,7 @@ class DesktopProjectorBridge {
   static const String _channelName = 'diatar/desktop_projector';
   static const String _controlChannelName = 'diatar/desktop_projector_control';
   static const String _businessId = 'desktop_projector';
-  static const String _windowCloseMethod = 'window_close';
   static const Duration _windowOpTimeout = Duration(milliseconds: 1200);
-  static const double _hiddenOpacityWindows = 0.01;
 
   final WindowMethodChannel _channel = const WindowMethodChannel(
     _channelName,
@@ -28,20 +28,26 @@ class DesktopProjectorBridge {
   );
   final WindowMethodChannel _controlChannel = const WindowMethodChannel(
     _controlChannelName,
-    mode: ChannelMode.bidirectional,
+    mode: ChannelMode.unidirectional,
   );
 
   WindowController? _windowController;
   bool _starting = false;
   bool _enabled = false;
+  bool _controlHidden = false;
   Future<void> _settingsTransition = Future<void>.value();
+  Future<void>? _recovery;
+  StreamSubscription<void>? _windowsChangedSubscription;
   AppSettings _lastSettings = const AppSettings();
 
   /// Akkor hívódik meg, ha a vezérlő ablakot külső esemény (pl. a vetítő
   /// ablakba való kattintás) hozza vissza. A controller ezen keresztül
   /// szinkronizálhatja a belső `controlWindowHidden` állapotát.
   VoidCallback? onControlWindowRestored;
-  void Function(String actionId)? onDesktopHotkeyAction;
+
+  /// A vetítőablakból érkező, már feloldott gyorsbillentyű-parancsokat adja
+  /// át a controllernek.
+  void Function(DesktopHotkeyCommand command)? onDesktopHotkeyCommand;
   Uint8List? _lastStateBytes;
   Uint8List? _lastTextBytes;
   Uint8List? _lastRenderedTextBytes;
@@ -56,9 +62,6 @@ class DesktopProjectorBridge {
 
   bool get isEnabled => _enabled;
 
-  /// Linuxon a desktop_multi_window 0.3.0 + window_manager 0.5.2
-  /// gyerekablak-bezárása crash-t okoz (lásd: _closeWindow), ezért
-  /// Linuxon eltérő (rejtő) viselkedést használunk.
   bool get _isLinux => !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
 
   /// A szoftveres OpenGL-es régi Linux gépeken a másodlagos Flutter-motor
@@ -70,6 +73,7 @@ class DesktopProjectorBridge {
   Future<void> start(AppSettings settings) async {
     _enabled = _isDesktopPlatform() && settings.desktopProjectorEnabled;
     _lastSettings = settings;
+    _listenToWindowChanges();
     if (!_enabled) {
       await _closeProjectorWindowsBestEffort();
       return;
@@ -80,6 +84,43 @@ class DesktopProjectorBridge {
     await _invoke('settings', settings.toMap(), cache: () {});
   }
 
+  /// Figyeli a natív ablaklista változásait, hogy a váratlanul eltűnt
+  /// (pl. felhasználó által bezárt) vetítőablakot újra létrehozhassuk.
+  void _listenToWindowChanges() {
+    _windowsChangedSubscription ??= onWindowsChanged.listen((_) {
+      unawaited(_handleWindowsChanged());
+    });
+  }
+
+  Future<void> _handleWindowsChanged() async {
+    if (!_enabled) {
+      return;
+    }
+    final WindowController? current = _windowController;
+    if (current == null) {
+      return;
+    }
+    // Rövid késleltetés, hogy az ablaklista stabilizálódjon (a frissen
+    // létrehozott ablak csak a motor indulása után jelenik meg).
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (!_enabled || !identical(_windowController, current)) {
+      return;
+    }
+    try {
+      final List<WindowController> all = await WindowController.getAll();
+      final bool alive = all.any(
+        (WindowController controller) => controller.windowId == current.windowId,
+      );
+      if (alive) {
+        return;
+      }
+      _windowController = null;
+      _scheduleProjectorRecovery();
+    } catch (_) {
+      // nem kritikus
+    }
+  }
+
   Future<dynamic> _handleControlMethodCall(MethodCall call) async {
     switch (call.method) {
       case 'showControl':
@@ -88,16 +129,21 @@ class DesktopProjectorBridge {
       case 'focusControl':
         await focusControlWindow();
         return null;
-      case 'hotkeyAction':
-        final Object? actionId = call.arguments;
-        if (actionId is! String || actionId.isEmpty) {
-          throw ArgumentError.value(
-            actionId,
-            'actionId',
-            'A desktop hotkey action identifier is required.',
-          );
+      case 'ready':
+        // A vetítő motor befejezte az indulást és regisztrálta az
+        // adatcsatornát: most küldjük el a függőben lévő állapotot.
+        if (_windowController == null) {
+          await _adoptExistingProjectorWindow();
         }
-        onDesktopHotkeyAction?.call(actionId);
+        await _replayPending();
+        return null;
+      case 'hotkey':
+        final DesktopHotkeyCommand? command = DesktopHotkeyCommand.fromMap(
+          call.arguments,
+        );
+        if (command != null) {
+          onDesktopHotkeyCommand?.call(command);
+        }
         return null;
       default:
         throw MissingPluginException(
@@ -145,34 +191,29 @@ class DesktopProjectorBridge {
       await _adoptExistingProjectorWindow();
       await _ensureProjectorWindow();
       await _invoke('settings', settings.toMap(), cache: () {});
+      unawaited(_retryReplayPending());
     } else {
       // Az `_enabled` jelzőt azonnal lekapcsoljuk, hogy bármely közben futó
       // küldés/ikonművelet ne tudja visszanyitni a vetítőablakot.
       _enabled = false;
       // Kikapcsoláskor előbb visszaállítjuk a vezérlő ablakot (ha épp
-      // el volt rejtve), majd bezárjuk a vetítőablakot.
+      // el volt rejtve), majd elrejtjük a vetítőablakot.
       await _restoreControlWindow();
       await _closeWindow();
       await _closeProjectorWindowsBestEffort();
     }
   }
 
+  /// A vetítőablakot elrejti (nem zárja be).
+  ///
+  /// Minden platformon ugyanezt tesszük: a gyerekablak bezárása a
+  /// desktop_multi_window + window_manager kombinációban Linuxon crash-t
+  /// okoz ("The implicit view cannot be removed"), és a motor megszűnésével
+  /// a natív csatorna-regisztráció is árva maradhat. Az elrejtés egységes,
+  /// veszteségmentes életciklust ad, és a meglévő ablak újra megjeleníthető.
   Future<void> _closeWindow() async {
     try {
-      if (_isLinux) {
-        // A Linux-i desktop_multi_window 0.3.0 + window_manager 0.5.2
-        // kombinációban a gyerekablak bezárása (windowManager.close)
-        // crash-t okoz ("The implicit view cannot be removed", lásd
-        // MixinNetwork/flutter-plugins#488). Ezért Linuxon csak
-        // elrejtjük az ablakot, a motort nem állítjuk le; újra
-        // bekapcsoláskor a meglévő ablakot visszahozzuk.
-        await _windowController?.hide().timeout(_windowOpTimeout);
-      } else {
-        // A vetítőablakot a saját maga zárja be (windowManager.close),
-        // mivel a WindowControllernek nincs close metódusa. Így a
-        // WindowListener.onWindowClose is megfelelően lefut.
-        await _channel.invokeMethod('close', null).timeout(_windowOpTimeout);
-      }
+      await _windowController?.hide().timeout(_windowOpTimeout);
     } catch (_) {
       // nem kritikus
     }
@@ -258,45 +299,63 @@ class DesktopProjectorBridge {
     await _invoke('idle', null, cache: () {});
   }
 
-  /// Elrejti a vezérlő (fő) ablakot, ha a vetítő ablakkal azonos
-  /// monitoron vagyunk, hogy a vetítés látszódjon.
+  /// Elrejti a vezérlő (fő) ablakot, hogy a vetítés látszódjon.
   ///
-  /// Ablakmozgatás/átméretezés nélkül átlátszóvá tesszük, és átadjuk az
-  /// egéreseményeket a vetítőablaknak. Win10 alatt ez stabilabb, mert elkerüli
-  /// a DPI/surface deszinkront, ami torz visszarajzolást okozhat.
-  Future<void> hideControlWindow() async {
+  /// A hordozható `windowManager.hide()`-ot használjuk (nem átlátszóságot és
+  /// nem egérátengedést), mert az egységesen működik Windowson, macOS-en és
+  /// Linuxon. A vetítőablak ezt követően átveszi a fókuszt, így a
+  /// gyorsbillentyűket megkapja és továbbítja a vezérlőablaknak.
+  ///
+  /// `true`, ha az ablak valóban eltűnt; `false` esetén a hívó ne ürítse ki
+  /// a vezérlőfelületet.
+  Future<bool> hideControlWindow() async {
     if (!_enabled) {
-      return;
+      return false;
     }
     try {
-      await windowManager.setIgnoreMouseEvents(true, forward: true);
-      await windowManager.setOpacity(
-        Platform.isWindows ? _hiddenOpacityWindows : 0.0,
-      );
+      await windowManager.hide();
     } catch (_) {
-      // nem kritikus
+      // Ha nem sikerül elrejteni, maradjon a vezérlőfelület a helyén.
+      _controlHidden = false;
+      return false;
     }
+    _controlHidden = true;
+    await _focusProjectorWindow();
+    return true;
   }
 
   /// Visszaállítja a vezérlő (fő) ablakot a vetítésbe való kattintás után.
-  Future<void> showControlWindow() async {
+  Future<bool> showControlWindow() async {
     if (!_enabled) {
-      return;
+      return false;
     }
-    await _restoreControlWindow();
+    return _restoreControlWindow();
   }
 
-  /// A vezérlő ablak eredeti (látható, egérrel kezelhető, nem teljes
-  /// képernyős) állapotának visszaállítása. Nem függ az `_enabled`
-  /// állapottól, így kikapcsoláskor is meghívható.
-  Future<void> _restoreControlWindow() async {
+  /// A vetítőablakot fókuszba hozza, hogy az átvegye a billentyűzetet a
+  /// elrejtett vezérlőablaktól.
+  Future<void> _focusProjectorWindow() async {
     try {
-      await windowManager.setIgnoreMouseEvents(false);
-      await windowManager.setOpacity(1.0);
+      await _channel.invokeMethod('focus', null).timeout(_windowOpTimeout);
+    } catch (_) {
+      // nem kritikus; a következő hotkey-ig a fókusz a régi maradhat
+    }
+  }
+
+  /// A vezérlő ablak eredeti (látható, fókuszált) állapotának
+  /// visszaállítása. Nem függ az `_enabled` állapottól, így kikapcsoláskor is
+  /// meghívható.
+  Future<bool> _restoreControlWindow() async {
+    _controlHidden = false;
+    bool shown = true;
+    try {
       await windowManager.show();
       await windowManager.focus();
     } catch (_) {
-      // nem kritikus
+      shown = false;
+    }
+    if (!shown) {
+      return false;
     }
     // Jelezzük a controllernek, hogy a vezérlő ablak újra látható
     // (pl. a vetítőbe kattintás miatt), hogy a UI visszaálljon.
@@ -305,12 +364,13 @@ class DesktopProjectorBridge {
     } catch (_) {
       // nem kritikus
     }
+    return true;
   }
 
-  /// A vezérlőablakot fókuszba hozza a vetítő fölé úgy, hogy közben
-  /// a rejtett állapotot nem módosítja.
+  /// A vezérlőablakot fókuszba hozza a vetítő fölé. Ha a vezérlőablak
+  /// szándékosan el van rejtve, nem hozzuk vissza.
   Future<void> focusControlWindow() async {
-    if (!_enabled) {
+    if (!_enabled || _controlHidden) {
       return;
     }
     try {
@@ -325,7 +385,7 @@ class DesktopProjectorBridge {
   /// bezárása után), ha az a vetítőablak mögé került vagy elvesztette a
   /// fókuszt. Nem módosítja a rejtett/átlátszó állapotot.
   Future<void> reassertControlWindow() async {
-    if (!_isDesktopPlatform()) {
+    if (!_isDesktopPlatform() || _controlHidden) {
       return;
     }
     try {
@@ -343,7 +403,7 @@ class DesktopProjectorBridge {
   /// útvonalon mennek (lásd: `macos_file_panels`), így a vetítőablak
   /// jelenléte nem zavarja őket.
   Future<void> prepareForNativeDialog() async {
-    if (!_isDesktopPlatform()) {
+    if (!_isDesktopPlatform() || _controlHidden) {
       return;
     }
     try {
@@ -376,6 +436,8 @@ class DesktopProjectorBridge {
   }
 
   Future<void> dispose() async {
+    await _windowsChangedSubscription?.cancel();
+    _windowsChangedSubscription = null;
     await _closeWindow();
     await _controlChannel.setMethodCallHandler(null);
     _enabled = false;
@@ -438,16 +500,28 @@ class DesktopProjectorBridge {
 
     try {
       return await _channel.invokeMethod<T>(method, arguments);
-    } catch (_) {
+    } on WindowChannelException catch (error) {
       cache();
-      // Ha a csatorna már nem elérhető, a tárolt controller valószínűleg
-      // egy lezárt (árva) vetítőablakra mutat. Eldobjuk és újranyitjuk.
-      _windowController = null;
-      if (_enabled) {
-        unawaited(_recoverProjectorWindow());
+      // Az „a csatorna még nincs regisztrálva” átmeneti állapot: a vetítő
+      // `ready` üzenetére újraküldjük a függőben lévő állapotot, és nem
+      // dobjuk el a controllerünket (ez korábban duplikált ablakokat okozott).
+      if (!_isTransientChannelError(error)) {
+        _windowController = null;
+        _scheduleProjectorRecovery();
       }
       return null;
+    } catch (_) {
+      cache();
+      _windowController = null;
+      _scheduleProjectorRecovery();
+      return null;
     }
+  }
+
+  bool _isTransientChannelError(WindowChannelException error) {
+    return error.code == 'CHANNEL_UNREGISTERED' ||
+        error.code == 'CHANNEL_NOT_FOUND' ||
+        error.code == 'NO_HANDLER';
   }
 
   Future<void> _sendTextToProjector(Uint8List textBytes) async {
@@ -527,9 +601,30 @@ class DesktopProjectorBridge {
   }
 
   Future<void> _recoverProjectorWindow() async {
+    // Rövid késleltetés, hogy az ablaklista stabilizálódjon.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!_enabled) {
+      return;
+    }
     await _adoptExistingProjectorWindow();
+    if (_windowController != null) {
+      await _invoke('settings', _lastSettings.toMap(), cache: () {});
+      await _replayPending();
+      return;
+    }
     await _ensureProjectorWindow();
     await _invoke('settings', _lastSettings.toMap(), cache: () {});
+  }
+
+  /// A helyreállítást sorosítja, hogy egy hiba se indítson több párhuzamos
+  /// újranyitást (korábban ez duplikált vetítőablakokat eredményezett).
+  void _scheduleProjectorRecovery() {
+    if (!_enabled || _recovery != null) {
+      return;
+    }
+    _recovery = _recoverProjectorWindow().whenComplete(() {
+      _recovery = null;
+    });
   }
 
   Future<void> _ensureProjectorWindow() async {
@@ -599,26 +694,10 @@ class DesktopProjectorBridge {
   Future<void> _closeWindowControllerBestEffort(
     WindowController controller,
   ) async {
-    if (_isLinux) {
-      // Linuxon nem zárjuk be a vetítőablakot, mert az crash-t okoz
-      // (lásd: _closeWindow); csak elrejtjük.
-      try {
-        await controller.hide().timeout(_windowOpTimeout);
-      } catch (_) {
-        // nem kritikus
-      }
-      return;
-    }
+    // Egységesen elrejtjük: a bezárás Linuxon crash-t okoz, és a motor
+    // megszűnésével a natív csatorna-regisztráció árva maradhat.
     try {
-      await controller
-          .invokeMethod(_windowCloseMethod)
-          .timeout(_windowOpTimeout);
-      return;
-    } catch (_) {
-      // Ha a per-window close nincs bekötve, próbáljuk a legacy close-t.
-    }
-    try {
-      await controller.invokeMethod('close').timeout(_windowOpTimeout);
+      await controller.hide().timeout(_windowOpTimeout);
     } catch (_) {
       // nem kritikus
     }

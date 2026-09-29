@@ -28,6 +28,7 @@ import '../core/dia/dia_ini_parser.dart';
 import '../core/dia/dia_embedded_image_codec.dart';
 import '../core/dia/dia_matching_policy.dart';
 import '../core/dia/dia_path_policy.dart';
+import '../core/hotkeys/desktop_hotkey_dispatch.dart';
 import '../core/navigation/song_navigation_policy.dart';
 import '../core/navigation/song_selection_policy.dart';
 import '../core/settings/projection_globals_policy.dart';
@@ -1193,7 +1194,7 @@ class DiatarMainController extends ChangeNotifier {
         notifyListeners();
       }
     };
-    _desktopProjectorBridge.onDesktopHotkeyAction = runDesktopHotkeyAction;
+    _desktopProjectorBridge.onDesktopHotkeyCommand = runDesktopHotkeyCommand;
     await _desktopProjectorBridge.start(settings);
     cameraAvailable = _cameraView.available;
     await _cameraView.init();
@@ -4838,6 +4839,22 @@ class DiatarMainController extends ChangeNotifier {
     _playCurrentVerseSound();
   }
 
+  /// A vetítőablakból (vagy a vezérlőablakból) érkező, már feloldott
+  /// gyorsbillentyű-parancs végrehajtása.
+  void runDesktopHotkeyCommand(DesktopHotkeyCommand command) {
+    switch (command.kind) {
+      case DesktopHotkeyKind.action:
+        runDesktopHotkeyAction(command.value);
+        break;
+      case DesktopHotkeyKind.song:
+        activateSongHotkeyBinding(command.value);
+        break;
+      case DesktopHotkeyKind.orderSet:
+        unawaited(setActiveCustomOrderSetById(command.value));
+        break;
+    }
+  }
+
   void runDesktopHotkeyAction(String actionId) {
     switch (actionId) {
       case 'prevSong':
@@ -4917,19 +4934,26 @@ class DiatarMainController extends ChangeNotifier {
   /// Elrejti a vezérlő (fő) ablakot, ha a vetítő ablakkal azonos
   /// monitoron vagyunk, hogy a vetítés látszódjon.
   Future<void> hideControlWindow() async {
-    await _desktopProjectorBridge.hideControlWindow();
+    final bool hidden = await _desktopProjectorBridge.hideControlWindow();
+    if (!hidden) {
+      // Nem sikerült elrejteni: a vezérlőfelület marad a helyén.
+      return;
+    }
     _controlWindowHidden = true;
     notifyListeners();
   }
 
   /// Visszaállítja a vezérlő (fő) ablakot a vetítésbe való kattintás után.
   Future<void> showControlWindow() async {
-    await _desktopProjectorBridge.showControlWindow();
+    final bool shown = await _desktopProjectorBridge.showControlWindow();
+    if (!shown) {
+      return;
+    }
     _controlWindowHidden = false;
     notifyListeners();
   }
 
-  /// Igaz, ha a vezérlő ablak el van rejtve (átlátszósága 0).
+  /// Igaz, ha a vezérlő ablak el van rejtve (`windowManager.hide`).
   bool _controlWindowHidden = false;
   bool get controlWindowHidden => _controlWindowHidden;
 
