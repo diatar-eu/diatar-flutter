@@ -506,6 +506,40 @@ void main() {
     expect(AppSettings.fromMap(settings.toMap()).advanceAfterMusic, isTrue);
   });
 
+  // The projector window resolves hotkeys from the `settings` message while
+  // the control window is hidden, so the three hotkey tables have to be part
+  // of the wire format. Without them the projector always sees empty maps
+  // and no hotkey ever resolves from there.
+  test('desktop hotkey tables survive map conversions', () {
+    const AppSettings settings = AppSettings(
+      desktopActionHotkeys: <String, String>{'nextVerse': 'F1'},
+      desktopSongHotkeys: <String, String>{'F2': 'konyv1.dtx::3'},
+      desktopOrderSetHotkeys: <String, String>{'F3': 'order-set-7'},
+    );
+
+    final AppSettings restored = AppSettings.fromMap(settings.toMap());
+
+    expect(restored.desktopActionHotkeys, settings.desktopActionHotkeys);
+    expect(restored.desktopSongHotkeys, settings.desktopSongHotkeys);
+    expect(restored.desktopOrderSetHotkeys, settings.desktopOrderSetHotkeys);
+  });
+
+  test('desktop hotkey tables read from a codec shaped map', () {
+    final AppSettings restored = AppSettings.fromMap(<String, dynamic>{
+      'desktopActionHotkeys': <Object?, Object?>{
+        'nextVerse': 'F1',
+        'bogus': 42,
+      },
+    });
+
+    expect(restored.desktopActionHotkeys, <String, String>{'nextVerse': 'F1'});
+    // A sender that predates the key must not break the projector.
+    expect(
+      AppSettings.fromMap(<String, dynamic>{}).desktopSongHotkeys,
+      isEmpty,
+    );
+  });
+
   test('state record preserves background image visibility', () {
     const ProjectionGlobals globals = ProjectionGlobals(
       isBlankPic: true,

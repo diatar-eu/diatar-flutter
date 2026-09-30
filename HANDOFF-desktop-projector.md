@@ -52,7 +52,7 @@ indítanak (`_scheduleProjectorRecovery`).
 ### 2. Főablak elrejtése
 
 `setOpacity` + `setIgnoreMouseEvents` helyett minden platformon
-`windowManager.hide()`.
+`windowManager.minimize()`.
 
 A gyökérok: a régi `hideControlWindow()` egyetlen `try` blokkban hívta a
 `setOpacity`-t, és a Linuxon nem létező `setIgnoreMouseEvents` (window_manager
@@ -61,8 +61,19 @@ A gyökérok: a régi `hideControlWindow()` egyetlen `try` blokkban hívta a
 Linuxon `respond_not_implemented`-re esik, a `gtk_widget_set_opacity`
 pedig compositing managert igényel.
 
-A `hideControlWindow()` / `showControlWindow()` most `bool`-t ad vissza, és a
-controller csak siker esetén állítja a `_controlWindowHidden` jelzőt.
+**Későbbi korrekció (a tulajdonos Windows-os tesztje után):** az elrejtés
+`windowManager.hide()` lett, de ez Windowson elsorolta a fő ablakot a
+tálcáról és az Alt+TAB-ból, így a rejtett vezérlőfelület miatt nem volt
+visszaút. A megoldás `windowManager.minimize()`: a képernyőről eltűnik, de
+a tálca-/panel-/Dock-bejegyzés megmarad. A `hideControlWindow()` /
+`showControlWindow()` `bool`-t ad vissza, és a controller csak siker esetén
+állítja a `_controlWindowHidden` jelzőt. A tálcáról/Alt+TAB-bal történő
+visszahozást a `DesktopProjectorBridge.handleExternalRestore()` fogadja
+(`onWindowRestore` / `onWindowFocus` eseményről, `isMinimized` őrrel).
+
+A fókuszt **a** `hideControlWindow()` **a minimalizálás előtt** adja át a
+vetítőablaknak, mert a Windows az aktív ablak minimalizálásakor más
+ablakra adja át a fókuszt.
 
 ### 3. Gyorsbillentyűk a vetítőablakból
 

@@ -4953,7 +4953,14 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Igaz, ha a vezérlő ablak el van rejtve (`windowManager.hide`).
+  /// A felhasználó a rendszeren keresztül hozta vissza a vezérlő ablakot
+  /// (tálcáról, Alt+TAB-bal), nem a vetítőablak kattintása váltotta ki, ezért
+  /// itt szinkonizáljuk a rejtett állapotot.
+  Future<void> handleControlWindowRestoredExternally() async {
+    await _desktopProjectorBridge.handleExternalRestore();
+  }
+
+  /// Igaz, ha a vezérlő ablak el van rejtve (`windowManager.minimize`).
   bool _controlWindowHidden = false;
   bool get controlWindowHidden => _controlWindowHidden;
 

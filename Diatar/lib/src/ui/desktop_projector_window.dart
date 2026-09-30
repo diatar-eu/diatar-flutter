@@ -92,14 +92,10 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     final int requestedMonitor = (args['monitor'] as int?) ?? widget.monitor;
     _mainMonitor = (args['mainMonitor'] as int?) ?? -1;
     _controller.applyMonitor(requestedMonitor);
-    _controller.onClose = _shutdown;
-    await windowController.setWindowMethodHandler((MethodCall call) async {
-      if (call.method == 'window_close') {
-        await _shutdown();
-        return null;
-      }
-      throw MissingPluginException('Unknown window method: ${call.method}');
-    });
+    // Nincs per-window bezáró csatorna: a bridge egységesen elrejti a
+    // vetítőablakot (lásd: DesktopProjectorBridge._closeWindow), így a
+    // korábbi `window_close` bezáró útnak nincs küldője. Az egyetlen
+    // levezetési pont a `CHANNEL_LIMIT_REACHED` kezelése lent.
     try {
       await _channel.setMethodCallHandler(_handleProjectorMethodCall);
     } catch (error) {
@@ -311,10 +307,6 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
   void dispose() {
     windowManager.removeListener(this);
     _hotkeyFocusNode.dispose();
-    final WindowController? current = _currentWindowController;
-    if (current != null) {
-      unawaited(current.setWindowMethodHandler(null));
-    }
     unawaited(_channel.setMethodCallHandler(null));
     unawaited(_controlChannel.setMethodCallHandler(null));
     _controller.dispose();
@@ -355,7 +347,16 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     if (command == null) {
       return KeyEventResult.ignored;
     }
-    unawaited(_controlChannel.invokeMethod<void>('hotkey', command.toMap()));
+    unawaited(
+      _controlChannel
+          .invokeMethod<void>('hotkey', command.toMap())
+          .catchError((Object error) {
+        // A továbbítás néma hiba esetén nem derülne ki, hol akadt el:
+        // érdemes egy sorban látszania, ha a rejtett vezérlőablak mellett
+        // a gyorsbillentyűk nem érnek célba.
+        debugPrint('[DesktopProjector] hotkey forward failed: $error');
+      }),
+    );
     return KeyEventResult.handled;
   }
 
@@ -438,25 +439,11 @@ class DesktopProjectorController extends ChangeNotifier {
         return null;
       case 'idle':
         return null;
-      case 'close':
-        await _onClose();
-        return null;
       default:
         throw MissingPluginException(
           'Unknown projector method: ${call.method}',
         );
     }
-  }
-
-  /// A vezérlő ablak bezárását (a 'close' csatornaüzenetre) a vetítőablak
-  /// állapotkezelőjéből indítjuk, hogy a natív csatornák is leiratkozzanak.
-  Future<void> Function()? onClose;
-
-  Future<void> _onClose() async {
-    if (onClose == null) {
-      return;
-    }
-    await onClose!.call();
   }
 
   void applyMonitor(int value) {

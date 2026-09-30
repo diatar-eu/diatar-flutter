@@ -43,17 +43,23 @@ Asztali környezetben (macOS, Windows, Linux) külön ablakban is vetíthetsz.
 
 A vetítés menü **Vezérlő ablak elrejtése** pontja elrejti a fő ablakot, hogy
 a vetítés akadálytalanul látszódjon. Az elrejtés minden platformon ugyanaz:
-az ablak eltűnik a képernyőről (nem csak átlátszóvá válik), így a megjelenített
+az ablak kikerül a képernyőről (nem csak átlátszóvá válik), így a megjelenített
 dia sem villan át rajta.
+
+Az elrejtett ablak **nem tűnik el a rendszerből**: a tálcán (Windowson), a
+panelen (Linuxon) és a Dockban (macOS-en) megmarad az ikonja, és az
+Alt+TAB-bal is előhívható. Így a vezérlő ablak akkor is elérhető marad, ha
+az elrejtés alatt a vetítésre kattintás nem lenne elérhető.
 
 Az elrejtés után a **vetítőablak viszi át a billentyűzetet**, ezért a
 [gyorsbillentyűk](hotkeys.md) továbbra is működnek — a vetítőablak felismeri
 őket, és továbbítja a vezérlő ablaknak, ahol a tényleges művelet végbemegy.
 
-A vezérlő ablakot kétféleképpen hozhatod vissza:
+A vezérlő ablakot háromféleképpen hozhatod vissza:
 
 - kattints a vetítésre a vetítőablakban;
-- válaszd újra a **Vezérlő ablak elrejtése** menüpontot a vetítés menüben.
+- kattints a tálcán (vagy a panelen, illetve a Dockban) az alkalmazás ikonjára;
+- válaszd ki az alkalmazást az Alt+TAB-ban.
 
 Ha a vetítőablakot te zártad be, az elrejtés után a Beállításokban ki- és
 visszakapcsolhatod a **Vetítő ablak** kapcsolót, vagy indítsd újra a programot.

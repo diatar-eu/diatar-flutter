@@ -472,6 +472,12 @@ class AppSettings {
       'maxCustomOrderSets': maxCustomOrderSets,
       'desktopProjectorEnabled': desktopProjectorEnabled,
       'desktopProjectorMonitor': desktopProjectorMonitor,
+      // A gyorsbillentyű-térképeknek is rajta kell lenniük a térképen: a
+      // vetítőablak a `settings` üzenetből ezekkel oldja fel a saját
+      // billentyűleolvasását, amíg a vezérlő ablak rejtve van.
+      'desktopActionHotkeys': desktopActionHotkeys,
+      'desktopSongHotkeys': desktopSongHotkeys,
+      'desktopOrderSetHotkeys': desktopOrderSetHotkeys,
       'externalCommandOnStart': externalCommandOnStart,
       'externalCommandOnExit': externalCommandOnExit,
       'externalCommandOnProjectionOn': externalCommandOnProjectionOn,
@@ -527,6 +533,25 @@ class AppSettings {
       return fallback;
     }
 
+    /// A `String -> String` térképek visszaolvasása. A standard csatorna-
+    /// kódoló `Map<Object?, Object?>` alakban adja vissza a térképeket, és egy
+    /// régebbi küldő (ami nem tartalmazta a kulcsot) üres térképet kap.
+    Map<String, String> stringMapValue(String key) {
+      final Object? raw = map[key];
+      if (raw is! Map) {
+        return const <String, String>{};
+      }
+      final Map<String, String> result = <String, String>{};
+      for (final MapEntry<Object?, Object?> entry in raw.entries) {
+        final Object? entryKey = entry.key;
+        final Object? entryValue = entry.value;
+        if (entryKey is String && entryValue is String) {
+          result[entryKey] = entryValue;
+        }
+      }
+      return result;
+    }
+
     return AppSettings(
       clipL: (map['clipL'] as num?)?.toDouble() ?? 0,
       clipT: (map['clipT'] as num?)?.toDouble() ?? 0,
@@ -569,6 +594,9 @@ class AppSettings {
       ).clamp(minCustomOrderSets, maxCustomOrderSetsLimit),
       desktopProjectorEnabled: boolValue('desktopProjectorEnabled', false),
       desktopProjectorMonitor: intValue('desktopProjectorMonitor', -1),
+      desktopActionHotkeys: stringMapValue('desktopActionHotkeys'),
+      desktopSongHotkeys: stringMapValue('desktopSongHotkeys'),
+      desktopOrderSetHotkeys: stringMapValue('desktopOrderSetHotkeys'),
       externalCommandOnStart: map['externalCommandOnStart'] as String? ?? '',
       externalCommandOnExit: map['externalCommandOnExit'] as String? ?? '',
       externalCommandOnProjectionOn:

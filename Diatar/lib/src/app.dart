@@ -91,6 +91,23 @@ class _DiatarAppState extends State<DiatarApp>
     await _controller.requestExit();
   }
 
+  /// A felhasználó a tálcáról vagy az Alt+TAB-bal hozta vissza a minimalizált
+  /// vezérlő ablakot. Ezt a bridge nem kérte, ezért szinkonizáljuk a rejtett
+  /// állapotot, hogy a vezérlőfelület is visszatérjen.
+  @override
+  void onWindowRestore() {
+    unawaited(_controller.handleControlWindowRestoredExternally());
+  }
+
+  /// Az Alt+TAB és a tálcakattintás nem mindgyik platformon jár `restore`
+  /// eseménnyel, de fókuszt mindig ad, ezért ugyanazt a szinkront végezzük.
+  /// Az `isMinimized` őre a bridge-ben szűri ki a minimalizáláskori
+  /// fókuszváltást.
+  @override
+  void onWindowFocus() {
+    unawaited(_controller.handleControlWindowRestoredExternally());
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {

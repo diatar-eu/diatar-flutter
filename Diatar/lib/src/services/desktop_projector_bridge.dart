@@ -301,9 +301,17 @@ class DesktopProjectorBridge {
 
   /// Elrejti a vezérlő (fő) ablakot, hogy a vetítés látszódjon.
   ///
-  /// A hordozható `windowManager.hide()`-ot használjuk (nem átlátszóságot és
-  /// nem egérátengedést), mert az egységesen működik Windowson, macOS-en és
-  /// Linuxon. A vetítőablak ezt követően átveszi a fókuszt, így a
+  /// A **minimalizálást** használjuk, nem az elrejtést és nem az
+  /// átlátszóságot. A minimalizált ablak kikerül a képernyőről (a dia nem villan
+  /// át rajta), de a rendszer megőrzi a tálca-, a panel- és az
+  /// Alt+TAB-bejegyzését, így a felhasználó bármikor visszahozhatja. Az
+  /// elrejtés (`windowManager.hide()`) ezt elrontja: Windowson az ablak
+  /// eltűnik a tálcáról és az Alt+TAB-ból, Linuxon a panelről, és mivel a
+  /// rejtett vezérlőfelületen nincs programsáv, visszahozni is csak a
+  /// vetítésre való kattintással lehet — ami pont akkor nem elérhető, ha az
+  /// eleve nem működik.
+  ///
+  /// A vetítőablak a vezérlőablak előtt veszi át a fókuszt, így a
   /// gyorsbillentyűket megkapja és továbbítja a vezérlőablaknak.
   ///
   /// `true`, ha az ablak valóban eltűnt; `false` esetén a hívó ne ürítse ki
@@ -313,14 +321,18 @@ class DesktopProjectorBridge {
       return false;
     }
     try {
-      await windowManager.hide();
+      // Előbb a vetítőablaknak adjuk a fókuszt, és csak utána lépünk félre:
+      // a Windows az aktív ablak minimalizálásakor egy másik ablakra adja át
+      // a fókuszt, így fordított sorrendben a fókusz a minimalizálás után
+      // rögtön elsodródna, és a gyorsbillentyűk nem kapnák meg.
+      await _focusProjectorWindow();
+      await windowManager.minimize();
     } catch (_) {
-      // Ha nem sikerül elrejteni, maradjon a vezérlőfelület a helyén.
+      // Ha nem sikerült elrejteni, maradjon a vezérlőfelület a helyén.
       _controlHidden = false;
       return false;
     }
     _controlHidden = true;
-    await _focusProjectorWindow();
     return true;
   }
 
@@ -339,6 +351,33 @@ class DesktopProjectorBridge {
       await _channel.invokeMethod('focus', null).timeout(_windowOpTimeout);
     } catch (_) {
       // nem kritikus; a következő hotkey-ig a fókusz a régi maradhat
+    }
+  }
+
+  /// A felhasználó a rendszeren keresztül hozta vissza a vezérlő ablakot
+  /// (tálcáról, Alt+TAB-bal, a panel ikonjáról): ezt nem a bridge kérte, így
+  /// a rejtett jelzőt és a vezérlőfelületet itt kell visszaállítani.
+  ///
+  /// Csak akkor fogadjuk el, ha az ablak már nem minimalizált, hogy a
+  /// minimalizáláshoz tartozó fókuszváltás (amit magunk indítunk) ne oldja fel
+  /// a rejtett állapotot. Ha nem tudunk róla döntést, akkor fogadjuk el a
+  /// visszahozást: inkább egy látható vezérlőfelület, mint egy elakadt állapot.
+  Future<void> handleExternalRestore() async {
+    if (!_controlHidden) {
+      return;
+    }
+    try {
+      if (await windowManager.isMinimized()) {
+        return;
+      }
+    } catch (_) {
+      // nem kritikus
+    }
+    _controlHidden = false;
+    try {
+      onControlWindowRestored?.call();
+    } catch (_) {
+      // nem kritikus
     }
   }
 
