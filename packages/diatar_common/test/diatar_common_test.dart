@@ -857,6 +857,55 @@ void main() {
     expect(prefixes.skip(1), everyElement('kGE2'));
   });
 
+  test(r'preferred break after a kotta block still separates the words', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useKotta: true),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    // `\.` straight after a \K block leaves the text buffer empty, so the
+    // break used to be dropped and the two words were glued together.
+    const String source = r'P\KkGE2[?r81d;ange\K1d;\.l\K1d;ing\K1c]?1;ua';
+
+    expect(
+      painter.debugTextWrappedRowsForLine(
+        source,
+        fontSize: 24,
+        maxWidth: 100000,
+      ),
+      <String>['Pange lingua'],
+    );
+
+    // The kotta payload must stay bound to the word it belongs to, so the
+    // notation layout matches the plain-space spelling of the same text.
+    expect(
+      painter.debugKottaTextStartXsForLine(source, fontSize: 24, maxWidth: 120),
+      painter.debugKottaTextStartXsForLine(
+        r'P\KkGE2[?r81d;ange\K1d; l\K1d;ing\K1c]?1;ua',
+        fontSize: 24,
+        maxWidth: 120,
+      ),
+    );
+  });
+
+  test(r'preferred break after a chord block still separates the words', () {
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: const ProjectionGlobals(useAkkord: true),
+      settings: const AppSettings(receiverUseAkkord: true),
+    );
+
+    expect(
+      painter.debugTextWrappedRowsForLine(
+        'egy\\GC;\\.kettő',
+        fontSize: 24,
+        maxWidth: 100000,
+      ),
+      <String>['egy kettő'],
+    );
+  });
+
   test('kotta honors the initial staff line count command', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,

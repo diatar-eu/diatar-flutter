@@ -4832,7 +4832,7 @@ class ProjectorPainter extends CustomPainter {
       pendingKotta = null;
     }
 
-    void markPrevSpaceAfter() {
+    void markPrevSpaceAfter({bool addPreferredBreakAfter = false}) {
       if (words.isEmpty) {
         return;
       }
@@ -4850,7 +4850,8 @@ class ProjectorPainter extends CustomPainter {
           kotta: last.kotta,
           spaceAfter: true,
           breakAfter: true,
-          preferredBreakAfter: last.preferredBreakAfter,
+          preferredBreakAfter:
+              addPreferredBreakAfter || last.preferredBreakAfter,
           softHyphenAfter: last.softHyphenAfter,
           fontScale: last.fontScale,
         ),
@@ -4963,11 +4964,22 @@ class ProjectorPainter extends CustomPainter {
             style.strike = false;
             continue;
           case '.':
-            flushWord(
-              addSpaceAfter: true,
-              addBreakAfter: true,
-              addPreferredBreakAfter: true,
-            );
+            if (sb.isNotEmpty) {
+              flushWord(
+                addSpaceAfter: true,
+                addBreakAfter: true,
+                addPreferredBreakAfter: true,
+              );
+            } else {
+              // `\.` can arrive straight after a control block (\K, \G, ?K,
+              // ?G), which leaves the text buffer empty and only the pending
+              // chord/kotta behind. flushWord() would bail out on the empty
+              // buffer and drop the break, gluing the next word onto the
+              // previous one ("Pange\K1d;\.lingua" -> "Pangelingua").
+              // Mark the previous token instead and keep the pending
+              // chord/kotta for the word that follows the break.
+              markPrevSpaceAfter(addPreferredBreakAfter: true);
+            }
             continue;
           case '_':
             sb.write('-');
