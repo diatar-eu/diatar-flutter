@@ -103,27 +103,31 @@ class DiatarChord {
   /// [_inputModifiers]. A leading `^` marks the following character as a
   /// superscript, matching the sheet's own markup. Every entry is populated,
   /// so this column never needs a fallback.
+  ///
+  /// A `~` marks where the optional seventh lands when the switch is on
+  /// ([_optionalSeventhPlaceholder]); without the switch it vanishes, so the
+  /// ninth chords are written as plain `C9`, `C+9`, `C△9`.
   static const List<String> _symbolicModifiers = <String>[
     '', // (major)
     '^+', // #
     '°', // o
     '^7', // 7
-    '^△', // 7+
+    '^△~', // 7+
     '^ø', // o7
     '°^7', // o7-
-    '°^△', // o7+
+    '°^△~', // o7+
     '^+^7', // #7
-    '^+^△', // #7+
+    '^+^△~', // #7+
     '^6', // 6
-    '^9', // 79
-    '^♭^9', // 79-
-    '^#^9', // 79+
-    '^+^9', // #79
-    '^+^#^9', // #79+
-    '^△^9', // 7+9
-    '^△^#^9', // 7+9+
-    '^+^△^9', // #7+9
-    '^+^△^#^9', // #7+9+
+    '^~^9', // 79
+    '^7^♭^9', // 79-
+    '^7^#^9', // 79+
+    '^+^~^9', // #79
+    '^+^7^#^9', // #79+
+    '^△^~^9', // 7+9
+    '^△^~^#^9', // 7+9+
+    '^+^△^~^9', // #7+9
+    '^+^△^~^#^9', // #7+9+
     '^ø^9', // o79
     '^ø^♭^9', // o79-
     '^a^d^d^9', // 9
@@ -149,22 +153,22 @@ class DiatarChord {
     '^a^u^g', // #
     '^d^i^m', // o
     '', // 7
-    '^m^a^j', // 7+
+    '^m^a^j~', // 7+
     'm^7^♭^5', // o7
     '^d^i^m^7', // o7-
-    '^d^i^m^(^m^a^j^)', // o7+
+    '^d^i^m^(^m^a^j~^)', // o7+
     '^a^u^g^7', // #7
-    '^a^u^g^(^m^a^j^)', // #7+
+    '^a^u^g^(^m^a^j~^)', // #7+
     '', // 6
     '', // 79
     '', // 79-
     '', // 79+
-    '^a^u^g^9', // #79
-    '^a^u^g^#^9', // #79+
-    '^m^a^j^9', // 7+9
-    '^m^a^j^#^9', // 7+9+
-    '^a^u^g^(^m^a^j^9^)', // #7+9
-    '^a^u^g^(^m^a^j^#^9^)', // #7+9+
+    '^a^u^g^~^9', // #79
+    '^a^u^g^7^#^9', // #79+
+    '^m^a^j^~^9', // 7+9
+    '^m^a^j^~^#^9', // 7+9+
+    '^a^u^g~^(^m^a^j^9^)', // #7+9
+    '^a^u^g~^(^m^a^j^#^9^)', // #7+9+
     'm^9^♭^5', // o79
     'm^♭^9^♭^5', // o79-
     '', // 9
@@ -200,12 +204,12 @@ class DiatarChord {
     '', // 79
     '', // 79-
     '', // 79+
-    '^9^#^5', // #79
-    '^#^9^#^5', // #79+
+    '^~^9^#^5', // #79
+    '^7^#^9^#^5', // #79+
     '', // 7+9
     '', // 7+9+
-    '^m^a^j^9^#^5', // #7+9
-    '^m^a^j^#^9^#^5', // #7+9+
+    '^m^a^j^~^9^#^5', // #7+9
+    '^m^a^j^~^#^9^#^5', // #7+9+
     '', // o79
     '', // o79-
     '', // 9
@@ -224,10 +228,14 @@ class DiatarChord {
     '', // 49+
   ];
 
-  /// Modifiers whose spelling omits the seventh, so the optional "7" switch
-  /// documented in the sheet's notes column can reveal it (C△7, Cmaj7, C°△7,
-  /// Cdim(maj7), Caug(maj7)).
-  static const Set<int> _optionalSeventhModifiers = <int>{4, 7, 9};
+  /// Marker in a modifier template for the place where the optional "7" switch
+  /// puts the seventh. Without the switch the marker disappears, so the ninth
+  /// chords are written as C9, C+9, C△9; with it, as C79, C+79, C△79.
+  ///
+  /// The `♭9` and `#9` ninth chords have no marker: they keep their seventh
+  /// either way (C7♭9, C7#9), because a bare `C♭9` would be the added-ninth
+  /// chord.
+  static const String _optionalSeventhPlaceholder = '~';
 
   /// Resolves the modifier tail for [notation], walking the sheet's columns
   /// from the requested one towards the symbolic one until a value is found.
@@ -249,8 +257,12 @@ class DiatarChord {
   }
 
   /// Expands a modifier tail into parts, turning `^x` runs into a single
-  /// superscript part each.
-  static List<ChordPart> _templateParts(String template) {
+  /// superscript part each. [optionalSeventh] decides whether
+  /// [_optionalSeventhPlaceholder] becomes a superscript `7` or nothing.
+  static List<ChordPart> _templateParts(
+    String template, {
+    required bool optionalSeventh,
+  }) {
     final List<ChordPart> result = <ChordPart>[];
     bool superscriptNext = false;
     for (int i = 0; i < template.length; i++) {
@@ -259,15 +271,20 @@ class DiatarChord {
         superscriptNext = true;
         continue;
       }
-      final ChordPartStyle style = superscriptNext
+      final bool isSeventh = character == _optionalSeventhPlaceholder;
+      if (isSeventh && !optionalSeventh) {
+        continue;
+      }
+      final ChordPartStyle style = superscriptNext || isSeventh
           ? ChordPartStyle.superscript
           : ChordPartStyle.normal;
       superscriptNext = false;
+      final String text = isSeventh ? '7' : character;
       if (result.isNotEmpty && result.last.style == style) {
         final ChordPart last = result.removeLast();
-        result.add(ChordPart(last.text + character, style));
+        result.add(ChordPart(last.text + text, style));
       } else {
-        result.add(ChordPart(character, style));
+        result.add(ChordPart(text, style));
       }
     }
     return result;
@@ -280,23 +297,10 @@ class DiatarChord {
     ChordNotation notation, {
     required bool optionalSeventh,
   }) {
-    final String template = _modifierTemplate(notation, index);
-    // A spelling that already writes the seventh out — such as the numeric
-    // Cmmaj7♭5 — must not gain a second one.
-    if (!optionalSeventh ||
-        !_optionalSeventhModifiers.contains(index) ||
-        template.contains('7')) {
-      return _templateParts(template);
-    }
-    // The sheet keeps the seventh inside the parentheses of e.g. dim(maj7).
-    final int insertAt = template.endsWith(')')
-        ? template.length - 1
-        : template.length;
-    return <ChordPart>[
-      ..._templateParts(template.substring(0, insertAt)),
-      const ChordPart('7', ChordPartStyle.superscript),
-      ..._templateParts(template.substring(insertAt)),
-    ];
+    return _templateParts(
+      _modifierTemplate(notation, index),
+      optionalSeventh: optionalSeventh,
+    );
   }
 
   static const Set<int> _minorModifiers = <int>{

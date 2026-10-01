@@ -595,7 +595,7 @@
   "chordNotationNumeric": "Számjegyes (C#5, Cm♭5, C7sus4)",
   "chordNotationOff": "Kikapcsolva",
   "chordOptionalSeventh": "A rejtett szeptim megjelenítése",
-  "chordOptionalSeventhHint": "A szeptimet csak azoknál a hangzatoknál írja ki, amelyek külön jel nélkül tartalmazzák (C△7, Cmaj7, C°△7, Cdim(maj7)).",
+  "chordOptionalSeventhHint": "A szeptimet csak azoknál a hangzatoknál írja ki, amelyek külön jel nélkül tartalmazzák (C△7, Cmaj7, C°△7, Cdim(maj7), C79, C△79, Cmaj9).",
   "chordMinorAsDash": "Moll jelölése kötőjellel",
   "chordMinorAsDashHint": "A moll akkordok \"m\" jele helyett kötőjelet kap, például Cm7 helyett C-7.",
   "colorsTitle": "Színek",

@@ -90,10 +90,10 @@ void main() {
       '#7+': 'C+△',
       '6': 'C6',
       '79': 'C9',
-      '79-': 'C♭9',
-      '79+': 'C#9',
+      '79-': 'C7♭9',
+      '79+': 'C7#9',
       '#79': 'C+9',
-      '#79+': 'C+#9',
+      '#79+': 'C+7#9',
       '7+9': 'C△9',
       '7+9+': 'C△#9',
       '#7+9': 'C+△9',
@@ -138,7 +138,7 @@ void main() {
       '#7': 'Caug7',
       '#7+': 'Caug(maj)',
       '#79': 'Caug9',
-      '#79+': 'Caug#9',
+      '#79+': 'Caug7#9',
       '7+9': 'Cmaj9',
       '7+9+': 'Cmaj#9',
       '#7+9': 'Caug(maj9)',
@@ -155,8 +155,8 @@ void main() {
       '7': 'C7',
       '6': 'C6',
       '79': 'C9',
-      '79-': 'C♭9',
-      '79+': 'C#9',
+      '79-': 'C7♭9',
+      '79+': 'C7#9',
       '9': 'Cadd9',
       '9-': 'Cadd♭9',
       '9+': 'Cadd#9',
@@ -201,7 +201,7 @@ void main() {
       '#7': 'C7#5',
       '#7+': 'Cmaj7#5',
       '#79': 'C9#5',
-      '#79+': 'C#9#5',
+      '#79+': 'C7#9#5',
       '#7+9': 'Cmaj9#5',
       '#7+9+': 'Cmaj#9#5',
     };
@@ -223,8 +223,8 @@ void main() {
       '7': 'C7',
       '6': 'C6',
       '79': 'C9',
-      '79-': 'C♭9',
-      '79+': 'C#9',
+      '79-': 'C7♭9',
+      '79+': 'C7#9',
       '9': 'Cadd9',
       '9-': 'Cadd♭9',
       '9+': 'Cadd#9',
@@ -296,11 +296,59 @@ void main() {
     expect(render('C7+', notation: ChordNotation.numeric), 'Cmaj7');
     expect(render('Co7+', notation: ChordNotation.numeric), 'Cmmaj7♭5');
 
+    // The ninth chords leave the seventh out unless asked.
+    expect(render('C79'), 'C79');
+    expect(render('Cm79'), 'Cm79');
+    expect(render('C#79'), 'C+79');
+    expect(render('C7+9'), 'C△79');
+    expect(render('Cm7+9'), 'Cm△79');
+    expect(render('C7+9+'), 'C△7#9');
+    expect(render('C#7+9'), 'C+△79');
+    expect(render('C#7+9+'), 'C+△7#9');
+
+    expect(
+      render('C#79', notation: ChordNotation.textual),
+      'Caug79',
+    );
+    expect(render('C7+9', notation: ChordNotation.textual), 'Cmaj79');
+    expect(
+      render('C7+9+', notation: ChordNotation.textual),
+      'Cmaj7#9',
+    );
+    expect(
+      render('C#7+9', notation: ChordNotation.textual),
+      'Caug7(maj9)',
+    );
+    expect(
+      render('C#7+9+', notation: ChordNotation.textual),
+      'Caug7(maj#9)',
+    );
+    expect(render('C#79', notation: ChordNotation.numeric), 'C79#5');
+    expect(render('C#7+9', notation: ChordNotation.numeric), 'Cmaj79#5');
+    expect(
+      render('C#7+9+', notation: ChordNotation.numeric),
+      'Cmaj7#9#5',
+    );
+
+    // A bare ♭9 or #9 would be the added-ninth chord, so these keep the seventh.
+    expect(render('C79-'), 'C7♭9');
+    expect(render('Cm79-'), 'Cm7♭9');
+    expect(render('C79+'), 'C7#9');
+    expect(render('C#79+'), 'C+7#9');
+    expect(render('C#79+', notation: ChordNotation.textual), 'Caug7#9');
+    expect(render('C#79+', notation: ChordNotation.numeric), 'C7#9#5');
+    expect(render('C79-', optionalSeventh: false), 'C7♭9');
+    expect(render('C79+', optionalSeventh: false), 'C7#9');
+
     // Qualities that already show a seventh are untouched.
     expect(render('C7'), 'C7');
     expect(render('Co7'), 'Cø');
     expect(render('Co7-'), 'C°7');
     expect(render('C7+', optionalSeventh: false), 'C△');
+    expect(render('C79', optionalSeventh: false), 'C9');
+    expect(render('C#79', optionalSeventh: false), 'C+9');
+    expect(render('C7+9', optionalSeventh: false), 'C△9');
+    expect(render('C#7+9+', optionalSeventh: false), 'C+△#9');
   });
 
   test('diminished and half-diminished use the sheet glyphs', () {
