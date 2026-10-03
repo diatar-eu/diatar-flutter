@@ -27,9 +27,9 @@ import '../services/blank_image_storage.dart';
 import '../services/pic_plc_service.dart';
 import '../services/web_diavetito_url.dart';
 import '../services/wol_service.dart';
+import '../core/hotkeys/desktop_hotkey.dart';
 import '../core/settings/internet_credentials_policy.dart';
 import '../utils/friendly_path.dart';
-import 'desktop_hotkey.dart';
 import 'onboarding_sheet.dart';
 
 class SongHotkeyOption {
