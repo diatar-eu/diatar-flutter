@@ -595,7 +595,7 @@
   "chordNotationNumeric": "Numeric (C#5, Cm♭5, C7sus4)",
   "chordNotationOff": "Off",
   "chordOptionalSeventh": "Show the hidden seventh",
-  "chordOptionalSeventhHint": "Writes out the seventh only for qualities that imply it without a separate mark (C△7, Cmaj7, C°△7, Cdim(maj7)).",
+  "chordOptionalSeventhHint": "Writes out the seventh only for qualities that imply it without a separate mark (C△7, Cmaj7, C°△7, Cdim(maj7), C79, C△79, Cmaj9).",
   "chordMinorAsDash": "Mark minor with a dash",
   "chordMinorAsDashHint": "Minor chords use \"-\" instead of \"m\", so Cm7 becomes C-7.",
   "colorsTitle": "Colors",

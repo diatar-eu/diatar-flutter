@@ -4079,11 +4079,17 @@ class _BookDropdown extends StatelessWidget {
     final int activeEnabledSetIndex = activeId == null
         ? -1
         : enabledSets.indexWhere((CustomOrderSet s) => s.id == activeId);
+    final int currentBookIndex = controller.bookIndex.clamp(
+      0,
+      controller.books.length - 1,
+    );
     final int initial = controller.diaVirtualBookSelected
         ? (activeEnabledSetIndex >= 0
               ? _customOrderSetValueBase - activeEnabledSetIndex
-              : _diaVirtualBookValue)
-        : controller.bookIndex;
+              : hasDia
+              ? _diaVirtualBookValue
+              : currentBookIndex)
+        : currentBookIndex;
 
     return Row(
       children: <Widget>[

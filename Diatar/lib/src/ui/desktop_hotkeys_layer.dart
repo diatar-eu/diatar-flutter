@@ -21,34 +21,29 @@ class DesktopHotkeysLayer extends StatefulWidget {
 }
 
 class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
-  final FocusNode _focusNode = FocusNode(debugLabel: 'desktop-hotkeys-layer');
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKeyEvent);
+  }
 
   @override
   void dispose() {
-    _focusNode.dispose();
+    HardwareKeyboard.instance.removeHandler(_onKeyEvent);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_supportsMainWindowHotkeys()) {
-      return widget.child;
-    }
-
-    return Focus(
-      autofocus: true,
-      focusNode: _focusNode,
-      onKeyEvent: _onKeyEvent,
-      child: widget.child,
-    );
+    return widget.child;
   }
 
-  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) {
-      return KeyEventResult.ignored;
-    }
-    if (_isTypingIntoTextField()) {
-      return KeyEventResult.ignored;
+  bool _onKeyEvent(KeyEvent event) {
+    if (!_supportsMainWindowHotkeys() ||
+        event is! KeyDownEvent ||
+        !_isCurrentRoute() ||
+        _isTypingIntoTextField()) {
+      return false;
     }
 
     final AppSettings settings = widget.controller.settings;
@@ -59,10 +54,18 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
       orderSetHotkeys: settings.desktopOrderSetHotkeys,
     );
     if (command == null) {
-      return KeyEventResult.ignored;
+      return false;
     }
     widget.controller.runDesktopHotkeyCommand(command);
-    return KeyEventResult.handled;
+    return true;
+  }
+
+  bool _isCurrentRoute() {
+    if (!mounted) {
+      return false;
+    }
+    return ModalRoute.of(context)?.isCurrent ?? true;
+  }
   }
 
   bool _isTypingIntoTextField() {
@@ -71,7 +74,8 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
     if (focusContext == null) {
       return false;
     }
-    return focusContext.widget is EditableText;
+    return focusContext.widget is EditableText ||
+        focusContext.findAncestorWidgetOfExactType<EditableText>() != null;
   }
 
   bool _supportsMainWindowHotkeys() {
