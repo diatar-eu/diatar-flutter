@@ -39,3 +39,22 @@ A főképernyőn lent jobb sarokban található **módváltó**:
 - **Hang** — versszakokhoz tartozó hangfájlok lejátszása
 - **Billentyűparancsok** — gyorsbillentyűk asztali környezetben
 - **Biztonsági mentés** — teljes adatmappa export/import ZIP formátumban
+
+## Linuxos grafikai hibaelhárítás
+
+A Diatár az ismert régi Intel grafikus vezérlőkön automatikusan szoftveres
+megjelenítésre vált. Ha egy korábban ismeretlen Impeller- vagy Mesa-hiba miatt
+a grafikus indítás megszakad, vagy az OpenGL-kompozitor nem inicializálható, a
+következő indítás már szoftveres módban történik, és ezt a beállítást megőrzi.
+
+A mód kézzel is kiválasztható:
+
+```bash
+./diatar_app --software-rendering
+./diatar_app --hardware-rendering
+```
+
+A `--software-rendering` megőrzi a biztonságos beállítást. A
+`--hardware-rendering` törli azt, és ismét megpróbálja a hardveres
+megjelenítést; ha a grafikus indítás újra összeomlik, a következő indításkor
+ismét automatikusan bekapcsol a szoftveres mód.

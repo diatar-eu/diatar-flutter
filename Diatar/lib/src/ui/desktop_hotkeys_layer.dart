@@ -1,11 +1,10 @@
-import 'dart:async';
-
+import 'package:diatar_common/diatar_common.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../controllers/diatar_main_controller.dart';
-import 'desktop_hotkey.dart';
+import '../core/hotkeys/desktop_hotkey_dispatch.dart';
 
 class DesktopHotkeysLayer extends StatefulWidget {
   const DesktopHotkeysLayer({
@@ -47,39 +46,18 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
       return false;
     }
 
-    final Map<String, String> actionHotkeys =
-        widget.controller.settings.desktopActionHotkeys;
-    final String? actionId = desktopHotkeyActionForEvent(event, actionHotkeys);
-    if (actionId != null) {
-      widget.controller.runDesktopHotkeyAction(actionId);
-      return true;
-    }
-
-    final String combo = desktopHotkeyComboForEvent(event);
-    if (combo.isEmpty) {
+    final AppSettings settings = widget.controller.settings;
+    final DesktopHotkeyCommand? command = desktopHotkeyCommandForEvent(
+      event,
+      actionHotkeys: settings.desktopActionHotkeys,
+      songHotkeys: settings.desktopSongHotkeys,
+      orderSetHotkeys: settings.desktopOrderSetHotkeys,
+    );
+    if (command == null) {
       return false;
     }
-
-    final Map<String, String> songHotkeys =
-        widget.controller.settings.desktopSongHotkeys;
-    final String? songBinding = desktopHotkeyValueForCombo(combo, songHotkeys);
-    if (songBinding != null) {
-      widget.controller.activateSongHotkeyBinding(songBinding);
-      return true;
-    }
-
-    final Map<String, String> orderSetHotkeys =
-        widget.controller.settings.desktopOrderSetHotkeys;
-    final String? orderSetId = desktopHotkeyValueForCombo(
-      combo,
-      orderSetHotkeys,
-    );
-    if (orderSetId != null) {
-      unawaited(widget.controller.setActiveCustomOrderSetById(orderSetId));
-      return true;
-    }
-
-    return false;
+    widget.controller.runDesktopHotkeyCommand(command);
+    return true;
   }
 
   bool _isCurrentRoute() {

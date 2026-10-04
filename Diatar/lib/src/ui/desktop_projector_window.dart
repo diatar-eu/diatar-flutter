@@ -10,7 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'desktop_hotkey.dart';
+import '../core/hotkeys/desktop_hotkey_dispatch.dart';
 
 class DesktopProjectorWindow extends StatefulWidget {
   const DesktopProjectorWindow({super.key, required this.monitor});
@@ -31,9 +31,11 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     _channelName,
     mode: ChannelMode.unidirectional,
   );
+  /// A vezérlő (fő) ablak felé menő csatorna: egyirányú, mert a
+  /// kezelőt a főablak regisztrálja, a vetítőablak csak hív rajta.
   final WindowMethodChannel _controlChannel = const WindowMethodChannel(
     _controlChannelName,
-    mode: ChannelMode.bidirectional,
+    mode: ChannelMode.unidirectional,
   );
   final DesktopProjectorController _controller = DesktopProjectorController();
   final FocusNode _hotkeyFocusNode = FocusNode(
@@ -90,14 +92,10 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
     final int requestedMonitor = (args['monitor'] as int?) ?? widget.monitor;
     _mainMonitor = (args['mainMonitor'] as int?) ?? -1;
     _controller.applyMonitor(requestedMonitor);
-    _controller.onClose = _shutdown;
-    await windowController.setWindowMethodHandler((MethodCall call) async {
-      if (call.method == 'window_close') {
-        await _shutdown();
-        return null;
-      }
-      throw MissingPluginException('Unknown window method: ${call.method}');
-    });
+    // Nincs per-window bezáró csatorna: a bridge egységesen elrejti a
+    // vetítőablakot (lásd: DesktopProjectorBridge._closeWindow), így a
+    // korábbi `window_close` bezáró útnak nincs küldője. Az egyetlen
+    // levezetési pont a `CHANNEL_LIMIT_REACHED` kezelése lent.
     try {
       await _channel.setMethodCallHandler(_handleProjectorMethodCall);
     } catch (error) {
@@ -107,12 +105,6 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
       }
       rethrow;
     }
-    // A vezérlő ablakkal való kommunikációhoz (vetítésbe kattintás ->
-    // vezérlő visszahozása) egy bidirekcionális csatornán párba állunk a
-    // főablakkal. Ha egy korábbi vetítőablak regisztrációja megmaradt
-    // (CHANNEL_LIMIT_REACHED), újrapróbáljuk, hogy a kattintásos visszahozás
-    // ne törjön el véglegesen.
-    await _registerControlChannelWithRetry();
     await windowManager.ensureInitialized();
     windowManager.addListener(this);
     // macOS-en a `setSkipTaskbar(true)` az NSApplication activation policy-ját
@@ -138,17 +130,22 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
         _windowReady = true;
       },
     );
+    // A vezérlőcsatorna egyirányú: azt a főablak regisztrálja, a vetítőablak
+    // csak hív rajta. Jelezzük a vezérlőnek, hogy az adatcsatorna készen áll,
+    // és elküldheti a függőben lévő állapotot.
+    await _notifyControlReady();
   }
 
-  Future<void> _registerControlChannelWithRetry() async {
+  /// Jelzi a vezérlőablaknak, hogy a vetítő motor készen áll. A csatorna
+  /// regisztrációja a főablaknál az induláskor megtörténik, de az első
+  /// pillanatokban még hiányozhat; ezért rövid ideig újrapróbáljuk.
+  Future<void> _notifyControlReady() async {
     for (int attempt = 0; attempt < 10; attempt++) {
       try {
-        await _controlChannel.setMethodCallHandler((MethodCall call) async {
-          return null;
-        });
+        await _controlChannel.invokeMethod<void>('ready');
         return;
       } catch (_) {
-        await Future<void>.delayed(const Duration(milliseconds: 300));
+        await Future<void>.delayed(const Duration(milliseconds: 200));
       }
     }
   }
@@ -174,6 +171,17 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
       // A macOS fájlpárbeszédablakok a `runModal` alapú natív útvonalon
       // mennek (lásd: `macos_file_panels`), így erre az üzenetre nincs
       // szükség. A beérkező üzeneteket figyelmen kívül hagyjuk.
+      return null;
+    }
+
+    if (call.method == 'focus') {
+      // A vezérlőablak elrejtése után a vetítő veszi át a fókuszt, hogy a
+      // gyorsbillentyűket megkapja.
+      try {
+        await windowManager.focus();
+      } catch (_) {
+        // nem kritikus
+      }
       return null;
     }
 
@@ -299,18 +307,25 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
   void dispose() {
     windowManager.removeListener(this);
     _hotkeyFocusNode.dispose();
-    final WindowController? current = _currentWindowController;
-    if (current != null) {
-      unawaited(current.setWindowMethodHandler(null));
-    }
     unawaited(_channel.setMethodCallHandler(null));
     unawaited(_controlChannel.setMethodCallHandler(null));
     _controller.dispose();
     super.dispose();
   }
 
+  /// A felhasználó bezárta a vetítőablakot.
+  ///
+  /// A bridge az ablakot sosem zárja be, csak elrejti, így itt is az
+  /// elrejtés a helyes válasz: az ablak és a natív csatorna-regisztráció
+  /// életben marad, és a következő engedélyezéskor azonnal újra használható
+  /// (a bezárás a Linuxon a regisztráció elvesztéséhez vezetne).
   @override
-  void onWindowClose() => _shutdown();
+  void onWindowClose() {
+    if (_shuttingDown) {
+      return;
+    }
+    unawaited(windowManager.hide());
+  }
 
   /// A vetítésbe való kattintáskor visszahozzuk a vezérlő (fő) ablakot.
   Future<void> _onProjectionTap() async {
@@ -322,14 +337,26 @@ class _DesktopProjectorWindowState extends State<DesktopProjectorWindow>
   }
 
   KeyEventResult _onHotkeyEvent(FocusNode node, KeyEvent event) {
-    final String? actionId = desktopHotkeyActionForEvent(
+    final AppSettings settings = _controller.settings;
+    final DesktopHotkeyCommand? command = desktopHotkeyCommandForEvent(
       event,
-      _controller.settings.desktopActionHotkeys,
+      actionHotkeys: settings.desktopActionHotkeys,
+      songHotkeys: settings.desktopSongHotkeys,
+      orderSetHotkeys: settings.desktopOrderSetHotkeys,
     );
-    if (actionId == null) {
+    if (command == null) {
       return KeyEventResult.ignored;
     }
-    unawaited(_controlChannel.invokeMethod<void>('hotkeyAction', actionId));
+    unawaited(
+      _controlChannel
+          .invokeMethod<void>('hotkey', command.toMap())
+          .catchError((Object error) {
+        // A továbbítás néma hiba esetén nem derülne ki, hol akadt el:
+        // érdemes egy sorban látszania, ha a rejtett vezérlőablak mellett
+        // a gyorsbillentyűk nem érnek célba.
+        debugPrint('[DesktopProjector] hotkey forward failed: $error');
+      }),
+    );
     return KeyEventResult.handled;
   }
 
@@ -412,25 +439,11 @@ class DesktopProjectorController extends ChangeNotifier {
         return null;
       case 'idle':
         return null;
-      case 'close':
-        await _onClose();
-        return null;
       default:
         throw MissingPluginException(
           'Unknown projector method: ${call.method}',
         );
     }
-  }
-
-  /// A vezérlő ablak bezárását (a 'close' csatornaüzenetre) a vetítőablak
-  /// állapotkezelőjéből indítjuk, hogy a natív csatornák is leiratkozzanak.
-  Future<void> Function()? onClose;
-
-  Future<void> _onClose() async {
-    if (onClose == null) {
-      return;
-    }
-    await onClose!.call();
   }
 
   void applyMonitor(int value) {
