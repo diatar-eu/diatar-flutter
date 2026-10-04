@@ -15,9 +15,13 @@ constexpr char kSoftwareRenderingArgument[] = "--software-rendering";
 constexpr char kHardwareRenderingArgument[] = "--hardware-rendering";
 constexpr char kStartupMarkerPrefix[] = "startup-";
 constexpr char kStartupMarkerSuffix[] = ".pending";
+constexpr char kCompositorSetupFailure[] =
+    "Failed to setup compositor shaders, unable to make OpenGL context "
+    "current";
 constexpr guint kStartupSuccessDelaySeconds = 10;
 
 gchar* startup_marker_path = nullptr;
+gchar* software_marker_path = nullptr;
 
 bool is_legacy_intel_gpu(const gchar* device_id) {
   // Intel Gen2-Gen4 and Pineview IDs from Linux's include/drm/intel/pciids.h.
@@ -153,6 +157,23 @@ bool write_marker(const gchar* path) {
   return false;
 }
 
+void graphics_log_handler(const gchar* log_domain,
+                          GLogLevelFlags log_level,
+                          const gchar* message,
+                          gpointer user_data) {
+  if ((log_level & G_LOG_LEVEL_WARNING) != 0 &&
+      g_strcmp0(message, kCompositorSetupFailure) == 0 &&
+      software_marker_path != nullptr &&
+      !g_file_test(software_marker_path, G_FILE_TEST_EXISTS) &&
+      write_marker(software_marker_path)) {
+    g_message(
+        "OpenGL compositor initialization failed; software rendering will be "
+        "used on the next start");
+  }
+
+  g_log_default_handler(log_domain, log_level, message, user_data);
+}
+
 gboolean remove_startup_marker(gpointer data) {
   const gchar* path = static_cast<const gchar*>(data);
   if (g_remove(path) != 0 && errno != ENOENT) {
@@ -179,6 +200,9 @@ void graphics_fallback_configure(int* argc, char*** argv) {
 
   g_autofree gchar* software_marker = g_build_filename(
       marker_directory, "software-rendering", nullptr);
+  software_marker_path = g_strdup(software_marker);
+  g_log_set_default_handler(graphics_log_handler, nullptr);
+
   bool previous_startup_failed = false;
   if (marker_directory_ready) {
     previous_startup_failed =
@@ -250,12 +274,11 @@ void graphics_fallback_schedule_startup_success() {
 }
 
 void graphics_fallback_cleanup_startup_marker() {
-  if (startup_marker_path == nullptr) {
-    return;
-  }
-  if (g_remove(startup_marker_path) != 0 && errno != ENOENT) {
+  if (startup_marker_path != nullptr &&
+      g_remove(startup_marker_path) != 0 && errno != ENOENT) {
     g_warning("Unable to remove graphics startup marker %s",
               startup_marker_path);
   }
   g_clear_pointer(&startup_marker_path, g_free);
+  g_clear_pointer(&software_marker_path, g_free);
 }

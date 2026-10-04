@@ -44,8 +44,8 @@ A főképernyőn lent jobb sarokban található **módváltó**:
 
 A Diatár az ismert régi Intel grafikus vezérlőkön automatikusan szoftveres
 megjelenítésre vált. Ha egy korábban ismeretlen Impeller- vagy Mesa-hiba miatt
-a grafikus indítás megszakad, a következő indítás már szoftveres módban
-történik, és ezt a beállítást megőrzi.
+a grafikus indítás megszakad, vagy az OpenGL-kompozitor nem inicializálható, a
+következő indítás már szoftveres módban történik, és ezt a beállítást megőrzi.
 
 A mód kézzel is kiválasztható:
 
