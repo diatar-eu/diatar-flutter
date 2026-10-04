@@ -66,7 +66,6 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
     }
     return ModalRoute.of(context)?.isCurrent ?? true;
   }
-  }
 
   bool _isTypingIntoTextField() {
     final BuildContext? focusContext =
