@@ -51,6 +51,7 @@ class ProjectorPainter extends CustomPainter {
     required this.frame,
     required this.globals,
     required this.settings,
+    this.allowLineWrapping = true,
     this.logoTitle = '',
     this.logoSubtitle = '',
     this.onHighlightRenderState,
@@ -63,6 +64,7 @@ class ProjectorPainter extends CustomPainter {
   final ProjectionFrame? frame;
   final ProjectionGlobals globals;
   final AppSettings settings;
+  final bool allowLineWrapping;
   final String logoTitle;
   final String logoSubtitle;
   final ValueChanged<HighlightRenderState>? onHighlightRenderState;
@@ -124,6 +126,60 @@ class ProjectorPainter extends CustomPainter {
     }
     final double contentHeight = _measureTextRequiredHeight(size, localFrame);
     return globals.vCenter ? contentHeight : contentHeight + 8;
+  }
+
+  /// Computes the width needed to render text lines without wrapping.
+  double measureRequiredWidth() {
+    final ProjectionFrame? localFrame = frame;
+    if (localFrame is! TextFrame) {
+      return 0;
+    }
+
+    final double fontSize = globals.fontSize.toDouble();
+    final List<String> sourceLines = <String>[
+      if (!globals.hideTitle && localFrame.record.title.isNotEmpty)
+        localFrame.record.title,
+      ...localFrame.record.lines,
+    ];
+    final List<_RenderLine> lines = _parseRenderLines(sourceLines);
+    final _KottaDrawState carryKottaState = _KottaDrawState();
+    double requiredWidth = 0;
+
+    for (int index = 0; index < lines.length; index++) {
+      final _RenderLine line = lines[index];
+      final bool isTitleLine =
+          !globals.hideTitle &&
+          localFrame.record.title.isNotEmpty &&
+          index == 0;
+      final bool hasKotta =
+          !isTitleLine &&
+          globals.useKotta &&
+          settings.receiverUseKotta &&
+          line.words.any((word) => (word.kotta ?? '').isNotEmpty);
+      if (hasKotta) {
+        final List<_KottaRowLayout> rows = _buildKottaRows(
+          line,
+          fontSize,
+          double.maxFinite,
+          inheritedState: carryKottaState,
+        );
+        for (final _KottaRowLayout row in rows) {
+          requiredWidth = math.max(requiredWidth, row.width);
+        }
+        _advanceKottaStateForLine(
+          line,
+          _kottaLineGap(fontSize),
+          carryKottaState,
+        );
+      } else {
+        requiredWidth = math.max(
+          requiredWidth,
+          _buildTextRowMeasure(line, fontSize).width,
+        );
+      }
+    }
+
+    return requiredWidth;
   }
 
   List<String> debugKottaRowPrefixesForLine(
@@ -738,7 +794,9 @@ class ProjectorPainter extends CustomPainter {
     }
 
     const double horizontalPad = 0;
-    final double maxWidth = math.max(40, size.width);
+    final double maxWidth = allowLineWrapping
+        ? math.max(40, size.width)
+        : double.maxFinite;
 
     final _AutoSizeResult autoSize = _resolveAutoSize(size, frame);
     final double fontSize = autoSize.fontSize;
@@ -1129,7 +1187,9 @@ class ProjectorPainter extends CustomPainter {
       return cached;
     }
 
-    final double maxWidth = math.max(40, size.width);
+    final double maxWidth = allowLineWrapping
+        ? math.max(40, size.width)
+        : double.maxFinite;
     final bool hasTitleLine =
         !globals.hideTitle && frame.record.title.isNotEmpty;
     final List<String> sourceLines = <String>[
@@ -3268,6 +3328,7 @@ class ProjectorPainter extends CustomPainter {
       globals.useAkkord,
       globals.useKotta,
       globals.hideTitle,
+      allowLineWrapping,
       settings.receiverUseAkkord,
       settings.receiverUseKotta,
       frame.record.title,
@@ -3293,6 +3354,7 @@ class ProjectorPainter extends CustomPainter {
       globals.useAkkord,
       globals.useKotta,
       globals.hideTitle,
+      allowLineWrapping,
       globals.kottaArany,
       globals.akkordArany,
       settings.receiverUseAkkord,
@@ -5118,6 +5180,7 @@ class ProjectorPainter extends CustomPainter {
     return !_sameFrame(oldDelegate.frame, frame) ||
         !_sameGlobals(oldDelegate.globals, globals) ||
         !_sameSettings(oldDelegate.settings, settings) ||
+        oldDelegate.allowLineWrapping != allowLineWrapping ||
         oldDelegate.logoTitle != logoTitle ||
         oldDelegate.logoSubtitle != logoSubtitle;
   }

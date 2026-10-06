@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -6,6 +8,8 @@ import '../models/projection_frame.dart';
 import '../models/projection_globals.dart';
 import '../models/records.dart';
 import 'projector_painter.dart';
+
+typedef KottaPreviewLineBuilder = String Function(String source);
 
 class KottaEditorLabels {
   const KottaEditorLabels({
@@ -78,14 +82,14 @@ class KottaEditorLabels {
 Future<String?> showKottaEditorDialog({
   required BuildContext context,
   required KottaEditorLabels labels,
-  required String followingText,
+  required KottaPreviewLineBuilder previewLineBuilder,
   String? initialSource,
 }) {
   return showDialog<String>(
     context: context,
     builder: (BuildContext context) => _KottaEditorDialog(
       labels: labels,
-      followingText: followingText,
+      previewLineBuilder: previewLineBuilder,
       initialSource: initialSource,
     ),
   );
@@ -94,12 +98,12 @@ Future<String?> showKottaEditorDialog({
 class _KottaEditorDialog extends StatefulWidget {
   const _KottaEditorDialog({
     required this.labels,
-    required this.followingText,
+    required this.previewLineBuilder,
     this.initialSource,
   });
 
   final KottaEditorLabels labels;
-  final String followingText;
+  final KottaPreviewLineBuilder previewLineBuilder;
   final String? initialSource;
 
   @override
@@ -158,124 +162,148 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   Widget build(BuildContext context) {
     final KottaEditorLabels labels = widget.labels;
     final ThemeData theme = Theme.of(context);
+    final double contentHeight = math.min(
+      650,
+      MediaQuery.sizeOf(context).height * 0.7,
+    );
     return AlertDialog(
       title: Text(
         widget.initialSource == null ? labels.insertTitle : labels.editTitle,
       ),
       content: SizedBox(
         width: 720,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Text(labels.preview, style: theme.textTheme.labelLarge),
-              const SizedBox(height: 8),
-              _KottaPreview(
-                source: _sourceController.text,
-                followingText: widget.followingText,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _sourceController,
-                focusNode: _sourceFocusNode,
-                decoration: InputDecoration(
-                  labelText: labels.source,
-                  helperText: labels.sourceHint,
-                  errorText: _sourceController.text.isNotEmpty && !_isValid
-                      ? labels.invalidSource
-                      : null,
-                ),
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.deny(
-                    RegExp(r'[\\;\r\n]'),
-                    replacementString: '',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _CommandSection(
-                label: labels.clef,
-                commands: <_KottaEditorCommand>[
-                  _KottaEditorCommand(labels.gClef, 'kG'),
-                  _KottaEditorCommand(labels.fClef, 'kF'),
-                ],
-                onPressed: _insertCommand,
-              ),
-              _CommandSection(
-                label: labels.keySignature,
-                commands: <_KottaEditorCommand>[
-                  _KottaEditorCommand(labels.noKeySignature, 'E0'),
-                  for (int index = 1; index <= 7; index++)
-                    _KottaEditorCommand('${labels.flats} $index', 'e$index'),
-                  for (int index = 1; index <= 7; index++)
-                    _KottaEditorCommand('${labels.sharps} $index', 'E$index'),
-                ],
-                onPressed: _insertCommand,
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(labels.dotted),
-                value: _dotted,
-                onChanged: (bool value) => setState(() => _dotted = value),
-              ),
-              _CommandSection(
-                label: labels.rhythm,
-                commands: <_KottaEditorCommand>[
-                  _KottaEditorCommand(labels.whole, _rhythmCommand('1')),
-                  _KottaEditorCommand(labels.half, _rhythmCommand('2')),
-                  _KottaEditorCommand(labels.quarter, _rhythmCommand('4')),
-                  _KottaEditorCommand(labels.eighth, _rhythmCommand('8')),
-                  _KottaEditorCommand(labels.sixteenth, _rhythmCommand('6')),
-                ],
-                onPressed: _insertCommand,
-              ),
-              _CommandSection(
-                label: labels.notes,
-                commands: <_KottaEditorCommand>[
-                  for (final String octave in <String>['1', '2', '3'])
-                    for (final String position in 'abcdefghi'.split(''))
-                      _KottaEditorCommand(
-                        '$octave$position',
-                        '$octave$position',
+        height: contentHeight,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(labels.preview, style: theme.textTheme.labelLarge),
+            const SizedBox(height: 8),
+            _KottaPreview(
+              line: widget.previewLineBuilder(_sourceController.text),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    TextField(
+                      controller: _sourceController,
+                      focusNode: _sourceFocusNode,
+                      decoration: InputDecoration(
+                        labelText: labels.source,
+                        helperText: labels.sourceHint,
+                        errorText:
+                            _sourceController.text.isNotEmpty && !_isValid
+                            ? labels.invalidSource
+                            : null,
                       ),
-                ],
-                onPressed: _insertCommand,
+                      inputFormatters: <TextInputFormatter>[
+                        FilteringTextInputFormatter.deny(
+                          RegExp(r'[\\;\r\n]'),
+                          replacementString: '',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _CommandSection(
+                      label: labels.clef,
+                      commands: <_KottaEditorCommand>[
+                        _KottaEditorCommand(labels.gClef, 'kG'),
+                        _KottaEditorCommand(labels.fClef, 'kF'),
+                      ],
+                      onPressed: _insertCommand,
+                    ),
+                    _CommandSection(
+                      label: labels.keySignature,
+                      commands: <_KottaEditorCommand>[
+                        _KottaEditorCommand(labels.noKeySignature, 'E0'),
+                        for (int index = 1; index <= 7; index++)
+                          _KottaEditorCommand(
+                            '${labels.flats} $index',
+                            'e$index',
+                          ),
+                        for (int index = 1; index <= 7; index++)
+                          _KottaEditorCommand(
+                            '${labels.sharps} $index',
+                            'E$index',
+                          ),
+                      ],
+                      onPressed: _insertCommand,
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(labels.dotted),
+                      value: _dotted,
+                      onChanged: (bool value) =>
+                          setState(() => _dotted = value),
+                    ),
+                    _CommandSection(
+                      label: labels.rhythm,
+                      commands: <_KottaEditorCommand>[
+                        _KottaEditorCommand(labels.whole, _rhythmCommand('1')),
+                        _KottaEditorCommand(labels.half, _rhythmCommand('2')),
+                        _KottaEditorCommand(
+                          labels.quarter,
+                          _rhythmCommand('4'),
+                        ),
+                        _KottaEditorCommand(labels.eighth, _rhythmCommand('8')),
+                        _KottaEditorCommand(
+                          labels.sixteenth,
+                          _rhythmCommand('6'),
+                        ),
+                      ],
+                      onPressed: _insertCommand,
+                    ),
+                    _CommandSection(
+                      label: labels.notes,
+                      commands: <_KottaEditorCommand>[
+                        for (final String octave in <String>['1', '2', '3'])
+                          for (final String position in 'abcdefghi'.split(''))
+                            _KottaEditorCommand(
+                              '$octave$position',
+                              '$octave$position',
+                            ),
+                      ],
+                      onPressed: _insertCommand,
+                    ),
+                    _CommandSection(
+                      label: labels.rests,
+                      commands: <_KottaEditorCommand>[
+                        _KottaEditorCommand(labels.whole, 's1'),
+                        _KottaEditorCommand(labels.half, 's2'),
+                        _KottaEditorCommand(labels.quarter, 's4'),
+                        _KottaEditorCommand(labels.eighth, 's8'),
+                        _KottaEditorCommand(labels.sixteenth, 's6'),
+                      ],
+                      onPressed: _insertCommand,
+                    ),
+                    _CommandSection(
+                      label: labels.accidentals,
+                      commands: <_KottaEditorCommand>[
+                        _KottaEditorCommand(labels.natural, 'm0'),
+                        _KottaEditorCommand(labels.flat, 'mb'),
+                        _KottaEditorCommand(labels.sharp, 'mk'),
+                        _KottaEditorCommand(labels.doubleFlat, 'mB'),
+                        _KottaEditorCommand(labels.doubleSharp, 'mK'),
+                      ],
+                      onPressed: _insertCommand,
+                    ),
+                    _CommandSection(
+                      label: labels.barlines,
+                      commands: const <_KottaEditorCommand>[
+                        _KottaEditorCommand('|', '|!'),
+                        _KottaEditorCommand('||', '||'),
+                        _KottaEditorCommand('|:', '|:'),
+                        _KottaEditorCommand(':|', '|<'),
+                      ],
+                      onPressed: _insertCommand,
+                    ),
+                  ],
+                ),
               ),
-              _CommandSection(
-                label: labels.rests,
-                commands: <_KottaEditorCommand>[
-                  _KottaEditorCommand(labels.whole, 's1'),
-                  _KottaEditorCommand(labels.half, 's2'),
-                  _KottaEditorCommand(labels.quarter, 's4'),
-                  _KottaEditorCommand(labels.eighth, 's8'),
-                  _KottaEditorCommand(labels.sixteenth, 's6'),
-                ],
-                onPressed: _insertCommand,
-              ),
-              _CommandSection(
-                label: labels.accidentals,
-                commands: <_KottaEditorCommand>[
-                  _KottaEditorCommand(labels.natural, 'm0'),
-                  _KottaEditorCommand(labels.flat, 'mb'),
-                  _KottaEditorCommand(labels.sharp, 'mk'),
-                  _KottaEditorCommand(labels.doubleFlat, 'mB'),
-                  _KottaEditorCommand(labels.doubleSharp, 'mK'),
-                ],
-                onPressed: _insertCommand,
-              ),
-              _CommandSection(
-                label: labels.barlines,
-                commands: const <_KottaEditorCommand>[
-                  _KottaEditorCommand('|', '|!'),
-                  _KottaEditorCommand('||', '||'),
-                  _KottaEditorCommand('|:', '|:'),
-                  _KottaEditorCommand(':|', '|<'),
-                ],
-                onPressed: _insertCommand,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       actions: <Widget>[
@@ -294,42 +322,73 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   }
 }
 
-class _KottaPreview extends StatelessWidget {
-  const _KottaPreview({required this.source, required this.followingText});
+class _KottaPreview extends StatefulWidget {
+  const _KottaPreview({required this.line});
 
-  final String source;
-  final String followingText;
+  final String line;
+
+  @override
+  State<_KottaPreview> createState() => _KottaPreviewState();
+}
+
+class _KottaPreviewState extends State<_KottaPreview> {
+  final ScrollController _horizontalScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final String lyric = followingText.trim().isEmpty
-        ? '\u00A0'
-        : followingText;
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: TextFrame(
+        record: RecTextRecord(
+          scholaLine: '',
+          title: '',
+          lines: <String>[widget.line.isEmpty ? '\u00A0' : widget.line],
+        ),
+      ),
+      globals: const ProjectionGlobals(
+        fontSize: 34,
+        autoResize: false,
+        hCenter: false,
+        vCenter: true,
+        hideTitle: true,
+        useAkkord: false,
+        useKotta: true,
+      ),
+      settings: const AppSettings(receiverUseKotta: true),
+      allowLineWrapping: false,
+    );
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: SizedBox(
         height: 180,
-        child: CustomPaint(
-          painter: ProjectorPainter(
-            frame: TextFrame(
-              record: RecTextRecord(
-                scholaLine: '',
-                title: '',
-                lines: <String>['\\K$source;$lyric'],
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double contentWidth = math.max(
+              constraints.maxWidth,
+              painter.measureRequiredWidth() + 16,
+            );
+            return Scrollbar(
+              controller: _horizontalScrollController,
+              thumbVisibility: true,
+              trackVisibility: true,
+              interactive: true,
+              scrollbarOrientation: ScrollbarOrientation.bottom,
+              child: SingleChildScrollView(
+                controller: _horizontalScrollController,
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: contentWidth,
+                  height: constraints.maxHeight,
+                  child: CustomPaint(painter: painter),
+                ),
               ),
-            ),
-            globals: const ProjectionGlobals(
-              fontSize: 34,
-              autoResize: true,
-              hCenter: true,
-              vCenter: true,
-              hideTitle: true,
-              useAkkord: false,
-              useKotta: true,
-            ),
-            settings: const AppSettings(receiverUseKotta: true),
-          ),
-          child: const SizedBox.expand(),
+            );
+          },
         ),
       ),
     );

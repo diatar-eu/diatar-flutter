@@ -224,7 +224,10 @@ void main() {
 
     expect(controller.kottaAtOffset(0)?.source, 'r41a');
     expect(controller.kottaAtOffset(0)?.isConditional, isTrue);
-    expect(controller.textFollowingKottaAt(0), 'word');
+    expect(
+      controller.previewLineWithKottaAt(0, 'r82a', replaceExisting: true),
+      r'\?Kr82a;word',
+    );
 
     controller.replaceKottaAt(0, 'r82a');
     expect(controller.encodedText, r'\?Kr82a;word');
@@ -232,6 +235,25 @@ void main() {
     controller.selection = const TextSelection.collapsed(offset: 5);
     controller.insertKotta('r41c');
     expect(controller.encodedText, r'\?Kr82a;word\Kr41c;');
+    controller.dispose();
+  });
+
+  test('notation preview contains the complete current DIA line', () {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(
+          'first\n'
+          r'before \GAm;\Kr41a;word \Kr42b;after'
+          '\nlast',
+        );
+
+    expect(
+      controller.previewLineWithKottaAt(14, 'kGr82a', replaceExisting: false),
+      r'before \GAm;\KkGr82a;\Kr41a;word \Kr42b;after',
+    );
+    expect(
+      controller.previewLineWithKottaAt(20, 'r82c', replaceExisting: true),
+      r'before \GAm;\Kr41a;word \Kr82c;after',
+    );
     controller.dispose();
   });
 
@@ -510,6 +532,42 @@ void main() {
 
     expect(controller.encodedText, r'\KkG;word');
     expect(controller.kottaAtOffset(0)?.source, 'kG');
+    controller.dispose();
+  });
+
+  testWidgets('notation preview exposes a draggable horizontal scrollbar', (
+    WidgetTester tester,
+  ) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(
+          List<String>.filled(30, 'long preview text').join(' '),
+        );
+    controller.selection = const TextSelection.collapsed(offset: 0);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InlineTextEditor(
+            controller: controller,
+            labels: _editorLabels,
+            chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
+            decoration: const InputDecoration(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Insert notation'));
+    await tester.pumpAndSettle();
+
+    final Scrollbar scrollbar = tester.widget<Scrollbar>(
+      find.byType(Scrollbar),
+    );
+    expect(scrollbar.thumbVisibility, isTrue);
+    expect(scrollbar.trackVisibility, isTrue);
+    expect(scrollbar.interactive, isTrue);
+    expect(scrollbar.scrollbarOrientation, ScrollbarOrientation.bottom);
+    expect(scrollbar.controller!.position.maxScrollExtent, greaterThan(0));
     controller.dispose();
   });
 

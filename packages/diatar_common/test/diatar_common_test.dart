@@ -389,6 +389,74 @@ void main() {
     expect(prefixes.skip(1), everyElement('kGE2'));
   });
 
+  test('projector measures a kotta line wide enough to avoid wrapping', () {
+    const String source =
+        r'\KkGE2r41a;Alpha \Kr41b;beta \Kr41c;gamma \Kr41d;delta';
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: const TextFrame(
+        record: RecTextRecord(
+          scholaLine: '',
+          title: '',
+          lines: <String>[source],
+        ),
+      ),
+      globals: const ProjectionGlobals(
+        autoResize: false,
+        fontSize: 34,
+        hideTitle: true,
+        useAkkord: false,
+        useKotta: true,
+      ),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    final double requiredWidth = painter.measureRequiredWidth();
+
+    expect(requiredWidth, greaterThan(200));
+    expect(
+      painter.debugKottaRowPrefixesForLine(
+        source,
+        fontSize: 34,
+        maxWidth: requiredWidth + 8,
+      ),
+      hasLength(1),
+    );
+  });
+
+  test('projector can disable kotta line wrapping explicitly', () {
+    const String source =
+        r'\KkGE2r41a;Alpha \Kr41b;beta \Kr41c;gamma \Kr41d;delta';
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: const TextFrame(
+        record: RecTextRecord(
+          scholaLine: '',
+          title: '',
+          lines: <String>[source],
+        ),
+      ),
+      globals: const ProjectionGlobals(
+        autoResize: false,
+        fontSize: 34,
+        hideTitle: true,
+        useKotta: true,
+      ),
+      settings: const AppSettings(receiverUseKotta: true),
+      allowLineWrapping: false,
+    );
+
+    expect(
+      painter.debugFullPipelineRowsForRecord(
+        size: const Size(120, 180),
+        record: const RecTextRecord(
+          scholaLine: '',
+          title: '',
+          lines: <String>[source],
+        ),
+      ),
+      hasLength(1),
+    );
+  });
+
   test('kotta honors the initial staff line count command', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,

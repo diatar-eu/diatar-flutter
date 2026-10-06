@@ -1064,21 +1064,52 @@ class InlineTextEditingController extends TextEditingController {
     _setDocumentValue(TextSelection.collapsed(offset: offset + 1));
   }
 
-  String textFollowingKottaAt(int offset) {
-    final StringBuffer result = StringBuffer();
-    for (int index = offset + 1; index < _document._elements.length; index++) {
-      final _InlineTextElement element = _document._elements[index];
-      if (element.visibleCharacter == '\n') {
-        break;
-      }
-      if (element.kottaSource != null) {
-        break;
-      }
-      if (!element.isCommand) {
-        result.write(element.visibleCharacter);
-      }
+  String previewLineWithKottaAt(
+    int offset,
+    String source, {
+    required bool replaceExisting,
+  }) {
+    final int insertionOffset = offset.clamp(0, _document._elements.length);
+    int lineStart = insertionOffset;
+    while (lineStart > 0 &&
+        _document._elements[lineStart - 1].visibleCharacter != '\n') {
+      lineStart--;
     }
-    return result.toString().trimLeft();
+    int lineEnd = insertionOffset;
+    while (lineEnd < _document._elements.length &&
+        _document._elements[lineEnd].visibleCharacter != '\n') {
+      lineEnd++;
+    }
+
+    final InlineTextDocument line = _document.copyRange(lineStart, lineEnd);
+    final int lineOffset = insertionOffset - lineStart;
+    final Set<InlineTextStyle> styles = line.stylesForInsertionAt(lineOffset);
+    final _InlineTextElement? existingKotta =
+        replaceExisting &&
+            lineOffset < line._elements.length &&
+            line._elements[lineOffset].kottaSource != null
+        ? line._elements[lineOffset]
+        : null;
+    if (replaceExisting && existingKotta == null) {
+      throw ArgumentError.value(
+        offset,
+        'offset',
+        'No Diatár notation command exists at this offset',
+      );
+    }
+    final _InlineTextElement previewKotta = _InlineTextElement(
+      kind: _InlineTextElementKind.command,
+      styles: Set<InlineTextStyle>.unmodifiable(styles),
+      visibleCharacter: inlineCommandPlaceholder,
+      rawCommand:
+          '${existingKotta?.isConditionalKotta ?? false ? r'\?K' : r'\K'}$source;',
+    );
+    if (existingKotta != null) {
+      line._elements[lineOffset] = previewKotta;
+    } else {
+      line._elements.insert(lineOffset, previewKotta);
+    }
+    return line.encode();
   }
 
   void _validateKottaSource(String source) {
@@ -1624,7 +1655,8 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
       final String? source = await showKottaEditorDialog(
         context: context,
         labels: widget.kottaEditorLabels,
-        followingText: widget.controller.textFollowingKottaAt(offset - 1),
+        previewLineBuilder: (String source) => widget.controller
+            .previewLineWithKottaAt(offset, source, replaceExisting: false),
       );
       if (source != null && mounted) {
         widget.controller.insertKotta(source);
@@ -1644,7 +1676,12 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
       final String? source = await showKottaEditorDialog(
         context: context,
         labels: widget.kottaEditorLabels,
-        followingText: widget.controller.textFollowingKottaAt(kotta.offset),
+        previewLineBuilder: (String source) =>
+            widget.controller.previewLineWithKottaAt(
+              kotta.offset,
+              source,
+              replaceExisting: true,
+            ),
         initialSource: kotta.source,
       );
       if (source != null && mounted) {
