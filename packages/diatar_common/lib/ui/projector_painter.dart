@@ -27,6 +27,20 @@ class HighlightRenderState {
   final bool isFullyHighlighted;
 }
 
+class ProjectorEditorCursorOverlay {
+  const ProjectorEditorCursorOverlay({
+    required this.kottaPosition,
+    required this.textPosition,
+    required this.textActive,
+    required this.activeVisible,
+  });
+
+  final int kottaPosition;
+  final int textPosition;
+  final bool textActive;
+  final bool activeVisible;
+}
+
 class ProjectorPainter extends CustomPainter {
   static const int _layoutCacheLimit = 32;
   static const int _preparedLayoutCacheLimit = 16;
@@ -52,6 +66,7 @@ class ProjectorPainter extends CustomPainter {
     required this.globals,
     required this.settings,
     this.allowLineWrapping = true,
+    this.editorCursorOverlay,
     this.logoTitle = '',
     this.logoSubtitle = '',
     this.onHighlightRenderState,
@@ -65,9 +80,18 @@ class ProjectorPainter extends CustomPainter {
   final ProjectionGlobals globals;
   final AppSettings settings;
   final bool allowLineWrapping;
+  final ProjectorEditorCursorOverlay? editorCursorOverlay;
   final String logoTitle;
   final String logoSubtitle;
   final ValueChanged<HighlightRenderState>? onHighlightRenderState;
+  double? _editorKottaX;
+  double? _editorKottaTop;
+  double? _editorKottaBottom;
+  double? _editorTextX;
+  double? _editorTextTop;
+  double? _editorTextBottom;
+  int _editorKottaCommandIndex = 0;
+  int _editorTextCharacterIndex = 0;
 
   void _emitHighlightRenderState({
     required int maxWordIndex,
@@ -793,6 +817,7 @@ class ProjectorPainter extends CustomPainter {
       return;
     }
 
+    _resetEditorCursorCapture();
     const double horizontalPad = 0;
     final double maxWidth = allowLineWrapping
         ? math.max(40, size.width)
@@ -1074,6 +1099,7 @@ class ProjectorPainter extends CustomPainter {
         y += rowChordBand + rowHeight * lineSpacing;
       }
     }
+    _paintEditorCursors(canvas);
   }
 
   double _measureTextRequiredHeight(Size size, TextFrame frame) {
@@ -1220,7 +1246,8 @@ class ProjectorPainter extends CustomPainter {
           !isTitleLine &&
           globals.useKotta &&
           settings.receiverUseKotta &&
-          baseLine.words.any((w) => (w.kotta ?? '').isNotEmpty);
+          (baseLine.words.any((w) => (w.kotta ?? '').isNotEmpty) ||
+              editorCursorOverlay != null);
       final _RenderLine line;
       if (!isTitleLine && !hasKotta) {
         final _RenderLine paddedLine = _applyChordPadding(
@@ -2279,6 +2306,8 @@ class ProjectorPainter extends CustomPainter {
       final double rowX =
           blockStartX + _kottaContinuationIndent(rowIndex, continuationIndent);
       final double rowTop = baseTop + rowIndex * rowStep;
+      _editorKottaTop ??= rowTop - _kottaLedgerReserve(lineGap);
+      _editorKottaBottom ??= rowTop + staffHeight + staffToTextGap;
       if (globals.inverzKotta) {
         canvas.drawRect(
           Rect.fromLTRB(
@@ -2321,6 +2350,12 @@ class ProjectorPainter extends CustomPainter {
           cx += rowPrefix.width;
         }
         if (isFirstSlot && row.inlinePrefix.kotta.isNotEmpty) {
+          _captureEditorKottaCursor(
+            row.inlinePrefix.kotta,
+            cx,
+            lineGap,
+            lineState,
+          );
           _drawSimpleKotta(
             canvas,
             row.inlinePrefix.kotta,
@@ -2338,6 +2373,7 @@ class ProjectorPainter extends CustomPainter {
           }
         }
         if (kotta.isNotEmpty) {
+          _captureEditorKottaCursor(kotta, cx, lineGap, lineState);
           _drawSimpleKotta(
             canvas,
             kotta,
@@ -2530,6 +2566,7 @@ class ProjectorPainter extends CustomPainter {
       )..layout();
       final double slotLeft = cx + inset;
       tp.paint(canvas, Offset(slotLeft, y));
+      _captureEditorTextCursor(display, tp, slotLeft, y);
       final List<ui.TextBox> textBoxes = tp.getBoxesForSelection(
         TextSelection(baseOffset: 0, extentOffset: w.text.length),
       );
@@ -2582,6 +2619,129 @@ class ProjectorPainter extends CustomPainter {
       )..layout();
       hyphen.paint(canvas, Offset(hyphenX, y));
     }
+  }
+
+  void _resetEditorCursorCapture() {
+    _editorKottaX = null;
+    _editorKottaTop = null;
+    _editorKottaBottom = null;
+    _editorTextX = null;
+    _editorTextTop = null;
+    _editorTextBottom = null;
+    _editorKottaCommandIndex = 0;
+    _editorTextCharacterIndex = 0;
+  }
+
+  void _captureEditorKottaCursor(
+    String kotta,
+    double startX,
+    double lineGap,
+    _KottaDrawState state,
+  ) {
+    final ProjectorEditorCursorOverlay? overlay = editorCursorOverlay;
+    if (overlay == null) {
+      return;
+    }
+    final List<String> commands = _parseKottaCommands(kotta);
+    final int target = overlay.kottaPosition;
+    final int startIndex = _editorKottaCommandIndex;
+    final int endIndex = startIndex + commands.length;
+    if (target >= startIndex && target <= endIndex) {
+      final _KottaDrawState measureState = state.copy();
+      double x = startX;
+      for (int index = 0; index < commands.length; index++) {
+        if (startIndex + index == target) {
+          _editorKottaX = x;
+          break;
+        }
+        x += _kottaWidthOf(commands[index], lineGap, measureState);
+      }
+      if (target == endIndex) {
+        _editorKottaX = x;
+      }
+    }
+    _editorKottaCommandIndex = endIndex;
+  }
+
+  void _captureEditorTextCursor(
+    String display,
+    TextPainter painter,
+    double startX,
+    double top,
+  ) {
+    final ProjectorEditorCursorOverlay? overlay = editorCursorOverlay;
+    if (overlay == null) {
+      return;
+    }
+    final int startIndex = _editorTextCharacterIndex;
+    final int endIndex = startIndex + display.length;
+    if (overlay.textPosition >= startIndex &&
+        overlay.textPosition <= endIndex) {
+      final int localOffset = overlay.textPosition - startIndex;
+      _editorTextX =
+          startX +
+          painter
+              .getOffsetForCaret(TextPosition(offset: localOffset), Rect.zero)
+              .dx;
+      _editorTextTop = top;
+      _editorTextBottom = top + painter.height;
+    }
+    _editorTextCharacterIndex = endIndex;
+  }
+
+  void _paintEditorCursors(Canvas canvas) {
+    final ProjectorEditorCursorOverlay? overlay = editorCursorOverlay;
+    final double? textX = _editorTextX;
+    final double? textTop = _editorTextTop;
+    final double? textBottom = _editorTextBottom;
+    final double? kottaTop = _editorKottaTop;
+    final double? kottaBottom = _editorKottaBottom;
+    if (overlay == null ||
+        textX == null ||
+        textTop == null ||
+        textBottom == null ||
+        kottaTop == null ||
+        kottaBottom == null) {
+      return;
+    }
+
+    final double kottaX = overlay.textActive ? textX : (_editorKottaX ?? textX);
+    _paintEditorCursorLine(
+      canvas,
+      x: kottaX,
+      top: kottaTop,
+      bottom: kottaBottom,
+      active: !overlay.textActive,
+      visible: overlay.textActive || overlay.activeVisible,
+    );
+    _paintEditorCursorLine(
+      canvas,
+      x: textX,
+      top: textTop,
+      bottom: textBottom,
+      active: overlay.textActive,
+      visible: !overlay.textActive || overlay.activeVisible,
+    );
+  }
+
+  void _paintEditorCursorLine(
+    Canvas canvas, {
+    required double x,
+    required double top,
+    required double bottom,
+    required bool active,
+    required bool visible,
+  }) {
+    if (!visible) {
+      return;
+    }
+    canvas.drawLine(
+      Offset(x, top),
+      Offset(x, bottom),
+      Paint()
+        ..color = active ? globals.txtColor : Colors.red
+        ..strokeWidth = active ? 2 : 1,
+    );
   }
 
   bool _shouldPaintKottaLetterConnector({
@@ -3329,6 +3489,7 @@ class ProjectorPainter extends CustomPainter {
       globals.useKotta,
       globals.hideTitle,
       allowLineWrapping,
+      editorCursorOverlay != null,
       settings.receiverUseAkkord,
       settings.receiverUseKotta,
       frame.record.title,
@@ -3355,6 +3516,7 @@ class ProjectorPainter extends CustomPainter {
       globals.useKotta,
       globals.hideTitle,
       allowLineWrapping,
+      editorCursorOverlay != null,
       globals.kottaArany,
       globals.akkordArany,
       settings.receiverUseAkkord,
@@ -5181,6 +5343,10 @@ class ProjectorPainter extends CustomPainter {
         !_sameGlobals(oldDelegate.globals, globals) ||
         !_sameSettings(oldDelegate.settings, settings) ||
         oldDelegate.allowLineWrapping != allowLineWrapping ||
+        !_sameEditorCursorOverlay(
+          oldDelegate.editorCursorOverlay,
+          editorCursorOverlay,
+        ) ||
         oldDelegate.logoTitle != logoTitle ||
         oldDelegate.logoSubtitle != logoSubtitle;
   }
@@ -5189,9 +5355,11 @@ class ProjectorPainter extends CustomPainter {
     if (identical(a, b)) {
       return true;
     }
+
     if (a == null || b == null || a.runtimeType != b.runtimeType) {
       return false;
     }
+
     if (a is LogoFrame && b is LogoFrame) {
       return a.phase == b.phase;
     }
@@ -5202,6 +5370,16 @@ class ProjectorPainter extends CustomPainter {
       return _sameTextRecord(a.record, b.record);
     }
     return false;
+  }
+
+  bool _sameEditorCursorOverlay(
+    ProjectorEditorCursorOverlay? a,
+    ProjectorEditorCursorOverlay? b,
+  ) {
+    return a?.kottaPosition == b?.kottaPosition &&
+        a?.textPosition == b?.textPosition &&
+        a?.textActive == b?.textActive &&
+        a?.activeVisible == b?.activeVisible;
   }
 
   bool _sameTextRecord(dynamic a, dynamic b) {

@@ -37,10 +37,6 @@ const ChordEditorLabels _chordLabels = ChordEditorLabels(
 const KottaEditorLabels _kottaLabels = KottaEditorLabels(
   insertTitle: 'Insert notation',
   editTitle: 'Edit notation',
-  source: 'Notation commands',
-  sourceHint: 'Two-character commands',
-  invalidSource: 'Invalid notation',
-  preview: 'Preview',
   clef: 'Clef',
   keySignature: 'Key signature',
   rhythm: 'Rhythm',
@@ -224,9 +220,20 @@ void main() {
 
     expect(controller.kottaAtOffset(0)?.source, 'r41a');
     expect(controller.kottaAtOffset(0)?.isConditional, isTrue);
+    final KottaEditorInitialState editorState = controller.kottaEditorStateAt(
+      0,
+      editingExisting: true,
+    );
+    expect(editorState.elements.map((element) => element.command), <String>[
+      'r4',
+      '1a',
+    ]);
+    expect(editorState.elements, everyElement(isA<KottaEditorElement>()));
+    expect(editorState.kottaCursor, 2);
+    expect(editorState.textCursor, 0);
     expect(
-      controller.previewLineWithKottaAt(0, 'r82a', replaceExisting: true),
-      r'\?Kr82a;word',
+      controller.previewLineForKottaEditor(0, editorState.elements),
+      r'\?Kr41a;word',
     );
 
     controller.replaceKottaAt(0, 'r82a');
@@ -246,14 +253,57 @@ void main() {
           '\nlast',
         );
 
-    expect(
-      controller.previewLineWithKottaAt(14, 'kGr82a', replaceExisting: false),
-      r'before \GAm;\KkGr82a;\Kr41a;word \Kr42b;after',
+    final KottaEditorInitialState editorState = controller.kottaEditorStateAt(
+      20,
+      editingExisting: true,
     );
+    expect(editorState.elements.map((element) => element.command), <String>[
+      'r4',
+      '1a',
+      'r4',
+      '2b',
+    ]);
+    expect(editorState.elements.map((element) => element.textOffset), <int>[
+      7,
+      7,
+      12,
+      12,
+    ]);
+    expect(editorState.kottaCursor, 4);
+    expect(editorState.textCursor, 12);
     expect(
-      controller.previewLineWithKottaAt(20, 'r82c', replaceExisting: true),
-      r'before \GAm;\Kr41a;word \Kr82c;after',
+      controller.previewLineForKottaEditor(20, editorState.elements),
+      r'before \GAm;\Kr41a;word \Kr42b;after',
     );
+    controller.dispose();
+  });
+
+  test('graphical notation result moves its command to the text cursor', () {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\Kr41a;word');
+
+    final KottaEditorInitialState state = controller.kottaEditorStateAt(
+      0,
+      editingExisting: true,
+    );
+    expect(state.textLength, 4);
+    expect(state.textCursor, 0);
+
+    controller.applyKottaEditorResult(
+      0,
+      KottaEditorResult(
+        elements: <KottaEditorElement>[
+          for (final KottaEditorElement element in state.elements)
+            KottaEditorElement(
+              command: element.command,
+              textOffset: 2,
+              isConditional: element.isConditional,
+            ),
+        ],
+      ),
+    );
+
+    expect(controller.encodedText, r'wo\Kr41a;rd');
     controller.dispose();
   });
 
@@ -568,6 +618,111 @@ void main() {
     expect(scrollbar.interactive, isTrue);
     expect(scrollbar.scrollbarOrientation, ScrollbarOrientation.bottom);
     expect(scrollbar.controller!.position.maxScrollExtent, greaterThan(0));
+    controller.dispose();
+  });
+
+  testWidgets('notation cursors move with Tab and arrow keys', (
+    WidgetTester tester,
+  ) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia('word');
+    controller.selection = const TextSelection.collapsed(offset: 0);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InlineTextEditor(
+            controller: controller,
+            labels: _editorLabels,
+            chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
+            decoration: const InputDecoration(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Insert notation'));
+    await tester.pumpAndSettle();
+    expect(find.text('Notation commands'), findsNothing);
+    expect(find.text('Preview'), findsNothing);
+
+    ProjectorPainter previewPainter() {
+      return tester
+          .widgetList<CustomPaint>(find.byType(CustomPaint))
+          .map((widget) => widget.painter)
+          .whereType<ProjectorPainter>()
+          .single;
+    }
+
+    final ProjectorPainter initialPainter = previewPainter();
+    final String initialLine =
+        (initialPainter.frame! as TextFrame).record.lines.single;
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'kotta-editor');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(previewPainter().editorCursorOverlay!.textActive, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    final ProjectorPainter movedPainter = previewPainter();
+    expect(movedPainter.editorCursorOverlay!.textActive, isTrue);
+    expect(movedPainter.editorCursorOverlay!.textPosition, 2);
+    expect((movedPainter.frame! as TextFrame).record.lines.single, initialLine);
+
+    final bool movedCaretVisibility =
+        movedPainter.editorCursorOverlay!.activeVisible;
+    await tester.pump(const Duration(milliseconds: 500));
+    final ProjectorPainter blinkPainter = previewPainter();
+    expect(
+      blinkPainter.editorCursorOverlay!.activeVisible,
+      isNot(movedCaretVisibility),
+    );
+    expect((blinkPainter.frame! as TextFrame).record.lines.single, initialLine);
+
+    await tester.tap(find.text('G clef'));
+    await tester.pump();
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(controller.encodedText, r'wo\KkG;rd');
+    controller.dispose();
+  });
+
+  testWidgets('notation button inserts at the active kotta cursor', (
+    WidgetTester tester,
+  ) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\KkGr41a;word');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InlineTextEditor(
+            controller: controller,
+            labels: _editorLabels,
+            chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
+            decoration: const InputDecoration(),
+          ),
+        ),
+      ),
+    );
+
+    final Finder marker = find.byKey(
+      const ValueKey<String>('inline-kotta-marker'),
+    );
+    await tester.tap(marker);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(marker);
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.tap(find.text('F clef'));
+    await tester.pump();
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(controller.encodedText, r'\KkGr4kF1a;word');
     controller.dispose();
   });
 

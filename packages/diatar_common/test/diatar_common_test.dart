@@ -457,6 +457,83 @@ void main() {
     );
   });
 
+  test('graphical editor cursor overlay does not change kotta width', () {
+    ProjectorPainter painterFor({bool withOverlay = false}) {
+      return ProjectorPainter(
+        frame: const TextFrame(
+          record: RecTextRecord(
+            scholaLine: '',
+            title: '',
+            lines: <String>[r'\KkGr41a;word'],
+          ),
+        ),
+        globals: const ProjectionGlobals(
+          autoResize: false,
+          fontSize: 34,
+          hideTitle: true,
+          useKotta: true,
+        ),
+        settings: const AppSettings(receiverUseKotta: true),
+        allowLineWrapping: false,
+        editorCursorOverlay: withOverlay
+            ? const ProjectorEditorCursorOverlay(
+                kottaPosition: 2,
+                textPosition: 0,
+                textActive: false,
+                activeVisible: true,
+              )
+            : null,
+      );
+    }
+
+    final double plainWidth = painterFor().measureRequiredWidth();
+    final double cursorWidth = painterFor(
+      withOverlay: true,
+    ).measureRequiredWidth();
+
+    expect(cursorWidth, closeTo(plainWidth, 0.001));
+  });
+
+  test('graphical editor paints the active cursor overlay', () async {
+    Future<Uint8List> render({required bool activeVisible}) async {
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder);
+      ProjectorPainter(
+        frame: const TextFrame(
+          record: RecTextRecord(
+            scholaLine: '',
+            title: '',
+            lines: <String>[r'\KkGr41a;word'],
+          ),
+        ),
+        globals: const ProjectionGlobals(
+          autoResize: false,
+          fontSize: 34,
+          hideTitle: true,
+          useKotta: true,
+          vCenter: true,
+        ),
+        settings: const AppSettings(receiverUseKotta: true),
+        allowLineWrapping: false,
+        editorCursorOverlay: ProjectorEditorCursorOverlay(
+          kottaPosition: 2,
+          textPosition: 0,
+          textActive: false,
+          activeVisible: activeVisible,
+        ),
+      ).paint(canvas, const Size(400, 180));
+      final ui.Image image = await recorder.endRecording().toImage(400, 180);
+      final ByteData data = (await image.toByteData())!;
+      image.dispose();
+      return data.buffer.asUint8List();
+    }
+
+    final Uint8List visible = await render(activeVisible: true);
+    final Uint8List hidden = await render(activeVisible: false);
+
+    expect(visible, isNot(orderedEquals(hidden)));
+  });
+
   test('kotta honors the initial staff line count command', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,

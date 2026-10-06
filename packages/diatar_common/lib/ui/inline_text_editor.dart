@@ -1064,11 +1064,153 @@ class InlineTextEditingController extends TextEditingController {
     _setDocumentValue(TextSelection.collapsed(offset: offset + 1));
   }
 
-  String previewLineWithKottaAt(
-    int offset,
-    String source, {
-    required bool replaceExisting,
+  KottaEditorInitialState kottaEditorStateAt(
+    int offset, {
+    required bool editingExisting,
   }) {
+    final ({int start, int end}) bounds = _lineBoundsAt(offset);
+    final InlineTextDocument line = _document.copyRange(
+      bounds.start,
+      bounds.end,
+    );
+    final List<KottaEditorElement> elements = <KottaEditorElement>[];
+    final int selectedLineOffset =
+        offset.clamp(bounds.start, bounds.end) - bounds.start;
+    int textOffset = 0;
+    int? selectedKottaCursor;
+    for (int index = 0; index < line._elements.length; index++) {
+      final _InlineTextElement element = line._elements[index];
+      final String? source = element.kottaSource;
+      if (source != null) {
+        for (
+          int sourceOffset = 0;
+          sourceOffset + 1 < source.length;
+          sourceOffset += 2
+        ) {
+          elements.add(
+            KottaEditorElement(
+              command: source.substring(sourceOffset, sourceOffset + 2),
+              textOffset: textOffset,
+              isConditional: element.isConditionalKotta,
+            ),
+          );
+        }
+        if (index == selectedLineOffset) {
+          selectedKottaCursor = elements.length;
+        }
+      } else if (!element.isCommand) {
+        textOffset++;
+      }
+    }
+
+    final int initialTextCursor = _document._elements
+        .sublist(bounds.start, offset.clamp(bounds.start, bounds.end))
+        .where((element) => !element.isCommand)
+        .length;
+    if (editingExisting && selectedKottaCursor == null) {
+      throw ArgumentError.value(
+        offset,
+        'offset',
+        'No Diatár notation command exists at this offset',
+      );
+    }
+    final int initialKottaCursor =
+        selectedKottaCursor ??
+        elements.indexWhere(
+          (element) => element.textOffset > initialTextCursor,
+        );
+    return KottaEditorInitialState(
+      elements: List<KottaEditorElement>.unmodifiable(elements),
+      textLength: textOffset,
+      kottaCursor: initialKottaCursor < 0
+          ? elements.length
+          : initialKottaCursor,
+      textCursor: initialTextCursor,
+      isEditing: editingExisting,
+    );
+  }
+
+  String previewLineForKottaEditor(
+    int offset,
+    List<KottaEditorElement> elements,
+  ) {
+    final ({int start, int end}) bounds = _lineBoundsAt(offset);
+    return _buildKottaEditorLine(bounds, elements).encode();
+  }
+
+  void applyKottaEditorResult(int offset, KottaEditorResult result) {
+    final ({int start, int end}) bounds = _lineBoundsAt(offset);
+    final InlineTextDocument line = _buildKottaEditorLine(
+      bounds,
+      result.elements,
+    );
+    _document._elements.replaceRange(bounds.start, bounds.end, line._elements);
+    _setDocumentValue(
+      TextSelection.collapsed(
+        offset: (bounds.start + line._elements.length).clamp(
+          bounds.start,
+          _document._elements.length,
+        ),
+      ),
+    );
+  }
+
+  InlineTextDocument _buildKottaEditorLine(
+    ({int start, int end}) bounds,
+    List<KottaEditorElement> elements,
+  ) {
+    final InlineTextDocument line = _document.copyRange(
+      bounds.start,
+      bounds.end,
+    );
+    line._elements.removeWhere((element) => element.kottaSource != null);
+    final int textLength = _lineTextLength(line);
+
+    for (int index = 0; index < elements.length;) {
+      final KottaEditorElement first = elements[index];
+      if (first.command.length != 2) {
+        throw ArgumentError.value(
+          first.command,
+          'elements',
+          'Diatár notation commands must contain two characters',
+        );
+      }
+      final int textOffset = first.textOffset.clamp(0, textLength);
+      final StringBuffer source = StringBuffer(first.command);
+      int next = index + 1;
+      while (next < elements.length &&
+          elements[next].textOffset == first.textOffset &&
+          elements[next].isConditional == first.isConditional) {
+        if (elements[next].command.length != 2) {
+          throw ArgumentError.value(
+            elements[next].command,
+            'elements',
+            'Diatár notation commands must contain two characters',
+          );
+        }
+        source.write(elements[next].command);
+        next++;
+      }
+      final int targetOffset = _elementOffsetForTextOffset(line, textOffset);
+      final Set<InlineTextStyle> styles = line.stylesForInsertionAt(
+        targetOffset,
+      );
+      line._elements.insert(
+        targetOffset,
+        _InlineTextElement(
+          kind: _InlineTextElementKind.command,
+          styles: Set<InlineTextStyle>.unmodifiable(styles),
+          visibleCharacter: inlineCommandPlaceholder,
+          rawCommand:
+              '${first.isConditional ? r'\?K' : r'\K'}${source.toString()};',
+        ),
+      );
+      index = next;
+    }
+    return line;
+  }
+
+  ({int start, int end}) _lineBoundsAt(int offset) {
     final int insertionOffset = offset.clamp(0, _document._elements.length);
     int lineStart = insertionOffset;
     while (lineStart > 0 &&
@@ -1080,36 +1222,26 @@ class InlineTextEditingController extends TextEditingController {
         _document._elements[lineEnd].visibleCharacter != '\n') {
       lineEnd++;
     }
+    return (start: lineStart, end: lineEnd);
+  }
 
-    final InlineTextDocument line = _document.copyRange(lineStart, lineEnd);
-    final int lineOffset = insertionOffset - lineStart;
-    final Set<InlineTextStyle> styles = line.stylesForInsertionAt(lineOffset);
-    final _InlineTextElement? existingKotta =
-        replaceExisting &&
-            lineOffset < line._elements.length &&
-            line._elements[lineOffset].kottaSource != null
-        ? line._elements[lineOffset]
-        : null;
-    if (replaceExisting && existingKotta == null) {
-      throw ArgumentError.value(
-        offset,
-        'offset',
-        'No Diatár notation command exists at this offset',
-      );
+  int _lineTextLength(InlineTextDocument line) {
+    return line._elements.where((element) => !element.isCommand).length;
+  }
+
+  int _elementOffsetForTextOffset(InlineTextDocument line, int textOffset) {
+    int currentTextOffset = 0;
+    for (int index = 0; index < line._elements.length; index++) {
+      final _InlineTextElement element = line._elements[index];
+      if (element.isCommand) {
+        continue;
+      }
+      if (currentTextOffset == textOffset) {
+        return index;
+      }
+      currentTextOffset++;
     }
-    final _InlineTextElement previewKotta = _InlineTextElement(
-      kind: _InlineTextElementKind.command,
-      styles: Set<InlineTextStyle>.unmodifiable(styles),
-      visibleCharacter: inlineCommandPlaceholder,
-      rawCommand:
-          '${existingKotta?.isConditionalKotta ?? false ? r'\?K' : r'\K'}$source;',
-    );
-    if (existingKotta != null) {
-      line._elements[lineOffset] = previewKotta;
-    } else {
-      line._elements.insert(lineOffset, previewKotta);
-    }
-    return line.encode();
+    return line._elements.length;
   }
 
   void _validateKottaSource(String source) {
@@ -1652,14 +1784,18 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
       final int offset = widget.controller.selection.isValid
           ? widget.controller.selection.start
           : widget.controller.text.length;
-      final String? source = await showKottaEditorDialog(
+      final KottaEditorResult? result = await showKottaEditorDialog(
         context: context,
         labels: widget.kottaEditorLabels,
-        previewLineBuilder: (String source) => widget.controller
-            .previewLineWithKottaAt(offset, source, replaceExisting: false),
+        initialState: widget.controller.kottaEditorStateAt(
+          offset,
+          editingExisting: false,
+        ),
+        previewLineBuilder: (List<KottaEditorElement> elements) =>
+            widget.controller.previewLineForKottaEditor(offset, elements),
       );
-      if (source != null && mounted) {
-        widget.controller.insertKotta(source);
+      if (result != null && mounted) {
+        widget.controller.applyKottaEditorResult(offset, result);
         _focusNode.requestFocus();
       }
     } finally {
@@ -1673,19 +1809,18 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
     }
     _editingKotta = true;
     try {
-      final String? source = await showKottaEditorDialog(
+      final KottaEditorResult? result = await showKottaEditorDialog(
         context: context,
         labels: widget.kottaEditorLabels,
-        previewLineBuilder: (String source) =>
-            widget.controller.previewLineWithKottaAt(
-              kotta.offset,
-              source,
-              replaceExisting: true,
-            ),
-        initialSource: kotta.source,
+        initialState: widget.controller.kottaEditorStateAt(
+          kotta.offset,
+          editingExisting: true,
+        ),
+        previewLineBuilder: (List<KottaEditorElement> elements) =>
+            widget.controller.previewLineForKottaEditor(kotta.offset, elements),
       );
-      if (source != null && mounted) {
-        widget.controller.replaceKottaAt(kotta.offset, source);
+      if (result != null && mounted) {
+        widget.controller.applyKottaEditorResult(kotta.offset, result);
         _focusNode.requestFocus();
       }
     } finally {

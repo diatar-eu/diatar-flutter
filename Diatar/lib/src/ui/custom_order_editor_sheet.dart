@@ -3038,10 +3038,6 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
               kottaEditorLabels: KottaEditorLabels(
                 insertTitle: l10n.kottaEditorInsertTitle,
                 editTitle: l10n.kottaEditorEditTitle,
-                source: l10n.kottaEditorSource,
-                sourceHint: l10n.kottaEditorSourceHint,
-                invalidSource: l10n.kottaEditorInvalidSource,
-                preview: l10n.kottaEditorPreview,
                 clef: l10n.kottaEditorClef,
                 keySignature: l10n.kottaEditorKeySignature,
                 rhythm: l10n.kottaEditorRhythm,
