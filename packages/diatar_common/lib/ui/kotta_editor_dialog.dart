@@ -216,7 +216,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
           _kottaCursor = _elements.length;
         }
       } else {
-        _kottaCursor = (_kottaCursor + direction).clamp(0, _elements.length);
+        _kottaCursor = _nextKottaCursor(direction);
         if (_elements.isNotEmpty) {
           _textCursor = _kottaCursor < _elements.length
               ? _elements[_kottaCursor].textOffset
@@ -227,11 +227,51 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     });
   }
 
+  int _nextKottaCursor(int direction) {
+    if (direction > 0) {
+      for (int index = _kottaCursor; index < _elements.length; index++) {
+        if (_isVisibleKottaElement(_elements[index].command)) {
+          return index + 1;
+        }
+      }
+      return _kottaCursor;
+    }
+    for (
+      int index = math.min(_kottaCursor - 1, _elements.length - 1);
+      index >= 0;
+      index--
+    ) {
+      final int candidate = index + 1;
+      if (candidate < _kottaCursor &&
+          _isVisibleKottaElement(_elements[index].command)) {
+        return candidate;
+      }
+    }
+    return 0;
+  }
+
+  bool _isVisibleKottaElement(String command) {
+    if (command.length != 2) {
+      return false;
+    }
+    return !<String>{
+      'r',
+      'R',
+      '-',
+      'm',
+      'a',
+      '[',
+      ']',
+      '(',
+      ')',
+    }.contains(command[0]);
+  }
+
   KeyEventResult _handleEarlyKeyEvent(KeyEvent event) {
-    if (event is! KeyDownEvent) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
-    if (event.logicalKey == LogicalKeyboardKey.tab) {
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.tab) {
       _toggleActiveCursor();
       return KeyEventResult.handled;
     }
@@ -424,11 +464,48 @@ class _KottaPreview extends StatefulWidget {
 
 class _KottaPreviewState extends State<_KottaPreview> {
   final ScrollController _horizontalScrollController = ScrollController();
+  Rect? _pendingCursorRect;
+  bool _cursorScrollScheduled = false;
 
   @override
   void dispose() {
     _horizontalScrollController.dispose();
     super.dispose();
+  }
+
+  void _handleEditorCursorLayout(ProjectorEditorCursorLayout layout) {
+    _pendingCursorRect = widget.cursorOverlay.textActive
+        ? layout.textRect
+        : layout.kottaRect;
+    if (_cursorScrollScheduled) {
+      return;
+    }
+    _cursorScrollScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cursorScrollScheduled = false;
+      if (!mounted || !_horizontalScrollController.hasClients) {
+        return;
+      }
+      final Rect? cursorRect = _pendingCursorRect;
+      if (cursorRect == null) {
+        return;
+      }
+      const double margin = 24;
+      final ScrollPosition position = _horizontalScrollController.position;
+      final double left = position.pixels + margin;
+      final double right =
+          position.pixels + position.viewportDimension - margin;
+      double target = position.pixels;
+      if (cursorRect.left < left) {
+        target = cursorRect.left - margin;
+      } else if (cursorRect.right > right) {
+        target = cursorRect.right - position.viewportDimension + margin;
+      }
+      target = target.clamp(0, position.maxScrollExtent);
+      if (target != position.pixels) {
+        _horizontalScrollController.jumpTo(target);
+      }
+    });
   }
 
   @override
@@ -453,6 +530,7 @@ class _KottaPreviewState extends State<_KottaPreview> {
       settings: const AppSettings(receiverUseKotta: true),
       allowLineWrapping: false,
       editorCursorOverlay: widget.cursorOverlay,
+      onEditorCursorLayout: _handleEditorCursorLayout,
     );
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),

@@ -719,10 +719,135 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.tap(find.text('F clef'));
     await tester.pump();
+    final ProjectorPainter painter = tester
+        .widgetList<CustomPaint>(find.byType(CustomPaint))
+        .map((widget) => widget.painter)
+        .whereType<ProjectorPainter>()
+        .single;
+    expect(painter.editorCursorOverlay!.kottaPosition, 2);
     await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
 
-    expect(controller.encodedText, r'\KkGr4kF1a;word');
+    expect(controller.encodedText, r'\KkGkFr41a;word');
+    controller.dispose();
+  });
+
+  testWidgets('notation cursor skips commands attached to a visible element', (
+    WidgetTester tester,
+  ) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\Kr4mk1ar42b;word');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InlineTextEditor(
+            controller: controller,
+            labels: _editorLabels,
+            chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
+            decoration: const InputDecoration(),
+          ),
+        ),
+      ),
+    );
+
+    final Finder marker = find.byKey(
+      const ValueKey<String>('inline-kotta-marker'),
+    );
+    await tester.tap(marker);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(marker);
+    await tester.pumpAndSettle();
+
+    ProjectorEditorCursorOverlay overlay() => tester
+        .widgetList<CustomPaint>(find.byType(CustomPaint))
+        .map((widget) => widget.painter)
+        .whereType<ProjectorPainter>()
+        .single
+        .editorCursorOverlay!;
+
+    expect(overlay().kottaPosition, 5);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(overlay().kottaPosition, 3);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(overlay().kottaPosition, 0);
+    controller.dispose();
+  });
+
+  testWidgets('held arrow key repeats notation cursor movement', (
+    WidgetTester tester,
+  ) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia('word');
+    controller.selection = const TextSelection.collapsed(offset: 0);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InlineTextEditor(
+            controller: controller,
+            labels: _editorLabels,
+            chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
+            decoration: const InputDecoration(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Insert notation'));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+
+    final ProjectorPainter painter = tester
+        .widgetList<CustomPaint>(find.byType(CustomPaint))
+        .map((widget) => widget.painter)
+        .whereType<ProjectorPainter>()
+        .single;
+    expect(painter.editorCursorOverlay!.textPosition, 2);
+    controller.dispose();
+  });
+
+  testWidgets('notation preview scrolls to keep the active cursor visible', (
+    WidgetTester tester,
+  ) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(
+          List<String>.filled(20, 'word').join(),
+        );
+    controller.selection = const TextSelection.collapsed(offset: 0);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InlineTextEditor(
+            controller: controller,
+            labels: _editorLabels,
+            chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
+            decoration: const InputDecoration(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Insert notation'));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    for (int index = 0; index < 70; index++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    }
+    await tester.pump();
+    await tester.pump();
+
+    final Scrollbar scrollbar = tester.widget<Scrollbar>(
+      find.byType(Scrollbar),
+    );
+    expect(scrollbar.controller!.offset, greaterThan(0));
     controller.dispose();
   });
 

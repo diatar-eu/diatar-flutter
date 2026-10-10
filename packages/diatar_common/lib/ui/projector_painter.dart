@@ -41,6 +41,16 @@ class ProjectorEditorCursorOverlay {
   final bool activeVisible;
 }
 
+class ProjectorEditorCursorLayout {
+  const ProjectorEditorCursorLayout({
+    required this.kottaRect,
+    required this.textRect,
+  });
+
+  final Rect kottaRect;
+  final Rect textRect;
+}
+
 class ProjectorPainter extends CustomPainter {
   static const int _layoutCacheLimit = 32;
   static const int _preparedLayoutCacheLimit = 16;
@@ -67,6 +77,7 @@ class ProjectorPainter extends CustomPainter {
     required this.settings,
     this.allowLineWrapping = true,
     this.editorCursorOverlay,
+    this.onEditorCursorLayout,
     this.logoTitle = '',
     this.logoSubtitle = '',
     this.onHighlightRenderState,
@@ -81,6 +92,7 @@ class ProjectorPainter extends CustomPainter {
   final AppSettings settings;
   final bool allowLineWrapping;
   final ProjectorEditorCursorOverlay? editorCursorOverlay;
+  final ValueChanged<ProjectorEditorCursorLayout>? onEditorCursorLayout;
   final String logoTitle;
   final String logoSubtitle;
   final ValueChanged<HighlightRenderState>? onHighlightRenderState;
@@ -2646,7 +2658,7 @@ class ProjectorPainter extends CustomPainter {
     final int target = overlay.kottaPosition;
     final int startIndex = _editorKottaCommandIndex;
     final int endIndex = startIndex + commands.length;
-    if (target >= startIndex && target <= endIndex) {
+    if (_editorKottaX == null && target >= startIndex && target <= endIndex) {
       final _KottaDrawState measureState = state.copy();
       double x = startX;
       for (int index = 0; index < commands.length; index++) {
@@ -2705,7 +2717,13 @@ class ProjectorPainter extends CustomPainter {
       return;
     }
 
-    final double kottaX = overlay.textActive ? textX : (_editorKottaX ?? textX);
+    final double kottaX = _editorKottaX ?? textX;
+    onEditorCursorLayout?.call(
+      ProjectorEditorCursorLayout(
+        kottaRect: Rect.fromLTRB(kottaX, kottaTop, kottaX + 2, kottaBottom),
+        textRect: Rect.fromLTRB(textX, textTop, textX + 2, textBottom),
+      ),
+    );
     _paintEditorCursorLine(
       canvas,
       x: kottaX,

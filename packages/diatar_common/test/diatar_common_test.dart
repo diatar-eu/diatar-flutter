@@ -534,6 +534,72 @@ void main() {
     expect(visible, isNot(orderedEquals(hidden)));
   });
 
+  test('graphical editor reports the actual kotta insertion position', () {
+    ProjectorEditorCursorLayout? layout;
+    ProjectorPainter(
+      frame: const TextFrame(
+        record: RecTextRecord(
+          scholaLine: '',
+          title: '',
+          lines: <String>[r'\Kr41a;word'],
+        ),
+      ),
+      globals: const ProjectionGlobals(
+        autoResize: false,
+        fontSize: 34,
+        hCenter: false,
+        hideTitle: true,
+        useKotta: true,
+      ),
+      settings: const AppSettings(receiverUseKotta: true),
+      allowLineWrapping: false,
+      editorCursorOverlay: const ProjectorEditorCursorOverlay(
+        kottaPosition: 2,
+        textPosition: 0,
+        textActive: true,
+        activeVisible: true,
+      ),
+      onEditorCursorLayout: (value) => layout = value,
+    ).paint(Canvas(ui.PictureRecorder()), const Size(400, 180));
+
+    expect(layout, isNotNull);
+    expect(layout!.kottaRect.left, greaterThan(layout!.textRect.left));
+  });
+
+  test('graphical editor retains the first matching kotta boundary', () {
+    double cursorX(String line) {
+      ProjectorEditorCursorLayout? layout;
+      ProjectorPainter(
+        frame: TextFrame(
+          record: RecTextRecord(
+            scholaLine: '',
+            title: '',
+            lines: <String>[line],
+          ),
+        ),
+        globals: const ProjectionGlobals(
+          autoResize: false,
+          fontSize: 34,
+          hCenter: false,
+          hideTitle: true,
+          useKotta: true,
+        ),
+        settings: const AppSettings(receiverUseKotta: true),
+        allowLineWrapping: false,
+        editorCursorOverlay: const ProjectorEditorCursorOverlay(
+          kottaPosition: 1,
+          textPosition: 0,
+          textActive: false,
+          activeVisible: true,
+        ),
+        onEditorCursorLayout: (value) => layout = value,
+      ).paint(Canvas(ui.PictureRecorder()), const Size(500, 180));
+      return layout!.kottaRect.left;
+    }
+
+    expect(cursorX(r'\KkG;a \Kr41a;b'), closeTo(cursorX(r'\KkG;a'), 0.001));
+  });
+
   test('kotta honors the initial staff line count command', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
