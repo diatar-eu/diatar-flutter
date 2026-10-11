@@ -616,9 +616,28 @@
       "upperLine": { "type": "int" }
     }
   },
-  "kottaEditorNoKeySignature": "None",
-  "kottaEditorFlats": "flats",
-  "kottaEditorSharps": "sharps",
+  "kottaEditorFlats": "{count}♭",
+  "@kottaEditorFlats": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "kottaEditorSharps": "{count}#",
+  "@kottaEditorSharps": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "kottaEditorFlatKey1": "F major/D minor",
+  "kottaEditorFlatKey2": "B♭ major/G minor",
+  "kottaEditorFlatKey3": "E♭ major/C minor",
+  "kottaEditorFlatKey4": "A♭ major/F minor",
+  "kottaEditorFlatKey5": "D♭ major/B♭ minor",
+  "kottaEditorFlatKey6": "G♭ major/E♭ minor",
+  "kottaEditorFlatKey7": "C♭ major/A♭ minor",
+  "kottaEditorSharpKey1": "G major/E minor",
+  "kottaEditorSharpKey2": "D major/B minor",
+  "kottaEditorSharpKey3": "A major/F♯ minor",
+  "kottaEditorSharpKey4": "E major/C♯ minor",
+  "kottaEditorSharpKey5": "B major/G♯ minor",
+  "kottaEditorSharpKey6": "F♯ major/D♯ minor",
+  "kottaEditorSharpKey7": "C♯ major/A♯ minor",
   "kottaEditorWhole": "whole",
   "kottaEditorHalf": "half",
   "kottaEditorQuarter": "quarter",

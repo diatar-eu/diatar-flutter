@@ -57,9 +57,26 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   baritoneClef: _l10n.kottaEditorBaritoneClef,
   doClefLine: _l10n.kottaEditorDoClefLine,
   doClefSpace: _l10n.kottaEditorDoClefSpace,
-  noKeySignature: _l10n.kottaEditorNoKeySignature,
   flats: _l10n.kottaEditorFlats,
   sharps: _l10n.kottaEditorSharps,
+  flatKeys: <String>[
+    _l10n.kottaEditorFlatKey1,
+    _l10n.kottaEditorFlatKey2,
+    _l10n.kottaEditorFlatKey3,
+    _l10n.kottaEditorFlatKey4,
+    _l10n.kottaEditorFlatKey5,
+    _l10n.kottaEditorFlatKey6,
+    _l10n.kottaEditorFlatKey7,
+  ],
+  sharpKeys: <String>[
+    _l10n.kottaEditorSharpKey1,
+    _l10n.kottaEditorSharpKey2,
+    _l10n.kottaEditorSharpKey3,
+    _l10n.kottaEditorSharpKey4,
+    _l10n.kottaEditorSharpKey5,
+    _l10n.kottaEditorSharpKey6,
+    _l10n.kottaEditorSharpKey7,
+  ],
   whole: _l10n.kottaEditorWhole,
   half: _l10n.kottaEditorHalf,
   quarter: _l10n.kottaEditorQuarter,
@@ -728,6 +745,82 @@ void main() {
     await tester.tap(find.text(_kottaLabels.apply));
     await tester.pumpAndSettle();
     expect(result!.elements.map((element) => element.command), clefs.keys);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('key signatures expose key hints and insert only supported codes', (
+    WidgetTester tester,
+  ) async {
+    KottaEditorResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (BuildContext context) => TextButton(
+              onPressed: () async {
+                result = await showKottaEditorDialog(
+                  context: context,
+                  labels: _kottaLabels,
+                  previewLineBuilder: (elements) =>
+                      '\\K${elements.map((element) => element.command).join()};',
+                  initialState: const KottaEditorInitialState(
+                    elements: <KottaEditorElement>[],
+                    textLength: 0,
+                    kottaCursor: 0,
+                    textCursor: 0,
+                    isEditing: false,
+                  ),
+                );
+              },
+              child: Text(_kottaLabels.insertTitle),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text(_kottaLabels.insertTitle));
+    await tester.pumpAndSettle();
+
+    final Finder section = find
+        .ancestor(
+          of: find.text(_kottaLabels.keySignature),
+          matching: find.byType(Column),
+        )
+        .first;
+    expect(
+      find.descendant(of: section, matching: find.byType(OutlinedButton)),
+      findsNWidgets(14),
+    );
+    final List<String> commands = <String>[];
+    for (final bool flats in <bool>[true, false]) {
+      for (int count = 1; count <= 7; count++) {
+        final String hint = (flats
+            ? _kottaLabels.flatKeys
+            : _kottaLabels.sharpKeys)[count - 1];
+        final Finder button = find.byTooltip(hint);
+        expect(button, findsOneWidget);
+        expect(
+          find.descendant(
+            of: button,
+            matching: find.text(flats ? '$count\u266d' : '$count#'),
+          ),
+          findsOneWidget,
+        );
+        await tester.ensureVisible(button);
+        await tester.pumpAndSettle();
+        if (flats && count == 1) {
+          await tester.longPress(button);
+          await tester.pump();
+          expect(find.text(hint), findsOneWidget);
+        }
+        await tester.tap(button);
+        await tester.pump();
+        commands.add('${flats ? 'e' : 'E'}$count');
+      }
+    }
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(result!.elements.map((element) => element.command), commands);
     expect(tester.takeException(), isNull);
   });
 

@@ -45,6 +45,11 @@ baritonkulcs (C-kulcs az 1–5. vonalon), valamint Do-kulcs mind az öt vonalon
 és a négy vonalközben. A kulcs neve egér fölévitelére, mobilon hosszú
 koppintásra jelenik meg.
 
+Az **Előjegyzés** sorban az **1♭–7♭** és **1#–7#** gombokkal
+szúrható be előjegyzés. Egér fölévitelére vagy hosszú koppintásra a hozzá
+tartozó dúr és párhuzamos moll hangnem jelenik meg, például
+**F-dúr/d-moll**, **B-dúr/g-moll**, illetve **G-dúr/e-moll**.
+
 ## Export/Import
 
 - **Mentés** — `.dia` fájl mentése a lemezre

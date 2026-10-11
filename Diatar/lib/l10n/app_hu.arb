@@ -616,9 +616,28 @@
       "upperLine": { "type": "int" }
     }
   },
-  "kottaEditorNoKeySignature": "Nincs",
-  "kottaEditorFlats": "bé",
-  "kottaEditorSharps": "kereszt",
+  "kottaEditorFlats": "{count}♭",
+  "@kottaEditorFlats": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "kottaEditorSharps": "{count}#",
+  "@kottaEditorSharps": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "kottaEditorFlatKey1": "F-dúr/d-moll",
+  "kottaEditorFlatKey2": "B-dúr/g-moll",
+  "kottaEditorFlatKey3": "Esz-dúr/c-moll",
+  "kottaEditorFlatKey4": "Asz-dúr/f-moll",
+  "kottaEditorFlatKey5": "Desz-dúr/b-moll",
+  "kottaEditorFlatKey6": "Gesz-dúr/esz-moll",
+  "kottaEditorFlatKey7": "Cesz-dúr/asz-moll",
+  "kottaEditorSharpKey1": "G-dúr/e-moll",
+  "kottaEditorSharpKey2": "D-dúr/h-moll",
+  "kottaEditorSharpKey3": "A-dúr/fisz-moll",
+  "kottaEditorSharpKey4": "E-dúr/cisz-moll",
+  "kottaEditorSharpKey5": "H-dúr/gisz-moll",
+  "kottaEditorSharpKey6": "Fisz-dúr/disz-moll",
+  "kottaEditorSharpKey7": "Cisz-dúr/aisz-moll",
   "kottaEditorWhole": "egész",
   "kottaEditorHalf": "fél",
   "kottaEditorQuarter": "negyed",

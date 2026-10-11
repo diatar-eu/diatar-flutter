@@ -1,5 +1,6 @@
 Új funkciók
 Diasor
+- A kottaszerkesztő előjegyzésgombjai rövid jelölést és dúr/moll hangnemsúgót kaptak; a nem támogatott „Nincs” gomb megszűnt
 - A kottaszerkesztőben grafikus gombokkal választható G-, F-, minden C- és Do-kulcs; a nevük egér fölévitelére vagy hosszú koppintásra jelenik meg
 - A C-kulcsok a kottakód szerinti vonalon jelennek meg
 - A szöveges diák kottajelei külön, élő előnézetes szerkesztőben módosíthatók a Ctrl+K billentyűvel vagy az eszköztárból

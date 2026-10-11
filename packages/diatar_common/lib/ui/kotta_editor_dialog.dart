@@ -67,9 +67,10 @@ class KottaEditorLabels {
     required this.baritoneClef,
     required this.doClefLine,
     required this.doClefSpace,
-    required this.noKeySignature,
     required this.flats,
     required this.sharps,
+    required this.flatKeys,
+    required this.sharpKeys,
     required this.whole,
     required this.half,
     required this.quarter,
@@ -83,7 +84,8 @@ class KottaEditorLabels {
     required this.doubleSharp,
     required this.cancel,
     required this.apply,
-  });
+  }) : assert(flatKeys.length == 7),
+       assert(sharpKeys.length == 7);
 
   final String insertTitle;
   final String editTitle;
@@ -103,9 +105,10 @@ class KottaEditorLabels {
   final String baritoneClef;
   final String Function(int line) doClefLine;
   final String Function(int lowerLine, int upperLine) doClefSpace;
-  final String noKeySignature;
-  final String flats;
-  final String sharps;
+  final String Function(int count) flats;
+  final String Function(int count) sharps;
+  final List<String> flatKeys;
+  final List<String> sharpKeys;
   final String whole;
   final String half;
   final String quarter;
@@ -364,16 +367,17 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                       _CommandSection(
                         label: labels.keySignature,
                         commands: <_KottaEditorCommand>[
-                          _KottaEditorCommand(labels.noKeySignature, 'E0'),
                           for (int index = 1; index <= 7; index++)
                             _KottaEditorCommand(
-                              '${labels.flats} $index',
+                              labels.flats(index),
                               'e$index',
+                              hint: labels.flatKeys[index - 1],
                             ),
                           for (int index = 1; index <= 7; index++)
                             _KottaEditorCommand(
-                              '${labels.sharps} $index',
+                              labels.sharps(index),
                               'E$index',
+                              hint: labels.sharpKeys[index - 1],
                             ),
                         ],
                         onPressed: _insertCommand,
@@ -596,10 +600,11 @@ class _KottaPreviewState extends State<_KottaPreview> {
 }
 
 class _KottaEditorCommand {
-  const _KottaEditorCommand(this.label, this.source);
+  const _KottaEditorCommand(this.label, this.source, {this.hint});
 
   final String label;
   final String source;
+  final String? hint;
 }
 
 class _CommandSection extends StatelessWidget {
@@ -650,6 +655,14 @@ class _CommandSection extends StatelessWidget {
                                 ),
                               ),
                             ),
+                          ),
+                        )
+                      : command.hint != null
+                      ? Tooltip(
+                          message: command.hint!,
+                          child: OutlinedButton(
+                            onPressed: () => onPressed(command.source),
+                            child: Text(command.label),
                           ),
                         )
                       : OutlinedButton(
