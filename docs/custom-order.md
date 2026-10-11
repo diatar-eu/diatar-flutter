@@ -50,6 +50,11 @@ szúrható be előjegyzés. Egér fölévitelére vagy hosszú koppintásra a ho
 tartozó dúr és párhuzamos moll hangnem jelenik meg, például
 **F-dúr/d-moll**, **B-dúr/g-moll**, illetve **G-dúr/e-moll**.
 
+Az **Ütemvonalak** sor nyolc grafikus gombja sorrendben: szimpla,
+dupla, záró ütemvonal, rövid cezúra, hosszú cezúra, nyitó ismétlőjel,
+kétirányú ismétlőjel és záró ismétlőjel. A jel neve egér fölévitelére
+vagy hosszú koppintásra jelenik meg.
+
 ## Export/Import
 
 - **Mentés** — `.dia` fájl mentése a lemezre

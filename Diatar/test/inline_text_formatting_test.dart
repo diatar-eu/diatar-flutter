@@ -48,6 +48,14 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   rests: _l10n.kottaEditorRests,
   accidentals: _l10n.kottaEditorAccidentals,
   barlines: _l10n.kottaEditorBarlines,
+  singleBarline: _l10n.kottaEditorSingleBarline,
+  doubleBarline: _l10n.kottaEditorDoubleBarline,
+  finalBarline: _l10n.kottaEditorFinalBarline,
+  shortCaesura: _l10n.kottaEditorShortCaesura,
+  longCaesura: _l10n.kottaEditorLongCaesura,
+  openingRepeat: _l10n.kottaEditorOpeningRepeat,
+  bidirectionalRepeat: _l10n.kottaEditorBidirectionalRepeat,
+  closingRepeat: _l10n.kottaEditorClosingRepeat,
   gClef: _l10n.kottaEditorGClef,
   fClef: _l10n.kottaEditorFClef,
   sopranoClef: _l10n.kottaEditorSopranoClef,
@@ -821,6 +829,119 @@ void main() {
     await tester.tap(find.text(_kottaLabels.apply));
     await tester.pumpAndSettle();
     expect(result!.elements.map((element) => element.command), commands);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('graphical barlines show named hints and insert in legacy order', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    KottaEditorResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: Scaffold(
+          body: Builder(
+            builder: (BuildContext context) => TextButton(
+              onPressed: () async {
+                result = await showKottaEditorDialog(
+                  context: context,
+                  labels: _kottaLabels,
+                  previewLineBuilder: (elements) =>
+                      '\\K${elements.map((element) => element.command).join()};',
+                  initialState: const KottaEditorInitialState(
+                    elements: <KottaEditorElement>[],
+                    textLength: 0,
+                    kottaCursor: 0,
+                    textCursor: 0,
+                    isEditing: false,
+                  ),
+                );
+              },
+              child: Text(_kottaLabels.insertTitle),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text(_kottaLabels.insertTitle));
+    await tester.pumpAndSettle();
+
+    final List<(String, String, String)> barlines = <(String, String, String)>[
+      (_kottaLabels.singleBarline, '|1', 'utemjel'),
+      (_kottaLabels.doubleBarline, '||', 'utemjel2'),
+      (_kottaLabels.finalBarline, '|.', 'utemjelveg'),
+      (_kottaLabels.shortCaesura, "|'", 'cezura1'),
+      (_kottaLabels.longCaesura, '|!', 'cezura2'),
+      (_kottaLabels.openingRepeat, '|>', 'ismjel2'),
+      (_kottaLabels.bidirectionalRepeat, '|:', 'ismjel3'),
+      (_kottaLabels.closingRepeat, '|<', 'ismjel1'),
+    ];
+    final Finder section = find
+        .ancestor(
+          of: find.text(_kottaLabels.barlines),
+          matching: find.byType(Column),
+        )
+        .first;
+    expect(
+      tester
+          .widgetList<Tooltip>(
+            find.descendant(of: section, matching: find.byType(Tooltip)),
+          )
+          .map((tooltip) => tooltip.message),
+      barlines.map((barline) => barline.$1),
+    );
+    for (final (String hint, String _, String asset) in barlines) {
+      final Finder button = find.byTooltip(hint);
+      expect(
+        find.descendant(of: button, matching: find.byType(Text)),
+        findsNothing,
+      );
+      final Image image = tester.widget<Image>(
+        find.descendant(of: button, matching: find.byType(Image)),
+      );
+      expect((image.image as AssetImage).assetName, 'assets/kotta/$asset.png');
+      expect(
+        image.color,
+        Theme.of(tester.element(button)).colorScheme.onSurface,
+      );
+      await tester.runAsync(() async {
+        final ByteData data = await rootBundle.load('assets/kotta/$asset.png');
+        final ui.Codec codec = await ui.instantiateImageCodec(
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+        );
+        final ui.Image glyph = (await codec.getNextFrame()).image;
+        final ByteData pixels = (await glyph.toByteData())!;
+        int visiblePixels = 0;
+        for (int offset = 3; offset < pixels.lengthInBytes; offset += 4) {
+          if (pixels.getUint8(offset) != 0) {
+            visiblePixels++;
+          }
+        }
+        expect(visiblePixels, greaterThan(0));
+        expect(visiblePixels, lessThan(glyph.width * glyph.height));
+        glyph.dispose();
+        codec.dispose();
+      });
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      if (asset == 'utemjel') {
+        await tester.longPress(button);
+        await tester.pump();
+        expect(find.text(hint), findsOneWidget);
+      }
+      await tester.tap(button);
+      await tester.pump();
+    }
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(
+      result!.elements.map((element) => element.command),
+      barlines.map((barline) => barline.$2),
+    );
     expect(tester.takeException(), isNull);
   });
 

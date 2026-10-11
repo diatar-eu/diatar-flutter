@@ -58,6 +58,14 @@ class KottaEditorLabels {
     required this.rests,
     required this.accidentals,
     required this.barlines,
+    required this.singleBarline,
+    required this.doubleBarline,
+    required this.finalBarline,
+    required this.shortCaesura,
+    required this.longCaesura,
+    required this.openingRepeat,
+    required this.bidirectionalRepeat,
+    required this.closingRepeat,
     required this.gClef,
     required this.fClef,
     required this.sopranoClef,
@@ -96,6 +104,14 @@ class KottaEditorLabels {
   final String rests;
   final String accidentals;
   final String barlines;
+  final String singleBarline;
+  final String doubleBarline;
+  final String finalBarline;
+  final String shortCaesura;
+  final String longCaesura;
+  final String openingRepeat;
+  final String bidirectionalRepeat;
+  final String closingRepeat;
   final String gClef;
   final String fClef;
   final String sopranoClef;
@@ -448,11 +464,47 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                       ),
                       _CommandSection(
                         label: labels.barlines,
-                        commands: const <_KottaEditorCommand>[
-                          _KottaEditorCommand('|', '|!'),
-                          _KottaEditorCommand('||', '||'),
-                          _KottaEditorCommand('|:', '|:'),
-                          _KottaEditorCommand(':|', '|<'),
+                        commands: <_KottaEditorCommand>[
+                          _KottaEditorCommand(
+                            labels.singleBarline,
+                            '|1',
+                            asset: 'utemjel',
+                          ),
+                          _KottaEditorCommand(
+                            labels.doubleBarline,
+                            '||',
+                            asset: 'utemjel2',
+                          ),
+                          _KottaEditorCommand(
+                            labels.finalBarline,
+                            '|.',
+                            asset: 'utemjelveg',
+                          ),
+                          _KottaEditorCommand(
+                            labels.shortCaesura,
+                            "|'",
+                            asset: 'cezura1',
+                          ),
+                          _KottaEditorCommand(
+                            labels.longCaesura,
+                            '|!',
+                            asset: 'cezura2',
+                          ),
+                          _KottaEditorCommand(
+                            labels.openingRepeat,
+                            '|>',
+                            asset: 'ismjel2',
+                          ),
+                          _KottaEditorCommand(
+                            labels.bidirectionalRepeat,
+                            '|:',
+                            asset: 'ismjel3',
+                          ),
+                          _KottaEditorCommand(
+                            labels.closingRepeat,
+                            '|<',
+                            asset: 'ismjel1',
+                          ),
                         ],
                         onPressed: _insertCommand,
                       ),
@@ -600,11 +652,12 @@ class _KottaPreviewState extends State<_KottaPreview> {
 }
 
 class _KottaEditorCommand {
-  const _KottaEditorCommand(this.label, this.source, {this.hint});
+  const _KottaEditorCommand(this.label, this.source, {this.hint, this.asset});
 
   final String label;
   final String source;
   final String? hint;
+  final String? asset;
 }
 
 class _CommandSection extends StatelessWidget {
@@ -634,7 +687,8 @@ class _CommandSection extends StatelessWidget {
             runSpacing: 6,
             children: commands
                 .map(
-                  (_KottaEditorCommand command) => graphicalClefs
+                  (_KottaEditorCommand command) =>
+                      graphicalClefs || command.asset != null
                       ? Tooltip(
                           message: command.label,
                           child: OutlinedButton(
@@ -645,15 +699,27 @@ class _CommandSection extends StatelessWidget {
                             ),
                             child: Semantics(
                               label: command.label,
-                              child: CustomPaint(
-                                size: const Size(48, 88),
-                                painter: KottaClefPainter(
-                                  command: command.source,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface,
-                                ),
-                              ),
+                              child: command.asset != null
+                                  ? Image.asset(
+                                      'assets/kotta/${command.asset}.png',
+                                      width: 48,
+                                      height: 48,
+                                      filterQuality: FilterQuality.none,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
+                                      colorBlendMode: BlendMode.srcIn,
+                                      excludeFromSemantics: true,
+                                    )
+                                  : CustomPaint(
+                                      size: const Size(48, 88),
+                                      painter: KottaClefPainter(
+                                        command: command.source,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                      ),
+                                    ),
                             ),
                           ),
                         )
