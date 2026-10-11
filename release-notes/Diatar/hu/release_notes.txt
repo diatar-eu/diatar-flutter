@@ -1,5 +1,7 @@
 Új funkciók
 Diasor
+- A kottaszerkesztőben grafikus gombokkal választható G-, F-, minden C- és Do-kulcs; a nevük egér fölévitelére vagy hosszú koppintásra jelenik meg
+- A C-kulcsok a kottakód szerinti vonalon jelennek meg
 - A szöveges diák kottajelei külön, élő előnézetes szerkesztőben módosíthatók a Ctrl+K billentyűvel vagy az eszköztárból
 - Asztali rendszereken automatikusan menthetők a módosított diasorok a szerkesztő bezárásakor vagy a programból kilépéskor
 - Beállítható az egyszerre betölthető diasorok száma; a korlát elérésekor a legrégebben használt, gyorsbillentyű nélküli diasor törlődik

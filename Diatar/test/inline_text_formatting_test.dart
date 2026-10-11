@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
+
 import 'package:diatar_common/diatar_common.dart';
+import 'package:diatar_app/l10n/generated/app_localizations_en.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,37 +37,97 @@ const ChordEditorLabels _chordLabels = ChordEditorLabels(
   apply: 'Apply',
 );
 
-const KottaEditorLabels _kottaLabels = KottaEditorLabels(
-  insertTitle: 'Insert notation',
-  editTitle: 'Edit notation',
-  clef: 'Clef',
-  keySignature: 'Key signature',
-  rhythm: 'Rhythm',
-  notes: 'Notes',
-  rests: 'Rests',
-  accidentals: 'Accidentals',
-  barlines: 'Barlines',
-  gClef: 'G clef',
-  fClef: 'F clef',
-  noKeySignature: 'None',
-  flats: 'Flats',
-  sharps: 'Sharps',
-  whole: 'Whole',
-  half: 'Half',
-  quarter: 'Quarter',
-  eighth: 'Eighth',
-  sixteenth: 'Sixteenth',
-  dotted: 'Dotted',
-  natural: 'Natural',
-  flat: 'Flat',
-  sharp: 'Sharp',
-  doubleFlat: 'Double flat',
-  doubleSharp: 'Double sharp',
-  cancel: 'Cancel',
-  apply: 'Apply',
+final AppLocalizationsEn _l10n = AppLocalizationsEn();
+final KottaEditorLabels _kottaLabels = KottaEditorLabels(
+  insertTitle: _l10n.kottaEditorInsertTitle,
+  editTitle: _l10n.kottaEditorEditTitle,
+  clef: _l10n.kottaEditorClef,
+  keySignature: _l10n.kottaEditorKeySignature,
+  rhythm: _l10n.kottaEditorRhythm,
+  notes: _l10n.kottaEditorNotes,
+  rests: _l10n.kottaEditorRests,
+  accidentals: _l10n.kottaEditorAccidentals,
+  barlines: _l10n.kottaEditorBarlines,
+  gClef: _l10n.kottaEditorGClef,
+  fClef: _l10n.kottaEditorFClef,
+  sopranoClef: _l10n.kottaEditorSopranoClef,
+  mezzoSopranoClef: _l10n.kottaEditorMezzoSopranoClef,
+  altoClef: _l10n.kottaEditorAltoClef,
+  tenorClef: _l10n.kottaEditorTenorClef,
+  baritoneClef: _l10n.kottaEditorBaritoneClef,
+  doClefLine: _l10n.kottaEditorDoClefLine,
+  doClefSpace: _l10n.kottaEditorDoClefSpace,
+  noKeySignature: _l10n.kottaEditorNoKeySignature,
+  flats: _l10n.kottaEditorFlats,
+  sharps: _l10n.kottaEditorSharps,
+  whole: _l10n.kottaEditorWhole,
+  half: _l10n.kottaEditorHalf,
+  quarter: _l10n.kottaEditorQuarter,
+  eighth: _l10n.kottaEditorEighth,
+  sixteenth: _l10n.kottaEditorSixteenth,
+  dotted: _l10n.kottaEditorDotted,
+  natural: _l10n.kottaEditorNatural,
+  flat: _l10n.kottaEditorFlat,
+  sharp: _l10n.kottaEditorSharp,
+  doubleFlat: _l10n.kottaEditorDoubleFlat,
+  doubleSharp: _l10n.kottaEditorDoubleSharp,
+  cancel: _l10n.cancel,
+  apply: _l10n.apply,
 );
 
 void main() {
+  test(
+    'clef graphics contain glyphs at their encoded staff positions',
+    () async {
+      await KottaAssets.ensureLoaded();
+      for (final String code in 'GF12345abcdefghi'.split('')) {
+        final ui.PictureRecorder recorder = ui.PictureRecorder();
+        KottaClefPainter(
+          command: 'k$code',
+          color: Colors.black,
+        ).paint(Canvas(recorder), const Size(48, 88));
+        final ui.Picture picture = recorder.endRecording();
+        final ui.Image image = await picture.toImage(48, 88);
+        final pixels = (await image.toByteData())!;
+        final List<int> glyphRows = <int>[];
+        int glyphPixels = 0;
+        for (int y = 0; y < 88; y++) {
+          if (<int>[32, 38, 44, 50, 56].contains(y)) {
+            continue;
+          }
+          for (int x = 0; x < 48; x++) {
+            if (pixels.getUint8((y * 48 + x) * 4 + 3) > 128) {
+              glyphRows.add(y);
+              glyphPixels++;
+            }
+          }
+        }
+        expect(
+          glyphPixels,
+          greaterThan(10),
+          reason: 'Missing glyph for k$code',
+        );
+        if ('12345'.contains(code)) {
+          final double center = (glyphRows.first + glyphRows.last) / 2;
+          expect(
+            center,
+            closeTo(56 - (int.parse(code) - 1) * 6, 1.5),
+            reason: 'C clef must be centered on its encoded staff line',
+          );
+        } else if ('abcdefghi'.contains(code)) {
+          final double center = (glyphRows.first + glyphRows.last) / 2;
+          expect(
+            center,
+            closeTo(56 - 'abcdefghi'.indexOf(code) * 3, 1.5),
+            reason: 'Do clef must be centered on its encoded line or space',
+          );
+        }
+        image.dispose();
+        picture.dispose();
+      }
+    },
+  );
+
   test('removes empty and repeated inline style markers', () {
     expect(normalizeInlineTextFormattingMarkers(r'a\B\b\B\bsd\b\B\b'), 'asd');
   });
@@ -575,7 +638,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Insert notation'), findsOneWidget);
 
-    await tester.tap(find.text('G clef'));
+    await tester.tap(find.byTooltip(_kottaLabels.gClef));
     await tester.pump();
     await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
@@ -583,6 +646,89 @@ void main() {
     expect(controller.encodedText, r'\KkG;word');
     expect(controller.kottaAtOffset(0)?.source, 'kG');
     controller.dispose();
+  });
+
+  testWidgets('graphical clefs expose hints and insert all legacy clef codes', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    KottaEditorResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (BuildContext context) => TextButton(
+              onPressed: () async {
+                result = await showKottaEditorDialog(
+                  context: context,
+                  labels: _kottaLabels,
+                  previewLineBuilder: (elements) =>
+                      '\\K${elements.map((element) => element.command).join()};',
+                  initialState: const KottaEditorInitialState(
+                    elements: <KottaEditorElement>[],
+                    textLength: 0,
+                    kottaCursor: 0,
+                    textCursor: 0,
+                    isEditing: false,
+                  ),
+                );
+              },
+              child: Text(_kottaLabels.insertTitle),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text(_kottaLabels.insertTitle));
+    await tester.pumpAndSettle();
+
+    final Map<String, String> clefs = <String, String>{
+      'kG': _kottaLabels.gClef,
+      'kF': _kottaLabels.fClef,
+      'k1': _kottaLabels.sopranoClef,
+      'k2': _kottaLabels.mezzoSopranoClef,
+      'k3': _kottaLabels.altoClef,
+      'k4': _kottaLabels.tenorClef,
+      'k5': _kottaLabels.baritoneClef,
+      for (int index = 0; index < 9; index++)
+        'k${String.fromCharCode(97 + index)}': index.isEven
+            ? _kottaLabels.doClefLine(index ~/ 2 + 1)
+            : _kottaLabels.doClefSpace(index ~/ 2 + 1, index ~/ 2 + 2),
+    };
+    for (final MapEntry<String, String> clef in clefs.entries) {
+      final Finder button = find.byTooltip(clef.value);
+      expect(button, findsOneWidget);
+      expect(
+        find.descendant(of: button, matching: find.byType(Text)),
+        findsNothing,
+      );
+      final CustomPaint image = tester.widget<CustomPaint>(
+        find.descendant(
+          of: button,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is CustomPaint && widget.painter is KottaClefPainter,
+          ),
+        ),
+      );
+      expect((image.painter! as KottaClefPainter).command, clef.key);
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      if (clef.key == 'k1') {
+        await tester.longPress(button);
+        await tester.pump();
+        expect(find.text(clef.value), findsOneWidget);
+      }
+      await tester.tap(button);
+      await tester.pump();
+    }
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(result!.elements.map((element) => element.command), clefs.keys);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('notation preview exposes a draggable horizontal scrollbar', (
@@ -680,7 +826,7 @@ void main() {
     );
     expect((blinkPainter.frame! as TextFrame).record.lines.single, initialLine);
 
-    await tester.tap(find.text('G clef'));
+    await tester.tap(find.byTooltip(_kottaLabels.gClef));
     await tester.pump();
     await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
@@ -717,7 +863,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-    await tester.tap(find.text('F clef'));
+    await tester.tap(find.byTooltip(_kottaLabels.fClef));
     await tester.pump();
     final ProjectorPainter painter = tester
         .widgetList<CustomPaint>(find.byType(CustomPaint))

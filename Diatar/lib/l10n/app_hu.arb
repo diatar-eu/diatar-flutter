@@ -598,6 +598,24 @@
   "kottaEditorBarlines": "Ütemvonalak",
   "kottaEditorGClef": "G-kulcs",
   "kottaEditorFClef": "F-kulcs",
+  "kottaEditorSopranoClef": "Szopránkulcs (C-kulcs az 1. vonalon)",
+  "kottaEditorMezzoSopranoClef": "Mezzoszopránkulcs (C-kulcs a 2. vonalon)",
+  "kottaEditorAltoClef": "Altkulcs (C-kulcs a 3. vonalon)",
+  "kottaEditorTenorClef": "Tenorkulcs (C-kulcs a 4. vonalon)",
+  "kottaEditorBaritoneClef": "Baritonkulcs (C-kulcs az 5. vonalon)",
+  "kottaEditorDoClefLine": "Do-kulcs a(z) {line}. vonalon",
+  "@kottaEditorDoClefLine": {
+    "placeholders": {
+      "line": { "type": "int" }
+    }
+  },
+  "kottaEditorDoClefSpace": "Do-kulcs a(z) {lowerLine}–{upperLine}. vonalközben",
+  "@kottaEditorDoClefSpace": {
+    "placeholders": {
+      "lowerLine": { "type": "int" },
+      "upperLine": { "type": "int" }
+    }
+  },
   "kottaEditorNoKeySignature": "Nincs",
   "kottaEditorFlats": "bé",
   "kottaEditorSharps": "kereszt",

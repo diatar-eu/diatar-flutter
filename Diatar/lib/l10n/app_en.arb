@@ -598,6 +598,24 @@
   "kottaEditorBarlines": "Barlines",
   "kottaEditorGClef": "G clef",
   "kottaEditorFClef": "F clef",
+  "kottaEditorSopranoClef": "Soprano clef (C clef on line 1)",
+  "kottaEditorMezzoSopranoClef": "Mezzo-soprano clef (C clef on line 2)",
+  "kottaEditorAltoClef": "Alto clef (C clef on line 3)",
+  "kottaEditorTenorClef": "Tenor clef (C clef on line 4)",
+  "kottaEditorBaritoneClef": "Baritone clef (C clef on line 5)",
+  "kottaEditorDoClefLine": "Do clef on line {line}",
+  "@kottaEditorDoClefLine": {
+    "placeholders": {
+      "line": { "type": "int" }
+    }
+  },
+  "kottaEditorDoClefSpace": "Do clef between lines {lowerLine} and {upperLine}",
+  "@kottaEditorDoClefSpace": {
+    "placeholders": {
+      "lowerLine": { "type": "int" },
+      "upperLine": { "type": "int" }
+    }
+  },
   "kottaEditorNoKeySignature": "None",
   "kottaEditorFlats": "flats",
   "kottaEditorSharps": "sharps",

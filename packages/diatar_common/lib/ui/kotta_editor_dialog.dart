@@ -60,6 +60,13 @@ class KottaEditorLabels {
     required this.barlines,
     required this.gClef,
     required this.fClef,
+    required this.sopranoClef,
+    required this.mezzoSopranoClef,
+    required this.altoClef,
+    required this.tenorClef,
+    required this.baritoneClef,
+    required this.doClefLine,
+    required this.doClefSpace,
     required this.noKeySignature,
     required this.flats,
     required this.sharps,
@@ -89,6 +96,13 @@ class KottaEditorLabels {
   final String barlines;
   final String gClef;
   final String fClef;
+  final String sopranoClef;
+  final String mezzoSopranoClef;
+  final String altoClef;
+  final String tenorClef;
+  final String baritoneClef;
+  final String Function(int line) doClefLine;
+  final String Function(int lowerLine, int upperLine) doClefSpace;
   final String noKeySignature;
   final String flats;
   final String sharps;
@@ -328,7 +342,23 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                         commands: <_KottaEditorCommand>[
                           _KottaEditorCommand(labels.gClef, 'kG'),
                           _KottaEditorCommand(labels.fClef, 'kF'),
+                          _KottaEditorCommand(labels.sopranoClef, 'k1'),
+                          _KottaEditorCommand(labels.mezzoSopranoClef, 'k2'),
+                          _KottaEditorCommand(labels.altoClef, 'k3'),
+                          _KottaEditorCommand(labels.tenorClef, 'k4'),
+                          _KottaEditorCommand(labels.baritoneClef, 'k5'),
+                          for (int index = 0; index < 9; index++)
+                            _KottaEditorCommand(
+                              index.isEven
+                                  ? labels.doClefLine(index ~/ 2 + 1)
+                                  : labels.doClefSpace(
+                                      index ~/ 2 + 1,
+                                      index ~/ 2 + 2,
+                                    ),
+                              'k${String.fromCharCode(97 + index)}',
+                            ),
                         ],
+                        graphicalClefs: true,
                         onPressed: _insertCommand,
                       ),
                       _CommandSection(
@@ -577,11 +607,13 @@ class _CommandSection extends StatelessWidget {
     required this.label,
     required this.commands,
     required this.onPressed,
+    this.graphicalClefs = false,
   });
 
   final String label;
   final List<_KottaEditorCommand> commands;
   final ValueChanged<String> onPressed;
+  final bool graphicalClefs;
 
   @override
   Widget build(BuildContext context) {
@@ -597,10 +629,33 @@ class _CommandSection extends StatelessWidget {
             runSpacing: 6,
             children: commands
                 .map(
-                  (_KottaEditorCommand command) => OutlinedButton(
-                    onPressed: () => onPressed(command.source),
-                    child: Text(command.label),
-                  ),
+                  (_KottaEditorCommand command) => graphicalClefs
+                      ? Tooltip(
+                          message: command.label,
+                          child: OutlinedButton(
+                            onPressed: () => onPressed(command.source),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.all(4),
+                              minimumSize: Size.zero,
+                            ),
+                            child: Semantics(
+                              label: command.label,
+                              child: CustomPaint(
+                                size: const Size(48, 88),
+                                painter: KottaClefPainter(
+                                  command: command.source,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      : OutlinedButton(
+                          onPressed: () => onPressed(command.source),
+                          child: Text(command.label),
+                        ),
                 )
                 .toList(),
           ),

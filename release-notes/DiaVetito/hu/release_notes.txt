@@ -1,2 +1,6 @@
 Hibajavítások
 - A vetítő felismeri és helyesen jeleníti meg a 2/7 akkordot
+- A C-kulcsok a kottakód szerinti vonalon jelennek meg
+
+Közös kiadás
+- A verziószám követi a Diatár kottaszerkesztőjének bővítését; a vetítési kódformátum változatlan

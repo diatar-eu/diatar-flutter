@@ -17,6 +17,49 @@ import '../services/aretino/aretino_svg.dart';
 import 'chord_renderer.dart';
 import 'kotta_assets.dart';
 
+class KottaClefPainter extends CustomPainter {
+  const KottaClefPainter({required this.command, required this.color});
+
+  final String command;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const double lineGap = 6;
+    final double top = (size.height - lineGap * 4) / 2;
+    final Paint staffPaint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    for (int index = 0; index < 5; index++) {
+      final double y = top + index * lineGap;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), staffPaint);
+    }
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: null,
+      globals: ProjectionGlobals(txtColor: color),
+      settings: const AppSettings(),
+    );
+    final double width = painter._kottaWidthOf(
+      command,
+      lineGap,
+      _KottaDrawState(),
+    );
+    painter._drawKottaCommand(
+      canvas,
+      command,
+      _KottaDrawState(),
+      (size.width - width) / 2,
+      top,
+      lineGap,
+      1,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant KottaClefPainter oldDelegate) =>
+      command != oldDelegate.command || color != oldDelegate.color;
+}
+
 class HighlightRenderState {
   const HighlightRenderState({
     required this.maxWordIndex,
@@ -3957,7 +4000,7 @@ class ProjectorPainter extends CustomPainter {
           h = _kcCkulcsH;
           v1 = _kcCkulcsV1;
           v5 = _kcCkulcsV5;
-          y0 = _linePos(top, lineGap, 6 - (int.parse(c2) - 1));
+          y0 = _linePos(top, lineGap, 5 - (int.parse(c2) - 1));
         } else if ('abcdefghi'.contains(c2)) {
           w = _kcDkulcsW;
           h = _kcDkulcsH;

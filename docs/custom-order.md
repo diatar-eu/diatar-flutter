@@ -39,6 +39,12 @@ ugyanez a billentyű, illetve a dupla kattintás nyitja meg a külön
 kottaszerkesztőt. Az ablak a kottát és a hozzá tartozó szöveget együtt,
 vetítési előnézetben mutatja.
 
+A **Kulcs** sorban a gombok a kulcs képét mutatják ötvonalas háttéren.
+Választható G- és F-kulcs, szoprán-, mezzoszoprán-, alt-, tenor- és
+baritonkulcs (C-kulcs az 1–5. vonalon), valamint Do-kulcs mind az öt vonalon
+és a négy vonalközben. A kulcs neve egér fölévitelére, mobilon hosszú
+koppintásra jelenik meg.
+
 ## Export/Import
 
 - **Mentés** — `.dia` fájl mentése a lemezre
