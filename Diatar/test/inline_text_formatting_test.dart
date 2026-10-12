@@ -43,10 +43,6 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   editTitle: _l10n.kottaEditorEditTitle,
   clef: _l10n.kottaEditorClef,
   keySignature: _l10n.kottaEditorKeySignature,
-  rhythm: _l10n.kottaEditorRhythm,
-  notes: _l10n.kottaEditorNotes,
-  rests: _l10n.kottaEditorRests,
-  accidentals: _l10n.kottaEditorAccidentals,
   barlines: _l10n.kottaEditorBarlines,
   singleBarline: _l10n.kottaEditorSingleBarline,
   doubleBarline: _l10n.kottaEditorDoubleBarline,
@@ -56,6 +52,17 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   openingRepeat: _l10n.kottaEditorOpeningRepeat,
   bidirectionalRepeat: _l10n.kottaEditorBidirectionalRepeat,
   closingRepeat: _l10n.kottaEditorClosingRepeat,
+  meters: _l10n.kottaEditorMeters,
+  meterSymbol: _l10n.kottaEditorMeterSymbol,
+  meter44: _l10n.kottaEditorMeter44,
+  meter24: _l10n.kottaEditorMeter24,
+  meter34: _l10n.kottaEditorMeter34,
+  meter38: _l10n.kottaEditorMeter38,
+  meter68: _l10n.kottaEditorMeter68,
+  meter22: _l10n.kottaEditorMeter22,
+  meter32: _l10n.kottaEditorMeter32,
+  meter54: _l10n.kottaEditorMeter54,
+  meter64: _l10n.kottaEditorMeter64,
   gClef: _l10n.kottaEditorGClef,
   fClef: _l10n.kottaEditorFClef,
   sopranoClef: _l10n.kottaEditorSopranoClef,
@@ -85,17 +92,6 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
     _l10n.kottaEditorSharpKey6,
     _l10n.kottaEditorSharpKey7,
   ],
-  whole: _l10n.kottaEditorWhole,
-  half: _l10n.kottaEditorHalf,
-  quarter: _l10n.kottaEditorQuarter,
-  eighth: _l10n.kottaEditorEighth,
-  sixteenth: _l10n.kottaEditorSixteenth,
-  dotted: _l10n.kottaEditorDotted,
-  natural: _l10n.kottaEditorNatural,
-  flat: _l10n.kottaEditorFlat,
-  sharp: _l10n.kottaEditorSharp,
-  doubleFlat: _l10n.kottaEditorDoubleFlat,
-  doubleSharp: _l10n.kottaEditorDoubleSharp,
   cancel: _l10n.cancel,
   apply: _l10n.apply,
 );
@@ -942,6 +938,152 @@ void main() {
       result!.elements.map((element) => element.command),
       barlines.map((barline) => barline.$2),
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('meters replace removed sections and preserve existing notation', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    const List<KottaEditorElement> existing = <KottaEditorElement>[
+      KottaEditorElement(command: 'R4', textOffset: 0),
+      KottaEditorElement(command: 'mk', textOffset: 0),
+      KottaEditorElement(command: '1a', textOffset: 0),
+      KottaEditorElement(command: 's4', textOffset: 0),
+    ];
+    KottaEditorResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: Builder(
+            builder: (BuildContext context) => TextButton(
+              onPressed: () async {
+                result = await showKottaEditorDialog(
+                  context: context,
+                  labels: _kottaLabels,
+                  previewLineBuilder: (elements) =>
+                      '\\K${elements.map((element) => element.command).join()};',
+                  initialState: const KottaEditorInitialState(
+                    elements: existing,
+                    textLength: 0,
+                    kottaCursor: 4,
+                    textCursor: 0,
+                    isEditing: true,
+                  ),
+                );
+              },
+              child: Text(_kottaLabels.editTitle),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text(_kottaLabels.editTitle));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SwitchListTile), findsNothing);
+    expect(find.byType(OutlinedButton), findsNWidgets(47));
+    final Finder barlineSection = find
+        .ancestor(
+          of: find.text(_kottaLabels.barlines),
+          matching: find.byType(Column),
+        )
+        .first;
+    final Column sections = tester.widget<Column>(
+      find.ancestor(of: barlineSection, matching: find.byType(Column)).first,
+    );
+    final List<String> headings = sections.children.map((section) {
+      final Column content = find
+          .descendant(of: find.byWidget(section), matching: find.byType(Column))
+          .evaluate()
+          .map((element) => element.widget)
+          .whereType<Column>()
+          .first;
+      return (content.children.first as Text).data!;
+    }).toList();
+    expect(headings, <String>[
+      _kottaLabels.clef,
+      _kottaLabels.keySignature,
+      _kottaLabels.barlines,
+      _kottaLabels.meters,
+    ]);
+
+    final List<(String, String, String)> meters = <(String, String, String)>[
+      (_kottaLabels.meter44, 'u4', 'u44'),
+      (_kottaLabels.meter24, 'u2', 'u24'),
+      (_kottaLabels.meter34, 'u3', 'u34'),
+      (_kottaLabels.meter38, 'U8', 'u38'),
+      (_kottaLabels.meter68, 'U6', 'u68'),
+      (_kottaLabels.meter22, 'U2', 'u22'),
+      (_kottaLabels.meter32, 'U3', 'u32'),
+      (_kottaLabels.meter54, 'u5', 'u54'),
+      (_kottaLabels.meter64, 'u6', 'u64'),
+    ];
+    final Finder meterSection = find
+        .ancestor(
+          of: find.text(_kottaLabels.meters),
+          matching: find.byType(Column),
+        )
+        .first;
+    expect(
+      tester
+          .widgetList<Tooltip>(
+            find.descendant(of: meterSection, matching: find.byType(Tooltip)),
+          )
+          .map((tooltip) => tooltip.message),
+      meters.map((meter) => meter.$1),
+    );
+    for (final (String hint, String _, String asset) in meters) {
+      final Finder button = find.byTooltip(hint);
+      expect(
+        find.descendant(of: button, matching: find.byType(Image)),
+        findsNothing,
+      );
+      final Finder symbolFinder = find.descendant(
+        of: button,
+        matching: find.byType(Text),
+      );
+      final Text symbol = tester.widget<Text>(symbolFinder);
+      expect(symbol.data, '${asset[1]}\n${asset[2]}');
+      expect(symbol.textAlign, TextAlign.center);
+      expect(symbol.style!.fontWeight, FontWeight.w700);
+      expect(symbol.style!.fontSize, lessThanOrEqualTo(20));
+      expect(
+        symbol.style!.color,
+        Theme.of(tester.element(button)).colorScheme.onSurface,
+      );
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(button).height,
+        tester.getSize(find.byTooltip(_kottaLabels.singleBarline)).height,
+      );
+      final Size symbolSize = tester.getSize(symbolFinder);
+      expect(symbolSize.height, greaterThan(symbolSize.width));
+      if (asset == 'u44') {
+        await tester.longPress(button);
+        await tester.pump();
+        expect(find.text(hint), findsOneWidget);
+      }
+      await tester.tap(button);
+      await tester.pump();
+    }
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(result!.elements.map((element) => element.command), <String>[
+      ...existing.map((element) => element.command),
+      ...meters.map((meter) => meter.$2),
+    ]);
     expect(tester.takeException(), isNull);
   });
 

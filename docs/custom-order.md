@@ -55,6 +55,15 @@ dupla, záró ütemvonal, rövid cezúra, hosszú cezúra, nyitó ismétlőjel,
 kétirányú ismétlőjel és záró ismétlőjel. A jel neve egér fölévitelére
 vagy hosszú koppintásra jelenik meg.
 
+Az **Ütemjelek** sor az ütemvonalak alatt található. A grafikus gombok
+sorrendben a **4/4, 2/4, 3/4, 3/8, 6/8, 2/2, 3/2, 5/4, 6/4**
+ütemjelet szúrják be; a súgó a nevüket mutatja, például **négy-negyed**.
+A gombokon az ütemjel két félkövér számjegye egymás alatt jelenik
+meg, így nagy felbontáson is éles és mindkét színtémában jól olvasható.
+A pontozott ritmusérték, ritmus, hangjegy, szünet és módosítójel
+beszúróvezérlői átmenetileg nem érhetők el. A meglévő kották jelei továbbra
+is megjelennek az előnézetben és a vetítésben.
+
 ## Export/Import
 
 - **Mentés** — `.dia` fájl mentése a lemezre

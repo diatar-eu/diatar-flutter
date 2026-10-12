@@ -1,5 +1,7 @@
 Új funkciók
 Diasor
+- Az ütemjelgombokon éles, nagy, egymás alá írt számok váltották a kis felbontású képeket
+- A kottaszerkesztő kilenc grafikus ütemjelgombot kapott; a ritmus-, hangjegy-, szünet- és módosítójel-beszúrás átmenetileg kikerült
 - A kottaszerkesztő ütemvonalai, cezúrái és ismétlőjelei nyolc grafikus gombbal szúrhatók be, névsúgóval
 - A kottaszerkesztő előjegyzésgombjai rövid jelölést és dúr/moll hangnemsúgót kaptak; a nem támogatott „Nincs” gomb megszűnt
 - A kottaszerkesztőben grafikus gombokkal választható G-, F-, minden C- és Do-kulcs; a nevük egér fölévitelére vagy hosszú koppintásra jelenik meg

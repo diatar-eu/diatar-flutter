@@ -53,10 +53,6 @@ class KottaEditorLabels {
     required this.editTitle,
     required this.clef,
     required this.keySignature,
-    required this.rhythm,
-    required this.notes,
-    required this.rests,
-    required this.accidentals,
     required this.barlines,
     required this.singleBarline,
     required this.doubleBarline,
@@ -66,6 +62,17 @@ class KottaEditorLabels {
     required this.openingRepeat,
     required this.bidirectionalRepeat,
     required this.closingRepeat,
+    required this.meters,
+    required this.meterSymbol,
+    required this.meter44,
+    required this.meter24,
+    required this.meter34,
+    required this.meter38,
+    required this.meter68,
+    required this.meter22,
+    required this.meter32,
+    required this.meter54,
+    required this.meter64,
     required this.gClef,
     required this.fClef,
     required this.sopranoClef,
@@ -79,17 +86,6 @@ class KottaEditorLabels {
     required this.sharps,
     required this.flatKeys,
     required this.sharpKeys,
-    required this.whole,
-    required this.half,
-    required this.quarter,
-    required this.eighth,
-    required this.sixteenth,
-    required this.dotted,
-    required this.natural,
-    required this.flat,
-    required this.sharp,
-    required this.doubleFlat,
-    required this.doubleSharp,
     required this.cancel,
     required this.apply,
   }) : assert(flatKeys.length == 7),
@@ -99,10 +95,6 @@ class KottaEditorLabels {
   final String editTitle;
   final String clef;
   final String keySignature;
-  final String rhythm;
-  final String notes;
-  final String rests;
-  final String accidentals;
   final String barlines;
   final String singleBarline;
   final String doubleBarline;
@@ -112,6 +104,17 @@ class KottaEditorLabels {
   final String openingRepeat;
   final String bidirectionalRepeat;
   final String closingRepeat;
+  final String meters;
+  final String Function(int numerator, int denominator) meterSymbol;
+  final String meter44;
+  final String meter24;
+  final String meter34;
+  final String meter38;
+  final String meter68;
+  final String meter22;
+  final String meter32;
+  final String meter54;
+  final String meter64;
   final String gClef;
   final String fClef;
   final String sopranoClef;
@@ -125,17 +128,6 @@ class KottaEditorLabels {
   final String Function(int count) sharps;
   final List<String> flatKeys;
   final List<String> sharpKeys;
-  final String whole;
-  final String half;
-  final String quarter;
-  final String eighth;
-  final String sixteenth;
-  final String dotted;
-  final String natural;
-  final String flat;
-  final String sharp;
-  final String doubleFlat;
-  final String doubleSharp;
   final String cancel;
   final String apply;
 }
@@ -179,7 +171,6 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   late final Timer _caretTimer;
   bool _textCursorActive = false;
   bool _activeCursorVisible = true;
-  bool _dotted = false;
 
   bool get _isValid => _elements.isNotEmpty;
 
@@ -225,8 +216,6 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
       _activeCursorVisible = true;
     });
   }
-
-  String _rhythmCommand(String value) => '${_dotted ? 'R' : 'r'}$value';
 
   void _toggleActiveCursor() {
     setState(() {
@@ -398,70 +387,6 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                         ],
                         onPressed: _insertCommand,
                       ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(labels.dotted),
-                        value: _dotted,
-                        onChanged: (bool value) =>
-                            setState(() => _dotted = value),
-                      ),
-                      _CommandSection(
-                        label: labels.rhythm,
-                        commands: <_KottaEditorCommand>[
-                          _KottaEditorCommand(
-                            labels.whole,
-                            _rhythmCommand('1'),
-                          ),
-                          _KottaEditorCommand(labels.half, _rhythmCommand('2')),
-                          _KottaEditorCommand(
-                            labels.quarter,
-                            _rhythmCommand('4'),
-                          ),
-                          _KottaEditorCommand(
-                            labels.eighth,
-                            _rhythmCommand('8'),
-                          ),
-                          _KottaEditorCommand(
-                            labels.sixteenth,
-                            _rhythmCommand('6'),
-                          ),
-                        ],
-                        onPressed: _insertCommand,
-                      ),
-                      _CommandSection(
-                        label: labels.notes,
-                        commands: <_KottaEditorCommand>[
-                          for (final String octave in <String>['1', '2', '3'])
-                            for (final String position in 'abcdefghi'.split(''))
-                              _KottaEditorCommand(
-                                '$octave$position',
-                                '$octave$position',
-                              ),
-                        ],
-                        onPressed: _insertCommand,
-                      ),
-                      _CommandSection(
-                        label: labels.rests,
-                        commands: <_KottaEditorCommand>[
-                          _KottaEditorCommand(labels.whole, 's1'),
-                          _KottaEditorCommand(labels.half, 's2'),
-                          _KottaEditorCommand(labels.quarter, 's4'),
-                          _KottaEditorCommand(labels.eighth, 's8'),
-                          _KottaEditorCommand(labels.sixteenth, 's6'),
-                        ],
-                        onPressed: _insertCommand,
-                      ),
-                      _CommandSection(
-                        label: labels.accidentals,
-                        commands: <_KottaEditorCommand>[
-                          _KottaEditorCommand(labels.natural, 'm0'),
-                          _KottaEditorCommand(labels.flat, 'mb'),
-                          _KottaEditorCommand(labels.sharp, 'mk'),
-                          _KottaEditorCommand(labels.doubleFlat, 'mB'),
-                          _KottaEditorCommand(labels.doubleSharp, 'mK'),
-                        ],
-                        onPressed: _insertCommand,
-                      ),
                       _CommandSection(
                         label: labels.barlines,
                         commands: <_KottaEditorCommand>[
@@ -504,6 +429,57 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                             labels.closingRepeat,
                             '|<',
                             asset: 'ismjel1',
+                          ),
+                        ],
+                        onPressed: _insertCommand,
+                      ),
+                      _CommandSection(
+                        label: labels.meters,
+                        commands: <_KottaEditorCommand>[
+                          _KottaEditorCommand(
+                            labels.meter44,
+                            'u4',
+                            meter: labels.meterSymbol(4, 4),
+                          ),
+                          _KottaEditorCommand(
+                            labels.meter24,
+                            'u2',
+                            meter: labels.meterSymbol(2, 4),
+                          ),
+                          _KottaEditorCommand(
+                            labels.meter34,
+                            'u3',
+                            meter: labels.meterSymbol(3, 4),
+                          ),
+                          _KottaEditorCommand(
+                            labels.meter38,
+                            'U8',
+                            meter: labels.meterSymbol(3, 8),
+                          ),
+                          _KottaEditorCommand(
+                            labels.meter68,
+                            'U6',
+                            meter: labels.meterSymbol(6, 8),
+                          ),
+                          _KottaEditorCommand(
+                            labels.meter22,
+                            'U2',
+                            meter: labels.meterSymbol(2, 2),
+                          ),
+                          _KottaEditorCommand(
+                            labels.meter32,
+                            'U3',
+                            meter: labels.meterSymbol(3, 2),
+                          ),
+                          _KottaEditorCommand(
+                            labels.meter54,
+                            'u5',
+                            meter: labels.meterSymbol(5, 4),
+                          ),
+                          _KottaEditorCommand(
+                            labels.meter64,
+                            'u6',
+                            meter: labels.meterSymbol(6, 4),
                           ),
                         ],
                         onPressed: _insertCommand,
@@ -652,12 +628,19 @@ class _KottaPreviewState extends State<_KottaPreview> {
 }
 
 class _KottaEditorCommand {
-  const _KottaEditorCommand(this.label, this.source, {this.hint, this.asset});
+  const _KottaEditorCommand(
+    this.label,
+    this.source, {
+    this.hint,
+    this.asset,
+    this.meter,
+  });
 
   final String label;
   final String source;
   final String? hint;
   final String? asset;
+  final String? meter;
 }
 
 class _CommandSection extends StatelessWidget {
@@ -688,7 +671,9 @@ class _CommandSection extends StatelessWidget {
             children: commands
                 .map(
                   (_KottaEditorCommand command) =>
-                      graphicalClefs || command.asset != null
+                      graphicalClefs ||
+                          command.asset != null ||
+                          command.meter != null
                       ? Tooltip(
                           message: command.label,
                           child: OutlinedButton(
@@ -699,7 +684,27 @@ class _CommandSection extends StatelessWidget {
                             ),
                             child: Semantics(
                               label: command.label,
-                              child: command.asset != null
+                              child: command.meter != null
+                                  ? SizedBox(
+                                      width: 48,
+                                      height: 48,
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          command.meter!,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            height: 1,
+                                            fontWeight: FontWeight.w700,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : command.asset != null
                                   ? Image.asset(
                                       'assets/kotta/${command.asset}.png',
                                       width: 48,
