@@ -3,6 +3,7 @@ Hibajavítások
 - A C-kulcsok a kottakód szerinti vonalon jelennek meg
 
 Közös kiadás
+- A verziószám követi a Diatár kottaszerkesztőjének kijelölési és cserefunkcióját; a vetítési kódformátum változatlan
 - A verziószám követi a Diatár kottaszerkesztőjének kattintásos kurzorkezelését; a vetítési kódformátum változatlan
 - A verziószám követi a Diatár ütemjelgombjainak olvashatósági javítását; a vetítési kódformátum változatlan
 - A verziószám követi a Diatár ütemjelgombjainak bővítését; a vetítési kódformátum változatlan

@@ -45,6 +45,14 @@ a szövegsorra kattintva a szövegkurzor lesz aktív. A balra/jobbra
 nyílbillentyűkkel az aktív kurzor mozgatható, a **Tab** pedig vált a két
 kurzor között. Hosszú soroknál az előnézet vízszintesen görgethető.
 
+A kottasorban lenyomott bal egérgombbal húzva, illetve aktív kottakurzor
+mellett a **Shift+balra/jobbra** billentyűkkel több kottaelem jelölhető ki.
+A kijelölt részt kék háttér jelzi. A **Kulcs**, **Előjegyzés**,
+**Ütemvonalak** vagy **Ütemjelek** bármely beszúrógombja a kijelölt
+kottaelemeket egyetlen új elemre cseréli; a hozzájuk tartozó szöveg megmarad.
+Kattintással vagy a **Tab** billentyűvel megszüntethető a kijelölés.
+Shift nélküli nyílbillentyűvel a kijelölés megfelelő végére léphetünk.
+
 A **Kulcs** sorban a gombok a kulcs képét mutatják ötvonalas háttéren.
 Választható G- és F-kulcs, szoprán-, mezzoszoprán-, alt-, tenor- és
 baritonkulcs (C-kulcs az 1–5. vonalon), valamint Do-kulcs mind az öt vonalon

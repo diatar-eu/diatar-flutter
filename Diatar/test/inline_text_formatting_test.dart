@@ -118,6 +118,52 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   return (preview: preview, layout: layout!);
 }
 
+ProjectorEditorCursorOverlay _notationOverlay(WidgetTester tester) =>
+    (tester.widget<CustomPaint>(_notationPreviewLayout(tester).preview).painter!
+            as ProjectorPainter)
+        .editorCursorOverlay!;
+
+Future<void> _openNotationPreview(
+  WidgetTester tester,
+  InlineTextEditingController controller,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        body: InlineTextEditor(
+          controller: controller,
+          labels: _editorLabels,
+          chordEditorLabels: _chordLabels,
+          kottaEditorLabels: _kottaLabels,
+          decoration: const InputDecoration(),
+        ),
+      ),
+    ),
+  );
+  final Finder marker = find
+      .byKey(const ValueKey<String>('inline-kotta-marker'))
+      .first;
+  await tester.tap(marker);
+  await tester.pump(const Duration(milliseconds: 50));
+  await tester.tap(marker);
+  await tester.pumpAndSettle();
+}
+
+Offset _kottaPosition(
+  WidgetTester tester,
+  int position, {
+  bool textRow = false,
+}) {
+  final preview = _notationPreviewLayout(tester);
+  return tester.getTopLeft(preview.preview) +
+      Offset(
+        preview.layout.kottaPositions[position]! + 0.1,
+        textRow
+            ? preview.layout.textRect.center.dy
+            : preview.layout.kottaRect.center.dy,
+      );
+}
+
 void main() {
   test(
     'clef graphics contain glyphs at their encoded staff positions',
@@ -1427,6 +1473,185 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pump();
     expect(overlay().kottaPosition, 0);
+    controller.dispose();
+  });
+
+  for (final button in <({String label, String command, bool tooltip})>[
+    (label: _kottaLabels.fClef, command: 'kF', tooltip: true),
+    (label: _kottaLabels.sharps(1), command: 'E1', tooltip: false),
+    (label: _kottaLabels.singleBarline, command: '|1', tooltip: true),
+    (label: _kottaLabels.meter44, command: 'u4', tooltip: true),
+  ]) {
+    testWidgets('Shift selection is replaced by ${button.command}', (
+      WidgetTester tester,
+    ) async {
+      final InlineTextEditingController controller =
+          InlineTextEditingController.fromDia(r'\KkG;ab\Kr4mk1a;cd\Ke2|!;ef');
+      await _openNotationPreview(tester, controller);
+      await tester.tapAt(
+        _kottaPosition(tester, 5),
+        kind: ui.PointerDeviceKind.mouse,
+      );
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      expect(
+        _notationOverlay(tester).kottaSelection,
+        const TextSelection(baseOffset: 5, extentOffset: 1),
+      );
+      expect(_notationOverlay(tester).textActive, isFalse);
+
+      final Finder finder = button.tooltip
+          ? find.byTooltip(button.label)
+          : find.text(button.label);
+      await tester.ensureVisible(finder);
+      await tester.tap(finder);
+      await tester.pump();
+      expect(_notationOverlay(tester).kottaSelection, isNull);
+      expect(_notationOverlay(tester).kottaPosition, 2);
+      expect(_notationOverlay(tester).textPosition, 2);
+      await tester.tap(find.text(_kottaLabels.apply));
+      await tester.pumpAndSettle();
+      expect(controller.encodedText, '\\KkG;ab\\K${button.command};cd\\K|!;ef');
+      controller.dispose();
+    });
+  }
+
+  testWidgets('Shift selection reverses and unmodified navigation clears it', (
+    WidgetTester tester,
+  ) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\KkGe2u4|1;word');
+    await _openNotationPreview(tester, controller);
+    await tester.tapAt(
+      _kottaPosition(tester, 2),
+      kind: ui.PointerDeviceKind.mouse,
+    );
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaSelection, isNull);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(
+      _notationOverlay(tester).kottaSelection,
+      const TextSelection(baseOffset: 2, extentOffset: 1),
+    );
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaSelection, isNull);
+    expect(_notationOverlay(tester).kottaPosition, 2);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaSelection, isNotNull);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaSelection, isNull);
+    expect(_notationOverlay(tester).textActive, isTrue);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaSelection, isNull);
+    controller.dispose();
+  });
+
+  testWidgets('mouse drag selects notation in both directions, not lyrics', (
+    WidgetTester tester,
+  ) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\KkGr4mk1a;word \Ke2|!;other');
+    await _openNotationPreview(tester, controller);
+    final TestGesture reverse = await tester.startGesture(
+      _kottaPosition(tester, 5),
+      kind: ui.PointerDeviceKind.mouse,
+    );
+    await reverse.moveTo(_kottaPosition(tester, 1, textRow: true));
+    await reverse.up();
+    await tester.pump();
+    expect(
+      _notationOverlay(tester).kottaSelection,
+      const TextSelection(baseOffset: 5, extentOffset: 1),
+    );
+    expect(_notationOverlay(tester).textActive, isFalse);
+    await tester.tapAt(
+      _kottaPosition(tester, 1),
+      kind: ui.PointerDeviceKind.mouse,
+    );
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaSelection, isNull);
+
+    final TestGesture forward = await tester.startGesture(
+      _kottaPosition(tester, 1),
+      kind: ui.PointerDeviceKind.mouse,
+    );
+    await forward.moveTo(_kottaPosition(tester, 5));
+    await forward.up();
+    await tester.pump();
+    expect(
+      _notationOverlay(tester).kottaSelection,
+      const TextSelection(baseOffset: 1, extentOffset: 5),
+    );
+    await tester.tap(find.byTooltip(_kottaLabels.fClef));
+    await tester.pump();
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\KkGkF;word \K|!;other');
+    controller.dispose();
+  });
+
+  testWidgets('mouse selection keeps its anchor while the preview scrolls', (
+    WidgetTester tester,
+  ) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(
+          List<String>.filled(40, r'\KkG;a').join(),
+        );
+    await _openNotationPreview(tester, controller);
+    final initial = _notationPreviewLayout(tester);
+    final ScrollController scroll = tester
+        .widget<Scrollbar>(find.byType(Scrollbar))
+        .controller!;
+    scroll.jumpTo(initial.layout.kottaPositions[20]! - 100);
+    await tester.pump();
+    final double initialOffset = scroll.offset;
+    final TestGesture drag = await tester.startGesture(
+      _kottaPosition(tester, 20),
+      kind: ui.PointerDeviceKind.mouse,
+    );
+    await drag.moveTo(_kottaPosition(tester, 38));
+    await tester.pump();
+    await tester.pump();
+    expect(scroll.offset, greaterThan(initialOffset));
+    await drag.moveTo(_kottaPosition(tester, 39));
+    await drag.up();
+    await tester.pump();
+    expect(
+      _notationOverlay(tester).kottaSelection,
+      const TextSelection(baseOffset: 20, extentOffset: 39),
+    );
+
+    final selected = _notationPreviewLayout(tester);
+    await tester.tapAt(
+      tester.getTopLeft(selected.preview) +
+          Offset(
+            selected.layout.textPositions[38]!,
+            selected.layout.textRect.center.dy,
+          ),
+    );
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaSelection, isNull);
+    expect(_notationOverlay(tester).textActive, isTrue);
     controller.dispose();
   });
 

@@ -76,12 +76,14 @@ class ProjectorEditorCursorOverlay {
     required this.textPosition,
     required this.textActive,
     required this.activeVisible,
+    this.kottaSelection,
   });
 
   final int kottaPosition;
   final int textPosition;
   final bool textActive;
   final bool activeVisible;
+  final TextSelection? kottaSelection;
 }
 
 class ProjectorEditorCursorLayout {
@@ -97,13 +99,12 @@ class ProjectorEditorCursorLayout {
   final Map<int, double> kottaPositions;
   final Map<int, double> textPositions;
 
-  ({int position, bool textActive}) hitTest(Offset offset) {
+  ({int position, bool textActive}) hitTest(Offset offset, {bool? textActive}) {
     double rowDistance(Rect rect) =>
         (offset.dy - offset.dy.clamp(rect.top, rect.bottom)).abs();
-    final bool textActive = rowDistance(textRect) <= rowDistance(kottaRect);
-    final Map<int, double> positions = textActive
-        ? textPositions
-        : kottaPositions;
+    final bool hitText =
+        textActive ?? (rowDistance(textRect) <= rowDistance(kottaRect));
+    final Map<int, double> positions = hitText ? textPositions : kottaPositions;
     int nearest = positions.keys.first;
     double distance = double.infinity;
     for (final MapEntry<int, double> entry in positions.entries) {
@@ -113,7 +114,7 @@ class ProjectorEditorCursorLayout {
         distance = candidateDistance;
       }
     }
-    return (position: nearest, textActive: textActive);
+    return (position: nearest, textActive: hitText);
   }
 }
 
@@ -2804,6 +2805,22 @@ class ProjectorPainter extends CustomPainter {
     if (_editorKottaPositions.isEmpty) {
       _editorKottaPositions[0] = textX;
     }
+    final TextSelection? selection = overlay.kottaSelection;
+    if (selection != null && !selection.isCollapsed) {
+      final double? startX = _editorKottaPositions[selection.start];
+      final double? endX = _editorKottaPositions[selection.end];
+      if (startX != null && endX != null) {
+        canvas.drawRect(
+          Rect.fromLTRB(
+            math.min(startX, endX),
+            kottaTop,
+            math.max(startX, endX),
+            kottaBottom,
+          ),
+          Paint()..color = Colors.blue.withValues(alpha: 0.25),
+        );
+      }
+    }
     onEditorCursorLayout?.call(
       ProjectorEditorCursorLayout(
         kottaRect: Rect.fromLTRB(kottaX, kottaTop, kottaX + 2, kottaBottom),
@@ -5485,7 +5502,8 @@ class ProjectorPainter extends CustomPainter {
     return a?.kottaPosition == b?.kottaPosition &&
         a?.textPosition == b?.textPosition &&
         a?.textActive == b?.textActive &&
-        a?.activeVisible == b?.activeVisible;
+        a?.activeVisible == b?.activeVisible &&
+        a?.kottaSelection == b?.kottaSelection;
   }
 
   bool _sameTextRecord(dynamic a, dynamic b) {

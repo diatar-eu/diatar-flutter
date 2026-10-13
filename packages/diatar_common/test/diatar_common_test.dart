@@ -566,6 +566,88 @@ void main() {
     expect(layout!.kottaRect.left, greaterThan(layout!.textRect.left));
   });
 
+  test('editor selection paints only the selected notation band', () async {
+    ProjectorPainter painterFor(TextSelection? selection) => ProjectorPainter(
+      frame: const TextFrame(
+        record: RecTextRecord(
+          scholaLine: '',
+          title: '',
+          lines: <String>[r'\KkGe2u4|1;word'],
+        ),
+      ),
+      globals: const ProjectionGlobals(
+        autoResize: false,
+        fontSize: 34,
+        hideTitle: true,
+        hCenter: false,
+        useKotta: true,
+        vCenter: true,
+      ),
+      settings: const AppSettings(receiverUseKotta: true),
+      allowLineWrapping: false,
+      editorCursorOverlay: ProjectorEditorCursorOverlay(
+        kottaPosition: 3,
+        textPosition: 0,
+        textActive: false,
+        activeVisible: true,
+        kottaSelection: selection,
+      ),
+    );
+
+    ProjectorEditorCursorLayout? layout;
+    final ProjectorPainter plain = painterFor(null);
+    final ProjectorPainter selected = painterFor(
+      const TextSelection(baseOffset: 3, extentOffset: 1),
+    );
+    final ui.PictureRecorder measureRecorder = ui.PictureRecorder();
+    ProjectorPainter(
+      frame: plain.frame,
+      globals: plain.globals,
+      settings: plain.settings,
+      allowLineWrapping: false,
+      editorCursorOverlay: plain.editorCursorOverlay,
+      onEditorCursorLayout: (value) => layout = value,
+    ).paint(Canvas(measureRecorder), const Size(400, 180));
+    measureRecorder.endRecording().dispose();
+
+    Future<Uint8List> render(ProjectorPainter painter) async {
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      painter.paint(Canvas(recorder), const Size(400, 180));
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image image = await picture.toImage(400, 180);
+      final ByteData data = (await image.toByteData())!;
+      image.dispose();
+      picture.dispose();
+      return data.buffer.asUint8List();
+    }
+
+    final Uint8List before = await render(plain);
+    final Uint8List after = await render(selected);
+    final Rect band = Rect.fromLTRB(
+      layout!.kottaPositions[1]!,
+      layout!.kottaRect.top,
+      layout!.kottaPositions[3]!,
+      layout!.kottaRect.bottom,
+    ).inflate(1);
+    int changedPixels = 0;
+    for (int index = 0; index < before.length; index += 4) {
+      if (before[index] != after[index] ||
+          before[index + 1] != after[index + 1] ||
+          before[index + 2] != after[index + 2]) {
+        final int pixel = index ~/ 4;
+        expect(
+          band.contains(
+            Offset((pixel % 400).toDouble(), (pixel ~/ 400).toDouble()),
+          ),
+          isTrue,
+        );
+        changedPixels++;
+      }
+    }
+    expect(changedPixels, greaterThan(100));
+    expect(selected.shouldRepaint(plain), isTrue);
+  });
+
   test('graphical editor retains the first matching kotta boundary', () {
     double cursorX(String line) {
       ProjectorEditorCursorLayout? layout;

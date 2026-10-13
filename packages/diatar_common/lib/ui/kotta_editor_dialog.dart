@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -168,11 +169,20 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   late List<KottaEditorElement> _elements;
   late int _kottaCursor;
   late int _textCursor;
+  int? _kottaSelectionAnchor;
   late final Timer _caretTimer;
   bool _textCursorActive = false;
   bool _activeCursorVisible = true;
 
   bool get _isValid => _elements.isNotEmpty;
+
+  TextSelection? get _kottaSelection {
+    final int? anchor = _kottaSelectionAnchor;
+    if (anchor == null || anchor == _kottaCursor) {
+      return null;
+    }
+    return TextSelection(baseOffset: anchor, extentOffset: _kottaCursor);
+  }
 
   @override
   void initState() {
@@ -207,6 +217,13 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   void _insertCommand(String command) {
     assert(command.length == 2);
     setState(() {
+      final TextSelection? selection = _kottaSelection;
+      if (selection != null) {
+        _kottaCursor = selection.start;
+        _textCursor = _elements[selection.start].textOffset;
+        _elements.removeRange(selection.start, selection.end);
+      }
+      _kottaSelectionAnchor = null;
       _elements.insert(
         _kottaCursor,
         KottaEditorElement(command: command, textOffset: _textCursor),
@@ -219,21 +236,34 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _toggleActiveCursor() {
     setState(() {
+      _kottaSelectionAnchor = null;
       _textCursorActive = !_textCursorActive;
       _activeCursorVisible = true;
     });
   }
 
-  void _moveActiveCursor(int direction) {
+  void _moveActiveCursor(int direction, {bool extendSelection = false}) {
     setState(() {
       if (_textCursorActive) {
+        _kottaSelectionAnchor = null;
         _textCursor = (_textCursor + direction).clamp(
           0,
           widget.initialState.textLength,
         );
         _syncKottaCursorToText();
       } else {
-        _kottaCursor = _nextKottaCursor(direction);
+        final TextSelection? selection = _kottaSelection;
+        if (extendSelection) {
+          _kottaSelectionAnchor ??= _kottaCursor;
+          _kottaCursor = _nextKottaCursor(direction);
+        } else {
+          _kottaSelectionAnchor = null;
+          _kottaCursor = selection == null
+              ? _nextKottaCursor(direction)
+              : direction < 0
+              ? selection.start
+              : selection.end;
+        }
         _syncTextCursorToKotta();
       }
       _activeCursorVisible = true;
@@ -259,6 +289,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _placeCursor(({int position, bool textActive}) hit) {
     setState(() {
+      _kottaSelectionAnchor = null;
       _textCursorActive = hit.textActive;
       if (_textCursorActive) {
         _textCursor = hit.position.clamp(0, widget.initialState.textLength);
@@ -267,6 +298,17 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
         _kottaCursor = hit.position.clamp(0, _elements.length);
         _syncTextCursorToKotta();
       }
+      _activeCursorVisible = true;
+    });
+    _editorFocusNode.requestFocus();
+  }
+
+  void _selectKotta(TextSelection selection) {
+    setState(() {
+      _kottaSelectionAnchor = selection.baseOffset.clamp(0, _elements.length);
+      _kottaCursor = selection.extentOffset.clamp(0, _elements.length);
+      _textCursorActive = false;
+      _syncTextCursorToKotta();
       _activeCursorVisible = true;
     });
     _editorFocusNode.requestFocus();
@@ -321,11 +363,17 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-      _moveActiveCursor(-1);
+      _moveActiveCursor(
+        -1,
+        extendSelection: HardwareKeyboard.instance.isShiftPressed,
+      );
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-      _moveActiveCursor(1);
+      _moveActiveCursor(
+        1,
+        extendSelection: HardwareKeyboard.instance.isShiftPressed,
+      );
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -356,11 +404,13 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
               _KottaPreview(
                 line: widget.previewLineBuilder(_elements),
                 onCursorPlaced: _placeCursor,
+                onSelectionChanged: _selectKotta,
                 cursorOverlay: ProjectorEditorCursorOverlay(
                   kottaPosition: _kottaCursor,
                   textPosition: _textCursor,
                   textActive: _textCursorActive,
                   activeVisible: _activeCursorVisible,
+                  kottaSelection: _kottaSelection,
                 ),
               ),
               const SizedBox(height: 16),
@@ -543,11 +593,13 @@ class _KottaPreview extends StatefulWidget {
     required this.line,
     required this.cursorOverlay,
     required this.onCursorPlaced,
+    required this.onSelectionChanged,
   });
 
   final String line;
   final ProjectorEditorCursorOverlay cursorOverlay;
   final ValueChanged<({int position, bool textActive})> onCursorPlaced;
+  final ValueChanged<TextSelection> onSelectionChanged;
 
   @override
   State<_KottaPreview> createState() => _KottaPreviewState();
@@ -555,6 +607,8 @@ class _KottaPreview extends StatefulWidget {
 
 class _KottaPreviewState extends State<_KottaPreview> {
   final ScrollController _horizontalScrollController = ScrollController();
+  final GlobalKey _previewKey = GlobalKey();
+  int? _dragAnchor;
   Rect? _pendingCursorRect;
   ProjectorEditorCursorLayout? _cursorLayout;
   bool _cursorScrollScheduled = false;
@@ -605,6 +659,40 @@ class _KottaPreviewState extends State<_KottaPreview> {
     });
   }
 
+  void _handlePointerDown(PointerDownEvent event) {
+    if (event.kind != PointerDeviceKind.mouse ||
+        event.buttons != kPrimaryMouseButton) {
+      return;
+    }
+    final ProjectorEditorCursorLayout? layout = _cursorLayout;
+    if (layout == null) {
+      return;
+    }
+    final hit = layout.hitTest(event.localPosition);
+    _dragAnchor = hit.textActive ? null : hit.position;
+    widget.onCursorPlaced(hit);
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    final int? anchor = _dragAnchor;
+    final ProjectorEditorCursorLayout? layout = _cursorLayout;
+    if (anchor == null ||
+        layout == null ||
+        event.kind != PointerDeviceKind.mouse ||
+        event.buttons != kPrimaryMouseButton) {
+      return;
+    }
+    final RenderBox box =
+        _previewKey.currentContext!.findRenderObject()! as RenderBox;
+    final hit = layout.hitTest(
+      box.globalToLocal(event.position),
+      textActive: false,
+    );
+    widget.onSelectionChanged(
+      TextSelection(baseOffset: anchor, extentOffset: hit.position),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ProjectorPainter painter = ProjectorPainter(
@@ -651,17 +739,28 @@ class _KottaPreviewState extends State<_KottaPreview> {
                 child: SizedBox(
                   width: contentWidth,
                   height: constraints.maxHeight,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapUp: (TapUpDetails details) {
-                      final ProjectorEditorCursorLayout? layout = _cursorLayout;
-                      if (layout != null) {
-                        widget.onCursorPlaced(
-                          layout.hitTest(details.localPosition),
-                        );
-                      }
-                    },
-                    child: CustomPaint(painter: painter),
+                  child: Listener(
+                    key: _previewKey,
+                    onPointerDown: _handlePointerDown,
+                    onPointerMove: _handlePointerMove,
+                    onPointerUp: (_) => _dragAnchor = null,
+                    onPointerCancel: (_) => _dragAnchor = null,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTapUp: (TapUpDetails details) {
+                        if (details.kind == PointerDeviceKind.mouse) {
+                          return;
+                        }
+                        final ProjectorEditorCursorLayout? layout =
+                            _cursorLayout;
+                        if (layout != null) {
+                          widget.onCursorPlaced(
+                            layout.hitTest(details.localPosition),
+                          );
+                        }
+                      },
+                      child: CustomPaint(painter: painter),
+                    ),
                   ),
                 ),
               ),
