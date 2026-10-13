@@ -231,22 +231,45 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
           0,
           widget.initialState.textLength,
         );
-        _kottaCursor = _elements.indexWhere(
-          (element) => element.textOffset > _textCursor,
-        );
-        if (_kottaCursor < 0) {
-          _kottaCursor = _elements.length;
-        }
+        _syncKottaCursorToText();
       } else {
         _kottaCursor = _nextKottaCursor(direction);
-        if (_elements.isNotEmpty) {
-          _textCursor = _kottaCursor < _elements.length
-              ? _elements[_kottaCursor].textOffset
-              : _elements.last.textOffset;
-        }
+        _syncTextCursorToKotta();
       }
       _activeCursorVisible = true;
     });
+  }
+
+  void _syncKottaCursorToText() {
+    _kottaCursor = _elements.indexWhere(
+      (element) => element.textOffset > _textCursor,
+    );
+    if (_kottaCursor < 0) {
+      _kottaCursor = _elements.length;
+    }
+  }
+
+  void _syncTextCursorToKotta() {
+    if (_elements.isNotEmpty) {
+      _textCursor = _kottaCursor < _elements.length
+          ? _elements[_kottaCursor].textOffset
+          : _elements.last.textOffset;
+    }
+  }
+
+  void _placeCursor(({int position, bool textActive}) hit) {
+    setState(() {
+      _textCursorActive = hit.textActive;
+      if (_textCursorActive) {
+        _textCursor = hit.position.clamp(0, widget.initialState.textLength);
+        _syncKottaCursorToText();
+      } else {
+        _kottaCursor = hit.position.clamp(0, _elements.length);
+        _syncTextCursorToKotta();
+      }
+      _activeCursorVisible = true;
+    });
+    _editorFocusNode.requestFocus();
   }
 
   int _nextKottaCursor(int direction) {
@@ -332,6 +355,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
             children: <Widget>[
               _KottaPreview(
                 line: widget.previewLineBuilder(_elements),
+                onCursorPlaced: _placeCursor,
                 cursorOverlay: ProjectorEditorCursorOverlay(
                   kottaPosition: _kottaCursor,
                   textPosition: _textCursor,
@@ -515,10 +539,15 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 }
 
 class _KottaPreview extends StatefulWidget {
-  const _KottaPreview({required this.line, required this.cursorOverlay});
+  const _KottaPreview({
+    required this.line,
+    required this.cursorOverlay,
+    required this.onCursorPlaced,
+  });
 
   final String line;
   final ProjectorEditorCursorOverlay cursorOverlay;
+  final ValueChanged<({int position, bool textActive})> onCursorPlaced;
 
   @override
   State<_KottaPreview> createState() => _KottaPreviewState();
@@ -527,6 +556,7 @@ class _KottaPreview extends StatefulWidget {
 class _KottaPreviewState extends State<_KottaPreview> {
   final ScrollController _horizontalScrollController = ScrollController();
   Rect? _pendingCursorRect;
+  ProjectorEditorCursorLayout? _cursorLayout;
   bool _cursorScrollScheduled = false;
 
   @override
@@ -536,9 +566,14 @@ class _KottaPreviewState extends State<_KottaPreview> {
   }
 
   void _handleEditorCursorLayout(ProjectorEditorCursorLayout layout) {
-    _pendingCursorRect = widget.cursorOverlay.textActive
+    _cursorLayout = layout;
+    final Rect cursorRect = widget.cursorOverlay.textActive
         ? layout.textRect
         : layout.kottaRect;
+    if (_pendingCursorRect == cursorRect) {
+      return;
+    }
+    _pendingCursorRect = cursorRect;
     if (_cursorScrollScheduled) {
       return;
     }
@@ -616,7 +651,18 @@ class _KottaPreviewState extends State<_KottaPreview> {
                 child: SizedBox(
                   width: contentWidth,
                   height: constraints.maxHeight,
-                  child: CustomPaint(painter: painter),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapUp: (TapUpDetails details) {
+                      final ProjectorEditorCursorLayout? layout = _cursorLayout;
+                      if (layout != null) {
+                        widget.onCursorPlaced(
+                          layout.hitTest(details.localPosition),
+                        );
+                      }
+                    },
+                    child: CustomPaint(painter: painter),
+                  ),
                 ),
               ),
             );

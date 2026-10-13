@@ -1,5 +1,6 @@
 Új funkciók
 Diasor
+- A kottaszerkesztő előnézetében egérkattintással vagy koppintással választható a kotta- és szövegkurzor legközelebbi pozíciója
 - Az ütemjelgombokon éles, nagy, egymás alá írt számok váltották a kis felbontású képeket
 - A kottaszerkesztő kilenc grafikus ütemjelgombot kapott; a ritmus-, hangjegy-, szünet- és módosítójel-beszúrás átmenetileg kikerült
 - A kottaszerkesztő ütemvonalai, cezúrái és ismétlőjelei nyolc grafikus gombbal szúrhatók be, névsúgóval

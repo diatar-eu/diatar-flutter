@@ -88,10 +88,33 @@ class ProjectorEditorCursorLayout {
   const ProjectorEditorCursorLayout({
     required this.kottaRect,
     required this.textRect,
+    required this.kottaPositions,
+    required this.textPositions,
   });
 
   final Rect kottaRect;
   final Rect textRect;
+  final Map<int, double> kottaPositions;
+  final Map<int, double> textPositions;
+
+  ({int position, bool textActive}) hitTest(Offset offset) {
+    double rowDistance(Rect rect) =>
+        (offset.dy - offset.dy.clamp(rect.top, rect.bottom)).abs();
+    final bool textActive = rowDistance(textRect) <= rowDistance(kottaRect);
+    final Map<int, double> positions = textActive
+        ? textPositions
+        : kottaPositions;
+    int nearest = positions.keys.first;
+    double distance = double.infinity;
+    for (final MapEntry<int, double> entry in positions.entries) {
+      final double candidateDistance = (entry.value - offset.dx).abs();
+      if (candidateDistance < distance) {
+        nearest = entry.key;
+        distance = candidateDistance;
+      }
+    }
+    return (position: nearest, textActive: textActive);
+  }
 }
 
 class ProjectorPainter extends CustomPainter {
@@ -147,6 +170,8 @@ class ProjectorPainter extends CustomPainter {
   double? _editorTextBottom;
   int _editorKottaCommandIndex = 0;
   int _editorTextCharacterIndex = 0;
+  final Map<int, double> _editorKottaPositions = <int, double>{};
+  final Map<int, double> _editorTextPositions = <int, double>{};
 
   void _emitHighlightRenderState({
     required int maxWordIndex,
@@ -2685,6 +2710,8 @@ class ProjectorPainter extends CustomPainter {
     _editorTextBottom = null;
     _editorKottaCommandIndex = 0;
     _editorTextCharacterIndex = 0;
+    _editorKottaPositions.clear();
+    _editorTextPositions.clear();
   }
 
   void _captureEditorKottaCursor(
@@ -2701,19 +2728,27 @@ class ProjectorPainter extends CustomPainter {
     final int target = overlay.kottaPosition;
     final int startIndex = _editorKottaCommandIndex;
     final int endIndex = startIndex + commands.length;
-    if (_editorKottaX == null && target >= startIndex && target <= endIndex) {
-      final _KottaDrawState measureState = state.copy();
-      double x = startX;
-      for (int index = 0; index < commands.length; index++) {
-        if (startIndex + index == target) {
-          _editorKottaX = x;
-          break;
-        }
-        x += _kottaWidthOf(commands[index], lineGap, measureState);
+    final _KottaDrawState measureState = state.copy();
+    double x = startX;
+    if (startIndex == 0) {
+      _editorKottaPositions.putIfAbsent(0, () => x);
+    }
+    for (int index = 0; index < commands.length; index++) {
+      if (startIndex + index == target) {
+        _editorKottaX ??= x;
       }
-      if (target == endIndex) {
-        _editorKottaX = x;
+      final double width = _kottaWidthOf(
+        commands[index],
+        lineGap,
+        measureState,
+      );
+      x += width;
+      if (width > 0) {
+        _editorKottaPositions.putIfAbsent(startIndex + index + 1, () => x);
       }
+    }
+    if (target == endIndex) {
+      _editorKottaX ??= x;
     }
     _editorKottaCommandIndex = endIndex;
   }
@@ -2730,6 +2765,11 @@ class ProjectorPainter extends CustomPainter {
     }
     final int startIndex = _editorTextCharacterIndex;
     final int endIndex = startIndex + display.length;
+    for (int index = 0; index <= display.length; index++) {
+      _editorTextPositions[startIndex + index] =
+          startX +
+          painter.getOffsetForCaret(TextPosition(offset: index), Rect.zero).dx;
+    }
     if (overlay.textPosition >= startIndex &&
         overlay.textPosition <= endIndex) {
       final int localOffset = overlay.textPosition - startIndex;
@@ -2761,10 +2801,15 @@ class ProjectorPainter extends CustomPainter {
     }
 
     final double kottaX = _editorKottaX ?? textX;
+    if (_editorKottaPositions.isEmpty) {
+      _editorKottaPositions[0] = textX;
+    }
     onEditorCursorLayout?.call(
       ProjectorEditorCursorLayout(
         kottaRect: Rect.fromLTRB(kottaX, kottaTop, kottaX + 2, kottaBottom),
         textRect: Rect.fromLTRB(textX, textTop, textX + 2, textBottom),
+        kottaPositions: Map<int, double>.unmodifiable(_editorKottaPositions),
+        textPositions: Map<int, double>.unmodifiable(_editorTextPositions),
       ),
     );
     _paintEditorCursorLine(

@@ -96,6 +96,28 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   apply: _l10n.apply,
 );
 
+({Finder preview, ProjectorEditorCursorLayout layout}) _notationPreviewLayout(
+  WidgetTester tester,
+) {
+  final Finder preview = find.byWidgetPredicate(
+    (widget) => widget is CustomPaint && widget.painter is ProjectorPainter,
+  );
+  final ProjectorPainter painter =
+      tester.widget<CustomPaint>(preview).painter! as ProjectorPainter;
+  ProjectorEditorCursorLayout? layout;
+  final ui.PictureRecorder recorder = ui.PictureRecorder();
+  ProjectorPainter(
+    frame: painter.frame,
+    globals: painter.globals,
+    settings: painter.settings,
+    allowLineWrapping: painter.allowLineWrapping,
+    editorCursorOverlay: painter.editorCursorOverlay,
+    onEditorCursorLayout: (value) => layout = value,
+  ).paint(Canvas(recorder), tester.getSize(preview));
+  recorder.endRecording().dispose();
+  return (preview: preview, layout: layout!);
+}
+
 void main() {
   test(
     'clef graphics contain glyphs at their encoded staff positions',
@@ -1231,6 +1253,136 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(controller.encodedText, r'\KkGkFr41a;word');
+    controller.dispose();
+  });
+
+  testWidgets('mouse and touch place notation cursors and preserve insertion', (
+    WidgetTester tester,
+  ) async {
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\KkGr41a;word \KkF;other');
+    controller.selection = const TextSelection.collapsed(offset: 0);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InlineTextEditor(
+            controller: controller,
+            labels: _editorLabels,
+            chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
+            decoration: const InputDecoration(),
+          ),
+        ),
+      ),
+    );
+    final Finder marker = find
+        .byKey(const ValueKey<String>('inline-kotta-marker'))
+        .first;
+    await tester.tap(marker);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(marker);
+    await tester.pumpAndSettle();
+
+    ProjectorEditorCursorOverlay overlay() =>
+        (tester
+                    .widget<CustomPaint>(_notationPreviewLayout(tester).preview)
+                    .painter!
+                as ProjectorPainter)
+            .editorCursorOverlay!;
+
+    final initial = _notationPreviewLayout(tester);
+    final Offset origin = tester.getTopLeft(initial.preview);
+    await tester.tapAt(
+      origin +
+          Offset(
+            initial.layout.kottaPositions[1]! + 0.1,
+            initial.layout.kottaRect.center.dy,
+          ),
+      kind: ui.PointerDeviceKind.mouse,
+    );
+    await tester.pump();
+    expect(overlay().textActive, isFalse);
+    expect(overlay().kottaPosition, 1);
+    expect(overlay().textPosition, 0);
+    expect(overlay().activeVisible, isTrue);
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'kotta-editor');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(overlay().kottaPosition, 3);
+
+    final next = _notationPreviewLayout(tester);
+    final double left = next.layout.textPositions[1]!;
+    final double right = next.layout.textPositions[2]!;
+    await tester.tapAt(
+      tester.getTopLeft(next.preview) +
+          Offset(left + (right - left) * 0.7, next.layout.textRect.center.dy),
+    );
+    await tester.pump();
+    expect(overlay().textActive, isTrue);
+    expect(overlay().textPosition, 2);
+    expect(overlay().kottaPosition, 3);
+
+    await tester.tap(find.byTooltip(_kottaLabels.fClef));
+    await tester.pump();
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\KkGr41a;wo\KkF;rd \KkF;other');
+    controller.dispose();
+  });
+
+  testWidgets('touch placement uses scrolled preview coordinates', (
+    WidgetTester tester,
+  ) async {
+    final String text = List<String>.filled(20, 'word').join();
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(text);
+    controller.selection = const TextSelection.collapsed(offset: 0);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InlineTextEditor(
+            controller: controller,
+            labels: _editorLabels,
+            chordEditorLabels: _chordLabels,
+            kottaEditorLabels: _kottaLabels,
+            decoration: const InputDecoration(),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip(_editorLabels.insertKotta));
+    await tester.pumpAndSettle();
+    final initial = _notationPreviewLayout(tester);
+    final ScrollController scroll = tester
+        .widget<Scrollbar>(find.byType(Scrollbar))
+        .controller!;
+    scroll.jumpTo(initial.layout.textPositions[40]! - 100);
+    await tester.pump();
+    final scrolled = _notationPreviewLayout(tester);
+    await tester.tapAt(
+      tester.getTopLeft(scrolled.preview) +
+          Offset(
+            scrolled.layout.textPositions[42]! + 0.1,
+            scrolled.layout.textRect.center.dy,
+          ),
+    );
+    await tester.pump();
+    final ProjectorPainter painter =
+        tester.widget<CustomPaint>(scrolled.preview).painter!
+            as ProjectorPainter;
+    expect(painter.editorCursorOverlay!.textActive, isTrue);
+    expect(painter.editorCursorOverlay!.textPosition, 42);
+    expect(painter.editorCursorOverlay!.kottaPosition, 0);
+
+    await tester.tap(find.byTooltip(_kottaLabels.gClef));
+    await tester.pump();
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(
+      controller.encodedText,
+      '${text.substring(0, 42)}\\KkG;${text.substring(42)}',
+    );
     controller.dispose();
   });
 

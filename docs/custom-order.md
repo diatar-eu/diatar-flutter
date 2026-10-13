@@ -39,6 +39,12 @@ ugyanez a billentyű, illetve a dupla kattintás nyitja meg a külön
 kottaszerkesztőt. Az ablak a kottát és a hozzá tartozó szöveget együtt,
 vetítési előnézetben mutatja.
 
+A felső előnézetben egérkattintással vagy ujjal koppintva a legközelebbi
+szerkesztési pozícióra léphetünk. A kottasorra kattintva a kottakurzor,
+a szövegsorra kattintva a szövegkurzor lesz aktív. A balra/jobbra
+nyílbillentyűkkel az aktív kurzor mozgatható, a **Tab** pedig vált a két
+kurzor között. Hosszú soroknál az előnézet vízszintesen görgethető.
+
 A **Kulcs** sorban a gombok a kulcs képét mutatják ötvonalas háttéren.
 Választható G- és F-kulcs, szoprán-, mezzoszoprán-, alt-, tenor- és
 baritonkulcs (C-kulcs az 1–5. vonalon), valamint Do-kulcs mind az öt vonalon

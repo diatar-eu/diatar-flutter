@@ -611,6 +611,76 @@ void main() {
     expect(painter.debugKottaStaffLineCountForLine(r'\Kr41a;Alfa'), 5);
   });
 
+  test('editor hit testing selects the nearest rendered boundary and row', () {
+    ProjectorEditorCursorLayout layoutAt(int kottaPosition, int textPosition) {
+      ProjectorEditorCursorLayout? layout;
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      ProjectorPainter(
+        frame: const TextFrame(
+          record: RecTextRecord(
+            scholaLine: '',
+            title: '',
+            lines: <String>[r'\KkGr4mk1a;wide \KkF;word'],
+          ),
+        ),
+        globals: const ProjectionGlobals(
+          autoResize: false,
+          fontSize: 34,
+          hCenter: false,
+          hideTitle: true,
+          useKotta: true,
+          vCenter: true,
+        ),
+        settings: const AppSettings(receiverUseKotta: true),
+        allowLineWrapping: false,
+        editorCursorOverlay: ProjectorEditorCursorOverlay(
+          kottaPosition: kottaPosition,
+          textPosition: textPosition,
+          textActive: false,
+          activeVisible: true,
+        ),
+        onEditorCursorLayout: (value) => layout = value,
+      ).paint(Canvas(recorder), const Size(600, 180));
+      recorder.endRecording().dispose();
+      return layout!;
+    }
+
+    final ProjectorEditorCursorLayout layout = layoutAt(0, 0);
+    expect(layout.kottaPositions.keys, <int>[0, 1, 4, 5]);
+    for (final int position in layout.kottaPositions.keys) {
+      final double x = layoutAt(position, 0).kottaRect.left;
+      expect(layout.kottaPositions[position], closeTo(x, 0.001));
+      expect(layout.hitTest(Offset(x + 0.1, layout.kottaRect.center.dy)), (
+        position: position,
+        textActive: false,
+      ));
+    }
+    for (int position = 0; position <= 9; position++) {
+      final double x = layoutAt(0, position).textRect.left;
+      expect(layout.textPositions[position], closeTo(x, 0.001));
+      expect(layout.hitTest(Offset(x + 0.1, layout.textRect.center.dy)), (
+        position: position,
+        textActive: true,
+      ));
+    }
+    final double first = layout.textPositions[0]!;
+    final double second = layout.textPositions[1]!;
+    expect(
+      layout.hitTest(
+        Offset(first + (second - first) * 0.6, layout.textRect.center.dy),
+      ),
+      (position: 1, textActive: true),
+    );
+    expect(layout.hitTest(Offset(-100, layout.kottaRect.top - 20)), (
+      position: 0,
+      textActive: false,
+    ));
+    expect(layout.hitTest(Offset(1000, layout.textRect.bottom + 20)), (
+      position: 9,
+      textActive: true,
+    ));
+  });
+
   test('real eneklo egyhaz sample repeats clef and key signature', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
