@@ -13,7 +13,6 @@ class WebrtcCameraService {
 
   final CameraSignalOut sendSignal;
 
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   MediaStream? _localStream;
   RTCPeerConnection? _peer;
   final List<RTCIceCandidate> _pendingCandidates = <RTCIceCandidate>[];
@@ -21,26 +20,11 @@ class WebrtcCameraService {
   bool _active = false;
   bool _remoteDescriptionSet = false;
 
-  /// Whether the preview texture is up and may be assigned a stream.
-  ///
-  /// `RTCVideoRenderer.srcObject` throws a bare string both when the renderer
-  /// was never initialised and when it is already disposed, and it reports
-  /// neither by return value. [start] and [stop] assign to it, and [dispose]
-  /// can run while [init] is still in flight, so this has to be tracked here
-  /// rather than assumed.
-  ///
-  /// A texture that never came up is not a camera failure. The stream and the
-  /// peer connection are what carry the picture, and `Diatar` is the side that
-  /// draws it — nothing here reads [localRenderer] — so a stream still goes out
-  /// over the wire without one.
-  bool _rendererReady = false;
-
   bool _disposed = false;
   String? selectedDeviceId;
 
   bool get active => _active;
   bool get available => _available();
-  RTCVideoRenderer get localRenderer => _localRenderer;
 
   bool _available() {
     if (kIsWeb || SystemPlatform.isTvOs) {
@@ -58,40 +42,13 @@ class WebrtcCameraService {
     }
   }
 
-  /// Brings the preview texture up, and records whether it made it.
-  ///
-  /// Awaited rather than fired and forgotten: a texture that fails to come up
-  /// is remembered in [_rendererReady] instead of surfacing later as a throw
-  /// from a [stop] that had no way to know.
-  Future<void> init() async {
-    if (_disposed || _rendererReady) {
-      return;
-    }
-    try {
-      await _localRenderer.initialize();
-      // [dispose] may have run while the texture was coming up. A renderer
-      // that is gone must not be marked ready, or the next [stop] assigns to
-      // one that throws.
-      _rendererReady = !_disposed;
-    } catch (error) {
-      debugPrint('CAM renderer init failed: $error');
-    }
-  }
-
-  /// Hands [stream] to the preview texture, when there is one to hand it to.
-  void _setLocalStream(MediaStream? stream) {
-    if (!_rendererReady) {
-      return;
-    }
-    _localRenderer.srcObject = stream;
-  }
-
   Future<List<MediaDeviceInfo>> listDevices() async {
     if (!available) {
       return const <MediaDeviceInfo>[];
     }
     try {
-      final List<MediaDeviceInfo> all = await navigator.mediaDevices.enumerateDevices();
+      final List<MediaDeviceInfo> all = await navigator.mediaDevices
+          .enumerateDevices();
       return all.where((MediaDeviceInfo d) => d.kind == 'videoinput').toList();
     } catch (_) {
       return const <MediaDeviceInfo>[];
@@ -113,13 +70,10 @@ class WebrtcCameraService {
         if (selectedDeviceId != null && selectedDeviceId!.isNotEmpty)
           'deviceId': selectedDeviceId!,
       };
-      final MediaStream stream =
-          await navigator.mediaDevices.getUserMedia(<String, Object>{
-        'audio': false,
-        'video': video,
-      });
+      final MediaStream stream = await navigator.mediaDevices.getUserMedia(
+        <String, Object>{'audio': false, 'video': video},
+      );
       _localStream = stream;
-      _setLocalStream(stream);
 
       final Map<String, Object> config = <String, Object>{
         'iceServers': <Map<String, Object>>[
@@ -133,12 +87,16 @@ class WebrtcCameraService {
       });
       peer.onIceCandidate = (RTCIceCandidate candidate) {
         debugPrint('CAM offerer ice out ${candidate.candidate}');
-        unawaited(sendSignal(CameraSignal(
-          kind: CameraSignalKind.ice,
-          candidate: candidate.candidate,
-          sdpMid: candidate.sdpMid,
-          sdpMLineIndex: candidate.sdpMLineIndex,
-        )));
+        unawaited(
+          sendSignal(
+            CameraSignal(
+              kind: CameraSignalKind.ice,
+              candidate: candidate.candidate,
+              sdpMid: candidate.sdpMid,
+              sdpMLineIndex: candidate.sdpMLineIndex,
+            ),
+          ),
+        );
       };
       peer.onConnectionState = (RTCPeerConnectionState state) {
         debugPrint('CAM offerer conn $state');
@@ -155,7 +113,7 @@ class WebrtcCameraService {
   }
 
   Future<void> handleSignal(CameraSignal signal) async {
-    if (!available) {
+    if (!available || _disposed) {
       return;
     }
     debugPrint('CAM offerer in ${signal.kind.name}');
@@ -223,10 +181,9 @@ class WebrtcCameraService {
     final RTCSessionDescription offer = await _peer!.createOffer();
     debugPrint('CAM offerer sdp.len=${offer.sdp?.length}');
     await _peer!.setLocalDescription(offer);
-    unawaited(sendSignal(CameraSignal(
-      kind: CameraSignalKind.offer,
-      sdp: offer.sdp,
-    )));
+    unawaited(
+      sendSignal(CameraSignal(kind: CameraSignalKind.offer, sdp: offer.sdp)),
+    );
   }
 
   Future<void> stop({bool sendStop = true}) async {
@@ -241,7 +198,6 @@ class WebrtcCameraService {
       await _localStream!.dispose();
     }
     _localStream = null;
-    _setLocalStream(null);
     if (sendStop) {
       unawaited(sendSignal(const CameraSignal(kind: CameraSignalKind.stop)));
     }
@@ -251,13 +207,7 @@ class WebrtcCameraService {
     if (_disposed) {
       return;
     }
-    // Raised before the teardown, not after, so that an [init] still in flight
-    // sees it and declines to mark the renderer ready, and so a second call is
-    // a no-op. [stop] below still sees a live texture and detaches the stream
-    // from it; only then does it stop being assignable.
     _disposed = true;
     await stop(sendStop: false);
-    _rendererReady = false;
-    await _localRenderer.dispose();
   }
 }

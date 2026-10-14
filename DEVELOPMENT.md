@@ -245,11 +245,13 @@ tooling points at them.
   `String`, both when the renderer was never initialised and when it is already
   disposed. Nothing reads it back, so a service that assigns to it from a
   platform callback — `onTrack`, a dispose path — has to track whether the
-  texture came up itself. That is why both camera services carry a
-  `_rendererReady` flag.
+  texture came up itself. The sender's camera view service carries a
+  `_rendererReady` flag. DiaVetítő only captures and transmits the camera
+  stream: it has no local preview and must not create a video renderer during
+  startup or camera capture.
 - **Do not dispose a `RTCVideoRenderer` while a `RTCVideoView` may be mounted.**
   `RTCVideoView` subscribes through a `ValueListenableBuilder`, so tearing the
   renderer down during window teardown makes the widget's own `dispose` call
   `removeListener` on a disposed `ChangeNotifier` — a new crash in the path you
-  were trying to clean up. Both camera services deliberately leave the texture
-  alone and let the engine go with the process.
+  were trying to clean up. The sender's camera view service deliberately
+  leaves the texture alone and lets the engine go with the process.

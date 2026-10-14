@@ -1,24 +1,14 @@
-// Regression tests for the camera service's lifecycle.
-//
-// `RTCVideoRenderer.srcObject` throws a bare string when the renderer was never
-// initialised or is already disposed, and says so only by throwing. The service
-// used to assign to it unconditionally, so tearing down a camera whose texture
-// never came up — which is what happens on every platform that cannot create
-// one, and on every run of a widget test — took the whole app down on the
-// dispose path. These pin the guard that replaced that.
-
 import 'package:diavetito/src/services/webrtc_camera_service.dart';
 import 'package:diavetito/src/utils/system_platform.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 WebrtcCameraService _service() =>
     WebrtcCameraService(sendSignal: (CameraSignal _) async {});
 
 void main() {
-  // `flutter_webrtc` reaches a platform channel even to fail, so the binding
-  // has to exist before any of this runs.
   TestWidgetsFlutterBinding.ensureInitialized();
 
   tearDown(() {
@@ -26,43 +16,140 @@ void main() {
     SystemPlatform.debugSetTvOsOverride(null);
   });
 
-  group('teardown without a live renderer', () {
-    // A platform texture cannot be created in a test host, so `initialize()`
-    // cannot succeed here. That is precisely the state the old code reached
-    // `srcObject` in and threw from.
-    test('dispose after a failed init does not throw', () async {
-      final WebrtcCameraService service = _service();
+  test(
+    'camera capture and signalling work without a preview renderer',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      const MethodChannel channel = MethodChannel('FlutterWebRTC.Method');
+      const MethodChannel events = MethodChannel(
+        'FlutterWebRTC/peerConnectionEventpeer-1',
+      );
+      final List<MethodCall> calls = <MethodCall>[];
+      final List<CameraSignal> signals = <CameraSignal>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(events, (_) async => null);
+      messenger.setMockMethodCallHandler(channel, (MethodCall call) async {
+        calls.add(call);
+        switch (call.method) {
+          case 'initialize':
+          case 'setLocalDescription':
+          case 'setRemoteDescription':
+          case 'peerConnectionClose':
+          case 'streamDispose':
+            return null;
+          case 'getUserMedia':
+            return <String, Object>{
+              'streamId': 'stream-1',
+              'audioTracks': <Object>[],
+              'videoTracks': <Object>[
+                <String, Object>{
+                  'id': 'video-1',
+                  'label': 'Camera',
+                  'kind': 'video',
+                  'enabled': true,
+                },
+              ],
+            };
+          case 'createPeerConnection':
+            return <String, Object>{'peerConnectionId': 'peer-1'};
+          case 'addTrack':
+            return <String, Object>{
+              'senderId': 'sender-1',
+              'track': <String, Object>{},
+              'rtpParameters': <String, Object>{
+                'encodings': <Object>[],
+                'headerExtensions': <Object>[],
+                'codecs': <Object>[],
+                'rtcp': <String, Object>{'reducedSize': true},
+              },
+              'ownsTrack': false,
+            };
+          case 'createOffer':
+            return <String, Object>{'sdp': 'v=0\r\n', 'type': 'offer'};
+          default:
+            fail('Unexpected WebRTC method: ${call.method}');
+        }
+      });
+      addTearDown(() {
+        messenger.setMockMethodCallHandler(channel, null);
+        messenger.setMockMethodCallHandler(events, null);
+      });
 
-      await service.init();
+      final WebrtcCameraService service = WebrtcCameraService(
+        sendSignal: (CameraSignal signal) async => signals.add(signal),
+      );
+      service.selectedDeviceId = 'camera-1';
+      await service.handleSignal(
+        const CameraSignal(kind: CameraSignalKind.request),
+      );
+
+      expect(service.active, isTrue);
+      expect(signals.single.kind, CameraSignalKind.offer);
+      expect(signals.single.sdp, 'v=0\r\n');
+      expect(
+        calls
+            .singleWhere((MethodCall call) => call.method == 'getUserMedia')
+            .arguments,
+        <String, Object>{
+          'constraints': <String, Object>{
+            'audio': false,
+            'video': <String, Object>{
+              'width': 1280,
+              'height': 720,
+              'frameRate': 30,
+              'deviceId': 'camera-1',
+            },
+          },
+        },
+      );
+      expect(
+        calls
+            .singleWhere((MethodCall call) => call.method == 'addTrack')
+            .arguments,
+        <String, Object>{
+          'peerConnectionId': 'peer-1',
+          'trackId': 'video-1',
+          'streamIds': <String>['stream-1'],
+        },
+      );
+
+      await service.handleSignal(
+        const CameraSignal(kind: CameraSignalKind.answer, sdp: 'v=0\r\n'),
+      );
       await service.dispose();
-    });
+      await service.dispose();
 
-    test('dispose without init does not throw', () async {
+      expect(service.active, isFalse);
+      expect(
+        calls.map((MethodCall call) => call.method),
+        containsAllInOrder(<String>[
+          'setRemoteDescription',
+          'peerConnectionClose',
+          'streamDispose',
+        ]),
+      );
+      expect(
+        calls.where((MethodCall call) => call.method == 'streamDispose'),
+        hasLength(1),
+      );
+    },
+  );
+
+  group('lifecycle without a camera stream', () {
+    test('dispose without start does not throw', () async {
       await _service().dispose();
     });
 
-    test('stop without init does not throw', () async {
+    test('stop without start does not throw', () async {
       await _service().stop();
     });
 
     test('dispose is idempotent', () async {
       final WebrtcCameraService service = _service();
-      await service.init();
 
       await service.dispose();
-      // A second teardown has to be a no-op: the renderer is already gone, and
-      // assigning to it again would throw.
       await service.dispose();
-    });
-
-    test('dispose while init is still in flight does not throw', () async {
-      final WebrtcCameraService service = _service();
-
-      // Deliberately not awaited first. The init is still outstanding when the
-      // teardown starts, which is what closing the window during startup is.
-      final Future<void> init = service.init();
-      await service.dispose();
-      await init;
     });
 
     test('stop after dispose does not throw', () async {
@@ -82,10 +169,7 @@ void main() {
       final WebrtcCameraService service = _service();
 
       await service.handleSignal(
-        const CameraSignal(
-          kind: CameraSignalKind.answer,
-          sdp: 'v=0\r\n',
-        ),
+        const CameraSignal(kind: CameraSignalKind.answer, sdp: 'v=0\r\n'),
       );
     });
 
@@ -105,15 +189,13 @@ void main() {
       await service.dispose();
 
       await service.handleSignal(
-        const CameraSignal(
-          kind: CameraSignalKind.answer,
-          sdp: 'v=0\r\n',
-        ),
+        const CameraSignal(kind: CameraSignalKind.answer, sdp: 'v=0\r\n'),
       );
     });
   });
 
-  group('availability', () {    test('tvOS reports the camera as unavailable', () {
+  group('availability', () {
+    test('tvOS reports the camera as unavailable', () {
       SystemPlatform.debugSetTvOsOverride(true);
 
       expect(_service().available, isFalse);
