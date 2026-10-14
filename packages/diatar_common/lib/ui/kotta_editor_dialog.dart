@@ -862,7 +862,7 @@ class _CommandSection extends StatelessWidget {
                                       excludeFromSemantics: true,
                                     )
                                   : CustomPaint(
-                                      size: const Size(48, 88),
+                                      size: const Size(48, 48),
                                       painter: KottaClefPainter(
                                         command: command.source,
                                         color: Theme.of(

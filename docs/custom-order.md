@@ -53,7 +53,9 @@ kottaelemeket egyetlen új elemre cseréli; a hozzájuk tartozó szöveg megmara
 Kattintással vagy a **Tab** billentyűvel megszüntethető a kijelölés.
 Shift nélküli nyílbillentyűvel a kijelölés megfelelő végére léphetünk.
 
-A **Kulcs** sorban a gombok a kulcs képét mutatják ötvonalas háttéren.
+A **Kulcs** sorban a többi grafikus gombbal azonos méretű gombok a kulcs képét
+mutatják ötvonalas háttéren. A Do-kulcsok vektorosan rajzolt jelek, ezért
+nagy felbontáson is élesek, és nem igényelnek telepített zenei betűtípust.
 Választható G- és F-kulcs, szoprán-, mezzoszoprán-, alt-, tenor- és
 baritonkulcs (C-kulcs az 1–5. vonalon), valamint Do-kulcs mind az öt vonalon
 és a négy vonalközben. A kulcs neve egér fölévitelére, mobilon hosszú

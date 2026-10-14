@@ -25,7 +25,7 @@ class KottaClefPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const double lineGap = 6;
+    final double lineGap = math.min(size.width, size.height) / 12;
     final double top = (size.height - lineGap * 4) / 2;
     final Paint staffPaint = Paint()
       ..color = color
@@ -33,6 +33,27 @@ class KottaClefPainter extends CustomPainter {
     for (int index = 0; index < 5; index++) {
       final double y = top + index * lineGap;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), staffPaint);
+    }
+    final int doPosition = 'abcdefghi'.indexOf(command[1]);
+    if (doPosition >= 0) {
+      final double centerY = top + lineGap * (4 - doPosition / 2);
+      final double centerX = size.width / 2;
+      final Path glyph = Path()
+        ..moveTo(-1.25, -1.5)
+        ..lineTo(1.25, -1.5)
+        ..lineTo(1.25, -0.5)
+        ..lineTo(-0.25, -0.5)
+        ..lineTo(-0.25, 0.5)
+        ..lineTo(1.25, 0.5)
+        ..lineTo(1.25, 1.5)
+        ..lineTo(-1.25, 1.5)
+        ..close();
+      canvas.save();
+      canvas.translate(centerX, centerY);
+      canvas.scale(lineGap);
+      canvas.drawPath(glyph, Paint()..color = color);
+      canvas.restore();
+      return;
     }
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
@@ -52,6 +73,7 @@ class KottaClefPainter extends CustomPainter {
       top,
       lineGap,
       1,
+      clefFilterQuality: FilterQuality.high,
     );
   }
 
@@ -3999,8 +4021,9 @@ class ProjectorPainter extends CustomPainter {
     double x,
     double top,
     double lineGap,
-    double scale,
-  ) {
+    double scale, {
+    FilterQuality clefFilterQuality = FilterQuality.none,
+  }) {
     final String c1 = cmd[0];
     final String c2 = cmd[1];
     if (c1 == '[') {
@@ -4078,7 +4101,12 @@ class ProjectorPainter extends CustomPainter {
         final double y1 = y0 - v5 * rat;
         final double x2 = x + w * rat;
         final double y2 = y1 + h * rat;
-        _drawKottaAsset(canvas, clefName, Rect.fromLTRB(x, y1, x2, y2));
+        _drawKottaAsset(
+          canvas,
+          clefName,
+          Rect.fromLTRB(x, y1, x2, y2),
+          filterQuality: clefFilterQuality,
+        );
       }
       return;
     }
@@ -4992,7 +5020,12 @@ class ProjectorPainter extends CustomPainter {
     return Rect.fromLTWH(stemX - stemWidth, stemYTip, w, h);
   }
 
-  bool _drawKottaAsset(Canvas canvas, String assetName, Rect dst) {
+  bool _drawKottaAsset(
+    Canvas canvas,
+    String assetName,
+    Rect dst, {
+    FilterQuality filterQuality = FilterQuality.none,
+  }) {
     final ui.Image? img = KottaAssets.image(assetName);
     if (img == null) {
       return false;
@@ -5004,6 +5037,7 @@ class ProjectorPainter extends CustomPainter {
       img.height.toDouble(),
     );
     final Paint p = Paint()
+      ..filterQuality = filterQuality
       ..colorFilter = ColorFilter.mode(_kottaInkColor, BlendMode.srcIn);
     canvas.drawImageRect(img, src, dst, p);
     return true;

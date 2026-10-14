@@ -174,19 +174,21 @@ void main() {
         KottaClefPainter(
           command: 'k$code',
           color: Colors.black,
-        ).paint(Canvas(recorder), const Size(48, 88));
+        ).paint(Canvas(recorder), const Size(48, 48));
         final ui.Picture picture = recorder.endRecording();
-        final ui.Image image = await picture.toImage(48, 88);
+        final ui.Image image = await picture.toImage(48, 48);
         final pixels = (await image.toByteData())!;
         final List<int> glyphRows = <int>[];
+        final Set<int> glyphColumns = <int>{};
         int glyphPixels = 0;
-        for (int y = 0; y < 88; y++) {
-          if (<int>[32, 38, 44, 50, 56].contains(y)) {
+        for (int y = 0; y < 48; y++) {
+          if (<int>[16, 20, 24, 28, 32].contains(y)) {
             continue;
           }
           for (int x = 0; x < 48; x++) {
             if (pixels.getUint8((y * 48 + x) * 4 + 3) > 128) {
               glyphRows.add(y);
+              glyphColumns.add(x);
               glyphPixels++;
             }
           }
@@ -200,17 +202,24 @@ void main() {
           final double center = (glyphRows.first + glyphRows.last) / 2;
           expect(
             center,
-            closeTo(56 - (int.parse(code) - 1) * 6, 1.5),
+            closeTo(32 - (int.parse(code) - 1) * 4, 1.5),
             reason: 'C clef must be centered on its encoded staff line',
           );
         } else if ('abcdefghi'.contains(code)) {
           final double center = (glyphRows.first + glyphRows.last) / 2;
           expect(
             center,
-            closeTo(56 - 'abcdefghi'.indexOf(code) * 3, 1.5),
+            closeTo(32 - 'abcdefghi'.indexOf(code) * 2, 1),
             reason: 'Do clef must be centered on its encoded line or space',
           );
+          expect(
+            glyphColumns.length,
+            greaterThanOrEqualTo(10),
+            reason: 'Do clef must remain readable in a compact button',
+          );
         }
+        expect(glyphRows.first, greaterThan(0));
+        expect(glyphRows.last, lessThan(47));
         image.dispose();
         picture.dispose();
       }
@@ -804,6 +813,13 @@ void main() {
         ),
       );
       expect((image.painter! as KottaClefPainter).command, clef.key);
+      expect(image.size, const Size(48, 48));
+      expect(
+        tester.getSize(
+          find.descendant(of: button, matching: find.byType(OutlinedButton)),
+        ),
+        const Size(56, 56),
+      );
       await tester.ensureVisible(button);
       await tester.pumpAndSettle();
       if (clef.key == 'k1') {
