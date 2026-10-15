@@ -74,6 +74,12 @@ class KottaEditorLabels {
     required this.meter32,
     required this.meter54,
     required this.meter64,
+    required this.rests,
+    required this.wholeRest,
+    required this.halfRest,
+    required this.quarterRest,
+    required this.eighthRest,
+    required this.sixteenthRest,
     required this.gClef,
     required this.fClef,
     required this.sopranoClef,
@@ -116,6 +122,12 @@ class KottaEditorLabels {
   final String meter32;
   final String meter54;
   final String meter64;
+  final String rests;
+  final String wholeRest;
+  final String halfRest;
+  final String quarterRest;
+  final String eighthRest;
+  final String sixteenthRest;
   final String gClef;
   final String fClef;
   final String sopranoClef;
@@ -558,6 +570,38 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                         ],
                         onPressed: _insertCommand,
                       ),
+                      _CommandSection(
+                        label: labels.rests,
+                        assetSize: 24,
+                        commands: <_KottaEditorCommand>[
+                          _KottaEditorCommand(
+                            labels.wholeRest,
+                            's1',
+                            asset: 'szunet1',
+                          ),
+                          _KottaEditorCommand(
+                            labels.halfRest,
+                            's2',
+                            asset: 'szunet2',
+                          ),
+                          _KottaEditorCommand(
+                            labels.quarterRest,
+                            's4',
+                            asset: 'szunet4',
+                          ),
+                          _KottaEditorCommand(
+                            labels.eighthRest,
+                            's8',
+                            asset: 'szunet8',
+                          ),
+                          _KottaEditorCommand(
+                            labels.sixteenthRest,
+                            's6',
+                            asset: 'szunet16',
+                          ),
+                        ],
+                        onPressed: _insertCommand,
+                      ),
                     ],
                   ),
                 ),
@@ -794,12 +838,14 @@ class _CommandSection extends StatelessWidget {
     required this.commands,
     required this.onPressed,
     this.graphicalClefs = false,
+    this.assetSize = 48,
   });
 
   final String label;
   final List<_KottaEditorCommand> commands;
   final ValueChanged<String> onPressed;
   final bool graphicalClefs;
+  final double assetSize;
 
   @override
   Widget build(BuildContext context) {
@@ -850,16 +896,22 @@ class _CommandSection extends StatelessWidget {
                                       ),
                                     )
                                   : command.asset != null
-                                  ? Image.asset(
-                                      'assets/kotta/${command.asset}.png',
+                                  ? SizedBox(
                                       width: 48,
                                       height: 48,
-                                      filterQuality: FilterQuality.none,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface,
-                                      colorBlendMode: BlendMode.srcIn,
-                                      excludeFromSemantics: true,
+                                      child: Center(
+                                        child: Image.asset(
+                                          'assets/kotta/${command.asset}.png',
+                                          width: assetSize,
+                                          height: assetSize,
+                                          filterQuality: FilterQuality.none,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                          colorBlendMode: BlendMode.srcIn,
+                                          excludeFromSemantics: true,
+                                        ),
+                                      ),
                                     )
                                   : CustomPaint(
                                       size: const Size(48, 48),

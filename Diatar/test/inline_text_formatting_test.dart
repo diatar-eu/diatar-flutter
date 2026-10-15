@@ -63,6 +63,12 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   meter32: _l10n.kottaEditorMeter32,
   meter54: _l10n.kottaEditorMeter54,
   meter64: _l10n.kottaEditorMeter64,
+  rests: _l10n.kottaEditorRests,
+  wholeRest: _l10n.kottaEditorWholeRest,
+  halfRest: _l10n.kottaEditorHalfRest,
+  quarterRest: _l10n.kottaEditorQuarterRest,
+  eighthRest: _l10n.kottaEditorEighthRest,
+  sixteenthRest: _l10n.kottaEditorSixteenthRest,
   gClef: _l10n.kottaEditorGClef,
   fClef: _l10n.kottaEditorFClef,
   sopranoClef: _l10n.kottaEditorSopranoClef,
@@ -912,6 +918,103 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('graphical rests insert legacy codes at the active cursor', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    KottaEditorResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: Scaffold(
+          body: Builder(
+            builder: (BuildContext context) => TextButton(
+              onPressed: () async {
+                result = await showKottaEditorDialog(
+                  context: context,
+                  labels: _kottaLabels,
+                  previewLineBuilder: (elements) =>
+                      '\\K${elements.map((element) => element.command).join()};',
+                  initialState: const KottaEditorInitialState(
+                    elements: <KottaEditorElement>[
+                      KottaEditorElement(command: 'kG', textOffset: 0),
+                      KottaEditorElement(command: '|1', textOffset: 0),
+                    ],
+                    textLength: 0,
+                    kottaCursor: 1,
+                    textCursor: 0,
+                    isEditing: true,
+                  ),
+                );
+              },
+              child: Text(_kottaLabels.editTitle),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text(_kottaLabels.editTitle));
+    await tester.pumpAndSettle();
+
+    final List<(String, String, String)> rests = <(String, String, String)>[
+      (_kottaLabels.wholeRest, 's1', 'szunet1'),
+      (_kottaLabels.halfRest, 's2', 'szunet2'),
+      (_kottaLabels.quarterRest, 's4', 'szunet4'),
+      (_kottaLabels.eighthRest, 's8', 'szunet8'),
+      (_kottaLabels.sixteenthRest, 's6', 'szunet16'),
+    ];
+    final Finder section = find
+        .ancestor(
+          of: find.text(_kottaLabels.rests),
+          matching: find.byType(Column),
+        )
+        .first;
+    expect(
+      tester
+          .widgetList<Tooltip>(
+            find.descendant(of: section, matching: find.byType(Tooltip)),
+          )
+          .map((tooltip) => tooltip.message),
+      rests.map((rest) => rest.$1),
+    );
+    for (final (String label, String _, String asset) in rests) {
+      final Finder button = find.byTooltip(label);
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      final Image image = tester.widget<Image>(
+        find.descendant(of: button, matching: find.byType(Image)),
+      );
+      expect((image.image as AssetImage).assetName, 'assets/kotta/$asset.png');
+      expect(
+        tester.getSize(
+          find.descendant(of: button, matching: find.byType(Image)),
+        ),
+        const Size(24, 24),
+      );
+      expect(
+        tester.getSize(
+          find.descendant(of: button, matching: find.byType(OutlinedButton)),
+        ),
+        const Size(56, 56),
+      );
+      expect(image.color, ThemeData.dark().colorScheme.onSurface);
+      await tester.tap(button);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    }
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(result!.elements.map((element) => element.command), <String>[
+      'kG',
+      ...rests.map((rest) => rest.$2),
+      '|1',
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('graphical barlines show named hints and insert in legacy order', (
     WidgetTester tester,
   ) async {
@@ -1025,7 +1128,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('meters replace removed sections and preserve existing notation', (
+  testWidgets('meters and rests coexist and preserve existing notation', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(400, 800);
@@ -1076,7 +1179,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SwitchListTile), findsNothing);
-    expect(find.byType(OutlinedButton), findsNWidgets(47));
+    expect(find.byType(OutlinedButton), findsNWidgets(52));
     final Finder barlineSection = find
         .ancestor(
           of: find.text(_kottaLabels.barlines),
@@ -1100,6 +1203,7 @@ void main() {
       _kottaLabels.keySignature,
       _kottaLabels.barlines,
       _kottaLabels.meters,
+      _kottaLabels.rests,
     ]);
 
     final List<(String, String, String)> meters = <(String, String, String)>[
@@ -1497,6 +1601,7 @@ void main() {
     (label: _kottaLabels.sharps(1), command: 'E1', tooltip: false),
     (label: _kottaLabels.singleBarline, command: '|1', tooltip: true),
     (label: _kottaLabels.meter44, command: 'u4', tooltip: true),
+    (label: _kottaLabels.quarterRest, command: 's4', tooltip: true),
   ]) {
     testWidgets('Shift selection is replaced by ${button.command}', (
       WidgetTester tester,

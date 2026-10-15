@@ -1992,7 +1992,7 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
                       widget.controller.selectedChord;
                   unawaited(chord == null ? _insertChord() : _editChord(chord));
                 },
-                icon: const Icon(Icons.queue_music),
+                icon: const Icon(Icons.grid_on),
                 style: IconButton.styleFrom(
                   backgroundColor: colors.surfaceContainerHighest,
                   foregroundColor: colors.onSurfaceVariant,
@@ -2007,7 +2007,7 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
                       widget.controller.nearbyKotta;
                   unawaited(kotta == null ? _insertKotta() : _editKotta(kotta));
                 },
-                icon: const Icon(Icons.vertical_align_center),
+                icon: const Icon(Icons.queue_music),
                 style: IconButton.styleFrom(
                   backgroundColor: colors.surfaceContainerHighest,
                   foregroundColor: colors.onSurfaceVariant,

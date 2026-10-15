@@ -48,7 +48,7 @@ kurzor között. Hosszú soroknál az előnézet vízszintesen görgethető.
 A kottasorban lenyomott bal egérgombbal húzva, illetve aktív kottakurzor
 mellett a **Shift+balra/jobbra** billentyűkkel több kottaelem jelölhető ki.
 A kijelölt részt kék háttér jelzi. A **Kulcs**, **Előjegyzés**,
-**Ütemvonalak** vagy **Ütemjelek** bármely beszúrógombja a kijelölt
+**Ütemvonalak**, **Ütemjelek** vagy **Szünet** bármely beszúrógombja a kijelölt
 kottaelemeket egyetlen új elemre cseréli; a hozzájuk tartozó szöveg megmarad.
 Kattintással vagy a **Tab** billentyűvel megszüntethető a kijelölés.
 Shift nélküli nyílbillentyűvel a kijelölés megfelelő végére léphetünk.
@@ -76,7 +76,13 @@ sorrendben a **4/4, 2/4, 3/4, 3/8, 6/8, 2/2, 3/2, 5/4, 6/4**
 ütemjelet szúrják be; a súgó a nevüket mutatja, például **négy-negyed**.
 A gombokon az ütemjel két félkövér számjegye egymás alatt jelenik
 meg, így nagy felbontáson is éles és mindkét színtémában jól olvasható.
-A pontozott ritmusérték, ritmus, hangjegy, szünet és módosítójel
+
+A **Szünet** sor az ütemjelek alatt található. Öt grafikus gombja sorrendben
+**Egész**, **Fél**, **Negyed**, **Nyolcad** és **Tizenhatod** szünetet szúr be.
+A szünetjelek kisebb méretben, a változatlan méretű gombok közepén jelennek meg.
+A gombok neve egér fölévitelére vagy hosszú koppintásra jelenik meg.
+
+A pontozott ritmusérték, ritmus, hangjegy és módosítójel
 beszúróvezérlői átmenetileg nem érhetők el. A meglévő kották jelei továbbra
 is megjelennek az előnézetben és a vetítésben.
 

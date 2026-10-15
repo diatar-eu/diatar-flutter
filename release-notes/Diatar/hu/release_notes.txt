@@ -1,5 +1,6 @@
 Új funkciók
 Diasor
+- A kottaszerkesztő új Szünet sorában egész, fél, negyed, nyolcad és tizenhatod szünet szúrható be grafikus gombokkal
 - A kottaszerkesztő kulcsgombjai a többi grafikus gombbal azonos méretűek; a Do-kulcsok jól olvasható, fontfüggetlen vektoros jelek
 - A kottaszerkesztőben egérhúzással vagy Shift+nyilakkal több kottaelem jelölhető ki; a beszúrógombok a kijelölést az új elemre cserélik
 - A kottaszerkesztő előnézetében egérkattintással vagy koppintással választható a kotta- és szövegkurzor legközelebbi pozíciója
