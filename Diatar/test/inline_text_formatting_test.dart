@@ -64,6 +64,7 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   meter54: _l10n.kottaEditorMeter54,
   meter64: _l10n.kottaEditorMeter64,
   rests: _l10n.kottaEditorRests,
+  dotted: _l10n.kottaEditorDotted,
   notes: _l10n.kottaEditorNotes,
   longa: _l10n.kottaEditorLonga,
   brevis: _l10n.kottaEditorBrevis,
@@ -999,7 +1000,7 @@ void main() {
                 find.descendant(of: section, matching: find.byType(Tooltip)),
               )
               .map((tooltip) => tooltip.message),
-          rests.map((rest) => rest.$1),
+          <String>[...rests.map((rest) => rest.$1), _kottaLabels.dotted],
         );
         for (final (String label, String _, String asset) in rests) {
           final Finder button = find.descendant(
@@ -1045,6 +1046,343 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+  }
+
+  for (final bool rests in <bool>[true, false]) {
+    testWidgets('dotted ${rests ? 'rests' : 'notes'} latch for insertion', (
+      WidgetTester tester,
+    ) async {
+      KottaEditorResult? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                result = await showKottaEditorDialog(
+                  context: context,
+                  labels: _kottaLabels,
+                  previewLineBuilder: (elements) =>
+                      '\\K${elements.map((element) => element.command).join()};',
+                  initialState: const KottaEditorInitialState(
+                    elements: <KottaEditorElement>[],
+                    textLength: 0,
+                    kottaCursor: 0,
+                    textCursor: 0,
+                    isEditing: false,
+                  ),
+                );
+              },
+              child: Text(_kottaLabels.insertTitle),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text(_kottaLabels.insertTitle));
+      await tester.pumpAndSettle();
+      Finder section(bool forRests) => find
+          .ancestor(
+            of: find.text(forRests ? _kottaLabels.rests : _kottaLabels.notes),
+            matching: find.byType(Column),
+          )
+          .first;
+      Finder toggle(bool forRests) => find.descendant(
+        of: section(forRests),
+        matching: find.byType(IconButton),
+      );
+      await tester.ensureVisible(toggle(rests));
+      await tester.tap(toggle(rests));
+      await tester.pump();
+      expect(tester.widget<IconButton>(toggle(rests)).isSelected, isTrue);
+      expect(tester.widget<IconButton>(toggle(!rests)).isSelected, isFalse);
+      expect(
+        tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNull,
+      );
+      final List<String> labels = rests
+          ? <String>[
+              _kottaLabels.wholeRest,
+              _kottaLabels.halfRest,
+              _kottaLabels.quarterRest,
+              _kottaLabels.eighthRest,
+              _kottaLabels.sixteenthRest,
+            ]
+          : <String>[
+              _kottaLabels.wholeNote,
+              _kottaLabels.halfNote,
+              _kottaLabels.quarterNote,
+              _kottaLabels.eighthNote,
+              _kottaLabels.sixteenthNote,
+              _kottaLabels.longa,
+              _kottaLabels.brevis,
+              _kottaLabels.semibrevis,
+            ];
+      for (final String label in labels) {
+        final Finder button = find.descendant(
+          of: section(rests),
+          matching: find.byTooltip(label),
+        );
+        await tester.ensureVisible(button);
+        await tester.tap(button);
+        await tester.pump();
+      }
+      await tester.ensureVisible(toggle(rests));
+      await tester.tap(toggle(rests));
+      await tester.pump();
+      final Finder plain = find.descendant(
+        of: section(rests),
+        matching: find.byTooltip(
+          rests ? _kottaLabels.quarterRest : _kottaLabels.quarterNote,
+        ),
+      );
+      await tester.ensureVisible(plain);
+      await tester.tap(plain);
+      await tester.pump();
+      await tester.tap(find.text(_kottaLabels.apply));
+      await tester.pumpAndSettle();
+      expect(result!.elements.map((element) => element.command), <String>[
+        for (final String duration in <String>[
+          '1',
+          '2',
+          '4',
+          '8',
+          '6',
+        ]) ...<String>['${rests ? 'S' : 'R'}$duration', if (!rests) '2g'],
+        if (!rests)
+          for (final String duration in <String>['l', 'b', 's']) ...<String>[
+            'r$duration',
+            '2g',
+          ],
+        '${rests ? 's' : 'r'}4',
+        if (!rests) '2g',
+      ]);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final testCase
+      in <
+        ({
+          String name,
+          List<String> initial,
+          int cursor,
+          int steps,
+          bool rests,
+          bool selected,
+          List<String> expected,
+        })
+      >[
+        (
+          name: 'inherited note rhythm is isolated at both selection edges',
+          initial: <String>['r8', '2c', '2d', 's4', '|1', 'rt', '2e'],
+          cursor: 2,
+          steps: 1,
+          rests: false,
+          selected: false,
+          expected: <String>[
+            'r8',
+            '2c',
+            'R8',
+            '2d',
+            's4',
+            '|1',
+            'rt',
+            'r8',
+            '2e',
+          ],
+        ),
+        (
+          name: 'implicit default quarter rhythm is restored after selection',
+          initial: <String>['2c', '2d'],
+          cursor: 0,
+          steps: 1,
+          rests: false,
+          selected: false,
+          expected: <String>['R4', '2c', 'r4', '2d'],
+        ),
+        (
+          name: 'undotting restores dotted following notes',
+          initial: <String>['R4', '2c', '2d', '2e'],
+          cursor: 2,
+          steps: 1,
+          rests: false,
+          selected: true,
+          expected: <String>['R4', '2c', 'r4', '2d', 'R4', '2e'],
+        ),
+        (
+          name:
+              'mixed notes become dotted with explicit later rhythm preserved',
+          initial: <String>['R2', '2c', 'r8', '2d', 'r6', '2e'],
+          cursor: 0,
+          steps: 2,
+          rests: false,
+          selected: false,
+          expected: <String>['R2', '2c', 'R8', '2d', 'r6', '2e'],
+        ),
+        (
+          name: 'reverse selection preserves following implicit rhythm',
+          initial: <String>['r2', '2c', '2d', '2e'],
+          cursor: 3,
+          steps: -1,
+          rests: false,
+          selected: false,
+          expected: <String>['r2', '2c', 'R2', '2d', 'r2', '2e'],
+        ),
+        (
+          name: 'all five note durations support dotting',
+          initial: <String>[
+            'r1',
+            '2c',
+            'r2',
+            '2d',
+            'r4',
+            '2e',
+            'r8',
+            '2f',
+            'r6',
+            '2g',
+          ],
+          cursor: 0,
+          steps: 5,
+          rests: false,
+          selected: false,
+          expected: <String>[
+            'R1',
+            '2c',
+            'R2',
+            '2d',
+            'R4',
+            '2e',
+            'R8',
+            '2f',
+            'R6',
+            '2g',
+          ],
+        ),
+        (
+          name:
+              'unsupported long notes stay lowercase and are ignored in state',
+          initial: <String>['rl', '2c', 'rb', '2d', 'rs', '2e', 'R4', '2f'],
+          cursor: 0,
+          steps: 4,
+          rests: false,
+          selected: true,
+          expected: <String>['rl', '2c', 'rb', '2d', 'rs', '2e', 'r4', '2f'],
+        ),
+        (
+          name: 'rest-only selection does not change notes',
+          initial: <String>['R4', '2c', 's4', '2d'],
+          cursor: 2,
+          steps: 1,
+          rests: false,
+          selected: false,
+          expected: <String>['R4', '2c', 's4', '2d'],
+        ),
+        (
+          name: 'mixed rests become dotted without changing notes',
+          initial: <String>['s1', 'S2', 's4', 'S8', 's6', 'R4', '2c', 's4'],
+          cursor: 0,
+          steps: 6,
+          rests: true,
+          selected: false,
+          expected: <String>['S1', 'S2', 'S4', 'S8', 'S6', 'R4', '2c', 's4'],
+        ),
+        (
+          name: 'dotted rests become plain without changing outside rests',
+          initial: <String>['S4', 'S8', 'S6'],
+          cursor: 0,
+          steps: 2,
+          rests: true,
+          selected: true,
+          expected: <String>['s4', 's8', 'S6'],
+        ),
+      ]) {
+    testWidgets('dotted selection: ${testCase.name}', (tester) async {
+      KottaEditorResult? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                result = await showKottaEditorDialog(
+                  context: context,
+                  labels: _kottaLabels,
+                  previewLineBuilder: (elements) =>
+                      '\\K${elements.map((element) => element.command).join()};',
+                  initialState: KottaEditorInitialState(
+                    elements: <KottaEditorElement>[
+                      for (final String command in testCase.initial)
+                        KottaEditorElement(
+                          command: command,
+                          textOffset: 0,
+                          isConditional: true,
+                        ),
+                    ],
+                    textLength: 0,
+                    kottaCursor: testCase.cursor,
+                    textCursor: 0,
+                    isEditing: true,
+                  ),
+                );
+              },
+              child: Text(_kottaLabels.editTitle),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text(_kottaLabels.editTitle));
+      await tester.pumpAndSettle();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      for (int step = 0; step < testCase.steps.abs(); step++) {
+        await tester.sendKeyEvent(
+          testCase.steps > 0
+              ? LogicalKeyboardKey.arrowRight
+              : LogicalKeyboardKey.arrowLeft,
+        );
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      final Finder section = find
+          .ancestor(
+            of: find.text(
+              testCase.rests ? _kottaLabels.rests : _kottaLabels.notes,
+            ),
+            matching: find.byType(Column),
+          )
+          .first;
+      final Finder toggle = find.descendant(
+        of: section,
+        matching: find.byType(IconButton),
+      );
+      expect(tester.widget<IconButton>(toggle).isSelected, testCase.selected);
+      await tester.ensureVisible(toggle);
+      await tester.tap(toggle);
+      await tester.pump();
+      expect(
+        tester.widget<IconButton>(toggle).isSelected,
+        testCase.name.startsWith('rest-only') ? false : !testCase.selected,
+      );
+      if (!testCase.name.startsWith('rest-only')) {
+        for (final bool selected in <bool>[
+          testCase.selected,
+          !testCase.selected,
+        ]) {
+          await tester.tap(toggle);
+          await tester.pump();
+          expect(tester.widget<IconButton>(toggle).isSelected, selected);
+        }
+      }
+      await tester.tap(find.text(_kottaLabels.apply));
+      await tester.pumpAndSettle();
+      expect(
+        result!.elements.map((element) => element.command),
+        testCase.expected,
+      );
+      expect(
+        result!.elements.every((element) => element.isConditional),
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    });
   }
 
   for (final testCase

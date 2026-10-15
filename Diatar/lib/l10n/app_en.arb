@@ -632,6 +632,7 @@
   "kottaEditorQuarterRest": "Quarter",
   "kottaEditorEighthRest": "Eighth",
   "kottaEditorSixteenthRest": "Sixteenth",
+  "kottaEditorDotted": "Dotted",
   "kottaEditorGClef": "G clef",
   "kottaEditorFClef": "F clef",
   "kottaEditorSopranoClef": "Soprano clef (C clef on line 1)",

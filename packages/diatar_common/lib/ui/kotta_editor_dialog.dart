@@ -75,6 +75,7 @@ class KottaEditorLabels {
     required this.meter54,
     required this.meter64,
     required this.rests,
+    required this.dotted,
     required this.wholeRest,
     required this.halfRest,
     required this.quarterRest,
@@ -132,6 +133,7 @@ class KottaEditorLabels {
   final String meter54;
   final String meter64;
   final String rests;
+  final String dotted;
   final String wholeRest;
   final String halfRest;
   final String quarterRest;
@@ -203,6 +205,8 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   late final Timer _caretTimer;
   bool _textCursorActive = false;
   bool _activeCursorVisible = true;
+  bool _dottedRests = false;
+  bool _dottedNotes = false;
 
   bool get _isValid => _elements.isNotEmpty;
 
@@ -246,6 +250,12 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _insertCommand(String command) {
     assert(command.length == 2);
+    if (_canDot(command)) {
+      if (command[0] == 's' && _dottedRests ||
+          command[0] == 'r' && _dottedNotes) {
+        command = _withDot(command, true);
+      }
+    }
     setState(() {
       final TextSelection? selection = _kottaSelection;
       final String followingRhythm = _rhythmBefore(
@@ -257,7 +267,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
         _elements.removeRange(selection.start, selection.end);
       }
       _kottaSelectionAnchor = null;
-      if (command[0] == 'r') {
+      if (_isRhythm(command)) {
         _insertNote(command, followingRhythm: followingRhythm);
       } else {
         _elements.insert(
@@ -288,6 +298,132 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
       }
     }
     return 'r4';
+  }
+
+  bool _canDot(String command) => RegExp(r'^[rRsS][12486]$').hasMatch(command);
+
+  String _withDot(String command, bool dotted) =>
+      '${dotted ? command[0].toUpperCase() : command[0].toLowerCase()}${command[1]}';
+
+  bool _dottedState({required bool rests}) {
+    final TextSelection? selection = _kottaSelection;
+    if (selection == null) {
+      return rests ? _dottedRests : _dottedNotes;
+    }
+    String rhythm = _rhythmBefore(selection.start);
+    bool found = false;
+    for (int index = selection.start; index < selection.end; index++) {
+      final String command = _elements[index].command;
+      if (_isRhythm(command)) {
+        rhythm = command;
+      }
+      final String? candidate = rests
+          ? (command[0].toLowerCase() == 's' ? command : null)
+          : (_isPitch(command) ? rhythm : null);
+      if (candidate != null && _canDot(candidate)) {
+        if (candidate[0] == candidate[0].toLowerCase()) {
+          return false;
+        }
+        found = true;
+      }
+    }
+    return found;
+  }
+
+  void _toggleDotted({required bool rests}) {
+    final bool dotted = !_dottedState(rests: rests);
+    setState(() {
+      if (rests) {
+        _dottedRests = dotted;
+      } else {
+        _dottedNotes = dotted;
+      }
+      final TextSelection? selection = _kottaSelection;
+      if (selection == null) {
+        return;
+      }
+      final List<KottaEditorElement> updated = <KottaEditorElement>[];
+      String originalRhythm = 'r4';
+      String outputRhythm = 'r4';
+      int start = 0;
+      int end = 0;
+      for (int index = 0; index < _elements.length; index++) {
+        if (index == selection.start) {
+          start = updated.length;
+        }
+        if (index == selection.end) {
+          end = updated.length;
+        }
+        final KottaEditorElement element = _elements[index];
+        final bool selected = index >= selection.start && index < selection.end;
+        String command = element.command;
+        if (_isRhythm(command)) {
+          originalRhythm = command;
+          if (!rests && selected && _canDot(command)) {
+            command = _withDot(command, dotted);
+          }
+          outputRhythm = command;
+        } else if (!rests && _isPitch(command)) {
+          final String desired = selected && _canDot(originalRhythm)
+              ? _withDot(originalRhythm, dotted)
+              : originalRhythm;
+          // Rhythm commands persist: isolate both edges of the selection.
+          if (outputRhythm != desired) {
+            updated.add(
+              KottaEditorElement(
+                command: desired,
+                textOffset: element.textOffset,
+                isConditional: element.isConditional,
+              ),
+            );
+            outputRhythm = desired;
+          }
+        } else if (rests &&
+            selected &&
+            command[0].toLowerCase() == 's' &&
+            _canDot(command)) {
+          command = _withDot(command, dotted);
+        }
+        updated.add(
+          command == element.command
+              ? element
+              : KottaEditorElement(
+                  command: command,
+                  textOffset: element.textOffset,
+                  isConditional: element.isConditional,
+                ),
+        );
+      }
+      if (selection.end == _elements.length) {
+        end = updated.length;
+      }
+      _elements = updated;
+      final bool forward = selection.baseOffset < selection.extentOffset;
+      _kottaSelectionAnchor = forward ? start : end;
+      _kottaCursor = forward ? end : start;
+      _syncTextCursorToKotta();
+      _activeCursorVisible = true;
+    });
+    _editorFocusNode.requestFocus();
+  }
+
+  Widget _dottedButton({required bool rests}) {
+    final bool selected = _dottedState(rests: rests);
+    return Padding(
+      padding: const EdgeInsets.only(left: 10),
+      child: IconButton.outlined(
+        tooltip: widget.labels.dotted,
+        isSelected: selected,
+        onPressed: () => _toggleDotted(rests: rests),
+        style: IconButton.styleFrom(
+          fixedSize: const Size(56, 56),
+          backgroundColor: selected
+              ? Theme.of(context).colorScheme.secondaryContainer
+              : null,
+        ),
+        icon: const Icon(Icons.fiber_manual_record, size: 10),
+      ),
+    );
   }
 
   void _insertNote(String rhythm, {required String followingRhythm}) {
@@ -671,6 +807,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                       ),
                       _CommandSection(
                         label: labels.rests,
+                        trailing: _dottedButton(rests: true),
                         assetSize: 24,
                         commands: <_KottaEditorCommand>[
                           _KottaEditorCommand(
@@ -703,6 +840,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                       ),
                       _CommandSection(
                         label: labels.notes,
+                        trailing: _dottedButton(rests: false),
                         assetSize: 24,
                         commands: <_KottaEditorCommand>[
                           _KottaEditorCommand(
@@ -985,6 +1123,7 @@ class _CommandSection extends StatelessWidget {
     required this.onPressed,
     this.graphicalClefs = false,
     this.assetSize = 48,
+    this.trailing,
   });
 
   final String label;
@@ -992,6 +1131,7 @@ class _CommandSection extends StatelessWidget {
   final ValueChanged<String> onPressed;
   final bool graphicalClefs;
   final double assetSize;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -1005,86 +1145,87 @@ class _CommandSection extends StatelessWidget {
           Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: commands
-                .map(
-                  (_KottaEditorCommand command) =>
-                      graphicalClefs ||
-                          command.asset != null ||
-                          command.meter != null
-                      ? Tooltip(
-                          message: command.label,
-                          child: OutlinedButton(
-                            onPressed: () => onPressed(command.source),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.all(4),
-                              minimumSize: Size.zero,
-                            ),
-                            child: Semantics(
-                              label: command.label,
-                              child: command.meter != null
-                                  ? SizedBox(
-                                      width: 48,
-                                      height: 48,
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Text(
-                                          command.meter!,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            height: 1,
-                                            fontWeight: FontWeight.w700,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.onSurface,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                  : command.asset != null
-                                  ? SizedBox(
-                                      width: 48,
-                                      height: 48,
-                                      child: Center(
-                                        child: Image.asset(
-                                          'assets/kotta/${command.asset}.png',
-                                          width: assetSize,
-                                          height: assetSize,
-                                          filterQuality: FilterQuality.none,
+            children: <Widget>[
+              ...commands.map(
+                (_KottaEditorCommand command) =>
+                    graphicalClefs ||
+                        command.asset != null ||
+                        command.meter != null
+                    ? Tooltip(
+                        message: command.label,
+                        child: OutlinedButton(
+                          onPressed: () => onPressed(command.source),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.all(4),
+                            minimumSize: Size.zero,
+                          ),
+                          child: Semantics(
+                            label: command.label,
+                            child: command.meter != null
+                                ? SizedBox(
+                                    width: 48,
+                                    height: 48,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        command.meter!,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          height: 1,
+                                          fontWeight: FontWeight.w700,
                                           color: Theme.of(
                                             context,
                                           ).colorScheme.onSurface,
-                                          colorBlendMode: BlendMode.srcIn,
-                                          excludeFromSemantics: true,
                                         ),
                                       ),
-                                    )
-                                  : CustomPaint(
-                                      size: const Size(48, 48),
-                                      painter: KottaClefPainter(
-                                        command: command.source,
+                                    ),
+                                  )
+                                : command.asset != null
+                                ? SizedBox(
+                                    width: 48,
+                                    height: 48,
+                                    child: Center(
+                                      child: Image.asset(
+                                        'assets/kotta/${command.asset}.png',
+                                        width: assetSize,
+                                        height: assetSize,
+                                        filterQuality: FilterQuality.none,
                                         color: Theme.of(
                                           context,
                                         ).colorScheme.onSurface,
+                                        colorBlendMode: BlendMode.srcIn,
+                                        excludeFromSemantics: true,
                                       ),
                                     ),
-                            ),
+                                  )
+                                : CustomPaint(
+                                    size: const Size(48, 48),
+                                    painter: KottaClefPainter(
+                                      command: command.source,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
+                                    ),
+                                  ),
                           ),
-                        )
-                      : command.hint != null
-                      ? Tooltip(
-                          message: command.hint!,
-                          child: OutlinedButton(
-                            onPressed: () => onPressed(command.source),
-                            child: Text(command.label),
-                          ),
-                        )
-                      : OutlinedButton(
+                        ),
+                      )
+                    : command.hint != null
+                    ? Tooltip(
+                        message: command.hint!,
+                        child: OutlinedButton(
                           onPressed: () => onPressed(command.source),
                           child: Text(command.label),
                         ),
-                )
-                .toList(),
+                      )
+                    : OutlinedButton(
+                        onPressed: () => onPressed(command.source),
+                        child: Text(command.label),
+                      ),
+              ),
+              if (trailing != null) trailing!,
+            ],
           ),
         ],
       ),

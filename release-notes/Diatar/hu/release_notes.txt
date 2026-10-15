@@ -1,5 +1,6 @@
 Új funkciók
 Diasor
+- A Hang és Szünet sor végén külön Pontozott kapcsoló állítja a következő beszúrást vagy a kijelölt elemek pontozását; a kijelölés utáni hangok ritmusa változatlan marad
 - A Hang gombok nagybetűs hangkód után is mindig kisbetűs hangkódot szúrnak be
 - A Hang gombok tényleges hangot szúrnak be az előző hang magasságával, szükséges ritmusváltásokkal és a későbbi hangok ritmusának megőrzésével
 - A kottaszerkesztő új Hang sorában nyolc ritmusérték választható kis grafikájú, névsúgós gombokkal

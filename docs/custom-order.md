@@ -94,7 +94,16 @@ A későbbi hangok ritmusa nem változik: szükség esetén a program az új han
 után visszaállítja az eredeti ritmusértéket. Ez kijelölt kottaelemek cseréjekor
 is érvényes.
 
-A pontozott ritmusérték, hangmagasság és módosítójel
+A **Szünet** és **Hang** sor végén, kis térköz után külön **Pontozott**
+kapcsoló található. Önmagában nem szúr be jelet: bekapcsolva a következő
+szünetet vagy hangot pontozva szúrja be. A Longa, Brevis és Semi-brevis
+hangokra nincs hatása. Kijelöléskor a kapcsolók a kijelölt szünetek,
+illetve hangok pontozását mutatják és kattintásra módosítják; vegyes
+kijelölésnél kikapcsolt állapot látszik, és az első kattintás pontozottá
+teszi az érintett elemeket. A kijelölésen kívüli hangok ritmusa és
+pontozása változatlan marad.
+
+A hangmagasság és módosítójel
 beszúróvezérlői átmenetileg nem érhetők el. A meglévő kották jelei továbbra
 is megjelennek az előnézetben és a vetítésben.
 
