@@ -64,6 +64,15 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   meter54: _l10n.kottaEditorMeter54,
   meter64: _l10n.kottaEditorMeter64,
   rests: _l10n.kottaEditorRests,
+  notes: _l10n.kottaEditorNotes,
+  longa: _l10n.kottaEditorLonga,
+  brevis: _l10n.kottaEditorBrevis,
+  semibrevis: _l10n.kottaEditorSemibrevis,
+  wholeNote: _l10n.kottaEditorWholeNote,
+  halfNote: _l10n.kottaEditorHalfNote,
+  quarterNote: _l10n.kottaEditorQuarterNote,
+  eighthNote: _l10n.kottaEditorEighthNote,
+  sixteenthNote: _l10n.kottaEditorSixteenthNote,
   wholeRest: _l10n.kottaEditorWholeRest,
   halfRest: _l10n.kottaEditorHalfRest,
   quarterRest: _l10n.kottaEditorQuarterRest,
@@ -918,102 +927,302 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('graphical rests insert legacy codes at the active cursor', (
-    WidgetTester tester,
-  ) async {
-    tester.view.physicalSize = const Size(400, 800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    KottaEditorResult? result;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData.dark(),
-        home: Scaffold(
-          body: Builder(
-            builder: (BuildContext context) => TextButton(
-              onPressed: () async {
-                result = await showKottaEditorDialog(
-                  context: context,
-                  labels: _kottaLabels,
-                  previewLineBuilder: (elements) =>
-                      '\\K${elements.map((element) => element.command).join()};',
-                  initialState: const KottaEditorInitialState(
-                    elements: <KottaEditorElement>[
-                      KottaEditorElement(command: 'kG', textOffset: 0),
-                      KottaEditorElement(command: '|1', textOffset: 0),
-                    ],
-                    textLength: 0,
-                    kottaCursor: 1,
-                    textCursor: 0,
-                    isEditing: true,
-                  ),
-                );
-              },
-              child: Text(_kottaLabels.editTitle),
+  for (final bool notes in <bool>[false, true]) {
+    testWidgets(
+      'graphical ${notes ? 'notes' : 'rests'} insert legacy codes at the active cursor',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        KottaEditorResult? result;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark(),
+            home: Scaffold(
+              body: Builder(
+                builder: (BuildContext context) => TextButton(
+                  onPressed: () async {
+                    result = await showKottaEditorDialog(
+                      context: context,
+                      labels: _kottaLabels,
+                      previewLineBuilder: (elements) =>
+                          '\\K${elements.map((element) => element.command).join()};',
+                      initialState: const KottaEditorInitialState(
+                        elements: <KottaEditorElement>[
+                          KottaEditorElement(command: 'kG', textOffset: 0),
+                          KottaEditorElement(command: '|1', textOffset: 0),
+                        ],
+                        textLength: 0,
+                        kottaCursor: 1,
+                        textCursor: 0,
+                        isEditing: true,
+                      ),
+                    );
+                  },
+                  child: Text(_kottaLabels.editTitle),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text(_kottaLabels.editTitle));
+        await tester.pumpAndSettle();
+
+        final List<(String, String, String)> rests = notes
+            ? <(String, String, String)>[
+                (_kottaLabels.longa, 'rl', 'editor_hang0'),
+                (_kottaLabels.brevis, 'rb', 'editor_hangbrevis1'),
+                (_kottaLabels.semibrevis, 'rs', 'editor_hangbrevis2'),
+                (_kottaLabels.wholeNote, 'r1', 'editor_hang1'),
+                (_kottaLabels.halfNote, 'r2', 'editor_hang2'),
+                (_kottaLabels.quarterNote, 'r4', 'editor_hang4'),
+                (_kottaLabels.eighthNote, 'r8', 'editor_hang8'),
+                (_kottaLabels.sixteenthNote, 'r6', 'editor_hang16'),
+              ]
+            : <(String, String, String)>[
+                (_kottaLabels.wholeRest, 's1', 'szunet1'),
+                (_kottaLabels.halfRest, 's2', 'szunet2'),
+                (_kottaLabels.quarterRest, 's4', 'szunet4'),
+                (_kottaLabels.eighthRest, 's8', 'szunet8'),
+                (_kottaLabels.sixteenthRest, 's6', 'szunet16'),
+              ];
+        final Finder section = find
+            .ancestor(
+              of: find.text(notes ? _kottaLabels.notes : _kottaLabels.rests),
+              matching: find.byType(Column),
+            )
+            .first;
+        expect(
+          tester
+              .widgetList<Tooltip>(
+                find.descendant(of: section, matching: find.byType(Tooltip)),
+              )
+              .map((tooltip) => tooltip.message),
+          rests.map((rest) => rest.$1),
+        );
+        for (final (String label, String _, String asset) in rests) {
+          final Finder button = find.descendant(
+            of: section,
+            matching: find.byTooltip(label),
+          );
+          await tester.ensureVisible(button);
+          await tester.pumpAndSettle();
+          final Image image = tester.widget<Image>(
+            find.descendant(of: button, matching: find.byType(Image)),
+          );
+          expect(
+            (image.image as AssetImage).assetName,
+            'assets/kotta/$asset.png',
+          );
+          expect(
+            tester.getSize(
+              find.descendant(of: button, matching: find.byType(Image)),
+            ),
+            const Size(24, 24),
+          );
+          expect(
+            tester.getSize(
+              find.descendant(
+                of: button,
+                matching: find.byType(OutlinedButton),
+              ),
+            ),
+            const Size(56, 56),
+          );
+          expect(image.color, ThemeData.dark().colorScheme.onSurface);
+          await tester.tap(button);
+          await tester.pump();
+          expect(tester.takeException(), isNull);
+        }
+        await tester.tap(find.text(_kottaLabels.apply));
+        await tester.pumpAndSettle();
+        expect(result!.elements.map((element) => element.command), <String>[
+          'kG',
+          for (final rest in rests) ...<String>[rest.$2, if (notes) '2g'],
+          '|1',
+        ]);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final testCase
+      in <
+        ({
+          String name,
+          List<String> initial,
+          int cursor,
+          List<String> rhythms,
+          bool selectNext,
+          List<String> expected,
+        })
+      >[
+        (
+          name: 'empty notation starts on 2g without redundant quarter rhythm',
+          initial: <String>[],
+          cursor: 0,
+          rhythms: <String>['r4', 'r4'],
+          selectNext: false,
+          expected: <String>['2g', '2g'],
+        ),
+        (
+          name: 'line start ignores later pitches and restores later rhythm',
+          initial: <String>['3d'],
+          cursor: 0,
+          rhythms: <String>['r8'],
+          selectNext: false,
+          expected: <String>['r8', '2g', 'r4', '3d'],
+        ),
+        (
+          name: 'notes inherit the preceding pitch across rests and controls',
+          initial: <String>['r2', '1g', 's8', '|1', 'Rt'],
+          cursor: 5,
+          rhythms: <String>['r2'],
+          selectNext: false,
+          expected: <String>['r2', '1g', 's8', '|1', 'Rt', '1g'],
+        ),
+        (
+          name: 'upper ledger pitch is inherited',
+          initial: <String>['3d'],
+          cursor: 1,
+          rhythms: <String>['r6'],
+          selectNext: false,
+          expected: <String>['3d', 'r6', '3d'],
+        ),
+        (
+          name: 'inserted pitch is lowercase without rewriting existing notes',
+          initial: <String>['r2', '2G', '2A'],
+          cursor: 2,
+          rhythms: <String>['r8'],
+          selectNext: false,
+          expected: <String>['r2', '2G', 'r8', '2g', 'r2', '2A'],
+        ),
+        (
+          name:
+              'repeated middle insertion shares rhythm and restores following notes',
+          initial: <String>['r2', '2a', '|1', '2h'],
+          cursor: 2,
+          rhythms: <String>['r8', 'r8'],
+          selectNext: false,
+          expected: <String>['r2', '2a', 'r8', '2a', '2a', 'r2', '|1', '2h'],
+        ),
+        (
+          name: 'an explicit later rhythm needs no extra restoration',
+          initial: <String>['2c', 's4', 'r2', '2d'],
+          cursor: 1,
+          rhythms: <String>['r8'],
+          selectNext: false,
+          expected: <String>['2c', 'r8', '2c', 's4', 'r2', '2d'],
+        ),
+        (
+          name:
+              'returning to the original rhythm removes redundant restoration',
+          initial: <String>['r2', '2a', '2h'],
+          cursor: 2,
+          rhythms: <String>['r8', 'r2'],
+          selectNext: false,
+          expected: <String>['r2', '2a', 'r8', '2a', 'r2', '2a', '2h'],
+        ),
+        (
+          name: 'dotted rhythm is restored exactly',
+          initial: <String>['R4', '2e', 'rt', '2f'],
+          cursor: 2,
+          rhythms: <String>['r4'],
+          selectNext: false,
+          expected: <String>['R4', '2e', 'r4', '2e', 'R4', 'rt', '2f'],
+        ),
+        (
+          name: 'replacing selection preserves the rhythm at its original end',
+          initial: <String>['r4', '1a', 'r8', '2c', '3d'],
+          cursor: 2,
+          rhythms: <String>['r2'],
+          selectNext: true,
+          expected: <String>['r4', '1a', 'r2', '1a', 'r8', '3d'],
+        ),
+      ]) {
+    testWidgets(testCase.name, (WidgetTester tester) async {
+      KottaEditorResult? result;
+      final List<KottaEditorElement> initial = <KottaEditorElement>[
+        for (final String command in testCase.initial)
+          KottaEditorElement(
+            command: command,
+            textOffset: 0,
+            isConditional: true,
+          ),
+      ];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (BuildContext context) => TextButton(
+                onPressed: () async {
+                  result = await showKottaEditorDialog(
+                    context: context,
+                    labels: _kottaLabels,
+                    previewLineBuilder: (elements) =>
+                        '\\K${elements.map((element) => element.command).join()};',
+                    initialState: KottaEditorInitialState(
+                      elements: initial,
+                      textLength: 0,
+                      kottaCursor: testCase.cursor,
+                      textCursor: 0,
+                      isEditing: initial.isNotEmpty,
+                    ),
+                  );
+                },
+                child: Text(_kottaLabels.insertTitle),
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.tap(find.text(_kottaLabels.editTitle));
-    await tester.pumpAndSettle();
-
-    final List<(String, String, String)> rests = <(String, String, String)>[
-      (_kottaLabels.wholeRest, 's1', 'szunet1'),
-      (_kottaLabels.halfRest, 's2', 'szunet2'),
-      (_kottaLabels.quarterRest, 's4', 'szunet4'),
-      (_kottaLabels.eighthRest, 's8', 'szunet8'),
-      (_kottaLabels.sixteenthRest, 's6', 'szunet16'),
-    ];
-    final Finder section = find
-        .ancestor(
-          of: find.text(_kottaLabels.rests),
-          matching: find.byType(Column),
-        )
-        .first;
-    expect(
-      tester
-          .widgetList<Tooltip>(
-            find.descendant(of: section, matching: find.byType(Tooltip)),
-          )
-          .map((tooltip) => tooltip.message),
-      rests.map((rest) => rest.$1),
-    );
-    for (final (String label, String _, String asset) in rests) {
-      final Finder button = find.byTooltip(label);
-      await tester.ensureVisible(button);
+      );
+      await tester.tap(find.text(_kottaLabels.insertTitle));
       await tester.pumpAndSettle();
-      final Image image = tester.widget<Image>(
-        find.descendant(of: button, matching: find.byType(Image)),
-      );
-      expect((image.image as AssetImage).assetName, 'assets/kotta/$asset.png');
+      if (testCase.selectNext) {
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+      }
+      final Map<String, String> labels = <String, String>{
+        'r2': _kottaLabels.halfNote,
+        'r4': _kottaLabels.quarterNote,
+        'r8': _kottaLabels.eighthNote,
+        'r6': _kottaLabels.sixteenthNote,
+      };
+      final Finder section = find
+          .ancestor(
+            of: find.text(_kottaLabels.notes),
+            matching: find.byType(Column),
+          )
+          .first;
+      for (final String rhythm in testCase.rhythms) {
+        final Finder button = find.descendant(
+          of: section,
+          matching: find.byTooltip(labels[rhythm]!),
+        );
+        await tester.ensureVisible(button);
+        await tester.tap(button);
+        await tester.pump();
+      }
+      await tester.tap(find.text(_kottaLabels.apply));
+      await tester.pumpAndSettle();
       expect(
-        tester.getSize(
-          find.descendant(of: button, matching: find.byType(Image)),
-        ),
-        const Size(24, 24),
+        result!.elements.map((element) => element.command),
+        testCase.expected,
       );
-      expect(
-        tester.getSize(
-          find.descendant(of: button, matching: find.byType(OutlinedButton)),
-        ),
-        const Size(56, 56),
+      final Iterable<KottaEditorElement> restored = result!.elements.where(
+        (element) =>
+            !initial.contains(element) &&
+            (element.command.startsWith('r') ||
+                element.command.startsWith('R')) &&
+            !testCase.rhythms.contains(element.command),
       );
-      expect(image.color, ThemeData.dark().colorScheme.onSurface);
-      await tester.tap(button);
-      await tester.pump();
+      expect(restored.every((element) => element.isConditional), isTrue);
       expect(tester.takeException(), isNull);
-    }
-    await tester.tap(find.text(_kottaLabels.apply));
-    await tester.pumpAndSettle();
-    expect(result!.elements.map((element) => element.command), <String>[
-      'kG',
-      ...rests.map((rest) => rest.$2),
-      '|1',
-    ]);
-    expect(tester.takeException(), isNull);
-  });
+    });
+  }
 
   testWidgets('graphical barlines show named hints and insert in legacy order', (
     WidgetTester tester,
@@ -1179,7 +1388,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SwitchListTile), findsNothing);
-    expect(find.byType(OutlinedButton), findsNWidgets(52));
+    expect(find.byType(OutlinedButton), findsNWidgets(60));
     final Finder barlineSection = find
         .ancestor(
           of: find.text(_kottaLabels.barlines),
@@ -1204,6 +1413,7 @@ void main() {
       _kottaLabels.barlines,
       _kottaLabels.meters,
       _kottaLabels.rests,
+      _kottaLabels.notes,
     ]);
 
     final List<(String, String, String)> meters = <(String, String, String)>[
@@ -1602,6 +1812,7 @@ void main() {
     (label: _kottaLabels.singleBarline, command: '|1', tooltip: true),
     (label: _kottaLabels.meter44, command: 'u4', tooltip: true),
     (label: _kottaLabels.quarterRest, command: 's4', tooltip: true),
+    (label: _kottaLabels.quarterNote, command: 'r4', tooltip: true),
   ]) {
     testWidgets('Shift selection is replaced by ${button.command}', (
       WidgetTester tester,
@@ -1626,9 +1837,22 @@ void main() {
       );
       expect(_notationOverlay(tester).textActive, isFalse);
 
-      final Finder finder = button.tooltip
+      Finder finder = button.tooltip
           ? find.byTooltip(button.label)
           : find.text(button.label);
+      if (button.command == 's4' || button.command == 'r4') {
+        final Finder section = find
+            .ancestor(
+              of: find.text(
+                button.command == 's4'
+                    ? _kottaLabels.rests
+                    : _kottaLabels.notes,
+              ),
+              matching: find.byType(Column),
+            )
+            .first;
+        finder = find.descendant(of: section, matching: finder);
+      }
       await tester.ensureVisible(finder);
       await tester.tap(finder);
       await tester.pump();
@@ -1637,7 +1861,8 @@ void main() {
       expect(_notationOverlay(tester).textPosition, 2);
       await tester.tap(find.text(_kottaLabels.apply));
       await tester.pumpAndSettle();
-      expect(controller.encodedText, '\\KkG;ab\\K${button.command};cd\\K|!;ef');
+      final String inserted = button.command == 'r4' ? '2g' : button.command;
+      expect(controller.encodedText, '\\KkG;ab\\K$inserted;cd\\K|!;ef');
       controller.dispose();
     });
   }

@@ -80,6 +80,15 @@ class KottaEditorLabels {
     required this.quarterRest,
     required this.eighthRest,
     required this.sixteenthRest,
+    required this.notes,
+    required this.longa,
+    required this.brevis,
+    required this.semibrevis,
+    required this.wholeNote,
+    required this.halfNote,
+    required this.quarterNote,
+    required this.eighthNote,
+    required this.sixteenthNote,
     required this.gClef,
     required this.fClef,
     required this.sopranoClef,
@@ -128,6 +137,15 @@ class KottaEditorLabels {
   final String quarterRest;
   final String eighthRest;
   final String sixteenthRest;
+  final String notes;
+  final String longa;
+  final String brevis;
+  final String semibrevis;
+  final String wholeNote;
+  final String halfNote;
+  final String quarterNote;
+  final String eighthNote;
+  final String sixteenthNote;
   final String gClef;
   final String fClef;
   final String sopranoClef;
@@ -230,20 +248,101 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     assert(command.length == 2);
     setState(() {
       final TextSelection? selection = _kottaSelection;
+      final String followingRhythm = _rhythmBefore(
+        selection?.end ?? _kottaCursor,
+      );
       if (selection != null) {
         _kottaCursor = selection.start;
         _textCursor = _elements[selection.start].textOffset;
         _elements.removeRange(selection.start, selection.end);
       }
       _kottaSelectionAnchor = null;
-      _elements.insert(
-        _kottaCursor,
-        KottaEditorElement(command: command, textOffset: _textCursor),
-      );
-      _kottaCursor++;
+      if (command[0] == 'r') {
+        _insertNote(command, followingRhythm: followingRhythm);
+      } else {
+        _elements.insert(
+          _kottaCursor,
+          KottaEditorElement(command: command, textOffset: _textCursor),
+        );
+        _kottaCursor++;
+      }
       _textCursorActive = false;
       _activeCursorVisible = true;
     });
+  }
+
+  bool _isPitch(String command) => RegExp(
+    r'^(?:[12][gahcdef]|3[gahcd])$',
+    caseSensitive: false,
+  ).hasMatch(command);
+
+  bool _isRhythm(String command) =>
+      command.length == 2 &&
+      (command[0] == 'r' || command[0] == 'R') &&
+      command[1] != 't';
+
+  String _rhythmBefore(int position) {
+    for (int index = position - 1; index >= 0; index--) {
+      if (_isRhythm(_elements[index].command)) {
+        return _elements[index].command;
+      }
+    }
+    return 'r4';
+  }
+
+  void _insertNote(String rhythm, {required String followingRhythm}) {
+    String pitch = '2g';
+    for (int index = _kottaCursor - 1; index >= 0; index--) {
+      if (_isPitch(_elements[index].command)) {
+        pitch = _elements[index].command.toLowerCase();
+        break;
+      }
+    }
+    bool restoreRhythm = false;
+    if (rhythm != followingRhythm) {
+      for (int index = _kottaCursor; index < _elements.length; index++) {
+        final String command = _elements[index].command;
+        if (_isRhythm(command)) {
+          break;
+        }
+        if (_isPitch(command)) {
+          restoreRhythm = true;
+          break;
+        }
+      }
+    }
+    final List<KottaEditorElement> inserted = <KottaEditorElement>[
+      if (_rhythmBefore(_kottaCursor) != rhythm)
+        KottaEditorElement(command: rhythm, textOffset: _textCursor),
+      KottaEditorElement(command: pitch, textOffset: _textCursor),
+    ];
+    _elements.insertAll(_kottaCursor, inserted);
+    _kottaCursor += inserted.length;
+    for (int index = _kottaCursor; index < _elements.length; index++) {
+      final String command = _elements[index].command;
+      if (_isPitch(command)) {
+        break;
+      }
+      if (_isRhythm(command)) {
+        if (command == rhythm) {
+          _elements.removeAt(index);
+          index--;
+          continue;
+        }
+        break;
+      }
+    }
+    if (restoreRhythm) {
+      final KottaEditorElement following = _elements[_kottaCursor];
+      _elements.insert(
+        _kottaCursor,
+        KottaEditorElement(
+          command: followingRhythm,
+          textOffset: following.textOffset,
+          isConditional: following.isConditional,
+        ),
+      );
+    }
   }
 
   void _toggleActiveCursor() {
@@ -598,6 +697,53 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                             labels.sixteenthRest,
                             's6',
                             asset: 'szunet16',
+                          ),
+                        ],
+                        onPressed: _insertCommand,
+                      ),
+                      _CommandSection(
+                        label: labels.notes,
+                        assetSize: 24,
+                        commands: <_KottaEditorCommand>[
+                          _KottaEditorCommand(
+                            labels.longa,
+                            'rl',
+                            asset: 'editor_hang0',
+                          ),
+                          _KottaEditorCommand(
+                            labels.brevis,
+                            'rb',
+                            asset: 'editor_hangbrevis1',
+                          ),
+                          _KottaEditorCommand(
+                            labels.semibrevis,
+                            'rs',
+                            asset: 'editor_hangbrevis2',
+                          ),
+                          _KottaEditorCommand(
+                            labels.wholeNote,
+                            'r1',
+                            asset: 'editor_hang1',
+                          ),
+                          _KottaEditorCommand(
+                            labels.halfNote,
+                            'r2',
+                            asset: 'editor_hang2',
+                          ),
+                          _KottaEditorCommand(
+                            labels.quarterNote,
+                            'r4',
+                            asset: 'editor_hang4',
+                          ),
+                          _KottaEditorCommand(
+                            labels.eighthNote,
+                            'r8',
+                            asset: 'editor_hang8',
+                          ),
+                          _KottaEditorCommand(
+                            labels.sixteenthNote,
+                            'r6',
+                            asset: 'editor_hang16',
                           ),
                         ],
                         onPressed: _insertCommand,
