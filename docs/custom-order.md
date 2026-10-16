@@ -103,8 +103,17 @@ kijelölésnél kikapcsolt állapot látszik, és az első kattintás pontozott�
 teszi az érintett elemeket. A kijelölésen kívüli hangok ritmusa és
 pontozása változatlan marad.
 
-A hangmagasság és módosítójel
-beszúróvezérlői átmenetileg nem érhetők el. A meglévő kották jelei továbbra
+A **Módosítójelek** sorban öt grafikus kapcsoló található: **Bé** (`mb`),
+**Feloldó** (`m0`), **Kereszt** (`mk`), **Bebé** (`mB`) és **Kettős kereszt**
+(`mK`). Egyszerre legfeljebb egy lehet bekapcsolva; ismételt kattintással
+kikapcsolható. Kijelölés nélkül a következő beszúrt hang elé kerül a
+módosítójel, majd a kapcsoló automatikusan kikapcsol. Szünet vagy más jel
+beszúrása nem használja fel a választást.
+Kijelöléskor a választott módosítójelet az összes kijelölt hang megkapja,
+korábbi módosítójelük helyett. Ha már mindegyiken ez a módosítójel van,
+a gomb eltávolítja azt. A kijelölésen kívüli hangok és a szünetek változatlanok.
+
+A hangmagasság beszúróvezérlői átmenetileg nem érhetők el. A meglévő kották jelei továbbra
 is megjelennek az előnézetben és a vetítésben.
 
 ## Export/Import

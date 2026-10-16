@@ -76,6 +76,12 @@ class KottaEditorLabels {
     required this.meter64,
     required this.rests,
     required this.dotted,
+    required this.accidentals,
+    required this.flat,
+    required this.natural,
+    required this.sharp,
+    required this.doubleFlat,
+    required this.doubleSharp,
     required this.wholeRest,
     required this.halfRest,
     required this.quarterRest,
@@ -134,6 +140,12 @@ class KottaEditorLabels {
   final String meter64;
   final String rests;
   final String dotted;
+  final String accidentals;
+  final String flat;
+  final String natural;
+  final String sharp;
+  final String doubleFlat;
+  final String doubleSharp;
   final String wholeRest;
   final String halfRest;
   final String quarterRest;
@@ -207,6 +219,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   bool _activeCursorVisible = true;
   bool _dottedRests = false;
   bool _dottedNotes = false;
+  String? _accidental;
 
   bool get _isValid => _elements.isNotEmpty;
 
@@ -426,6 +439,89 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     );
   }
 
+  Map<int, List<int>> _selectedNoteAccidentals() {
+    final TextSelection? selection = _kottaSelection;
+    final Map<int, List<int>> notes = <int, List<int>>{};
+    if (selection == null) {
+      return notes;
+    }
+    final List<int> pending = <int>[];
+    for (int index = 0; index < _elements.length; index++) {
+      final String command = _elements[index].command;
+      if (command[0] == 'm') {
+        pending.add(index);
+      } else if (_isPitch(command)) {
+        if (index >= selection.start && index < selection.end) {
+          notes[index] = List<int>.of(pending);
+        }
+        pending.clear();
+      } else if (command[0].toLowerCase() == 's') {
+        pending.clear();
+      }
+    }
+    return notes;
+  }
+
+  bool _accidentalState(String command) {
+    if (_kottaSelection == null) {
+      return _accidental == command;
+    }
+    final Map<int, List<int>> notes = _selectedNoteAccidentals();
+    return notes.isNotEmpty &&
+        notes.values.every(
+          (indices) =>
+              indices.isNotEmpty && _elements[indices.last].command == command,
+        );
+  }
+
+  void _toggleAccidental(String command) {
+    final bool apply = !_accidentalState(command);
+    setState(() {
+      final TextSelection? selection = _kottaSelection;
+      if (selection == null) {
+        _accidental = apply ? command : null;
+        return;
+      }
+      final Map<int, List<int>> notes = _selectedNoteAccidentals();
+      final Set<int> removed = notes.values
+          .expand((indices) => indices)
+          .toSet();
+      final List<KottaEditorElement> updated = <KottaEditorElement>[];
+      int start = 0;
+      int end = 0;
+      for (int index = 0; index <= _elements.length; index++) {
+        if (index == selection.start) {
+          start = updated.length;
+        }
+        if (index == selection.end) {
+          end = updated.length;
+        }
+        if (index == _elements.length || removed.contains(index)) {
+          continue;
+        }
+        final KottaEditorElement element = _elements[index];
+        if (apply && notes.containsKey(index)) {
+          updated.add(
+            KottaEditorElement(
+              command: command,
+              textOffset: element.textOffset,
+              isConditional: element.isConditional,
+            ),
+          );
+        }
+        updated.add(element);
+      }
+      _elements = updated;
+      _accidental = null;
+      final bool forward = selection.baseOffset < selection.extentOffset;
+      _kottaSelectionAnchor = forward ? start : end;
+      _kottaCursor = forward ? end : start;
+      _syncTextCursorToKotta();
+      _activeCursorVisible = true;
+    });
+    _editorFocusNode.requestFocus();
+  }
+
   void _insertNote(String rhythm, {required String followingRhythm}) {
     String pitch = '2g';
     for (int index = _kottaCursor - 1; index >= 0; index--) {
@@ -450,8 +546,11 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     final List<KottaEditorElement> inserted = <KottaEditorElement>[
       if (_rhythmBefore(_kottaCursor) != rhythm)
         KottaEditorElement(command: rhythm, textOffset: _textCursor),
+      if (_accidental != null)
+        KottaEditorElement(command: _accidental!, textOffset: _textCursor),
       KottaEditorElement(command: pitch, textOffset: _textCursor),
     ];
+    _accidental = null;
     _elements.insertAll(_kottaCursor, inserted);
     _kottaCursor += inserted.length;
     for (int index = _kottaCursor; index < _elements.length; index++) {
@@ -886,6 +985,36 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                         ],
                         onPressed: _insertCommand,
                       ),
+                      _CommandSection(
+                        label: labels.accidentals,
+                        assetSize: 24,
+                        isSelected: _accidentalState,
+                        commands: <_KottaEditorCommand>[
+                          _KottaEditorCommand(labels.flat, 'mb', asset: 'be'),
+                          _KottaEditorCommand(
+                            labels.natural,
+                            'm0',
+                            asset: 'feloldo',
+                          ),
+                          _KottaEditorCommand(
+                            labels.sharp,
+                            'mk',
+                            asset: 'kereszt',
+                          ),
+                          _KottaEditorCommand(
+                            labels.doubleFlat,
+                            'mB',
+                            asset: 'bebe',
+                          ),
+                          _KottaEditorCommand(
+                            labels.doubleSharp,
+                            'mK',
+                            asset: 'kettoskereszt',
+                            assetSize: 12,
+                          ),
+                        ],
+                        onPressed: _toggleAccidental,
+                      ),
                     ],
                   ),
                 ),
@@ -1106,6 +1235,7 @@ class _KottaEditorCommand {
     this.source, {
     this.hint,
     this.asset,
+    this.assetSize,
     this.meter,
   });
 
@@ -1113,6 +1243,7 @@ class _KottaEditorCommand {
   final String source;
   final String? hint;
   final String? asset;
+  final double? assetSize;
   final String? meter;
 }
 
@@ -1124,6 +1255,7 @@ class _CommandSection extends StatelessWidget {
     this.graphicalClefs = false,
     this.assetSize = 48,
     this.trailing,
+    this.isSelected,
   });
 
   final String label;
@@ -1132,6 +1264,7 @@ class _CommandSection extends StatelessWidget {
   final bool graphicalClefs;
   final double assetSize;
   final Widget? trailing;
+  final bool Function(String command)? isSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1158,9 +1291,16 @@ class _CommandSection extends StatelessWidget {
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.all(4),
                             minimumSize: Size.zero,
+                            backgroundColor:
+                                isSelected?.call(command.source) == true
+                                ? Theme.of(
+                                    context,
+                                  ).colorScheme.secondaryContainer
+                                : null,
                           ),
                           child: Semantics(
                             label: command.label,
+                            toggled: isSelected?.call(command.source),
                             child: command.meter != null
                                 ? SizedBox(
                                     width: 48,
@@ -1188,8 +1328,8 @@ class _CommandSection extends StatelessWidget {
                                     child: Center(
                                       child: Image.asset(
                                         'assets/kotta/${command.asset}.png',
-                                        width: assetSize,
-                                        height: assetSize,
+                                        width: command.assetSize ?? assetSize,
+                                        height: command.assetSize ?? assetSize,
                                         filterQuality: FilterQuality.none,
                                         color: Theme.of(
                                           context,
