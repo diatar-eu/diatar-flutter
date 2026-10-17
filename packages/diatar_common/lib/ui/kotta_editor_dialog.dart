@@ -76,6 +76,7 @@ class KottaEditorLabels {
     required this.meter64,
     required this.rests,
     required this.dotted,
+    required this.stemDown,
     required this.accidentals,
     required this.flat,
     required this.natural,
@@ -150,6 +151,7 @@ class KottaEditorLabels {
   final String meter64;
   final String rests;
   final String dotted;
+  final String stemDown;
   final String accidentals;
   final String flat;
   final String natural;
@@ -239,9 +241,62 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   bool _activeCursorVisible = true;
   bool _dottedRests = false;
   bool _dottedNotes = false;
+  bool? _stemDownOverride;
   final Map<String, String> _noteModifiers = <String, String>{};
 
   bool get _isValid => _elements.isNotEmpty;
+
+  String _precedingPitch(int position) {
+    for (int index = position - 1; index >= 0; index--) {
+      if (_isPitch(_elements[index].command)) {
+        return _elements[index].command;
+      }
+    }
+    return '2g';
+  }
+
+  bool get _stemDown {
+    final TextSelection? selection = _kottaSelection;
+    if (selection != null) {
+      final Iterable<String> pitches = _elements
+          .sublist(selection.start, selection.end)
+          .map((element) => element.command)
+          .where(_isPitch);
+      return pitches.isNotEmpty &&
+          pitches.every((pitch) => pitch == pitch.toUpperCase());
+    }
+    final String pitch = _precedingPitch(
+      _kottaSelection?.start ?? _kottaCursor,
+    );
+    return _stemDownOverride ?? (pitch == pitch.toUpperCase());
+  }
+
+  void _toggleStemDirection() {
+    final bool down = !_stemDown;
+    setState(() {
+      final TextSelection? selection = _kottaSelection;
+      if (selection == null) {
+        _stemDownOverride = down;
+        return;
+      }
+      for (int index = selection.start; index < selection.end; index++) {
+        final KottaEditorElement element = _elements[index];
+        if (!_isPitch(element.command)) {
+          continue;
+        }
+        _elements[index] = KottaEditorElement(
+          command: down
+              ? element.command.toUpperCase()
+              : element.command.toLowerCase(),
+          textOffset: element.textOffset,
+          isConditional: element.isConditional,
+        );
+      }
+      _stemDownOverride = null;
+      _activeCursorVisible = true;
+    });
+    _editorFocusNode.requestFocus();
+  }
 
   TextSelection? get _kottaSelection {
     final int? anchor = _kottaSelectionAnchor;
@@ -548,13 +603,11 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   }
 
   void _insertNote(String rhythm, {required String followingRhythm}) {
-    String pitch = '2g';
-    for (int index = _kottaCursor - 1; index >= 0; index--) {
-      if (_isPitch(_elements[index].command)) {
-        pitch = _elements[index].command.toLowerCase();
-        break;
-      }
-    }
+    final String precedingPitch = _precedingPitch(_kottaCursor);
+    final String pitch = _stemDown
+        ? precedingPitch.toUpperCase()
+        : precedingPitch.toLowerCase();
+    _stemDownOverride = null;
     bool restoreRhythm = false;
     if (rhythm != followingRhythm) {
       for (int index = _kottaCursor; index < _elements.length; index++) {
@@ -643,6 +696,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   }
 
   void _syncKottaCursorToText() {
+    _stemDownOverride = null;
     _kottaCursor = _elements.indexWhere(
       (element) => element.textOffset > _textCursor,
     );
@@ -652,6 +706,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   }
 
   void _syncTextCursorToKotta() {
+    _stemDownOverride = null;
     if (_elements.isNotEmpty) {
       _textCursor = _kottaCursor < _elements.length
           ? _elements[_kottaCursor].textOffset
@@ -965,7 +1020,28 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                       ),
                       _CommandSection(
                         label: labels.notes,
-                        trailing: _dottedButton(rests: false),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            _dottedButton(rests: false),
+                            const SizedBox(width: 6),
+                            IconButton.outlined(
+                              tooltip: labels.stemDown,
+                              isSelected: _stemDown,
+                              onPressed: _toggleStemDirection,
+                              style: IconButton.styleFrom(
+                                fixedSize: const Size(56, 56),
+                                backgroundColor: _stemDown
+                                    ? Theme.of(
+                                        context,
+                                      ).colorScheme.secondaryContainer
+                                    : null,
+                              ),
+                              icon: const Icon(Icons.arrow_upward),
+                              selectedIcon: const Icon(Icons.arrow_downward),
+                            ),
+                          ],
+                        ),
                         assetSize: 24,
                         commands: <_KottaEditorCommand>[
                           _KottaEditorCommand(

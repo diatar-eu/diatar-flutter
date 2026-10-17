@@ -3,6 +3,8 @@ Hibajavítások
 - A C-kulcsok a kottakód szerinti vonalon jelennek meg
 
 Közös kiadás
+- A verziószám követi a Diatár kijelölt hangokra alkalmazható szárirányváltását; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kurzorfüggő szárirányának és kapcsológombjának bevezetését; a vetítési kódformátum változatlan
 - A verziószám követi a Diatár kottaszerkesztőjének új Agogika gombsorát; a vetítési kódformátum változatlan
 - A verziószám követi a Diatár kottaszerkesztőjének új Módosítójelek gombsorát; a vetítési kódformátum változatlan
 - A verziószám követi a Diatár kottaszerkesztőjének Pontozott kapcsolóit; a vetítési kódformátum változatlan

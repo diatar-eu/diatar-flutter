@@ -87,8 +87,14 @@ A **Hang** sor a szünetek alatt található. Nyolc grafikus gombja sorrendben:
 **Nyolcad**, **Tizenhatod**. A szünetgombokhoz hasonlóan kisebb grafikával
 és névsúgóval jelennek meg. A kiválasztott ritmusértékkel tényleges hangot
 szúrnak be, a megelőző hang magasságával; ha a sorban még nincs előtte hang,
-a kezdő hangmagasság `2g`. Az új hang kódja mindig kisbetűs, nagybetűs
-előzmény után is; a meglévő hangkódokat ez nem módosítja.
+a kezdő hangmagasság `2g`. A szárirány az előző hang irányát követi:
+felfelé kisbetűs, lefelé nagybetűs hangkód kerül beszúrásra.
+A Hang sor nyílgombja mutatja és átkapcsolja a következő beszúrás irányát.
+Kijelöléskor a kijelölt hangok szárirányát változtatja meg, a többi jelet
+és a kijelölést megtartva. Vegyes irányú kijelölést először lefelé fordít;
+ha minden kijelölt hang lefelé áll, kattintásra felfelé fordulnak.
+Kurzorváltáskor az irány ismét az új pozíció előtti utolsó hanghoz igazodik;
+előzmény nélkül felfelé álló szár az alapértelmezés.
 Ritmuskód csak ritmusváltáskor kerül a hang elé.
 A későbbi hangok ritmusa nem változik: szükség esetén a program az új hang
 után visszaállítja az eredeti ritmusértéket. Ez kijelölt kottaelemek cseréjekor

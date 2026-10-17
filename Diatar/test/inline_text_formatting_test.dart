@@ -65,6 +65,7 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   meter64: _l10n.kottaEditorMeter64,
   rests: _l10n.kottaEditorRests,
   dotted: _l10n.kottaEditorDotted,
+  stemDown: _l10n.kottaEditorStemDown,
   accidentals: _l10n.kottaEditorAccidentals,
   flat: _l10n.kottaEditorFlat,
   natural: _l10n.kottaEditorNatural,
@@ -1054,7 +1055,10 @@ void main() {
                   matching: find.byType(Column),
                 )
                 .first,
-            matching: find.byType(IconButton),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is IconButton && widget.tooltip == _kottaLabels.dotted,
+            ),
           );
           await tester.ensureVisible(dottedNotes);
           await tester.tap(dottedNotes);
@@ -1359,6 +1363,104 @@ void main() {
     });
   }
 
+  testWidgets('stem direction follows cursor and supports insertion override', (
+    tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(r'\K2G2a;word');
+    await _openNotationPreview(tester, controller);
+    final Finder toggle = find.byWidgetPredicate(
+      (widget) =>
+          widget is IconButton && widget.tooltip == _kottaLabels.stemDown,
+    );
+    bool down() => tester.widget<IconButton>(toggle).isSelected!;
+    expect(down(), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(down(), isTrue);
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(down(), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(down(), isTrue);
+    final Finder notes = find
+        .ancestor(
+          of: find.text(_kottaLabels.notes),
+          matching: find.byType(Column),
+        )
+        .first;
+    final Finder quarter = find.descendant(
+      of: notes,
+      matching: find.byTooltip(_kottaLabels.quarterNote),
+    );
+    await tester.ensureVisible(quarter);
+    await tester.tap(quarter);
+    await tester.pump();
+    expect(down(), isTrue);
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pump();
+    await tester.tap(quarter);
+    await tester.pump();
+    expect(down(), isFalse);
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\K2G2G2g2a;word');
+    controller.dispose();
+  });
+
+  for (final bool forward in <bool>[false, true]) {
+    testWidgets(
+      'stem toggle edits ${forward ? 'forward' : 'backward'} mixed selection',
+      (tester) async {
+        final controller = InlineTextEditingController.fromDia(
+          r'\?K2g2As42h2D;word',
+        );
+        await _openNotationPreview(tester, controller);
+        await tester.tapAt(
+          _kottaPosition(tester, forward ? 1 : 4),
+          kind: ui.PointerDeviceKind.mouse,
+        );
+        await tester.pump();
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        for (int index = 0; index < 3; index++) {
+          await tester.sendKeyEvent(
+            forward
+                ? LogicalKeyboardKey.arrowRight
+                : LogicalKeyboardKey.arrowLeft,
+          );
+        }
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+        final TextSelection selection = _notationOverlay(
+          tester,
+        ).kottaSelection!;
+        expect(selection.start, 1);
+        expect(selection.end, 4);
+        final Finder toggle = find.byWidgetPredicate(
+          (widget) =>
+              widget is IconButton && widget.tooltip == _kottaLabels.stemDown,
+        );
+        expect(tester.widget<IconButton>(toggle).isSelected, isFalse);
+        await tester.ensureVisible(toggle);
+        await tester.tap(toggle);
+        await tester.pump();
+        expect(tester.widget<IconButton>(toggle).isSelected, isTrue);
+        expect(_notationOverlay(tester).kottaSelection, selection);
+        await tester.tap(toggle);
+        await tester.pump();
+        expect(tester.widget<IconButton>(toggle).isSelected, isFalse);
+        expect(_notationOverlay(tester).kottaSelection, selection);
+        await tester.tap(find.text(_kottaLabels.apply));
+        await tester.pumpAndSettle();
+        expect(controller.encodedText, r'\?K2g2as42h2D;word');
+        controller.dispose();
+      },
+    );
+  }
+
   for (final bool notes in <bool>[false, true]) {
     testWidgets(
       'graphical ${notes ? 'notes' : 'rests'} insert legacy codes at the active cursor',
@@ -1431,7 +1533,11 @@ void main() {
                 find.descendant(of: section, matching: find.byType(Tooltip)),
               )
               .map((tooltip) => tooltip.message),
-          <String>[...rests.map((rest) => rest.$1), _kottaLabels.dotted],
+          <String>[
+            ...rests.map((rest) => rest.$1),
+            _kottaLabels.dotted,
+            if (notes) _kottaLabels.stemDown,
+          ],
         );
         for (final (String label, String _, String asset) in rests) {
           final Finder button = find.descendant(
@@ -1518,7 +1624,10 @@ void main() {
           .first;
       Finder toggle(bool forRests) => find.descendant(
         of: section(forRests),
-        matching: find.byType(IconButton),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is IconButton && widget.tooltip == _kottaLabels.dotted,
+        ),
       );
       await tester.ensureVisible(toggle(rests));
       await tester.tap(toggle(rests));
@@ -1782,7 +1891,10 @@ void main() {
           .first;
       final Finder toggle = find.descendant(
         of: section,
-        matching: find.byType(IconButton),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is IconButton && widget.tooltip == _kottaLabels.dotted,
+        ),
       );
       expect(tester.widget<IconButton>(toggle).isSelected, testCase.selected);
       await tester.ensureVisible(toggle);
@@ -1860,12 +1972,13 @@ void main() {
           expected: <String>['3d', 'r6', '3d'],
         ),
         (
-          name: 'inserted pitch is lowercase without rewriting existing notes',
+          name:
+              'inserted pitch inherits stem direction without rewriting notes',
           initial: <String>['r2', '2G', '2A'],
           cursor: 2,
           rhythms: <String>['r8'],
           selectNext: false,
-          expected: <String>['r2', '2G', 'r8', '2g', 'r2', '2A'],
+          expected: <String>['r2', '2G', 'r8', '2G', 'r2', '2A'],
         ),
         (
           name:
