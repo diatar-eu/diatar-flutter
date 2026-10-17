@@ -82,6 +82,16 @@ class KottaEditorLabels {
     required this.sharp,
     required this.doubleFlat,
     required this.doubleSharp,
+    required this.agogics,
+    required this.tenuto,
+    required this.staccato,
+    required this.marcato,
+    required this.martellato,
+    required this.fermata,
+    required this.trill,
+    required this.lowerTrill,
+    required this.mordent,
+    required this.lowerMordent,
     required this.wholeRest,
     required this.halfRest,
     required this.quarterRest,
@@ -146,6 +156,16 @@ class KottaEditorLabels {
   final String sharp;
   final String doubleFlat;
   final String doubleSharp;
+  final String agogics;
+  final String tenuto;
+  final String staccato;
+  final String marcato;
+  final String martellato;
+  final String fermata;
+  final String trill;
+  final String lowerTrill;
+  final String mordent;
+  final String lowerMordent;
   final String wholeRest;
   final String halfRest;
   final String quarterRest;
@@ -219,7 +239,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   bool _activeCursorVisible = true;
   bool _dottedRests = false;
   bool _dottedNotes = false;
-  String? _accidental;
+  final Map<String, String> _noteModifiers = <String, String>{};
 
   bool get _isValid => _elements.isNotEmpty;
 
@@ -439,7 +459,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     );
   }
 
-  Map<int, List<int>> _selectedNoteAccidentals() {
+  Map<int, List<int>> _selectedNoteModifiers(String prefix) {
     final TextSelection? selection = _kottaSelection;
     final Map<int, List<int>> notes = <int, List<int>>{};
     if (selection == null) {
@@ -448,25 +468,25 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     final List<int> pending = <int>[];
     for (int index = 0; index < _elements.length; index++) {
       final String command = _elements[index].command;
-      if (command[0] == 'm') {
+      if (command[0] == prefix) {
         pending.add(index);
       } else if (_isPitch(command)) {
         if (index >= selection.start && index < selection.end) {
           notes[index] = List<int>.of(pending);
         }
         pending.clear();
-      } else if (command[0].toLowerCase() == 's') {
+      } else if (prefix == 'm' && command[0].toLowerCase() == 's') {
         pending.clear();
       }
     }
     return notes;
   }
 
-  bool _accidentalState(String command) {
+  bool _noteModifierState(String command) {
     if (_kottaSelection == null) {
-      return _accidental == command;
+      return _noteModifiers[command[0]] == command;
     }
-    final Map<int, List<int>> notes = _selectedNoteAccidentals();
+    final Map<int, List<int>> notes = _selectedNoteModifiers(command[0]);
     return notes.isNotEmpty &&
         notes.values.every(
           (indices) =>
@@ -474,15 +494,20 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
         );
   }
 
-  void _toggleAccidental(String command) {
-    final bool apply = !_accidentalState(command);
+  void _toggleNoteModifier(String command) {
+    final String prefix = command[0];
+    final bool apply = !_noteModifierState(command);
     setState(() {
       final TextSelection? selection = _kottaSelection;
       if (selection == null) {
-        _accidental = apply ? command : null;
+        if (apply) {
+          _noteModifiers[prefix] = command;
+        } else {
+          _noteModifiers.remove(prefix);
+        }
         return;
       }
-      final Map<int, List<int>> notes = _selectedNoteAccidentals();
+      final Map<int, List<int>> notes = _selectedNoteModifiers(prefix);
       final Set<int> removed = notes.values
           .expand((indices) => indices)
           .toSet();
@@ -512,7 +537,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
         updated.add(element);
       }
       _elements = updated;
-      _accidental = null;
+      _noteModifiers.remove(prefix);
       final bool forward = selection.baseOffset < selection.extentOffset;
       _kottaSelectionAnchor = forward ? start : end;
       _kottaCursor = forward ? end : start;
@@ -546,11 +571,12 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     final List<KottaEditorElement> inserted = <KottaEditorElement>[
       if (_rhythmBefore(_kottaCursor) != rhythm)
         KottaEditorElement(command: rhythm, textOffset: _textCursor),
-      if (_accidental != null)
-        KottaEditorElement(command: _accidental!, textOffset: _textCursor),
+      for (final String prefix in <String>['m', 'a'])
+        if (_noteModifiers[prefix] case final String command)
+          KottaEditorElement(command: command, textOffset: _textCursor),
       KottaEditorElement(command: pitch, textOffset: _textCursor),
     ];
-    _accidental = null;
+    _noteModifiers.clear();
     _elements.insertAll(_kottaCursor, inserted);
     _kottaCursor += inserted.length;
     for (int index = _kottaCursor; index < _elements.length; index++) {
@@ -988,7 +1014,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                       _CommandSection(
                         label: labels.accidentals,
                         assetSize: 24,
-                        isSelected: _accidentalState,
+                        isSelected: _noteModifierState,
                         commands: <_KottaEditorCommand>[
                           _KottaEditorCommand(labels.flat, 'mb', asset: 'be'),
                           _KottaEditorCommand(
@@ -1013,7 +1039,61 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                             assetSize: 12,
                           ),
                         ],
-                        onPressed: _toggleAccidental,
+                        onPressed: _toggleNoteModifier,
+                      ),
+                      _CommandSection(
+                        label: labels.agogics,
+                        assetSize: 16.8,
+                        isSelected: _noteModifierState,
+                        commands: <_KottaEditorCommand>[
+                          _KottaEditorCommand(
+                            labels.tenuto,
+                            'a-',
+                            asset: 'tenuto',
+                          ),
+                          _KottaEditorCommand(
+                            labels.staccato,
+                            'a.',
+                            asset: 'pont',
+                            assetSize: 5.6,
+                          ),
+                          _KottaEditorCommand(
+                            labels.marcato,
+                            'a>',
+                            asset: 'marcato1',
+                          ),
+                          _KottaEditorCommand(
+                            labels.martellato,
+                            'a^',
+                            asset: 'marcato2',
+                          ),
+                          _KottaEditorCommand(
+                            labels.fermata,
+                            'aK',
+                            asset: 'koronale',
+                          ),
+                          _KottaEditorCommand(
+                            labels.trill,
+                            'at',
+                            asset: 'trilla1',
+                          ),
+                          _KottaEditorCommand(
+                            labels.lowerTrill,
+                            'aT',
+                            asset: 'trilla2',
+                          ),
+                          _KottaEditorCommand(
+                            labels.mordent,
+                            'am',
+                            asset: 'mordent1',
+                          ),
+                          _KottaEditorCommand(
+                            labels.lowerMordent,
+                            'aM',
+                            asset: 'mordent2',
+                          ),
+                        ],
+                        onPressed: _toggleNoteModifier,
                       ),
                     ],
                   ),

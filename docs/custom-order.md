@@ -113,6 +113,18 @@ Kijelöléskor a választott módosítójelet az összes kijelölt hang megkapja
 korábbi módosítójelük helyett. Ha már mindegyiken ez a módosítójel van,
 a gomb eltávolítja azt. A kijelölésen kívüli hangok és a szünetek változatlanok.
 
+A **Módosítójelek** alatt az **Agogika** sor kilenc grafikus kapcsolója
+található: **Tenuto** (`a-`), **Staccato** (`a.`), **Marcato** (`a>`),
+**Martellato** (`a^`), **Korona** (`aK`), **Trilla** (`at`), **Alsó trilla**
+(`aT`), **Mordent** (`am`) és **Alsó mordent** (`aM`).
+A módosítójelekhez hasonlóan egy sorból egyszerre legfeljebb egy jel
+választható. A következő hang beszúrásakor a jel kódja a hang elé kerül,
+majd a kapcsoló kikapcsol; más jel vagy szünet beszúrása nem használja fel.
+Kijelöléskor minden kijelölt hang megkapja a választott jelet a korábbi
+agogikai jele helyett, vagy elveszíti azt, ha már mindegyiken ez volt.
+A két gombsor független: módosítójel és agogikai jel együtt is alkalmazható,
+egyik cseréje vagy eltávolítása nem változtatja meg a másikat.
+
 A hangmagasság beszúróvezérlői átmenetileg nem érhetők el. A meglévő kották jelei továbbra
 is megjelennek az előnézetben és a vetítésben.
 

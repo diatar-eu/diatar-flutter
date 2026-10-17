@@ -71,6 +71,16 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   sharp: _l10n.kottaEditorSharp,
   doubleFlat: _l10n.kottaEditorDoubleFlat,
   doubleSharp: _l10n.kottaEditorDoubleSharp,
+  agogics: _l10n.kottaEditorAgogics,
+  tenuto: _l10n.kottaEditorTenuto,
+  staccato: _l10n.kottaEditorStaccato,
+  marcato: _l10n.kottaEditorMarcato,
+  martellato: _l10n.kottaEditorMartellato,
+  fermata: _l10n.kottaEditorFermata,
+  trill: _l10n.kottaEditorTrill,
+  lowerTrill: _l10n.kottaEditorLowerTrill,
+  mordent: _l10n.kottaEditorMordent,
+  lowerMordent: _l10n.kottaEditorLowerMordent,
   notes: _l10n.kottaEditorNotes,
   longa: _l10n.kottaEditorLonga,
   brevis: _l10n.kottaEditorBrevis,
@@ -934,319 +944,420 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  group('notation accidentals', () {
-    KottaEditorResult? result;
-    final List<(String, String, String)> accidentals =
-        <(String, String, String)>[
-          (_kottaLabels.flat, 'mb', 'be'),
-          (_kottaLabels.natural, 'm0', 'feloldo'),
-          (_kottaLabels.sharp, 'mk', 'kereszt'),
-          (_kottaLabels.doubleFlat, 'mB', 'bebe'),
-          (_kottaLabels.doubleSharp, 'mK', 'kettoskereszt'),
-        ];
+  for (final bool agogics in <bool>[false, true]) {
+    group('notation ${agogics ? 'agogics' : 'accidentals'}', () {
+      KottaEditorResult? result;
+      final List<(String, String, String)> accidentals = agogics
+          ? <(String, String, String)>[
+              (_kottaLabels.tenuto, 'a-', 'tenuto'),
+              (_kottaLabels.staccato, 'a.', 'pont'),
+              (_kottaLabels.marcato, 'a>', 'marcato1'),
+              (_kottaLabels.martellato, 'a^', 'marcato2'),
+              (_kottaLabels.fermata, 'aK', 'koronale'),
+              (_kottaLabels.trill, 'at', 'trilla1'),
+              (_kottaLabels.lowerTrill, 'aT', 'trilla2'),
+              (_kottaLabels.mordent, 'am', 'mordent1'),
+              (_kottaLabels.lowerMordent, 'aM', 'mordent2'),
+            ]
+          : <(String, String, String)>[
+              (_kottaLabels.flat, 'mb', 'be'),
+              (_kottaLabels.natural, 'm0', 'feloldo'),
+              (_kottaLabels.sharp, 'mk', 'kereszt'),
+              (_kottaLabels.doubleFlat, 'mB', 'bebe'),
+              (_kottaLabels.doubleSharp, 'mK', 'kettoskereszt'),
+            ];
 
-    Future<void> open(
-      WidgetTester tester, {
-      List<String> initial = const <String>[],
-      int cursor = 0,
-    }) async {
-      result = null;
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData.dark(),
-          home: Builder(
-            builder: (context) => TextButton(
-              onPressed: () async {
-                result = await showKottaEditorDialog(
-                  context: context,
-                  labels: _kottaLabels,
-                  previewLineBuilder: (elements) =>
-                      '\\K${elements.map((element) => element.command).join()};',
-                  initialState: KottaEditorInitialState(
-                    elements: <KottaEditorElement>[
-                      for (int index = 0; index < initial.length; index++)
-                        KottaEditorElement(
-                          command: initial[index],
-                          textOffset: index,
-                          isConditional: true,
-                        ),
-                    ],
-                    textLength: initial.length,
-                    kottaCursor: cursor,
-                    textCursor: cursor,
-                    isEditing: initial.isNotEmpty,
-                  ),
-                );
-              },
-              child: Text(_kottaLabels.insertTitle),
+      Future<void> open(
+        WidgetTester tester, {
+        List<String> initial = const <String>[],
+        int cursor = 0,
+      }) async {
+        result = null;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark(),
+            home: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async {
+                  result = await showKottaEditorDialog(
+                    context: context,
+                    labels: _kottaLabels,
+                    previewLineBuilder: (elements) =>
+                        '\\K${elements.map((element) => element.command).join()};',
+                    initialState: KottaEditorInitialState(
+                      elements: <KottaEditorElement>[
+                        for (int index = 0; index < initial.length; index++)
+                          KottaEditorElement(
+                            command: initial[index],
+                            textOffset: index,
+                            isConditional: true,
+                          ),
+                      ],
+                      textLength: initial.length,
+                      kottaCursor: cursor,
+                      textCursor: cursor,
+                      isEditing: initial.isNotEmpty,
+                    ),
+                  );
+                },
+                child: Text(_kottaLabels.insertTitle),
+              ),
             ),
           ),
-        ),
-      );
-      await tester.tap(find.text(_kottaLabels.insertTitle));
-      await tester.pumpAndSettle();
-    }
-
-    Future<void> tap(
-      WidgetTester tester,
-      String label, {
-      String? section,
-    }) async {
-      final Finder button = section == null
-          ? find.byTooltip(label)
-          : find.descendant(
-              of: find
-                  .ancestor(
-                    of: find.text(section),
-                    matching: find.byType(Column),
-                  )
-                  .first,
-              matching: find.byTooltip(label),
-            );
-      await tester.ensureVisible(button);
-      await tester.tap(button);
-      await tester.pump();
-    }
-
-    bool selected(WidgetTester tester, String label) => tester
-        .widget<Semantics>(
-          find.descendant(
-            of: find.byTooltip(label),
-            matching: find.byWidgetPredicate(
-              (widget) =>
-                  widget is Semantics && widget.properties.toggled != null,
-            ),
-          ),
-        )
-        .properties
-        .toggled!;
-
-    testWidgets('icons, exclusive toggles and one-shot dotted note insertion', (
-      tester,
-    ) async {
-      await open(tester);
-      final Finder dottedNotes = find.descendant(
-        of: find
-            .ancestor(
-              of: find.text(_kottaLabels.notes),
-              matching: find.byType(Column),
-            )
-            .first,
-        matching: find.byType(IconButton),
-      );
-      await tester.ensureVisible(dottedNotes);
-      await tester.tap(dottedNotes);
-      await tester.pump();
-      for (final (String label, String _, String asset) in accidentals) {
-        await tap(tester, _kottaLabels.flat);
-        await tap(tester, _kottaLabels.sharp);
-        if (label != _kottaLabels.sharp) {
-          await tap(tester, label);
-        }
-        for (final other in accidentals) {
-          expect(selected(tester, other.$1), other.$1 == label);
-        }
-        final Image image = tester.widget<Image>(
-          find.descendant(
-            of: find.byTooltip(label),
-            matching: find.byType(Image),
-          ),
         );
-        expect(
-          (image.image as AssetImage).assetName,
-          'assets/kotta/$asset.png',
-        );
-        final double expectedSize = asset == 'kettoskereszt' ? 12 : 24;
-        expect(image.width, expectedSize);
-        expect(image.height, expectedSize);
-        expect(image.color, ThemeData.dark().colorScheme.onSurface);
-        await tap(tester, label);
-        expect(selected(tester, label), isFalse);
-        await tap(tester, label);
-        expect(result, isNull);
-        if (label == _kottaLabels.flat) {
-          expect(
-            tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
-            isNull,
-          );
-          await tap(tester, _kottaLabels.gClef);
-        }
-        await tap(
-          tester,
-          _kottaLabels.quarterRest,
-          section: _kottaLabels.rests,
-        );
-        expect(selected(tester, label), isTrue);
-        await tap(
-          tester,
-          _kottaLabels.quarterNote,
-          section: _kottaLabels.notes,
-        );
-        expect(selected(tester, label), isFalse);
-        await tap(
-          tester,
-          _kottaLabels.quarterNote,
-          section: _kottaLabels.notes,
-        );
+        await tester.tap(find.text(_kottaLabels.insertTitle));
+        await tester.pumpAndSettle();
       }
-      await tester.tap(find.text(_kottaLabels.apply));
-      await tester.pumpAndSettle();
-      expect(result!.elements.map((element) => element.command), <String>[
-        'kG',
-        for (int index = 0; index < accidentals.length; index++) ...<String>[
-          's4',
-          if (index == 0) 'R4',
-          accidentals[index].$2,
-          '2g',
-          '2g',
-        ],
-      ]);
-      expect(tester.takeException(), isNull);
-    });
 
-    for (final testCase
-        in <
-          ({
-            String name,
-            List<String> initial,
-            int cursor,
-            int steps,
-            int accidental,
-            bool selected,
-            List<String> expected,
-          })
-        >[
-          (
-            name: 'mixed notes replace modifiers and leave outside notes alone',
-            initial: <String>['mb', '2c', 'mk', '2d', 's4', '2e', 'mK', '2f'],
-            cursor: 0,
-            steps: 4,
-            accidental: 0,
-            selected: false,
-            expected: <String>[
-              'mb',
-              '2c',
-              'mb',
-              '2d',
-              's4',
-              'mb',
-              '2e',
-              'mK',
-              '2f',
-            ],
-          ),
-          (
-            name: 'matching modifiers are removed across intervening commands',
-            initial: <String>['mB', 'r8', '2c', 'mB', 'rt', '2d', 'mb', '2e'],
-            cursor: 0,
-            steps: 2,
-            accidental: 3,
-            selected: true,
-            expected: <String>['r8', '2c', 'rt', '2d', 'mb', '2e'],
-          ),
-          (
-            name: 'reverse selection replaces multiple preceding modifiers',
-            initial: <String>['m0', '2c', 'mb', 'mk', 'r2', '2d', 'mK', '2e'],
-            cursor: 6,
-            steps: -1,
-            accidental: 4,
-            selected: false,
-            expected: <String>['m0', '2c', 'r2', 'mK', '2d', 'mK', '2e'],
-          ),
-          (
-            name:
-                'pitch-only selection at the end replaces an outside modifier',
-            initial: <String>['2c', 'mb', 'r2', '2D'],
-            cursor: 3,
-            steps: 1,
-            accidental: 1,
-            selected: false,
-            expected: <String>['2c', 'r2', 'm0', '2D'],
-          ),
-          (
-            name: 'rest-only selection does not modify or latch an accidental',
-            initial: <String>['mb', 's4', 'mk', '2c'],
-            cursor: 0,
-            steps: 1,
-            accidental: 2,
-            selected: false,
-            expected: <String>['mb', 's4', 'mk', '2c'],
-          ),
-          (
-            name: 'rest consumes a pending modifier before an unmodified note',
-            initial: <String>['mb', 's4', '2c', 'm0', '2d'],
-            cursor: 2,
-            steps: 1,
-            accidental: 0,
-            selected: false,
-            expected: <String>['mb', 's4', 'mb', '2c', 'm0', '2d'],
-          ),
-        ]) {
-      testWidgets(testCase.name, (tester) async {
-        await open(tester, initial: testCase.initial, cursor: testCase.cursor);
-        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-        for (int step = 0; step < testCase.steps.abs(); step++) {
-          await tester.sendKeyEvent(
-            testCase.steps > 0
-                ? LogicalKeyboardKey.arrowRight
-                : LogicalKeyboardKey.arrowLeft,
+      Future<void> tap(
+        WidgetTester tester,
+        String label, {
+        String? section,
+      }) async {
+        final Finder button = section == null
+            ? find.byTooltip(label)
+            : find.descendant(
+                of: find
+                    .ancestor(
+                      of: find.text(section),
+                      matching: find.byType(Column),
+                    )
+                    .first,
+                matching: find.byTooltip(label),
+              );
+        await tester.ensureVisible(button);
+        await tester.tap(button);
+        await tester.pump();
+      }
+
+      bool selected(WidgetTester tester, String label) => tester
+          .widget<Semantics>(
+            find.descendant(
+              of: find.byTooltip(label),
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Semantics && widget.properties.toggled != null,
+              ),
+            ),
+          )
+          .properties
+          .toggled!;
+
+      testWidgets(
+        'icons, exclusive toggles and one-shot dotted note insertion',
+        (tester) async {
+          await open(tester);
+          final Finder dottedNotes = find.descendant(
+            of: find
+                .ancestor(
+                  of: find.text(_kottaLabels.notes),
+                  matching: find.byType(Column),
+                )
+                .first,
+            matching: find.byType(IconButton),
           );
-        }
+          await tester.ensureVisible(dottedNotes);
+          await tester.tap(dottedNotes);
+          await tester.pump();
+          for (final (String label, String _, String asset) in accidentals) {
+            await tap(tester, accidentals[0].$1);
+            await tap(tester, accidentals[2].$1);
+            if (label != accidentals[2].$1) {
+              await tap(tester, label);
+            }
+            for (final other in accidentals) {
+              expect(selected(tester, other.$1), other.$1 == label);
+            }
+            final Image image = tester.widget<Image>(
+              find.descendant(
+                of: find.byTooltip(label),
+                matching: find.byType(Image),
+              ),
+            );
+            expect(
+              (image.image as AssetImage).assetName,
+              'assets/kotta/$asset.png',
+            );
+            final double expectedSize = agogics
+                ? (asset == 'pont' ? 5.6 : 16.8)
+                : asset == 'kettoskereszt'
+                ? 12
+                : 24;
+            expect(image.width, expectedSize);
+            expect(image.height, expectedSize);
+            expect(image.color, ThemeData.dark().colorScheme.onSurface);
+            await tap(tester, label);
+            expect(selected(tester, label), isFalse);
+            await tap(tester, label);
+            expect(result, isNull);
+            if (label == accidentals.first.$1) {
+              expect(
+                tester
+                    .widget<FilledButton>(find.byType(FilledButton))
+                    .onPressed,
+                isNull,
+              );
+              await tap(tester, _kottaLabels.gClef);
+            }
+            if (agogics) {
+              await tap(tester, _kottaLabels.flat);
+              expect(selected(tester, label), isTrue);
+              expect(selected(tester, _kottaLabels.flat), isTrue);
+            }
+            await tap(
+              tester,
+              _kottaLabels.quarterRest,
+              section: _kottaLabels.rests,
+            );
+            expect(selected(tester, label), isTrue);
+            await tap(
+              tester,
+              _kottaLabels.quarterNote,
+              section: _kottaLabels.notes,
+            );
+            expect(selected(tester, label), isFalse);
+            if (agogics) {
+              expect(selected(tester, _kottaLabels.flat), isFalse);
+            }
+            await tap(
+              tester,
+              _kottaLabels.quarterNote,
+              section: _kottaLabels.notes,
+            );
+          }
+          await tester.tap(find.text(_kottaLabels.apply));
+          await tester.pumpAndSettle();
+          expect(result!.elements.map((element) => element.command), <String>[
+            'kG',
+            for (
+              int index = 0;
+              index < accidentals.length;
+              index++
+            ) ...<String>[
+              's4',
+              if (index == 0) 'R4',
+              if (agogics) 'mb',
+              accidentals[index].$2,
+              '2g',
+              '2g',
+            ],
+          ]);
+          expect(tester.takeException(), isNull);
+        },
+      );
+
+      testWidgets('selection changes preserve the other modifier group', (
+        tester,
+      ) async {
+        await open(
+          tester,
+          initial: <String>[
+            'mb',
+            'a-',
+            'r8',
+            '2c',
+            'mk',
+            'a>',
+            '2d',
+            'aK',
+            '2e',
+          ],
+        );
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
         await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
         await tester.pump();
-        final String label = accidentals[testCase.accidental].$1;
-        expect(selected(tester, label), testCase.selected);
+        final String label = agogics
+            ? _kottaLabels.lowerTrill
+            : _kottaLabels.doubleFlat;
         await tap(tester, label);
-        expect(
-          selected(tester, label),
-          testCase.name.startsWith('rest-only') ? false : !testCase.selected,
-        );
-        final ProjectorPainter painter =
-            tester
-                    .widget<CustomPaint>(
-                      find.byWidgetPredicate(
-                        (widget) =>
-                            widget is CustomPaint &&
-                            widget.painter is ProjectorPainter,
-                      ),
-                    )
-                    .painter!
-                as ProjectorPainter;
-        final TextSelection selection =
-            painter.editorCursorOverlay!.kottaSelection!;
-        expect(
-          selection.baseOffset < selection.extentOffset,
-          testCase.steps > 0,
-        );
-        if (!testCase.name.startsWith('rest-only')) {
-          await tap(tester, label);
-          expect(selected(tester, label), testCase.selected);
-          await tap(tester, label);
-        }
+        expect(selected(tester, label), isTrue);
+        await tap(tester, label);
+        expect(selected(tester, label), isFalse);
         await tester.tap(find.text(_kottaLabels.apply));
         await tester.pumpAndSettle();
         expect(
           result!.elements.map((element) => element.command),
-          testCase.expected,
+          agogics
+              ? <String>['mb', 'r8', '2c', 'mk', '2d', 'aK', '2e']
+              : <String>['a-', 'r8', '2c', 'a>', '2d', 'aK', '2e'],
         );
-        expect(
-          result!.elements.every((element) => element.isConditional),
-          isTrue,
-        );
-        for (int index = 0; index < result!.elements.length - 1; index++) {
-          final KottaEditorElement element = result!.elements[index];
-          if (element.command == accidentals[testCase.accidental].$2 &&
-              index >= selection.start &&
-              index < selection.end &&
-              !testCase.name.startsWith('rest-only') &&
-              !testCase.selected) {
-            expect(element.textOffset, result!.elements[index + 1].textOffset);
-          }
-        }
         expect(tester.takeException(), isNull);
       });
-    }
-  });
+
+      for (final testCase
+          in <
+            ({
+              String name,
+              List<String> initial,
+              int cursor,
+              int steps,
+              int accidental,
+              bool selected,
+              List<String> expected,
+            })
+          >[
+            (
+              name:
+                  'mixed notes replace modifiers and leave outside notes alone',
+              initial: <String>['mb', '2c', 'mk', '2d', 's4', '2e', 'mK', '2f'],
+              cursor: 0,
+              steps: 4,
+              accidental: 0,
+              selected: false,
+              expected: <String>[
+                'mb',
+                '2c',
+                'mb',
+                '2d',
+                's4',
+                'mb',
+                '2e',
+                'mK',
+                '2f',
+              ],
+            ),
+            (
+              name:
+                  'matching modifiers are removed across intervening commands',
+              initial: <String>['mB', 'r8', '2c', 'mB', 'rt', '2d', 'mb', '2e'],
+              cursor: 0,
+              steps: 2,
+              accidental: 3,
+              selected: true,
+              expected: <String>['r8', '2c', 'rt', '2d', 'mb', '2e'],
+            ),
+            (
+              name: 'reverse selection replaces multiple preceding modifiers',
+              initial: <String>['m0', '2c', 'mb', 'mk', 'r2', '2d', 'mK', '2e'],
+              cursor: 6,
+              steps: -1,
+              accidental: 4,
+              selected: false,
+              expected: <String>['m0', '2c', 'r2', 'mK', '2d', 'mK', '2e'],
+            ),
+            (
+              name:
+                  'pitch-only selection at the end replaces an outside modifier',
+              initial: <String>['2c', 'mb', 'r2', '2D'],
+              cursor: 3,
+              steps: 1,
+              accidental: 1,
+              selected: false,
+              expected: <String>['2c', 'r2', 'm0', '2D'],
+            ),
+            (
+              name:
+                  'rest-only selection does not modify or latch an accidental',
+              initial: <String>['mb', 's4', 'mk', '2c'],
+              cursor: 0,
+              steps: 1,
+              accidental: 2,
+              selected: false,
+              expected: <String>['mb', 's4', 'mk', '2c'],
+            ),
+            (
+              name:
+                  'rest consumes a pending modifier before an unmodified note',
+              initial: <String>['mb', 's4', '2c', 'm0', '2d'],
+              cursor: 2,
+              steps: 1,
+              accidental: 0,
+              selected: false,
+              expected: <String>['mb', 's4', 'mb', '2c', 'm0', '2d'],
+            ),
+          ]) {
+        testWidgets(testCase.name, (tester) async {
+          String commandForGroup(String command) {
+            if (!agogics) {
+              return command;
+            }
+            return switch (command) {
+              'mb' => 'a-',
+              'm0' => 'a.',
+              'mk' => 'a>',
+              'mB' => 'a^',
+              'mK' => 'aK',
+              _ => command,
+            };
+          }
+
+          final bool acrossRest =
+              agogics && testCase.name.startsWith('rest consumes');
+          final bool initiallySelected = acrossRest || testCase.selected;
+          final List<String> expected = acrossRest
+              ? <String>['s4', '2c', 'a.', '2d']
+              : testCase.expected.map(commandForGroup).toList();
+          await open(
+            tester,
+            initial: testCase.initial.map(commandForGroup).toList(),
+            cursor: testCase.cursor,
+          );
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+          for (int step = 0; step < testCase.steps.abs(); step++) {
+            await tester.sendKeyEvent(
+              testCase.steps > 0
+                  ? LogicalKeyboardKey.arrowRight
+                  : LogicalKeyboardKey.arrowLeft,
+            );
+          }
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+          await tester.pump();
+          final String label = accidentals[testCase.accidental].$1;
+          expect(selected(tester, label), initiallySelected);
+          await tap(tester, label);
+          expect(
+            selected(tester, label),
+            testCase.name.startsWith('rest-only') ? false : !initiallySelected,
+          );
+          final ProjectorPainter painter =
+              tester
+                      .widget<CustomPaint>(
+                        find.byWidgetPredicate(
+                          (widget) =>
+                              widget is CustomPaint &&
+                              widget.painter is ProjectorPainter,
+                        ),
+                      )
+                      .painter!
+                  as ProjectorPainter;
+          final TextSelection selection =
+              painter.editorCursorOverlay!.kottaSelection!;
+          expect(
+            selection.baseOffset < selection.extentOffset,
+            testCase.steps > 0,
+          );
+          if (!testCase.name.startsWith('rest-only')) {
+            await tap(tester, label);
+            expect(selected(tester, label), initiallySelected);
+            await tap(tester, label);
+          }
+          await tester.tap(find.text(_kottaLabels.apply));
+          await tester.pumpAndSettle();
+          expect(result!.elements.map((element) => element.command), expected);
+          expect(
+            result!.elements.every((element) => element.isConditional),
+            isTrue,
+          );
+          for (int index = 0; index < result!.elements.length - 1; index++) {
+            final KottaEditorElement element = result!.elements[index];
+            if (element.command == accidentals[testCase.accidental].$2 &&
+                index >= selection.start &&
+                index < selection.end &&
+                !testCase.name.startsWith('rest-only') &&
+                !initiallySelected) {
+              expect(
+                element.textOffset,
+                result!.elements[index + 1].textOffset,
+              );
+            }
+          }
+          expect(tester.takeException(), isNull);
+        });
+      }
+    });
+  }
 
   for (final bool notes in <bool>[false, true]) {
     testWidgets(
@@ -2046,7 +2157,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SwitchListTile), findsNothing);
-    expect(find.byType(OutlinedButton), findsNWidgets(65));
+    expect(find.byType(OutlinedButton), findsNWidgets(74));
     final Finder barlineSection = find
         .ancestor(
           of: find.text(_kottaLabels.barlines),
@@ -2073,6 +2184,7 @@ void main() {
       _kottaLabels.rests,
       _kottaLabels.notes,
       _kottaLabels.accidentals,
+      _kottaLabels.agogics,
     ]);
 
     final List<(String, String, String)> meters = <(String, String, String)>[
