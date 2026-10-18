@@ -1,4 +1,5 @@
 Hibajavítások
+- A gerendák legfeljebb négy nyolcadot vagy tizenhatodot kötnek össze, hosszabb hangokon nem ívelnek át; a tizenhatodok második gerendája és gerendatöredékei a régi Diatár szabályait követik
 - A vetítő felismeri és helyesen jeleníti meg a 2/7 akkordot
 - A C-kulcsok a kottakód szerinti vonalon jelennek meg
 

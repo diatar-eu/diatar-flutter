@@ -4040,10 +4040,11 @@ class ProjectorPainter extends CustomPainter {
       return;
     }
     if (c1 == ']') {
-      _endBeam(canvas, state, lineGap);
-      state.gerenda = false;
       if (c2 == '3' || c2 == '5') {
         _endTuplet(canvas, state, lineGap);
+      } else {
+        _endBeam(canvas, state, lineGap);
+        state.gerenda = false;
       }
       return;
     }
@@ -4061,6 +4062,7 @@ class ProjectorPainter extends CustomPainter {
     }
 
     if (c1 == 'k') {
+      _endBeam(canvas, state, lineGap);
       state.kulcs = c2;
       final String? clefName = switch (c2) {
         'G' => 'gkulcs',
@@ -4207,6 +4209,9 @@ class ProjectorPainter extends CustomPainter {
       final _KottaNotePos? pos = _notePos(c1, c2);
       if (pos == null) {
         return;
+      }
+      if (state.szaaratlan || (state.ritmus != '8' && state.ritmus != '6')) {
+        _endBeam(canvas, state, lineGap);
       }
       final int l1 = pos.l1;
       final int l2 = pos.l2;
@@ -4381,6 +4386,9 @@ class ProjectorPainter extends CustomPainter {
               rhythm: state.ritmus,
             ),
           );
+          if (state.beamStems.length == 4) {
+            _endBeam(canvas, state, lineGap);
+          }
         } else {
           final Paint stemPaint = Paint()
             ..color = _kottaInkColor
@@ -4943,7 +4951,6 @@ class ProjectorPainter extends CustomPainter {
     final List<_BeamStem> stems = state.beamStems;
     final _BeamStem first = stems.first;
     final _BeamStem last = stems.last;
-    final bool down = first.down;
     final double beamThickness = lineGap * 0.45;
     final Paint beamPaint = Paint()
       ..color = _kottaInkColor
@@ -4955,14 +4962,12 @@ class ProjectorPainter extends CustomPainter {
     );
 
     final double dx = last.x - first.x;
+    double fractionAt(double x) => dx.abs() > 0.0001 ? (x - first.x) / dx : 0;
+    double beamY(double x) =>
+        first.yTip + (last.yTip - first.yTip) * fractionAt(x);
     for (final _BeamStem s in stems) {
-      double yBeam = first.yTip;
-      if (dx.abs() > 0.0001) {
-        yBeam = first.yTip + (last.yTip - first.yTip) * ((s.x - first.x) / dx);
-      }
-      final double yEnd = down
-          ? yBeam - beamThickness / 2
-          : yBeam + beamThickness / 2;
+      final double yEnd =
+          beamY(s.x) + (s.down ? -beamThickness / 2 : beamThickness / 2);
       canvas.drawLine(
         Offset(s.x, s.yHead),
         Offset(s.x, yEnd),
@@ -4972,14 +4977,32 @@ class ProjectorPainter extends CustomPainter {
       );
     }
 
-    final bool has16 = stems.any((s) => s.rhythm == '6');
-    if (has16) {
-      final double off = down ? lineGap * 0.55 : -lineGap * 0.55;
-      canvas.drawLine(
-        Offset(first.x, first.yTip + off),
-        Offset(last.x, last.yTip + off),
-        beamPaint,
-      );
+    final double secondaryGap = beamThickness * 1.5;
+    final double firstOffset = first.down ? -secondaryGap : secondaryGap;
+    final double lastOffset = last.down ? -secondaryGap : secondaryGap;
+    Offset secondaryPoint(double x) => Offset(
+      x,
+      beamY(x) + firstOffset + (lastOffset - firstOffset) * fractionAt(x),
+    );
+    for (int index = 0; index < stems.length; index++) {
+      if (stems[index].rhythm != '6') {
+        continue;
+      }
+      final bool previous16 = index > 0 && stems[index - 1].rhythm == '6';
+      final bool next16 =
+          index + 1 < stems.length && stems[index + 1].rhythm == '6';
+      if (!next16 && previous16) {
+        continue;
+      }
+      final double startX = next16 || index == 0
+          ? stems[index].x
+          : (stems[index - 1].x + stems[index].x) / 2;
+      final double endX = next16
+          ? stems[index + 1].x
+          : index + 1 < stems.length
+          ? (stems[index].x + stems[index + 1].x) / 2
+          : stems[index].x;
+      canvas.drawLine(secondaryPoint(startX), secondaryPoint(endX), beamPaint);
     }
     state.beamStems.clear();
   }

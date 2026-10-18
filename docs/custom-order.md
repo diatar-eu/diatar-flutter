@@ -102,7 +102,13 @@ Az előző hang gerendázását mutatja, és kattintásra a következő beszúrt
 állapotát váltja át; kurzormozgatáskor ismét az előző hanghoz igazodik.
 Kijelöléskor akkor bekapcsolt, ha minden kijelölt hang gerendázott;
 kattintásra csak a kijelölt hangok gerendázását változtatja.
-A gerenda a nyolcad- és tizenhatodhangokat köti össze. A szerkesztő a
+A gerenda legfeljebb négy egymást követő nyolcad- vagy tizenhatodhangot köt
+össze; hosszabb hang, szünet vagy szár nélküli hang megszakítja a csoportot.
+Négy hang után új csoport kezdődik, az egyedül maradó hang zászlót kap.
+A nyolcadok egy, a tizenhatodok két gerendát kapnak; a nyolcadok mellett
+egyedül álló tizenhatod második gerendája a szomszédos nyolcadok felé
+nyúló rövid gerendatöredék.
+A szerkesztő a
 gerendakezdő `[?` kódot az első hang elé, a záró `]?` kódot az utolsó hang
 után helyezi, és eltávolítja a felesleges, ismétlődő gerendakódokat.
 Ritmuskód csak ritmusváltáskor kerül a hang elé.

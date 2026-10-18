@@ -1564,6 +1564,7 @@ void main() {
     (r'\Kr8[?]?[?2g]?2a[?]?;word', r'\Kr8[?2g]?2a;word'),
     (r'\Kr8[?2g2a;word', r'\Kr8[?2g2a]?;word'),
     (r'\Kr8[?2g]?[?2a]?;word', r'\Kr8[?2g]?[?2a]?;word'),
+    (r'\Kr8[?[32g]32a]?;word', r'\Kr8[3[?2g]32a]?;word'),
   ]) {
     testWidgets('beaming normalizes $source without merging separate groups', (
       tester,

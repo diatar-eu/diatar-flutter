@@ -1,5 +1,6 @@
 Új funkciók
 Diasor
+- A gerendázás legfeljebb négy egymást követő nyolcadot vagy tizenhatodot köt össze; a hosszabb hangok megszakítják, a vegyes ritmusú csoportok helyes második gerendát és gerendatöredékeket kapnak
 - A Hang tulajdonság sor új Gerendázás kapcsolója a következő vagy a kijelölt hangok gerendázását állítja; a felesleges gerendakódokat a szerkesztő eltávolítja
 - A Pontozott és száriránykapcsolók bekapcsolva is megtartják a grafika színét és a peremet; a szárirány külön Hang tulajdonság csoportba került, rajzolt nyílhegyes hangjeggyel
 - A száriránygomb kontúros, és kijelöléskor a kijelölt hangok szárirányát is átállítja

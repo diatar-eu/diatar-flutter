@@ -7,7 +7,118 @@ import 'package:diatar_common/utils/transposition_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+class _BeamRecordingCanvas extends Fake implements Canvas {
+  final List<({Offset start, Offset end})> beams = [];
+
+  @override
+  void drawLine(Offset p1, Offset p2, Paint paint) {
+    if (paint.strokeWidth > 2) {
+      beams.add((start: p1, end: p2));
+    }
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+List<({Offset start, Offset end})> _renderBeams(String commands) {
+  final canvas = _BeamRecordingCanvas();
+  ProjectorPainter(
+    frame: TextFrame(
+      record: RecTextRecord(
+        scholaLine: '',
+        title: '',
+        lines: <String>['\\K$commands;word'],
+      ),
+    ),
+    globals: const ProjectionGlobals(
+      autoResize: false,
+      fontSize: 34,
+      hCenter: false,
+      hideTitle: true,
+      useKotta: true,
+    ),
+    settings: const AppSettings(receiverUseKotta: true),
+    allowLineWrapping: false,
+  ).paint(canvas, const Size(1000, 200));
+  return canvas.beams;
+}
+
 void main() {
+  for (final String interruption in <String>[
+    'r42g',
+    'r22g',
+    'r12g',
+    'rb2g',
+    '[02g[1',
+    's8',
+    'kG',
+  ]) {
+    test('beams stop at $interruption without disabling later beaming', () {
+      final beams = _renderBeams('[?r82g2g${interruption}r82g2g]?');
+      expect(beams, hasLength(2));
+      expect(beams.first.end.dx, lessThan(beams.last.start.dx));
+    });
+  }
+
+  for (final int count in <int>[4, 5, 6, 8, 9]) {
+    test('beams contain at most four of $count consecutive notes', () {
+      final beams = _renderBeams('[?r8${List.filled(count, '2g').join()}]?');
+      expect(beams, hasLength(count ~/ 4 + (count % 4 >= 2 ? 1 : 0)));
+      final reference = _renderBeams('[?r82g2g]?').single;
+      final double spacing = (reference.end - reference.start).dx;
+      for (final beam in beams) {
+        expect(
+          (beam.end - beam.start).dx,
+          lessThanOrEqualTo(spacing * 3 + 0.001),
+        );
+      }
+    });
+  }
+
+  for (final String pitch in <String>['2g', '2G']) {
+    for (final (List<String> rhythms, List<(double, double)> spans) in [
+      (['8', '8'], <(double, double)>[]),
+      (['6', '6'], [(0.0, 1.0)]),
+      (['6', '8'], [(0.0, 0.5)]),
+      (['8', '6'], [(0.5, 1.0)]),
+      (['8', '6', '8'], [(0.5, 1.5)]),
+      (['6', '8', '6'], [(0.0, 0.5), (1.5, 2.0)]),
+      (['8', '6', '6', '8'], [(1.0, 2.0)]),
+      (['6', '6', '8', '6'], [(0.0, 1.0), (2.5, 3.0)]),
+      (['6', '6', '6', '6'], [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0)]),
+    ]) {
+      test('sixteenth beams and hooks for $pitch with $rhythms', () {
+        final beams = _renderBeams(
+          '[?${rhythms.map((rhythm) => 'r$rhythm$pitch').join()}]?',
+        );
+        expect(beams, hasLength(1 + spans.length));
+        final primary = beams.first;
+        final double spacing =
+            (primary.end.dx - primary.start.dx) / (rhythms.length - 1);
+        for (int index = 0; index < spans.length; index++) {
+          final secondary = beams[index + 1];
+          expect(
+            secondary.start.dx,
+            closeTo(primary.start.dx + spacing * spans[index].$1, 0.001),
+          );
+          expect(
+            secondary.end.dx,
+            closeTo(primary.start.dx + spacing * spans[index].$2, 0.001),
+          );
+          expect(
+            secondary.start.dy - primary.start.dy,
+            pitch == '2g' ? greaterThan(0) : lessThan(0),
+          );
+        }
+      });
+    }
+  }
+
+  test('tuplet endings do not end a surrounding beam', () {
+    expect(_renderBeams('[?[3r82g2g]32g]?'), hasLength(1));
+  });
+
   test('Diatar chords use Hungarian note names and styled parts', () {
     final DiatarChord chord = DiatarChord.tryParse('H-7+/C+')!;
 

@@ -283,7 +283,9 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     for (final KottaEditorElement element in _elements) {
       if (element.command == '[?') {
         group ??= nextGroup++;
-      } else if (element.command[0] == ']') {
+      } else if (element.command[0] == ']' &&
+          element.command != ']3' &&
+          element.command != ']5') {
         group = null;
       } else if (_isPitch(element.command) && group != null) {
         groups[element] = group;
