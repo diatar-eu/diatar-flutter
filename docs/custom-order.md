@@ -89,7 +89,9 @@ A **Hang** sor a szünetek alatt található. Nyolc grafikus gombja sorrendben:
 szúrnak be, a megelőző hang magasságával; ha a sorban még nincs előtte hang,
 a kezdő hangmagasság `2g`. A szárirány az előző hang irányát követi:
 felfelé kisbetűs, lefelé nagybetűs hangkód kerül beszúrásra.
-A Hang sor nyílgombja mutatja és átkapcsolja a következő beszúrás irányát.
+A Hang sor utáni **Hang tulajdonság** csoport száriránygombja mutatja és
+átkapcsolja a következő beszúrás irányát. A rajzolt hangjegyfej jobb oldalán
+felfelé, illetve bal oldalán lefelé nyílhegyes szár jelzi az aktuális irányt.
 Kijelöléskor a kijelölt hangok szárirányát változtatja meg, a többi jelet
 és a kijelölést megtartva. Vegyes irányú kijelölést először lefelé fordít;
 ha minden kijelölt hang lefelé áll, kattintásra felfelé fordulnak.
@@ -101,7 +103,9 @@ után visszaállítja az eredeti ritmusértéket. Ez kijelölt kottaelemek cser�
 is érvényes.
 
 A **Szünet** és **Hang** sor végén, kis térköz után külön **Pontozott**
-kapcsoló található. Önmagában nem szúr be jelet: bekapcsolva a következő
+kapcsoló található. A Pontozott és a szárirány kapcsoló bekapcsolva is
+megtartja a grafika színét és a gomb peremét; az állapotot a háttérszín jelzi.
+Önmagában a Pontozott kapcsoló nem szúr be jelet: bekapcsolva a következő
 szünetet vagy hangot pontozva szúrja be. A Longa, Brevis és Semi-brevis
 hangokra nincs hatása. Kijelöléskor a kapcsolók a kijelölt szünetek,
 illetve hangok pontozását mutatják és kattintásra módosítják; vegyes

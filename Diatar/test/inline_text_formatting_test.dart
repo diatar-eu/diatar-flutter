@@ -66,6 +66,7 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   rests: _l10n.kottaEditorRests,
   dotted: _l10n.kottaEditorDotted,
   stemDown: _l10n.kottaEditorStemDown,
+  noteProperties: _l10n.kottaEditorNoteProperties,
   accidentals: _l10n.kottaEditorAccidentals,
   flat: _l10n.kottaEditorFlat,
   natural: _l10n.kottaEditorNatural,
@@ -158,10 +159,12 @@ ProjectorEditorCursorOverlay _notationOverlay(WidgetTester tester) =>
 
 Future<void> _openNotationPreview(
   WidgetTester tester,
-  InlineTextEditingController controller,
-) async {
+  InlineTextEditingController controller, {
+  ThemeData? theme,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
+      theme: theme,
       home: Scaffold(
         body: InlineTextEditor(
           controller: controller,
@@ -1363,6 +1366,90 @@ void main() {
     });
   }
 
+  for (final Brightness brightness in Brightness.values) {
+    testWidgets('notation toggles keep their outline and ink in $brightness', (
+      tester,
+    ) async {
+      final controller = InlineTextEditingController.fromDia(r'\K2g;word');
+      final ThemeData theme = ThemeData(brightness: brightness);
+      await _openNotationPreview(tester, controller, theme: theme);
+      Finder section(String label) => find
+          .ancestor(of: find.text(label), matching: find.byType(Column))
+          .first;
+      final Finder stem = find.byWidgetPredicate(
+        (widget) =>
+            widget is IconButton && widget.tooltip == _kottaLabels.stemDown,
+      );
+      expect(
+        find.descendant(of: section(_kottaLabels.notes), matching: stem),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: section(_kottaLabels.noteProperties),
+          matching: stem,
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.getTopLeft(find.text(_kottaLabels.noteProperties)).dy,
+        greaterThan(tester.getTopLeft(find.text(_kottaLabels.notes)).dy),
+      );
+      for (final Finder button in <Finder>[
+        for (final String label in <String>[
+          _kottaLabels.rests,
+          _kottaLabels.notes,
+        ])
+          find.descendant(
+            of: section(label),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is IconButton && widget.tooltip == _kottaLabels.dotted,
+            ),
+          ),
+        stem,
+      ]) {
+        final CustomPainter? beforePainter = button == stem
+            ? (tester.widget<IconButton>(button).icon as CustomPaint).painter
+            : null;
+        for (final bool selected in <bool>[false, true, false]) {
+          if (tester.widget<IconButton>(button).isSelected != selected) {
+            await tester.ensureVisible(button);
+            await tester.tap(button);
+            await tester.pump();
+          }
+          final IconButton widget = tester.widget<IconButton>(button);
+          final Set<WidgetState> states = <WidgetState>{
+            if (selected) WidgetState.selected,
+          };
+          expect(widget.isSelected, selected);
+          expect(
+            widget.style!.foregroundColor!.resolve(states),
+            theme.colorScheme.onSurface,
+          );
+          expect(
+            widget.style!.side!.resolve(states),
+            BorderSide(color: theme.colorScheme.outline),
+          );
+          if (selected) {
+            expect(
+              widget.style!.backgroundColor!.resolve(states),
+              theme.colorScheme.secondaryContainer,
+            );
+            if (beforePainter != null) {
+              final CustomPainter painter =
+                  (widget.icon as CustomPaint).painter!;
+              expect(painter.shouldRepaint(beforePainter), isTrue);
+            }
+          }
+        }
+      }
+      await tester.tap(find.text(_kottaLabels.cancel));
+      await tester.pumpAndSettle();
+      controller.dispose();
+    });
+  }
+
   testWidgets('stem direction follows cursor and supports insertion override', (
     tester,
   ) async {
@@ -1402,6 +1489,7 @@ void main() {
     await tester.ensureVisible(toggle);
     await tester.tap(toggle);
     await tester.pump();
+    await tester.ensureVisible(quarter);
     await tester.tap(quarter);
     await tester.pump();
     expect(down(), isFalse);
@@ -1533,11 +1621,7 @@ void main() {
                 find.descendant(of: section, matching: find.byType(Tooltip)),
               )
               .map((tooltip) => tooltip.message),
-          <String>[
-            ...rests.map((rest) => rest.$1),
-            _kottaLabels.dotted,
-            if (notes) _kottaLabels.stemDown,
-          ],
+          <String>[...rests.map((rest) => rest.$1), _kottaLabels.dotted],
         );
         for (final (String label, String _, String asset) in rests) {
           final Finder button = find.descendant(
@@ -2296,6 +2380,7 @@ void main() {
       _kottaLabels.meters,
       _kottaLabels.rests,
       _kottaLabels.notes,
+      _kottaLabels.noteProperties,
       _kottaLabels.accidentals,
       _kottaLabels.agogics,
     ]);

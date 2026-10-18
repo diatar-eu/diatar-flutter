@@ -99,6 +99,7 @@ class KottaEditorLabels {
     required this.eighthRest,
     required this.sixteenthRest,
     required this.notes,
+    required this.noteProperties,
     required this.longa,
     required this.brevis,
     required this.semibrevis,
@@ -174,6 +175,7 @@ class KottaEditorLabels {
   final String eighthRest;
   final String sixteenthRest;
   final String notes;
+  final String noteProperties;
   final String longa;
   final String brevis;
   final String semibrevis;
@@ -495,6 +497,16 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     _editorFocusNode.requestFocus();
   }
 
+  ButtonStyle _toggleButtonStyle({required bool selected}) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return IconButton.styleFrom(
+      fixedSize: const Size(56, 56),
+      foregroundColor: colors.onSurface,
+      side: BorderSide(color: colors.outline),
+      backgroundColor: selected ? colors.secondaryContainer : null,
+    );
+  }
+
   Widget _dottedButton({required bool rests}) {
     final bool selected = _dottedState(rests: rests);
     return Padding(
@@ -503,12 +515,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
         tooltip: widget.labels.dotted,
         isSelected: selected,
         onPressed: () => _toggleDotted(rests: rests),
-        style: IconButton.styleFrom(
-          fixedSize: const Size(56, 56),
-          backgroundColor: selected
-              ? Theme.of(context).colorScheme.secondaryContainer
-              : null,
-        ),
+        style: _toggleButtonStyle(selected: selected),
         icon: const Icon(Icons.fiber_manual_record, size: 10),
       ),
     );
@@ -1020,28 +1027,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                       ),
                       _CommandSection(
                         label: labels.notes,
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            _dottedButton(rests: false),
-                            const SizedBox(width: 6),
-                            IconButton.outlined(
-                              tooltip: labels.stemDown,
-                              isSelected: _stemDown,
-                              onPressed: _toggleStemDirection,
-                              style: IconButton.styleFrom(
-                                fixedSize: const Size(56, 56),
-                                backgroundColor: _stemDown
-                                    ? Theme.of(
-                                        context,
-                                      ).colorScheme.secondaryContainer
-                                    : null,
-                              ),
-                              icon: const Icon(Icons.arrow_upward),
-                              selectedIcon: const Icon(Icons.arrow_downward),
-                            ),
-                          ],
-                        ),
+                        trailing: _dottedButton(rests: false),
                         assetSize: 24,
                         commands: <_KottaEditorCommand>[
                           _KottaEditorCommand(
@@ -1086,6 +1072,24 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                           ),
                         ],
                         onPressed: _insertCommand,
+                      ),
+                      _CommandSection(
+                        label: labels.noteProperties,
+                        commands: const <_KottaEditorCommand>[],
+                        onPressed: _insertCommand,
+                        trailing: IconButton.outlined(
+                          tooltip: labels.stemDown,
+                          isSelected: _stemDown,
+                          onPressed: _toggleStemDirection,
+                          style: _toggleButtonStyle(selected: _stemDown),
+                          icon: CustomPaint(
+                            size: const Size(24, 24),
+                            painter: _StemDirectionPainter(
+                              down: _stemDown,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
                       ),
                       _CommandSection(
                         label: labels.accidentals,
@@ -1383,6 +1387,43 @@ class _KottaPreviewState extends State<_KottaPreview> {
       ),
     );
   }
+}
+
+class _StemDirectionPainter extends CustomPainter {
+  const _StemDirectionPainter({required this.down, required this.color});
+
+  final bool down;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 24, size.height / 24);
+    if (down) {
+      canvas.translate(24, 24);
+      canvas.rotate(math.pi);
+    }
+    final Paint paint = Paint()..color = color;
+    canvas.drawOval(const Rect.fromLTWH(5, 16, 12, 7), paint);
+    paint
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawLine(const Offset(16, 19), const Offset(16, 2), paint);
+    canvas.drawPath(
+      Path()
+        ..moveTo(12, 6)
+        ..lineTo(16, 2)
+        ..lineTo(20, 6),
+      paint,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_StemDirectionPainter oldDelegate) =>
+      down != oldDelegate.down || color != oldDelegate.color;
 }
 
 class _KottaEditorCommand {
