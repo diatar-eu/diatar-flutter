@@ -77,6 +77,7 @@ class KottaEditorLabels {
     required this.rests,
     required this.dotted,
     required this.stemDown,
+    required this.beaming,
     required this.accidentals,
     required this.flat,
     required this.natural,
@@ -153,6 +154,7 @@ class KottaEditorLabels {
   final String rests;
   final String dotted;
   final String stemDown;
+  final String beaming;
   final String accidentals;
   final String flat;
   final String natural;
@@ -244,6 +246,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   bool _dottedRests = false;
   bool _dottedNotes = false;
   bool? _stemDownOverride;
+  bool? _beamingOverride;
   final Map<String, String> _noteModifiers = <String, String>{};
 
   bool get _isValid => _elements.isNotEmpty;
@@ -271,6 +274,120 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
       _kottaSelection?.start ?? _kottaCursor,
     );
     return _stemDownOverride ?? (pitch == pitch.toUpperCase());
+  }
+
+  Map<KottaEditorElement, int> _beamGroups() {
+    final Map<KottaEditorElement, int> groups = <KottaEditorElement, int>{};
+    int nextGroup = 0;
+    int? group;
+    for (final KottaEditorElement element in _elements) {
+      if (element.command == '[?') {
+        group ??= nextGroup++;
+      } else if (element.command[0] == ']') {
+        group = null;
+      } else if (_isPitch(element.command) && group != null) {
+        groups[element] = group;
+      }
+    }
+    return groups;
+  }
+
+  KottaEditorElement? _precedingNote(int position) {
+    for (int index = position - 1; index >= 0; index--) {
+      if (_isPitch(_elements[index].command)) {
+        return _elements[index];
+      }
+    }
+    return null;
+  }
+
+  bool get _beaming {
+    final Map<KottaEditorElement, int> groups = _beamGroups();
+    final TextSelection? selection = _kottaSelection;
+    if (selection == null) {
+      return _beamingOverride ??
+          groups.containsKey(_precedingNote(_kottaCursor));
+    }
+    final List<KottaEditorElement> notes = _elements
+        .sublist(selection.start, selection.end)
+        .where((element) => _isPitch(element.command))
+        .toList();
+    return notes.isNotEmpty && notes.every(groups.containsKey);
+  }
+
+  void _normalizeBeaming([Map<KottaEditorElement, int>? groups]) {
+    groups ??= _beamGroups();
+    final List<KottaEditorElement> updated = <KottaEditorElement>[];
+    final List<int> positions = List<int>.filled(_elements.length + 1, 0);
+    final List<KottaEditorElement> notes = _elements
+        .where((element) => _isPitch(element.command))
+        .toList();
+    int noteIndex = 0;
+    int? previousGroup;
+    for (int index = 0; index < _elements.length; index++) {
+      positions[index] = updated.length;
+      final KottaEditorElement element = _elements[index];
+      if (element.command == '[?' || element.command == ']?') {
+        continue;
+      }
+      if (!_isPitch(element.command)) {
+        updated.add(element);
+        continue;
+      }
+      final int? group = groups[element];
+      KottaEditorElement marker(String command) => KottaEditorElement(
+        command: command,
+        textOffset: element.textOffset,
+        isConditional: element.isConditional,
+      );
+      if (group != null && group != previousGroup) {
+        updated.add(marker('[?'));
+      }
+      updated.add(element);
+      noteIndex++;
+      final int? nextGroup = noteIndex < notes.length
+          ? groups[notes[noteIndex]]
+          : null;
+      if (group != null && group != nextGroup) {
+        updated.add(marker(']?'));
+      }
+      previousGroup = group;
+    }
+    positions[_elements.length] = updated.length;
+    _kottaCursor = positions[_kottaCursor];
+    if (_kottaSelectionAnchor case final int anchor) {
+      _kottaSelectionAnchor = positions[anchor];
+    }
+    _elements = updated;
+  }
+
+  void _toggleBeaming() {
+    final bool apply = !_beaming;
+    setState(() {
+      final TextSelection? selection = _kottaSelection;
+      if (selection == null) {
+        _beamingOverride = apply;
+        return;
+      }
+      final Map<KottaEditorElement, int> groups = _beamGroups();
+      final int group = groups.values.fold<int>(-1, math.max) + 1;
+      for (final KottaEditorElement element in _elements.sublist(
+        selection.start,
+        selection.end,
+      )) {
+        if (_isPitch(element.command)) {
+          if (apply) {
+            groups[element] = group;
+          } else {
+            groups.remove(element);
+          }
+        }
+      }
+      _normalizeBeaming(groups);
+      _syncTextCursorToKotta();
+      _activeCursorVisible = true;
+    });
+    _editorFocusNode.requestFocus();
   }
 
   void _toggleStemDirection() {
@@ -346,6 +463,8 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
         command = _withDot(command, true);
       }
     }
+    final bool beaming = _beaming;
+    final Map<KottaEditorElement, int> groups = _beamGroups();
     setState(() {
       final TextSelection? selection = _kottaSelection;
       final String followingRhythm = _rhythmBefore(
@@ -358,13 +477,19 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
       }
       _kottaSelectionAnchor = null;
       if (_isRhythm(command)) {
-        _insertNote(command, followingRhythm: followingRhythm);
+        _insertNote(
+          command,
+          followingRhythm: followingRhythm,
+          beaming: beaming,
+          groups: groups,
+        );
       } else {
         _elements.insert(
           _kottaCursor,
           KottaEditorElement(command: command, textOffset: _textCursor),
         );
         _kottaCursor++;
+        _normalizeBeaming(groups);
       }
       _textCursorActive = false;
       _activeCursorVisible = true;
@@ -609,7 +734,15 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     _editorFocusNode.requestFocus();
   }
 
-  void _insertNote(String rhythm, {required String followingRhythm}) {
+  void _insertNote(
+    String rhythm, {
+    required String followingRhythm,
+    required bool beaming,
+    required Map<KottaEditorElement, int> groups,
+  }) {
+    final int group =
+        groups[_precedingNote(_kottaCursor)] ??
+        (groups.values.fold<int>(-1, math.max) + 1);
     final String precedingPitch = _precedingPitch(_kottaCursor);
     final String pitch = _stemDown
         ? precedingPitch.toUpperCase()
@@ -664,6 +797,11 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
         ),
       );
     }
+    if (beaming) {
+      groups[inserted.last] = group;
+    }
+    _normalizeBeaming(groups);
+    _beamingOverride = null;
   }
 
   void _toggleActiveCursor() {
@@ -704,6 +842,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _syncKottaCursorToText() {
     _stemDownOverride = null;
+    _beamingOverride = null;
     _kottaCursor = _elements.indexWhere(
       (element) => element.textOffset > _textCursor,
     );
@@ -714,6 +853,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _syncTextCursorToKotta() {
     _stemDownOverride = null;
+    _beamingOverride = null;
     if (_elements.isNotEmpty) {
       _textCursor = _kottaCursor < _elements.length
           ? _elements[_kottaCursor].textOffset
@@ -1077,18 +1217,40 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                         label: labels.noteProperties,
                         commands: const <_KottaEditorCommand>[],
                         onPressed: _insertCommand,
-                        trailing: IconButton.outlined(
-                          tooltip: labels.stemDown,
-                          isSelected: _stemDown,
-                          onPressed: _toggleStemDirection,
-                          style: _toggleButtonStyle(selected: _stemDown),
-                          icon: CustomPaint(
-                            size: const Size(24, 24),
-                            painter: _StemDirectionPainter(
-                              down: _stemDown,
-                              color: Theme.of(context).colorScheme.onSurface,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            IconButton.outlined(
+                              tooltip: labels.stemDown,
+                              isSelected: _stemDown,
+                              onPressed: _toggleStemDirection,
+                              style: _toggleButtonStyle(selected: _stemDown),
+                              icon: CustomPaint(
+                                size: const Size(24, 24),
+                                painter: _StemDirectionPainter(
+                                  down: _stemDown,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 10),
+                            IconButton.outlined(
+                              tooltip: labels.beaming,
+                              isSelected: _beaming,
+                              onPressed: _toggleBeaming,
+                              style: _toggleButtonStyle(selected: _beaming),
+                              icon: CustomPaint(
+                                size: const Size(24, 24),
+                                painter: _BeamingPainter(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       _CommandSection(
@@ -1189,13 +1351,16 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
           ),
           FilledButton(
             onPressed: _isValid
-                ? () => Navigator.of(context).pop(
-                    KottaEditorResult(
-                      elements: List<KottaEditorElement>.unmodifiable(
-                        _elements,
+                ? () {
+                    _normalizeBeaming();
+                    Navigator.of(context).pop(
+                      KottaEditorResult(
+                        elements: List<KottaEditorElement>.unmodifiable(
+                          _elements,
+                        ),
                       ),
-                    ),
-                  )
+                    );
+                  }
                 : null,
             child: Text(labels.apply),
           ),
@@ -1387,6 +1552,38 @@ class _KottaPreviewState extends State<_KottaPreview> {
       ),
     );
   }
+}
+
+class _BeamingPainter extends CustomPainter {
+  const _BeamingPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 24, size.height / 24);
+    final Paint paint = Paint()..color = color;
+    canvas.drawPath(
+      Path()
+        ..moveTo(3, 8)
+        ..lineTo(21, 3)
+        ..lineTo(21, 7)
+        ..lineTo(3, 12)
+        ..close(),
+      paint,
+    );
+    paint.strokeWidth = 2;
+    for (int index = 0; index < 4; index++) {
+      final double x = 3 + index * 6;
+      final double y = 10 - index * 5 / 3;
+      canvas.drawLine(Offset(x, y), Offset(x, y + 11), paint);
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_BeamingPainter oldDelegate) => color != oldDelegate.color;
 }
 
 class _StemDirectionPainter extends CustomPainter {

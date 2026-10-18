@@ -97,6 +97,14 @@ Kijelöléskor a kijelölt hangok szárirányát változtatja meg, a többi jele
 ha minden kijelölt hang lefelé áll, kattintásra felfelé fordulnak.
 Kurzorváltáskor az irány ismét az új pozíció előtti utolsó hanghoz igazodik;
 előzmény nélkül felfelé álló szár az alapértelmezés.
+A mellette található **Gerendázás** kapcsoló négy összekötött szárat ábrázol.
+Az előző hang gerendázását mutatja, és kattintásra a következő beszúrt hang
+állapotát váltja át; kurzormozgatáskor ismét az előző hanghoz igazodik.
+Kijelöléskor akkor bekapcsolt, ha minden kijelölt hang gerendázott;
+kattintásra csak a kijelölt hangok gerendázását változtatja.
+A gerenda a nyolcad- és tizenhatodhangokat köti össze. A szerkesztő a
+gerendakezdő `[?` kódot az első hang elé, a záró `]?` kódot az utolsó hang
+után helyezi, és eltávolítja a felesleges, ismétlődő gerendakódokat.
 Ritmuskód csak ritmusváltáskor kerül a hang elé.
 A későbbi hangok ritmusa nem változik: szükség esetén a program az új hang
 után visszaállítja az eredeti ritmusértéket. Ez kijelölt kottaelemek cseréjekor

@@ -66,6 +66,7 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   rests: _l10n.kottaEditorRests,
   dotted: _l10n.kottaEditorDotted,
   stemDown: _l10n.kottaEditorStemDown,
+  beaming: _l10n.kottaEditorBeaming,
   noteProperties: _l10n.kottaEditorNoteProperties,
   accidentals: _l10n.kottaEditorAccidentals,
   flat: _l10n.kottaEditorFlat,
@@ -1408,6 +1409,10 @@ void main() {
             ),
           ),
         stem,
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is IconButton && widget.tooltip == _kottaLabels.beaming,
+        ),
       ]) {
         final CustomPainter? beforePainter = button == stem
             ? (tester.widget<IconButton>(button).icon as CustomPaint).painter
@@ -1449,6 +1454,191 @@ void main() {
       controller.dispose();
     });
   }
+
+  testWidgets(
+    'beaming follows the preceding note and resets on cursor movement',
+    (tester) async {
+      final controller = InlineTextEditingController.fromDia(
+        r'\Kr8[?2g2a]?2h;word',
+      );
+      await _openNotationPreview(tester, controller);
+      final Finder toggle = find.byWidgetPredicate(
+        (widget) =>
+            widget is IconButton && widget.tooltip == _kottaLabels.beaming,
+      );
+      bool beamed() => tester.widget<IconButton>(toggle).isSelected!;
+      expect(beamed(), isFalse);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      expect(beamed(), isTrue);
+      await tester.ensureVisible(toggle);
+      await tester.tap(toggle);
+      await tester.pump();
+      expect(beamed(), isFalse);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      expect(beamed(), isTrue);
+      final Finder eighth = find.descendant(
+        of: find
+            .ancestor(
+              of: find.text(_kottaLabels.notes),
+              matching: find.byType(Column),
+            )
+            .first,
+        matching: find.byTooltip(_kottaLabels.eighthNote),
+      );
+      await tester.ensureVisible(eighth);
+      await tester.tap(eighth);
+      await tester.pump();
+      expect(beamed(), isTrue);
+      await tester.ensureVisible(toggle);
+      await tester.tap(toggle);
+      await tester.pump();
+      await tester.ensureVisible(eighth);
+      await tester.tap(eighth);
+      await tester.pump();
+      expect(beamed(), isFalse);
+      await tester.tap(find.text(_kottaLabels.apply));
+      await tester.pumpAndSettle();
+      expect(controller.encodedText, r'\Kr8[?2g2a2a]?2a2h;word');
+      controller.dispose();
+    },
+  );
+
+  for (final bool forward in <bool>[false, true]) {
+    for (final bool apply in <bool>[false, true]) {
+      testWidgets('beaming ${apply ? 'enables' : 'disables'} only the '
+          '${forward ? 'forward' : 'backward'} selection', (tester) async {
+        final controller = InlineTextEditingController.fromDia(
+          apply ? r'\?Kr82g2as42h2d;word' : r'\?Kr8[?2g2as42h2d]?;word',
+        );
+        await _openNotationPreview(tester, controller);
+        // Select the middle two notes and the intervening rest.
+        final int start = apply ? 2 : 3;
+        final int end = apply ? 5 : 6;
+        await tester.tapAt(
+          _kottaPosition(tester, forward ? start : end),
+          kind: ui.PointerDeviceKind.mouse,
+        );
+        await tester.pump();
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        for (int index = 0; index < 3; index++) {
+          await tester.sendKeyEvent(
+            forward
+                ? LogicalKeyboardKey.arrowRight
+                : LogicalKeyboardKey.arrowLeft,
+          );
+        }
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+        final Finder toggle = find.byWidgetPredicate(
+          (widget) =>
+              widget is IconButton && widget.tooltip == _kottaLabels.beaming,
+        );
+        expect(tester.widget<IconButton>(toggle).isSelected, !apply);
+        final bool wasForward =
+            _notationOverlay(tester).kottaSelection!.baseOffset <
+            _notationOverlay(tester).kottaSelection!.extentOffset;
+        await tester.ensureVisible(toggle);
+        await tester.tap(toggle);
+        await tester.pump();
+        expect(tester.widget<IconButton>(toggle).isSelected, apply);
+        final TextSelection selection = _notationOverlay(
+          tester,
+        ).kottaSelection!;
+        expect(selection.baseOffset < selection.extentOffset, wasForward);
+        await tester.tap(find.text(_kottaLabels.apply));
+        await tester.pumpAndSettle();
+        expect(
+          controller.encodedText,
+          apply ? r'\?Kr82g[?2as42h]?2d;word' : r'\?Kr8[?2g]?2as42h[?2d]?;word',
+        );
+        controller.dispose();
+      });
+    }
+  }
+
+  for (final (String source, String expected) in <(String, String)>[
+    (r'\Kr8]?[0[?[?2g[?2a]?]?;word', r'\Kr8[0[?2g2a]?;word'),
+    (r'\Kr8[?]?[?2g]?2a[?]?;word', r'\Kr8[?2g]?2a;word'),
+    (r'\Kr8[?2g2a;word', r'\Kr8[?2g2a]?;word'),
+    (r'\Kr8[?2g]?[?2a]?;word', r'\Kr8[?2g]?[?2a]?;word'),
+  ]) {
+    testWidgets('beaming normalizes $source without merging separate groups', (
+      tester,
+    ) async {
+      final controller = InlineTextEditingController.fromDia(source);
+      await _openNotationPreview(tester, controller);
+      await tester.tap(find.text(_kottaLabels.apply));
+      await tester.pumpAndSettle();
+      expect(controller.encodedText, expected);
+      controller.dispose();
+    });
+  }
+
+  testWidgets('beaming starts a group and extends it on repeated insertions', (
+    tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(r'\Kr82g;word');
+    await _openNotationPreview(tester, controller);
+    final Finder toggle = find.byWidgetPredicate(
+      (widget) =>
+          widget is IconButton && widget.tooltip == _kottaLabels.beaming,
+    );
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pump();
+    final Finder eighth = find.descendant(
+      of: find
+          .ancestor(
+            of: find.text(_kottaLabels.notes),
+            matching: find.byType(Column),
+          )
+          .first,
+      matching: find.byTooltip(_kottaLabels.eighthNote),
+    );
+    for (int index = 0; index < 2; index++) {
+      await tester.ensureVisible(eighth);
+      await tester.tap(eighth);
+      await tester.pump();
+    }
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\Kr82g[?2g2g]?;word');
+    controller.dispose();
+  });
+
+  testWidgets('replacing a beam end does not beam the following notes', (
+    tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(
+      r'\Kr8[?2g2a]?2h2d;word',
+    );
+    await _openNotationPreview(tester, controller);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaSelection!.start, 4);
+    final Finder eighth = find.descendant(
+      of: find
+          .ancestor(
+            of: find.text(_kottaLabels.notes),
+            matching: find.byType(Column),
+          )
+          .first,
+      matching: find.byTooltip(_kottaLabels.eighthNote),
+    );
+    await tester.ensureVisible(eighth);
+    await tester.tap(eighth);
+    await tester.pump();
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\Kr8[?2g2a]?2a2d;word');
+    controller.dispose();
+  });
 
   testWidgets('stem direction follows cursor and supports insertion override', (
     tester,
