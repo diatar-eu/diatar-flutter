@@ -66,6 +66,7 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   rests: _l10n.kottaEditorRests,
   dotted: _l10n.kottaEditorDotted,
   stemDown: _l10n.kottaEditorStemDown,
+  stemless: _l10n.kottaEditorStemless,
   beaming: _l10n.kottaEditorBeaming,
   noteProperties: _l10n.kottaEditorNoteProperties,
   accidentals: _l10n.kottaEditorAccidentals,
@@ -1411,6 +1412,10 @@ void main() {
         stem,
         find.byWidgetPredicate(
           (widget) =>
+              widget is IconButton && widget.tooltip == _kottaLabels.stemless,
+        ),
+        find.byWidgetPredicate(
+          (widget) =>
               widget is IconButton && widget.tooltip == _kottaLabels.beaming,
         ),
       ]) {
@@ -1638,6 +1643,272 @@ void main() {
     await tester.tap(find.text(_kottaLabels.apply));
     await tester.pumpAndSettle();
     expect(controller.encodedText, r'\Kr8[?2g2a]?2a2d;word');
+    controller.dispose();
+  });
+
+  for (final (String source, String expected) in <(String, String)>[
+    (r'\K[1[0[12g[0[1;word', r'\K2g;word'),
+    (r'\K[0[02g[02a[1[12h[1;word', r'\K[02g2a[12h;word'),
+    (r'\?K2g[0s4a.[1|12a[0;word', r'\?K2gs4a.|12a;word'),
+    (r'\K[0[?r82g[02a[1[0]?2h[1[12d;word', r'\K[0r8[?2g2a]?2h[12d;word'),
+    (r'\K[0[1[0;word', 'word'),
+  ]) {
+    testWidgets(
+      'stem mode normalization is minimal and idempotent for $source',
+      (tester) async {
+        final controller = InlineTextEditingController.fromDia(source);
+        for (int pass = 0; pass < 2; pass++) {
+          await _openNotationPreview(tester, controller);
+          await tester.tap(find.text(_kottaLabels.apply));
+          await tester.pumpAndSettle();
+          expect(controller.encodedText, expected);
+          if (expected == 'word') {
+            break;
+          }
+        }
+        controller.dispose();
+      },
+    );
+  }
+
+  for (final bool forward in <bool>[false, true]) {
+    testWidgets('repeated stemless toggles normalize the '
+        '${forward ? 'forward' : 'backward'} selection without moving it', (
+      tester,
+    ) async {
+      final controller = InlineTextEditingController.fromDia(
+        r'\?K2g2a2h2d;word',
+      );
+      await _openNotationPreview(tester, controller);
+      await tester.tapAt(
+        _kottaPosition(tester, forward ? 1 : 3),
+        kind: ui.PointerDeviceKind.mouse,
+      );
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      for (int index = 0; index < 2; index++) {
+        await tester.sendKeyEvent(
+          forward
+              ? LogicalKeyboardKey.arrowRight
+              : LogicalKeyboardKey.arrowLeft,
+        );
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      final Finder toggle = find.byWidgetPredicate(
+        (widget) =>
+            widget is IconButton && widget.tooltip == _kottaLabels.stemless,
+      );
+      await tester.ensureVisible(toggle);
+      for (int cycle = 0; cycle < 3; cycle++) {
+        await tester.tap(toggle);
+        await tester.pump();
+        expect(tester.widget<IconButton>(toggle).isSelected, isTrue);
+        await tester.tap(toggle);
+        await tester.pump();
+        expect(tester.widget<IconButton>(toggle).isSelected, isFalse);
+        expect(
+          _notationOverlay(tester).kottaSelection,
+          TextSelection(
+            baseOffset: forward ? 1 : 3,
+            extentOffset: forward ? 3 : 1,
+          ),
+        );
+      }
+      await tester.tap(find.text(_kottaLabels.apply));
+      await tester.pumpAndSettle();
+      expect(controller.encodedText, r'\?K2g2a2h2d;word');
+      controller.dispose();
+    });
+  }
+
+  testWidgets('stemless follows the preceding note and isolates insertions', (
+    tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(r'\K[02g[12a;word');
+    await _openNotationPreview(tester, controller);
+    final Finder toggle = find.byWidgetPredicate(
+      (widget) =>
+          widget is IconButton && widget.tooltip == _kottaLabels.stemless,
+    );
+    bool stemless() => tester.widget<IconButton>(toggle).isSelected!;
+    expect(stemless(), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(stemless(), isTrue);
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(stemless(), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(stemless(), isTrue);
+    final Finder quarter = find.descendant(
+      of: find
+          .ancestor(
+            of: find.text(_kottaLabels.notes),
+            matching: find.byType(Column),
+          )
+          .first,
+      matching: find.byTooltip(_kottaLabels.quarterNote),
+    );
+    for (int index = 0; index < 2; index++) {
+      await tester.ensureVisible(quarter);
+      await tester.tap(quarter);
+      await tester.pump();
+      expect(stemless(), isTrue);
+    }
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pump();
+    await tester.ensureVisible(quarter);
+    await tester.tap(quarter);
+    await tester.pump();
+    expect(stemless(), isFalse);
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\K[02g2g2g[12g2a;word');
+    controller.dispose();
+  });
+
+  for (final bool forward in <bool>[false, true]) {
+    for (final testCase
+        in <
+          ({
+            String source,
+            int start,
+            int end,
+            int steps,
+            bool selected,
+            String expected,
+          })
+        >[
+          (
+            source: r'\?K2g2as42h2d;word',
+            start: 1,
+            end: 4,
+            steps: 3,
+            selected: false,
+            expected: r'\?K2g[02as42h[12d;word',
+          ),
+          (
+            source: r'\?K[02g2as42h2d;word',
+            start: 2,
+            end: 5,
+            steps: 3,
+            selected: true,
+            expected: r'\?K[02g[12as42h[02d;word',
+          ),
+          (
+            source: r'\?K2g[02a[12h2d;word',
+            start: 1,
+            end: 5,
+            steps: 2,
+            selected: false,
+            expected: r'\?K2g[02a2h[12d;word',
+          ),
+          (
+            source: r'\?K[02g[12a[02h2d;word',
+            start: 2,
+            end: 6,
+            steps: 2,
+            selected: false,
+            expected: r'\?K[02g2a2h2d;word',
+          ),
+          (
+            source: r'\?K[02gs42a;word',
+            start: 2,
+            end: 3,
+            steps: 1,
+            selected: false,
+            expected: r'\?K[02gs42a;word',
+          ),
+          (
+            source: r'\?K2g2a;word',
+            start: 1,
+            end: 2,
+            steps: 1,
+            selected: false,
+            expected: r'\?K2g[02a;word',
+          ),
+        ]) {
+      testWidgets('stemless isolates ${forward ? 'forward' : 'backward'} '
+          'selection in ${testCase.source}', (tester) async {
+        final controller = InlineTextEditingController.fromDia(testCase.source);
+        await _openNotationPreview(tester, controller);
+        await tester.tapAt(
+          _kottaPosition(tester, forward ? testCase.start : testCase.end),
+          kind: ui.PointerDeviceKind.mouse,
+        );
+        await tester.pump();
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        for (int index = 0; index < testCase.steps; index++) {
+          await tester.sendKeyEvent(
+            forward
+                ? LogicalKeyboardKey.arrowRight
+                : LogicalKeyboardKey.arrowLeft,
+          );
+        }
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+        final Finder toggle = find.byWidgetPredicate(
+          (widget) =>
+              widget is IconButton && widget.tooltip == _kottaLabels.stemless,
+        );
+        expect(tester.widget<IconButton>(toggle).isSelected, testCase.selected);
+        await tester.ensureVisible(toggle);
+        await tester.tap(toggle);
+        await tester.pump();
+        expect(
+          tester.widget<IconButton>(toggle).isSelected,
+          testCase.start == 2 && testCase.end == 3 ? false : !testCase.selected,
+        );
+        final TextSelection selection = _notationOverlay(
+          tester,
+        ).kottaSelection!;
+        expect(selection.baseOffset < selection.extentOffset, forward);
+        await tester.tap(find.text(_kottaLabels.apply));
+        await tester.pumpAndSettle();
+        expect(controller.encodedText, testCase.expected);
+        controller.dispose();
+      });
+    }
+  }
+
+  testWidgets('stemless replacement preserves surrounding note modes', (
+    tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(
+      r'\K2g[02a2h[12d;word',
+    );
+    await _openNotationPreview(tester, controller);
+    await tester.tapAt(
+      _kottaPosition(tester, 1),
+      kind: ui.PointerDeviceKind.mouse,
+    );
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    for (int index = 0; index < 2; index++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    }
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    final Finder quarter = find.descendant(
+      of: find
+          .ancestor(
+            of: find.text(_kottaLabels.notes),
+            matching: find.byType(Column),
+          )
+          .first,
+      matching: find.byTooltip(_kottaLabels.quarterNote),
+    );
+    await tester.ensureVisible(quarter);
+    await tester.tap(quarter);
+    await tester.pump();
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\K2g[02g[12d;word');
     controller.dispose();
   });
 

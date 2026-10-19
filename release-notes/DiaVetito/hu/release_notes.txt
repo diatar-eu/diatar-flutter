@@ -4,6 +4,8 @@ Hibajavítások
 - A C-kulcsok a kottakód szerinti vonalon jelennek meg
 
 Közös kiadás
+- A verziószám követi a Diatár kottaszerkesztőjének szárnélküliség-kódokat normalizáló javítását; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének szár nélküli kapcsolóját; a meglévő [0 és [1 kottakódok és a vetítési kódformátum változatlanok
 - A verziószám követi a Diatár kottaszerkesztőjének Gerendázás kapcsolóját; a vetítési kódformátum változatlan
 - A verziószám követi a Diatár kottaszerkesztőjének kapcsoló- és szárirányikon-javítását; a vetítési kódformátum változatlan
 - A verziószám követi a Diatár kijelölt hangokra alkalmazható szárirányváltását; a vetítési kódformátum változatlan

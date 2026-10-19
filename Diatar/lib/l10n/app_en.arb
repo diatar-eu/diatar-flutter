@@ -635,6 +635,7 @@
   "kottaEditorSixteenthRest": "Sixteenth",
   "kottaEditorDotted": "Dotted",
   "kottaEditorStemDown": "Stem direction",
+  "kottaEditorStemless": "Stemless notes",
   "kottaEditorBeaming": "Beaming",
   "kottaEditorAccidentals": "Accidentals",
   "kottaEditorFlat": "Flat",

@@ -112,6 +112,17 @@ A szerkesztő a
 gerendakezdő `[?` kódot az első hang elé, a záró `]?` kódot az utolsó hang
 után helyezi, és eltávolítja a felesleges, ismétlődő gerendakódokat.
 Ritmuskód csak ritmusváltáskor kerül a hang elé.
+A **Szár nélküli hangok** kapcsolót három szár nélküli hangjegy jelzi.
+Bekapcsolva neuma stílusban, szár nélkül kerül be a következő hang (`[0`);
+kikapcsolva ismét száras hangot szúr be (`[1`). A kapcsoló a kurzor előtti
+utolsó hang állapotát követi; kattintással felülbírálható, kurzormozgatáskor
+újra igazodik. Kijelöléskor akkor bekapcsolt, ha minden kijelölt hang szár
+nélküli. Kattintásra csak a kijelölt hangokat változtatja meg, a kijelölés
+előtti és utáni hangok állapota változatlan marad.
+A szerkesztő szerkesztés közben és alkalmazáskor eltávolítja a fölösleges
+`[0` / `[1` kódokat: az ismétléseket, a köztes hang nélküli váltásokat és a
+hang után álló záró váltásokat. Csak a hangok megjelenéséhez szükséges
+állapotváltások maradnak meg.
 A későbbi hangok ritmusa nem változik: szükség esetén a program az új hang
 után visszaállítja az eredeti ritmusértéket. Ez kijelölt kottaelemek cseréjekor
 is érvényes.

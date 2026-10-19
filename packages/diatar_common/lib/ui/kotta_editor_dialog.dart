@@ -77,6 +77,7 @@ class KottaEditorLabels {
     required this.rests,
     required this.dotted,
     required this.stemDown,
+    required this.stemless,
     required this.beaming,
     required this.accidentals,
     required this.flat,
@@ -154,6 +155,7 @@ class KottaEditorLabels {
   final String rests;
   final String dotted;
   final String stemDown;
+  final String stemless;
   final String beaming;
   final String accidentals;
   final String flat;
@@ -246,6 +248,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   bool _dottedRests = false;
   bool _dottedNotes = false;
   bool? _stemDownOverride;
+  bool? _stemlessOverride;
   bool? _beamingOverride;
   final Map<String, String> _noteModifiers = <String, String>{};
 
@@ -303,6 +306,116 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     return null;
   }
 
+  bool _stemlessBefore(int position) {
+    for (int index = position - 1; index >= 0; index--) {
+      final String command = _elements[index].command;
+      if (command == '[0' || command == '[1') {
+        return command == '[0';
+      }
+    }
+    return false;
+  }
+
+  bool get _stemless {
+    final TextSelection? selection = _kottaSelection;
+    if (selection == null) {
+      if (_stemlessOverride case final bool value) {
+        return value;
+      }
+      for (int index = _kottaCursor - 1; index >= 0; index--) {
+        if (_isPitch(_elements[index].command)) {
+          return _stemlessBefore(index);
+        }
+      }
+      return false;
+    }
+    bool found = false;
+    bool stemless = _stemlessBefore(selection.start);
+    for (int index = selection.start; index < selection.end; index++) {
+      final String command = _elements[index].command;
+      if (command == '[0' || command == '[1') {
+        stemless = command == '[0';
+      } else if (_isPitch(command)) {
+        if (!stemless) {
+          return false;
+        }
+        found = true;
+      }
+    }
+    return found;
+  }
+
+  void _toggleStemless() {
+    final bool apply = !_stemless;
+    setState(() {
+      final TextSelection? selection = _kottaSelection;
+      if (selection == null) {
+        _stemlessOverride = apply;
+        return;
+      }
+      if (!_elements
+          .sublist(selection.start, selection.end)
+          .any((element) => _isPitch(element.command))) {
+        return;
+      }
+      final List<KottaEditorElement> updated = <KottaEditorElement>[];
+      bool original = false;
+      bool output = false;
+      int start = 0;
+      int end = 0;
+      for (int index = 0; index <= _elements.length; index++) {
+        if (index == selection.start) {
+          start = updated.length;
+        }
+        if (index == selection.end) {
+          end = updated.length;
+          // Stem mode persists beyond notes: restore it at the selection edge.
+          if (index < _elements.length && output != original) {
+            final KottaEditorElement following = _elements[index];
+            updated.add(
+              KottaEditorElement(
+                command: original ? '[0' : '[1',
+                textOffset: following.textOffset,
+                isConditional: following.isConditional,
+              ),
+            );
+            output = original;
+          }
+        }
+        if (index == _elements.length) {
+          break;
+        }
+        final KottaEditorElement element = _elements[index];
+        final bool selected = index >= selection.start && index < selection.end;
+        if (element.command == '[0' || element.command == '[1') {
+          original = element.command == '[0';
+          if (selected) {
+            continue;
+          }
+          output = original;
+        } else if (selected && _isPitch(element.command) && output != apply) {
+          updated.add(
+            KottaEditorElement(
+              command: apply ? '[0' : '[1',
+              textOffset: element.textOffset,
+              isConditional: element.isConditional,
+            ),
+          );
+          output = apply;
+        }
+        updated.add(element);
+      }
+      _elements = updated;
+      final bool forward = selection.baseOffset < selection.extentOffset;
+      _kottaSelectionAnchor = forward ? start : end;
+      _kottaCursor = forward ? end : start;
+      _normalizeStemMode();
+      _syncTextCursorToKotta();
+      _activeCursorVisible = true;
+    });
+    _editorFocusNode.requestFocus();
+  }
+
   bool get _beaming {
     final Map<KottaEditorElement, int> groups = _beamGroups();
     final TextSelection? selection = _kottaSelection;
@@ -317,7 +430,44 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     return notes.isNotEmpty && notes.every(groups.containsKey);
   }
 
-  void _normalizeBeaming([Map<KottaEditorElement, int>? groups]) {
+  void _normalizeStemMode() {
+    final Set<int> requiredMarkers = <int>{};
+    bool desired = false;
+    bool output = false;
+    int? pendingMarker;
+    for (int index = 0; index < _elements.length; index++) {
+      final String command = _elements[index].command;
+      if (command == '[0' || command == '[1') {
+        desired = command == '[0';
+        pendingMarker = index;
+      } else if (_isPitch(command) &&
+          desired != output &&
+          pendingMarker != null) {
+        requiredMarkers.add(pendingMarker);
+        output = desired;
+      }
+    }
+    final List<KottaEditorElement> updated = <KottaEditorElement>[];
+    final List<int> positions = List<int>.filled(_elements.length + 1, 0);
+    for (int index = 0; index < _elements.length; index++) {
+      positions[index] = updated.length;
+      final KottaEditorElement element = _elements[index];
+      if ((element.command == '[0' || element.command == '[1') &&
+          !requiredMarkers.contains(index)) {
+        continue;
+      }
+      updated.add(element);
+    }
+    positions[_elements.length] = updated.length;
+    _kottaCursor = positions[_kottaCursor];
+    if (_kottaSelectionAnchor case final int anchor) {
+      _kottaSelectionAnchor = positions[anchor];
+    }
+    _elements = updated;
+  }
+
+  void _normalizeCommands([Map<KottaEditorElement, int>? groups]) {
+    _normalizeStemMode();
     groups ??= _beamGroups();
     final List<KottaEditorElement> updated = <KottaEditorElement>[];
     final List<int> positions = List<int>.filled(_elements.length + 1, 0);
@@ -385,7 +535,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
           }
         }
       }
-      _normalizeBeaming(groups);
+      _normalizeCommands(groups);
       _syncTextCursorToKotta();
       _activeCursorVisible = true;
     });
@@ -466,10 +616,14 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
       }
     }
     final bool beaming = _beaming;
+    final bool stemless = _stemless;
     final Map<KottaEditorElement, int> groups = _beamGroups();
     setState(() {
       final TextSelection? selection = _kottaSelection;
       final String followingRhythm = _rhythmBefore(
+        selection?.end ?? _kottaCursor,
+      );
+      final bool followingStemless = _stemlessBefore(
         selection?.end ?? _kottaCursor,
       );
       if (selection != null) {
@@ -483,6 +637,8 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
           command,
           followingRhythm: followingRhythm,
           beaming: beaming,
+          stemless: stemless,
+          followingStemless: followingStemless,
           groups: groups,
         );
       } else {
@@ -491,7 +647,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
           KottaEditorElement(command: command, textOffset: _textCursor),
         );
         _kottaCursor++;
-        _normalizeBeaming(groups);
+        _normalizeCommands(groups);
       }
       _textCursorActive = false;
       _activeCursorVisible = true;
@@ -740,6 +896,8 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     String rhythm, {
     required String followingRhythm,
     required bool beaming,
+    required bool stemless,
+    required bool followingStemless,
     required Map<KottaEditorElement, int> groups,
   }) {
     final int group =
@@ -766,6 +924,11 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     final List<KottaEditorElement> inserted = <KottaEditorElement>[
       if (_rhythmBefore(_kottaCursor) != rhythm)
         KottaEditorElement(command: rhythm, textOffset: _textCursor),
+      if (_stemlessBefore(_kottaCursor) != stemless)
+        KottaEditorElement(
+          command: stemless ? '[0' : '[1',
+          textOffset: _textCursor,
+        ),
       for (final String prefix in <String>['m', 'a'])
         if (_noteModifiers[prefix] case final String command)
           KottaEditorElement(command: command, textOffset: _textCursor),
@@ -774,6 +937,17 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     _noteModifiers.clear();
     _elements.insertAll(_kottaCursor, inserted);
     _kottaCursor += inserted.length;
+    if (_kottaCursor < _elements.length && stemless != followingStemless) {
+      final KottaEditorElement following = _elements[_kottaCursor];
+      _elements.insert(
+        _kottaCursor,
+        KottaEditorElement(
+          command: followingStemless ? '[0' : '[1',
+          textOffset: following.textOffset,
+          isConditional: following.isConditional,
+        ),
+      );
+    }
     for (int index = _kottaCursor; index < _elements.length; index++) {
       final String command = _elements[index].command;
       if (_isPitch(command)) {
@@ -802,8 +976,9 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     if (beaming) {
       groups[inserted.last] = group;
     }
-    _normalizeBeaming(groups);
+    _normalizeCommands(groups);
     _beamingOverride = null;
+    _stemlessOverride = null;
   }
 
   void _toggleActiveCursor() {
@@ -844,6 +1019,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _syncKottaCursorToText() {
     _stemDownOverride = null;
+    _stemlessOverride = null;
     _beamingOverride = null;
     _kottaCursor = _elements.indexWhere(
       (element) => element.textOffset > _textCursor,
@@ -855,6 +1031,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _syncTextCursorToKotta() {
     _stemDownOverride = null;
+    _stemlessOverride = null;
     _beamingOverride = null;
     if (_elements.isNotEmpty) {
       _textCursor = _kottaCursor < _elements.length
@@ -1252,6 +1429,21 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                                 ),
                               ),
                             ),
+                            const SizedBox(width: 10),
+                            IconButton.outlined(
+                              tooltip: labels.stemless,
+                              isSelected: _stemless,
+                              onPressed: _toggleStemless,
+                              style: _toggleButtonStyle(selected: _stemless),
+                              icon: CustomPaint(
+                                size: const Size(24, 24),
+                                painter: _StemlessPainter(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1354,7 +1546,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
           FilledButton(
             onPressed: _isValid
                 ? () {
-                    _normalizeBeaming();
+                    _normalizeCommands();
                     Navigator.of(context).pop(
                       KottaEditorResult(
                         elements: List<KottaEditorElement>.unmodifiable(
@@ -1554,6 +1746,39 @@ class _KottaPreviewState extends State<_KottaPreview> {
       ),
     );
   }
+}
+
+class _StemlessPainter extends CustomPainter {
+  const _StemlessPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 24, size.height / 24);
+    final Paint paint = Paint()..color = color;
+    for (final Offset center in const <Offset>[
+      Offset(4, 15),
+      Offset(12, 9),
+      Offset(20, 12),
+    ]) {
+      canvas.drawPath(
+        Path()
+          ..moveTo(center.dx - 4, center.dy)
+          ..lineTo(center.dx, center.dy - 3)
+          ..lineTo(center.dx + 4, center.dy)
+          ..lineTo(center.dx, center.dy + 3)
+          ..close(),
+        paint,
+      );
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_StemlessPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _BeamingPainter extends CustomPainter {

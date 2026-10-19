@@ -635,6 +635,7 @@
   "kottaEditorSixteenthRest": "Tizenhatod",
   "kottaEditorDotted": "Pontozott",
   "kottaEditorStemDown": "Szár iránya",
+  "kottaEditorStemless": "Szár nélküli hangok",
   "kottaEditorBeaming": "Gerendázás",
   "kottaEditorAccidentals": "Módosítójelek",
   "kottaEditorFlat": "Bé",
