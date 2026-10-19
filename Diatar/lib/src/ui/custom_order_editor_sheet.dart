@@ -3064,6 +3064,7 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
                 dotted: l10n.kottaEditorDotted,
                 stemDown: l10n.kottaEditorStemDown,
                 stemless: l10n.kottaEditorStemless,
+                compact: l10n.kottaEditorCompact,
                 beaming: l10n.kottaEditorBeaming,
                 noteProperties: l10n.kottaEditorNoteProperties,
                 accidentals: l10n.kottaEditorAccidentals,

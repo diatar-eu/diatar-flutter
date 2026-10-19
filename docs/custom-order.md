@@ -123,6 +123,15 @@ A szerkesztő szerkesztés közben és alkalmazáskor eltávolítja a fölösleg
 `[0` / `[1` kódokat: az ismétléseket, a köztes hang nélküli váltásokat és a
 hang után álló záró váltásokat. Csak a hangok megjelenéséhez szükséges
 állapotváltások maradnak meg.
+A **Tömörített** kapcsoló ikonja három szorosan egymás mellett álló negyedhang.
+Bekapcsolva a következő hangtól tömörített kottázást használ (`Rt`),
+kikapcsolva visszatér a normál térközhöz (`rt`). Az előző hang állapotát
+követi, kattintással felülbírálható; kurzormozgatáskor újra igazodik.
+Kijelöléskor akkor bekapcsolt, ha minden kijelölt hang tömörített.
+Kattintásra csak a kijelölésen belüli hangokat módosítja; a kívül maradó
+hangok térköze és a szárnélküliség állapota változatlan marad.
+A fölösleges `Rt` / `rt` kódokat szerkesztés közben és alkalmazáskor
+ugyanúgy eltávolítja, mint a szárnélküliség kódjait.
 A későbbi hangok ritmusa nem változik: szükség esetén a program az új hang
 után visszaállítja az eredeti ritmusértéket. Ez kijelölt kottaelemek cseréjekor
 is érvényes.

@@ -67,6 +67,7 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   dotted: _l10n.kottaEditorDotted,
   stemDown: _l10n.kottaEditorStemDown,
   stemless: _l10n.kottaEditorStemless,
+  compact: _l10n.kottaEditorCompact,
   beaming: _l10n.kottaEditorBeaming,
   noteProperties: _l10n.kottaEditorNoteProperties,
   accidentals: _l10n.kottaEditorAccidentals,
@@ -1235,7 +1236,7 @@ void main() {
               steps: 2,
               accidental: 3,
               selected: true,
-              expected: <String>['r8', '2c', 'rt', '2d', 'mb', '2e'],
+              expected: <String>['r8', '2c', '2d', 'mb', '2e'],
             ),
             (
               name: 'reverse selection replaces multiple preceding modifiers',
@@ -1410,6 +1411,10 @@ void main() {
             ),
           ),
         stem,
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is IconButton && widget.tooltip == _kottaLabels.compact,
+        ),
         find.byWidgetPredicate(
           (widget) =>
               widget is IconButton && widget.tooltip == _kottaLabels.stemless,
@@ -1721,6 +1726,234 @@ void main() {
       controller.dispose();
     });
   }
+
+  for (final (String source, String expected) in <(String, String)>[
+    (r'\KrtRtrt2gRtrt;word', r'\K2g;word'),
+    (r'\KRtRt2gRt2artrt2hrt;word', r'\KRt2g2art2h;word'),
+    (r'\?K2gRts4a.rt|12aRt;word', r'\?K2gs4a.|12a;word'),
+    (r'\K[0Rt[?r82gRt2artRt]?2hrt[12d;word', r'\K[0Rtr8[?2g2a]?2hrt[12d;word'),
+  ]) {
+    testWidgets('compact mode normalizes idempotently for $source', (
+      tester,
+    ) async {
+      final controller = InlineTextEditingController.fromDia(source);
+      for (int pass = 0; pass < 2; pass++) {
+        await _openNotationPreview(tester, controller);
+        await tester.tap(find.text(_kottaLabels.apply));
+        await tester.pumpAndSettle();
+        expect(controller.encodedText, expected);
+      }
+      controller.dispose();
+    });
+  }
+
+  testWidgets('compact follows the cursor and isolates repeated insertions', (
+    tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(
+      r'\Kr8[0Rt2grt2a;word',
+    );
+    await _openNotationPreview(tester, controller);
+    final Finder toggle = find.byWidgetPredicate(
+      (widget) =>
+          widget is IconButton && widget.tooltip == _kottaLabels.compact,
+    );
+    bool compact() => tester.widget<IconButton>(toggle).isSelected!;
+    expect(compact(), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(compact(), isTrue);
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(compact(), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(compact(), isTrue);
+    final Finder quarter = find.descendant(
+      of: find
+          .ancestor(
+            of: find.text(_kottaLabels.notes),
+            matching: find.byType(Column),
+          )
+          .first,
+      matching: find.byTooltip(_kottaLabels.quarterNote),
+    );
+    for (int index = 0; index < 2; index++) {
+      await tester.ensureVisible(quarter);
+      await tester.tap(quarter);
+      await tester.pump();
+      expect(compact(), isTrue);
+    }
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pump();
+    await tester.ensureVisible(quarter);
+    await tester.tap(quarter);
+    await tester.pump();
+    expect(compact(), isFalse);
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\Kr8[0Rt2gr42g2grt2gr82a;word');
+    controller.dispose();
+  });
+
+  for (final bool forward in <bool>[false, true]) {
+    for (final testCase
+        in <
+          ({
+            String source,
+            int start,
+            int end,
+            int steps,
+            bool selected,
+            String expected,
+          })
+        >[
+          (
+            source: r'\?K2g2as42h2d;word',
+            start: 1,
+            end: 4,
+            steps: 3,
+            selected: false,
+            expected: r'\?K2gRt2as42hrt2d;word',
+          ),
+          (
+            source: r'\?KRt2g2as42h2d;word',
+            start: 2,
+            end: 5,
+            steps: 3,
+            selected: true,
+            expected: r'\?KRt2grt2as42hRt2d;word',
+          ),
+          (
+            source: r'\?K[02gRt2art2h2d;word',
+            start: 2,
+            end: 6,
+            steps: 2,
+            selected: false,
+            expected: r'\?K[02gRt2a2hrt2d;word',
+          ),
+          (
+            source: r'\?KRt2gs42a;word',
+            start: 2,
+            end: 3,
+            steps: 1,
+            selected: false,
+            expected: r'\?KRt2gs42a;word',
+          ),
+        ]) {
+      testWidgets('compact isolates ${forward ? 'forward' : 'backward'} '
+          'selection in ${testCase.source}', (tester) async {
+        final controller = InlineTextEditingController.fromDia(testCase.source);
+        await _openNotationPreview(tester, controller);
+        await tester.tapAt(
+          _kottaPosition(tester, forward ? testCase.start : testCase.end),
+          kind: ui.PointerDeviceKind.mouse,
+        );
+        await tester.pump();
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        for (int index = 0; index < testCase.steps; index++) {
+          await tester.sendKeyEvent(
+            forward
+                ? LogicalKeyboardKey.arrowRight
+                : LogicalKeyboardKey.arrowLeft,
+          );
+        }
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+        final Finder toggle = find.byWidgetPredicate(
+          (widget) =>
+              widget is IconButton && widget.tooltip == _kottaLabels.compact,
+        );
+        expect(tester.widget<IconButton>(toggle).isSelected, testCase.selected);
+        await tester.ensureVisible(toggle);
+        await tester.tap(toggle);
+        await tester.pump();
+        final TextSelection selection = _notationOverlay(
+          tester,
+        ).kottaSelection!;
+        expect(selection.baseOffset < selection.extentOffset, forward);
+        await tester.tap(find.text(_kottaLabels.apply));
+        await tester.pumpAndSettle();
+        expect(controller.encodedText, testCase.expected);
+        controller.dispose();
+      });
+    }
+  }
+
+  testWidgets('compact and stemless insertion overrides remain independent', (
+    tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(r'\K2g2a;word');
+    await _openNotationPreview(tester, controller);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    for (final String label in <String>[
+      _kottaLabels.compact,
+      _kottaLabels.stemless,
+    ]) {
+      final Finder toggle = find.byWidgetPredicate(
+        (widget) => widget is IconButton && widget.tooltip == label,
+      );
+      await tester.ensureVisible(toggle);
+      await tester.tap(toggle);
+      await tester.pump();
+    }
+    final Finder quarter = find.descendant(
+      of: find
+          .ancestor(
+            of: find.text(_kottaLabels.notes),
+            matching: find.byType(Column),
+          )
+          .first,
+      matching: find.byTooltip(_kottaLabels.quarterNote),
+    );
+    await tester.ensureVisible(quarter);
+    await tester.tap(quarter);
+    await tester.pump();
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\K2g[0Rt2grt[12a;word');
+    controller.dispose();
+  });
+
+  testWidgets('compact replacement preserves surrounding note modes', (
+    tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(
+      r'\K2gRt2a2hrt2d;word',
+    );
+    await _openNotationPreview(tester, controller);
+    await tester.tapAt(
+      _kottaPosition(tester, 1),
+      kind: ui.PointerDeviceKind.mouse,
+    );
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    for (int index = 0; index < 2; index++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    }
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    final Finder quarter = find.descendant(
+      of: find
+          .ancestor(
+            of: find.text(_kottaLabels.notes),
+            matching: find.byType(Column),
+          )
+          .first,
+      matching: find.byTooltip(_kottaLabels.quarterNote),
+    );
+    await tester.ensureVisible(quarter);
+    await tester.tap(quarter);
+    await tester.pump();
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\K2gRt2grt2d;word');
+    controller.dispose();
+  });
 
   testWidgets('stemless follows the preceding note and isolates insertions', (
     tester,
@@ -2264,17 +2497,7 @@ void main() {
           steps: 1,
           rests: false,
           selected: false,
-          expected: <String>[
-            'r8',
-            '2c',
-            'R8',
-            '2d',
-            's4',
-            '|1',
-            'rt',
-            'r8',
-            '2e',
-          ],
+          expected: <String>['r8', '2c', 'R8', '2d', 's4', '|1', 'r8', '2e'],
         ),
         (
           name: 'implicit default quarter rhythm is restored after selection',
@@ -2507,7 +2730,7 @@ void main() {
           cursor: 5,
           rhythms: <String>['r2'],
           selectNext: false,
-          expected: <String>['r2', '1g', 's8', '|1', 'Rt', '1g'],
+          expected: <String>['r2', '1g', 's8', '|1', '1g'],
         ),
         (
           name: 'upper ledger pitch is inherited',
@@ -2558,7 +2781,7 @@ void main() {
           cursor: 2,
           rhythms: <String>['r4'],
           selectNext: false,
-          expected: <String>['R4', '2e', 'r4', '2e', 'R4', 'rt', '2f'],
+          expected: <String>['R4', '2e', 'r4', '2e', 'R4', '2f'],
         ),
         (
           name: 'replacing selection preserves the rhythm at its original end',

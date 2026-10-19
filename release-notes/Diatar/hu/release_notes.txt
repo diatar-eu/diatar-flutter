@@ -1,5 +1,6 @@
 Új funkciók
 Diasor
+- A Hang tulajdonság sor új Tömörített kapcsolója az előző hangot követi, a következő hang vagy a kijelölés tömörített kottázását állítja, és eltávolítja a fölösleges Rt/rt kódokat
 - A kottaszerkesztő eltávolítja a fölösleges szárnélküliség-kódokat: az ismétléseket, a hang nélküli állapotváltásokat és a záró kódokat is, a hangok megjelenésének változtatása nélkül
 - A Hang tulajdonság sor új Szár nélküli hangok kapcsolója neuma stílusú hangbeszúrást és kijelölésen belüli váltást tesz lehetővé, a kívül maradó hangok változtatása nélkül
 - A gerendázás legfeljebb négy egymást követő nyolcadot vagy tizenhatodot köt össze; a hosszabb hangok megszakítják, a vegyes ritmusú csoportok helyes második gerendát és gerendatöredékeket kapnak
