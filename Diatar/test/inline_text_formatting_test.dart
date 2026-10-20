@@ -70,6 +70,8 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   compact: _l10n.kottaEditorCompact,
   lowerSlur: _l10n.kottaEditorLowerSlur,
   upperSlur: _l10n.kottaEditorUpperSlur,
+  triplet: _l10n.kottaEditorTriplet,
+  quintuplet: _l10n.kottaEditorQuintuplet,
   beaming: _l10n.kottaEditorBeaming,
   noteProperties: _l10n.kottaEditorNoteProperties,
   accidentals: _l10n.kottaEditorAccidentals,
@@ -1416,6 +1418,8 @@ void main() {
         for (final String label in <String>[
           _kottaLabels.lowerSlur,
           _kottaLabels.upperSlur,
+          _kottaLabels.triplet,
+          _kottaLabels.quintuplet,
         ])
           find.byWidgetPredicate(
             (widget) => widget is IconButton && widget.tooltip == label,
@@ -1583,7 +1587,7 @@ void main() {
     (r'\Kr8[?]?[?2g]?2a[?]?;word', r'\Kr8[?2g]?2a;word'),
     (r'\Kr8[?2g2a;word', r'\Kr8[?2g2a]?;word'),
     (r'\Kr8[?2g]?[?2a]?;word', r'\Kr8[?2g]?[?2a]?;word'),
-    (r'\Kr8[?[32g]32a]?;word', r'\Kr8[3[?2g]32a]?;word'),
+    (r'\Kr8[?[32g]32a]?;word', r'\Kr8[?[32g]32a]?;word'),
   ]) {
     testWidgets('beaming normalizes $source without merging separate groups', (
       tester,
@@ -1928,141 +1932,182 @@ void main() {
     controller.dispose();
   });
 
-  for (final String direction in <String>['a', 'f']) {
-    final String label = direction == 'a'
-        ? _kottaLabels.lowerSlur
-        : _kottaLabels.upperSlur;
-    final String otherLabel = direction == 'a'
-        ? _kottaLabels.upperSlur
-        : _kottaLabels.lowerSlur;
-    final String other = direction == 'a' ? 'f' : 'a';
+  for (final bool tuplets in <bool>[false, true]) {
+    for (final String direction
+        in tuplets ? <String>['3', '5'] : <String>['a', 'f']) {
+      final String open = tuplets ? '[' : '(';
+      final String close = tuplets ? ']' : ')';
+      final String family = tuplets ? 'tuplet' : 'slur';
+      final String label = tuplets
+          ? (direction == '3' ? _kottaLabels.triplet : _kottaLabels.quintuplet)
+          : direction == 'a'
+          ? _kottaLabels.lowerSlur
+          : _kottaLabels.upperSlur;
+      final String otherLabel = tuplets
+          ? (direction == '3' ? _kottaLabels.quintuplet : _kottaLabels.triplet)
+          : direction == 'a'
+          ? _kottaLabels.upperSlur
+          : _kottaLabels.lowerSlur;
+      final String other = tuplets
+          ? (direction == '3' ? '5' : '3')
+          : direction == 'a'
+          ? 'f'
+          : 'a';
 
-    testWidgets(
-      '$direction slur follows cursor and extends repeated insertions',
-      (tester) async {
-        final controller = InlineTextEditingController.fromDia(
-          '\\Kr8($direction'
-          '2g2a)$direction'
-          '2h;word',
-        );
-        await _openNotationPreview(tester, controller);
-        Finder button(String tooltip) => find.byWidgetPredicate(
-          (widget) => widget is IconButton && widget.tooltip == tooltip,
-        );
-        bool selected(String tooltip) =>
-            tester.widget<IconButton>(button(tooltip)).isSelected!;
-        expect(selected(label), isFalse);
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-        await tester.pump();
-        expect(selected(label), isTrue);
-        await tester.ensureVisible(button(otherLabel));
-        await tester.tap(button(otherLabel));
-        await tester.pump();
-        expect(selected(otherLabel), isTrue);
-        expect(selected(label), isFalse);
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-        await tester.pump();
-        expect(selected(label), isTrue);
-        expect(selected(otherLabel), isFalse);
-        final Finder eighth = find.descendant(
-          of: find
-              .ancestor(
-                of: find.text(_kottaLabels.notes),
-                matching: find.byType(Column),
-              )
-              .first,
-          matching: find.byTooltip(_kottaLabels.eighthNote),
-        );
-        for (int index = 0; index < 2; index++) {
+      testWidgets(
+        '$direction $family follows cursor and extends repeated insertions',
+        (tester) async {
+          final controller = InlineTextEditingController.fromDia(
+            '\\Kr8$open$direction'
+            '2g2a$close$direction'
+            '2h;word',
+          );
+          await _openNotationPreview(tester, controller);
+          Finder button(String tooltip) => find.byWidgetPredicate(
+            (widget) => widget is IconButton && widget.tooltip == tooltip,
+          );
+          bool selected(String tooltip) =>
+              tester.widget<IconButton>(button(tooltip)).isSelected!;
+          expect(selected(label), isFalse);
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+          await tester.pump();
+          expect(selected(label), isTrue);
+          await tester.ensureVisible(button(otherLabel));
+          await tester.tap(button(otherLabel));
+          await tester.pump();
+          expect(selected(otherLabel), isTrue);
+          expect(selected(label), isFalse);
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+          await tester.pump();
+          expect(selected(label), isTrue);
+          expect(selected(otherLabel), isFalse);
+          final Finder eighth = find.descendant(
+            of: find
+                .ancestor(
+                  of: find.text(_kottaLabels.notes),
+                  matching: find.byType(Column),
+                )
+                .first,
+            matching: find.byTooltip(_kottaLabels.eighthNote),
+          );
+          for (int index = 0; index < 2; index++) {
+            await tester.ensureVisible(eighth);
+            await tester.tap(eighth);
+            await tester.pump();
+            expect(selected(label), isTrue);
+          }
+          await tester.ensureVisible(button(label));
+          await tester.tap(button(label));
+          await tester.pump();
+          expect(selected(label), isFalse);
           await tester.ensureVisible(eighth);
           await tester.tap(eighth);
           await tester.pump();
-          expect(selected(label), isTrue);
-        }
-        await tester.ensureVisible(button(label));
-        await tester.tap(button(label));
-        await tester.pump();
-        expect(selected(label), isFalse);
-        await tester.ensureVisible(eighth);
-        await tester.tap(eighth);
-        await tester.pump();
-        await tester.tap(find.text(_kottaLabels.apply));
-        await tester.pumpAndSettle();
-        expect(
-          controller.encodedText,
-          '\\Kr8($direction'
-          '2g2a2a2a)$direction'
-          '2a2h;word',
-        );
-        controller.dispose();
-      },
-    );
-
-    for (final bool forward in <bool>[false, true]) {
-      for (final String initial in <String>['', direction, other]) {
-        testWidgets('$direction slur edits ${forward ? 'forward' : 'backward'} '
-            'selection with initial $initial slur', (tester) async {
-          final bool existing = initial.isNotEmpty;
-          final controller = InlineTextEditingController.fromDia(
-            '\\?Kr8${existing ? '($initial' : ''}'
-            '2g2as42h2d${existing ? ')$initial' : ''};word',
-          );
-          await _openNotationPreview(tester, controller);
-          final int start = existing ? 3 : 2;
-          final int end = existing ? 6 : 5;
-          await tester.tapAt(
-            _kottaPosition(tester, forward ? start : end),
-            kind: ui.PointerDeviceKind.mouse,
-          );
-          await tester.pump();
-          await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-          for (int index = 0; index < 3; index++) {
-            await tester.sendKeyEvent(
-              forward
-                  ? LogicalKeyboardKey.arrowRight
-                  : LogicalKeyboardKey.arrowLeft,
-            );
-          }
-          await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-          await tester.pump();
-          final Finder toggle = find.byWidgetPredicate(
-            (widget) => widget is IconButton && widget.tooltip == label,
-          );
-          expect(
-            tester.widget<IconButton>(toggle).isSelected,
-            initial == direction,
-          );
-          await tester.ensureVisible(toggle);
-          await tester.tap(toggle);
-          await tester.pump();
-          expect(
-            tester.widget<IconButton>(toggle).isSelected,
-            initial != direction,
-          );
-          final TextSelection selection = _notationOverlay(
-            tester,
-          ).kottaSelection!;
-          expect(selection.baseOffset < selection.extentOffset, forward);
           await tester.tap(find.text(_kottaLabels.apply));
           await tester.pumpAndSettle();
-          final String middle = initial == direction
-              ? '2as42h'
-              : '($direction'
-                    '2as42h)$direction';
           expect(
             controller.encodedText,
-            '\\?Kr8${existing ? '($initial' : ''}2g'
-            '${existing ? ')$initial' : ''}$middle'
-            '${existing ? '($initial' : ''}2d'
-            '${existing ? ')$initial' : ''};word',
+            '\\Kr8$open$direction'
+            '2g2a2a2a$close$direction'
+            '2a2h;word',
           );
           controller.dispose();
-        });
+        },
+      );
+
+      for (final bool forward in <bool>[false, true]) {
+        for (final String initial in <String>['', direction, other]) {
+          testWidgets(
+            '$direction $family edits ${forward ? 'forward' : 'backward'} '
+            'selection with initial $initial $family',
+            (tester) async {
+              final bool existing = initial.isNotEmpty;
+              final controller = InlineTextEditingController.fromDia(
+                '\\?Kr8${existing ? '$open$initial' : ''}'
+                '2g2as42h2d${existing ? '$close$initial' : ''};word',
+              );
+              await _openNotationPreview(tester, controller);
+              final int start = existing ? 3 : 2;
+              final int end = existing ? 6 : 5;
+              await tester.tapAt(
+                _kottaPosition(tester, forward ? start : end),
+                kind: ui.PointerDeviceKind.mouse,
+              );
+              await tester.pump();
+              await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+              for (int index = 0; index < 3; index++) {
+                await tester.sendKeyEvent(
+                  forward
+                      ? LogicalKeyboardKey.arrowRight
+                      : LogicalKeyboardKey.arrowLeft,
+                );
+              }
+              await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+              await tester.pump();
+              final Finder toggle = find.byWidgetPredicate(
+                (widget) => widget is IconButton && widget.tooltip == label,
+              );
+              expect(
+                tester.widget<IconButton>(toggle).isSelected,
+                initial == direction,
+              );
+              await tester.ensureVisible(toggle);
+              await tester.tap(toggle);
+              await tester.pump();
+              expect(
+                tester.widget<IconButton>(toggle).isSelected,
+                initial != direction,
+              );
+              final TextSelection selection = _notationOverlay(
+                tester,
+              ).kottaSelection!;
+              expect(selection.baseOffset < selection.extentOffset, forward);
+              await tester.tap(find.text(_kottaLabels.apply));
+              await tester.pumpAndSettle();
+              final String middle = initial == direction
+                  ? '2as42h'
+                  : '$open$direction'
+                        '2as42h$close$direction';
+              expect(
+                controller.encodedText,
+                '\\?Kr8${existing ? '$open$initial' : ''}2g'
+                '${existing ? '$close$initial' : ''}$middle'
+                '${existing ? '$open$initial' : ''}2d'
+                '${existing ? '$close$initial' : ''};word',
+              );
+              controller.dispose();
+            },
+          );
+        }
       }
     }
   }
 
+  for (final (String source, String expected) in <(String, String)>[
+    (r'\K]3[3[52g2a]5]5;word', r'\K[52g2a]5;word'),
+    (r'\K[3]32g[5]5;word', r'\K2g;word'),
+    (r'\K[32g2a;word', r'\K[32g2a]3;word'),
+    (r'\K[32g]3[32a]3;word', r'\K[32g]3[32a]3;word'),
+    (r'\K[32g[52a2h]3;word', r'\K[32g]3[52a2h]5;word'),
+    (
+      r'\Kr8Rt[0[?(a[32g2a]3)a]?rt[12h;word',
+      r'\Kr8Rt[0[?(a[32g2a]3)a]?rt[12h;word',
+    ),
+  ]) {
+    testWidgets('tuplet normalization is idempotent for $source', (
+      tester,
+    ) async {
+      final controller = InlineTextEditingController.fromDia(source);
+      for (int pass = 0; pass < 2; pass++) {
+        await _openNotationPreview(tester, controller);
+        await tester.tap(find.text(_kottaLabels.apply));
+        await tester.pumpAndSettle();
+        expect(controller.encodedText, expected);
+      }
+      controller.dispose();
+    });
+  }
   for (final (String source, String expected) in <(String, String)>[
     (r'\K)a(a(f2g2a)f)f;word', r'\K(f2g2a)f;word'),
     (r'\K(a)a2g(f)f;word', r'\K2g;word'),
@@ -2082,18 +2127,115 @@ void main() {
     });
   }
 
-  testWidgets('slur selection replacement does not capture following notes', (
+  for (final bool tuplets in <bool>[false, true]) {
+    final String open = tuplets ? '[3' : '(a';
+    final String close = tuplets ? ']3' : ')a';
+    final String family = tuplets ? 'tuplet' : 'slur';
+    testWidgets(
+      '$family selection replacement does not capture following notes',
+      (tester) async {
+        final controller = InlineTextEditingController.fromDia(
+          '\\Kr8${open}2g2a${close}2h2d;word',
+        );
+        await _openNotationPreview(tester, controller);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+        final Finder eighth = find.descendant(
+          of: find
+              .ancestor(
+                of: find.text(_kottaLabels.notes),
+                matching: find.byType(Column),
+              )
+              .first,
+          matching: find.byTooltip(_kottaLabels.eighthNote),
+        );
+        await tester.ensureVisible(eighth);
+        await tester.tap(eighth);
+        await tester.pump();
+        await tester.tap(find.text(_kottaLabels.apply));
+        await tester.pumpAndSettle();
+        expect(controller.encodedText, '\\Kr8${open}2g2a${close}2a2d;word');
+        controller.dispose();
+      },
+    );
+
+    for (final (String source, int steps, String expected)
+        in <(String, int, String)>[
+          (
+            '\\K${open}2g$close${tuplets ? '[5' : '(f'}2a${tuplets ? ']5' : ')f'}2h;word',
+            2,
+            '\\K${open}2g2a${close}2h;word',
+          ),
+          ('\\K${open}2g${close}2a2h;word', 2, '\\K${open}2g2a${close}2h;word'),
+          (r'\Ks42g;word', 1, r'\Ks42g;word'),
+          (r'\K2g2a;word', 2, '\\K${open}2g2a$close;word'),
+        ]) {
+      testWidgets('$family handles mixed and rest-only selections in $source', (
+        tester,
+      ) async {
+        final controller = InlineTextEditingController.fromDia(source);
+        await _openNotationPreview(tester, controller);
+        for (int index = 0; index < 4; index++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        }
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        for (int index = 0; index < steps; index++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        }
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+        final Finder lower = find.byWidgetPredicate(
+          (widget) =>
+              widget is IconButton &&
+              widget.tooltip ==
+                  (tuplets ? _kottaLabels.triplet : _kottaLabels.lowerSlur),
+        );
+        final Finder upper = find.byWidgetPredicate(
+          (widget) =>
+              widget is IconButton &&
+              widget.tooltip ==
+                  (tuplets ? _kottaLabels.quintuplet : _kottaLabels.upperSlur),
+        );
+        expect(tester.widget<IconButton>(lower).isSelected, isFalse);
+        expect(tester.widget<IconButton>(upper).isSelected, isFalse);
+        await tester.ensureVisible(lower);
+        for (int cycle = 0; cycle < 3; cycle++) {
+          await tester.tap(lower);
+          await tester.pump();
+          if (cycle < 2) {
+            await tester.tap(lower);
+            await tester.pump();
+          }
+        }
+        await tester.tap(find.text(_kottaLabels.apply));
+        await tester.pumpAndSettle();
+        expect(controller.encodedText, expected);
+        controller.dispose();
+      });
+    }
+  }
+
+  testWidgets('tuplet and slur insertion overrides are independent', (
     tester,
   ) async {
     final controller = InlineTextEditingController.fromDia(
-      r'\Kr8(a2g2a)a2h2d;word',
+      r'\Kr8[?2g2a]?;word',
     );
     await _openNotationPreview(tester, controller);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.pump();
+    for (final String label in <String>[
+      _kottaLabels.lowerSlur,
+      _kottaLabels.quintuplet,
+    ]) {
+      final Finder toggle = find.byWidgetPredicate(
+        (widget) => widget is IconButton && widget.tooltip == label,
+      );
+      await tester.ensureVisible(toggle);
+      await tester.tap(toggle);
+      await tester.pump();
+    }
     final Finder eighth = find.descendant(
       of: find
           .ancestor(
@@ -2103,61 +2245,16 @@ void main() {
           .first,
       matching: find.byTooltip(_kottaLabels.eighthNote),
     );
-    await tester.ensureVisible(eighth);
-    await tester.tap(eighth);
-    await tester.pump();
+    for (int index = 0; index < 2; index++) {
+      await tester.ensureVisible(eighth);
+      await tester.tap(eighth);
+      await tester.pump();
+    }
     await tester.tap(find.text(_kottaLabels.apply));
     await tester.pumpAndSettle();
-    expect(controller.encodedText, r'\Kr8(a2g2a)a2a2d;word');
+    expect(controller.encodedText, r'\Kr8[?2g2a(a[52a2a]5)a]?;word');
     controller.dispose();
   });
-
-  for (final (String source, int steps, String expected)
-      in <(String, int, String)>[
-        (r'\K(a2g)a(f2a)f2h;word', 2, r'\K(a2g2a)a2h;word'),
-        (r'\K(a2g)a2a2h;word', 2, r'\K(a2g2a)a2h;word'),
-        (r'\Ks42g;word', 1, r'\Ks42g;word'),
-        (r'\K2g2a;word', 2, r'\K(a2g2a)a;word'),
-      ]) {
-    testWidgets('slur handles mixed and rest-only selections in $source', (
-      tester,
-    ) async {
-      final controller = InlineTextEditingController.fromDia(source);
-      await _openNotationPreview(tester, controller);
-      for (int index = 0; index < 4; index++) {
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-      }
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-      for (int index = 0; index < steps; index++) {
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-      }
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-      await tester.pump();
-      final Finder lower = find.byWidgetPredicate(
-        (widget) =>
-            widget is IconButton && widget.tooltip == _kottaLabels.lowerSlur,
-      );
-      final Finder upper = find.byWidgetPredicate(
-        (widget) =>
-            widget is IconButton && widget.tooltip == _kottaLabels.upperSlur,
-      );
-      expect(tester.widget<IconButton>(lower).isSelected, isFalse);
-      expect(tester.widget<IconButton>(upper).isSelected, isFalse);
-      await tester.ensureVisible(lower);
-      for (int cycle = 0; cycle < 3; cycle++) {
-        await tester.tap(lower);
-        await tester.pump();
-        if (cycle < 2) {
-          await tester.tap(lower);
-          await tester.pump();
-        }
-      }
-      await tester.tap(find.text(_kottaLabels.apply));
-      await tester.pumpAndSettle();
-      expect(controller.encodedText, expected);
-      controller.dispose();
-    });
-  }
 
   testWidgets('compact replacement preserves surrounding note modes', (
     tester,

@@ -145,6 +145,19 @@ A kívül maradó hangok ívhez tartozása változatlan; szükség esetén a kor
 elé, a záró az utolsó hang után kerül: alsó ívnél `(a` és `)a`,
 felső ívnél `(f` és `)f`. A fölösleges ívkódok eltűnnek, de a külön
 kezdett, egymás melletti ívek nem olvadnak össze.
+A **Triola** és **Pentola** kapcsoló a kötőívekhez hasonlóan működik:
+az előző hang csoportját követi, kattintással a következő beszúráshoz
+felülbírálható, kurzormozgatáskor újra igazodik. A két kapcsoló egymást
+kizárja, de a kötőívtől és gerendázástól független. Az egymás után beszúrt
+hangok ugyanazt a csoportot folytatják; a csoport hossza nincs automatikusan
+három vagy öt hangra korlátozva.
+Kijelöléskor csak a kijelölt hangokat sorolja a választott csoportba,
+illetve az aktív gombbal megszünteti a csoporthoz tartozásukat.
+A kívül maradó hangok csoportja megmarad, szükség esetén külön szakaszokban.
+A triola kódpárja `[3` és `]3`, a pentoláé `[5` és `]5`.
+A fölösleges kódokat normalizálja, a külön kezdett szomszédos csoportokat
+viszont nem olvasztja össze. Az ikonon vízszintes vonal, két végén lefelé
+álló rövid szár és középen 3-as, illetve 5-ös szám látható.
 A későbbi hangok ritmusa nem változik: szükség esetén a program az új hang
 után visszaállítja az eredeti ritmusértéket. Ez kijelölt kottaelemek cseréjekor
 is érvényes.

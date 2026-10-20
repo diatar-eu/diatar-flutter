@@ -639,6 +639,8 @@
   "kottaEditorCompact": "Tömörített",
   "kottaEditorLowerSlur": "Alsó kötőív",
   "kottaEditorUpperSlur": "Felső kötőív",
+  "kottaEditorTriplet": "Triola",
+  "kottaEditorQuintuplet": "Pentola",
   "kottaEditorBeaming": "Gerendázás",
   "kottaEditorAccidentals": "Módosítójelek",
   "kottaEditorFlat": "Bé",

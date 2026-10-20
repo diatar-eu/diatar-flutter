@@ -81,6 +81,8 @@ class KottaEditorLabels {
     required this.compact,
     required this.lowerSlur,
     required this.upperSlur,
+    required this.triplet,
+    required this.quintuplet,
     required this.beaming,
     required this.accidentals,
     required this.flat,
@@ -162,6 +164,8 @@ class KottaEditorLabels {
   final String compact;
   final String lowerSlur;
   final String upperSlur;
+  final String triplet;
+  final String quintuplet;
   final String beaming;
   final String accidentals;
   final String flat;
@@ -252,10 +256,12 @@ enum _KottaNoteMode {
   final String disabled;
 }
 
-class _KottaSlurGroup {
-  _KottaSlurGroup(this.direction);
+enum _KottaGroupKind { slur, tuplet }
 
-  String direction;
+class _KottaNoteGroup {
+  _KottaNoteGroup(this.value);
+
+  String value;
 }
 
 class _KottaEditorDialogState extends State<_KottaEditorDialog> {
@@ -272,7 +278,8 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   bool? _stemDownOverride;
   final Map<_KottaNoteMode, bool> _noteModeOverrides = <_KottaNoteMode, bool>{};
   bool? _beamingOverride;
-  String? _slurOverride;
+  final Map<_KottaGroupKind, String> _groupOverrides =
+      <_KottaGroupKind, String>{};
   final Map<String, String> _noteModifiers = <String, String>{};
 
   bool get _isValid => _elements.isNotEmpty;
@@ -332,19 +339,19 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   bool _isSlurMarker(String command) =>
       const <String>{'(a', ')a', '(f', ')f'}.contains(command);
 
-  Map<KottaEditorElement, _KottaSlurGroup> _slurGroups() {
-    final Map<KottaEditorElement, _KottaSlurGroup> groups =
-        <KottaEditorElement, _KottaSlurGroup>{};
-    _KottaSlurGroup? pending;
-    _KottaSlurGroup? active;
+  Map<KottaEditorElement, _KottaNoteGroup> _slurGroups() {
+    final Map<KottaEditorElement, _KottaNoteGroup> groups =
+        <KottaEditorElement, _KottaNoteGroup>{};
+    _KottaNoteGroup? pending;
+    _KottaNoteGroup? active;
     for (final KottaEditorElement element in _elements) {
       final String command = element.command;
       if (_isSlurMarker(command)) {
         if (command[0] == '(') {
-          pending = _KottaSlurGroup(command[1]);
+          pending = _KottaNoteGroup(command[1]);
         } else {
           // The legacy renderer takes the direction from the closing code.
-          active?.direction = command[1];
+          active?.value = command[1];
           active = null;
           pending = null;
         }
@@ -359,12 +366,37 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     return groups;
   }
 
-  String get _slurDirection {
-    final Map<KottaEditorElement, _KottaSlurGroup> groups = _slurGroups();
+  bool _isTupletMarker(String command) =>
+      const <String>{'[3', ']3', '[5', ']5'}.contains(command);
+
+  Map<KottaEditorElement, _KottaNoteGroup> _tupletGroups() {
+    final Map<KottaEditorElement, _KottaNoteGroup> groups =
+        <KottaEditorElement, _KottaNoteGroup>{};
+    _KottaNoteGroup? active;
+    for (final KottaEditorElement element in _elements) {
+      final String command = element.command;
+      if (_isTupletMarker(command)) {
+        active = command[0] == '[' ? _KottaNoteGroup(command[1]) : null;
+      } else if (_isPitch(command) && active != null) {
+        groups[element] = active;
+      }
+    }
+    return groups;
+  }
+
+  Map<KottaEditorElement, _KottaNoteGroup> _noteGroups(_KottaGroupKind kind) =>
+      kind == _KottaGroupKind.slur ? _slurGroups() : _tupletGroups();
+
+  String get _slurDirection => _groupValue(_KottaGroupKind.slur);
+
+  String get _tuplet => _groupValue(_KottaGroupKind.tuplet);
+
+  String _groupValue(_KottaGroupKind kind) {
+    final Map<KottaEditorElement, _KottaNoteGroup> groups = _noteGroups(kind);
     final TextSelection? selection = _kottaSelection;
     if (selection == null) {
-      return _slurOverride ??
-          groups[_precedingNote(_kottaCursor)]?.direction ??
+      return _groupOverrides[kind] ??
+          groups[_precedingNote(_kottaCursor)]?.value ??
           '';
     }
     final List<KottaEditorElement> notes = _elements
@@ -374,23 +406,23 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     if (notes.isEmpty) {
       return '';
     }
-    final String? direction = groups[notes.first]?.direction;
-    return direction != null &&
-            notes.every((element) => groups[element]?.direction == direction)
-        ? direction
+    final String? value = groups[notes.first]?.value;
+    return value != null &&
+            notes.every((element) => groups[element]?.value == value)
+        ? value
         : '';
   }
 
-  void _toggleSlur(String direction) {
-    final bool apply = _slurDirection != direction;
+  void _toggleGroup(_KottaGroupKind kind, String value) {
+    final bool apply = _groupValue(kind) != value;
     setState(() {
       final TextSelection? selection = _kottaSelection;
       if (selection == null) {
-        _slurOverride = apply ? direction : '';
+        _groupOverrides[kind] = apply ? value : '';
         return;
       }
-      final Map<KottaEditorElement, _KottaSlurGroup> groups = _slurGroups();
-      final _KottaSlurGroup group = _KottaSlurGroup(direction);
+      final Map<KottaEditorElement, _KottaNoteGroup> groups = _noteGroups(kind);
+      final _KottaNoteGroup group = _KottaNoteGroup(value);
       for (final KottaEditorElement element in _elements.sublist(
         selection.start,
         selection.end,
@@ -403,7 +435,11 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
           }
         }
       }
-      _normalizeCommands(null, groups);
+      _normalizeCommands(
+        null,
+        kind == _KottaGroupKind.slur ? groups : null,
+        kind == _KottaGroupKind.tuplet ? groups : null,
+      );
       _syncTextCursorToKotta();
       _activeCursorVisible = true;
     });
@@ -578,9 +614,11 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _normalizeCommands([
     Map<KottaEditorElement, int>? groups,
-    Map<KottaEditorElement, _KottaSlurGroup>? slurs,
+    Map<KottaEditorElement, _KottaNoteGroup>? slurs,
+    Map<KottaEditorElement, _KottaNoteGroup>? tuplets,
   ]) {
     slurs ??= _slurGroups();
+    tuplets ??= _tupletGroups();
     for (final _KottaNoteMode mode in _KottaNoteMode.values) {
       _normalizeNoteMode(mode);
     }
@@ -591,11 +629,17 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
       opening: (_) => '[?',
       closing: (_) => ']?',
     );
-    _normalizeNoteGroups<_KottaSlurGroup>(
+    _normalizeNoteGroups<_KottaNoteGroup>(
       slurs,
       isMarker: _isSlurMarker,
-      opening: (group) => '(${group.direction}',
-      closing: (group) => ')${group.direction}',
+      opening: (group) => '(${group.value}',
+      closing: (group) => ')${group.value}',
+    );
+    _normalizeNoteGroups<_KottaNoteGroup>(
+      tuplets,
+      isMarker: _isTupletMarker,
+      opening: (group) => '[${group.value}',
+      closing: (group) => ']${group.value}',
     );
   }
 
@@ -753,7 +797,9 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     }
     final bool beaming = _beaming;
     final String slurDirection = _slurDirection;
-    final Map<KottaEditorElement, _KottaSlurGroup> slurs = _slurGroups();
+    final Map<KottaEditorElement, _KottaNoteGroup> slurs = _slurGroups();
+    final String tuplet = _tuplet;
+    final Map<KottaEditorElement, _KottaNoteGroup> tuplets = _tupletGroups();
     final Map<_KottaNoteMode, bool> modes = <_KottaNoteMode, bool>{
       for (final _KottaNoteMode mode in _KottaNoteMode.values)
         mode: _noteModeState(mode),
@@ -784,6 +830,8 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
           groups: groups,
           slurs: slurs,
           slurDirection: slurDirection,
+          tuplets: tuplets,
+          tuplet: tuplet,
         );
       } else {
         _elements.insert(
@@ -791,7 +839,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
           KottaEditorElement(command: command, textOffset: _textCursor),
         );
         _kottaCursor++;
-        _normalizeCommands(groups, slurs);
+        _normalizeCommands(groups, slurs, tuplets);
       }
       _textCursorActive = false;
       _activeCursorVisible = true;
@@ -1043,8 +1091,10 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     required Map<_KottaNoteMode, bool> modes,
     required Map<_KottaNoteMode, bool> followingModes,
     required Map<KottaEditorElement, int> groups,
-    required Map<KottaEditorElement, _KottaSlurGroup> slurs,
+    required Map<KottaEditorElement, _KottaNoteGroup> slurs,
     required String slurDirection,
+    required Map<KottaEditorElement, _KottaNoteGroup> tuplets,
+    required String tuplet,
   }) {
     final int group =
         groups[_precedingNote(_kottaCursor)] ??
@@ -1126,15 +1176,24 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     if (beaming) {
       groups[inserted.last] = group;
     }
-    if (slurDirection.isNotEmpty) {
-      final _KottaSlurGroup? preceding =
-          slurs[_precedingNote(_kottaCursor - inserted.length)];
-      slurs[inserted.last] = preceding?.direction == slurDirection
+    void extendGroup(
+      Map<KottaEditorElement, _KottaNoteGroup> groups,
+      String value,
+    ) {
+      if (value.isEmpty) {
+        return;
+      }
+      final _KottaNoteGroup? preceding =
+          groups[_precedingNote(_kottaCursor - inserted.length)];
+      groups[inserted.last] = preceding?.value == value
           ? preceding!
-          : _KottaSlurGroup(slurDirection);
+          : _KottaNoteGroup(value);
     }
-    _normalizeCommands(groups, slurs);
-    _slurOverride = null;
+
+    extendGroup(slurs, slurDirection);
+    extendGroup(tuplets, tuplet);
+    _normalizeCommands(groups, slurs, tuplets);
+    _groupOverrides.clear();
     _beamingOverride = null;
     _noteModeOverrides.clear();
   }
@@ -1176,7 +1235,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   }
 
   void _syncKottaCursorToText() {
-    _slurOverride = null;
+    _groupOverrides.clear();
     _stemDownOverride = null;
     _noteModeOverrides.clear();
     _beamingOverride = null;
@@ -1189,7 +1248,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   }
 
   void _syncTextCursorToKotta() {
-    _slurOverride = null;
+    _groupOverrides.clear();
     _stemDownOverride = null;
     _noteModeOverrides.clear();
     _beamingOverride = null;
@@ -1625,7 +1684,10 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                                     ? labels.lowerSlur
                                     : labels.upperSlur,
                                 isSelected: _slurDirection == direction,
-                                onPressed: () => _toggleSlur(direction),
+                                onPressed: () => _toggleGroup(
+                                  _KottaGroupKind.slur,
+                                  direction,
+                                ),
                                 style: _toggleButtonStyle(
                                   selected: _slurDirection == direction,
                                 ),
@@ -1633,6 +1695,27 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                                   size: const Size(24, 24),
                                   painter: _SlurPainter(
                                     down: direction == 'a',
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                            for (final String count in <String>['3', '5'])
+                              IconButton.outlined(
+                                tooltip: count == '3'
+                                    ? labels.triplet
+                                    : labels.quintuplet,
+                                isSelected: _tuplet == count,
+                                onPressed: () =>
+                                    _toggleGroup(_KottaGroupKind.tuplet, count),
+                                style: _toggleButtonStyle(
+                                  selected: _tuplet == count,
+                                ),
+                                icon: CustomPaint(
+                                  size: const Size(24, 24),
+                                  painter: _TupletPainter(
+                                    count: count,
                                     color: Theme.of(
                                       context,
                                     ).colorScheme.onSurface,
@@ -1941,6 +2024,49 @@ class _KottaPreviewState extends State<_KottaPreview> {
       ),
     );
   }
+}
+
+class _TupletPainter extends CustomPainter {
+  const _TupletPainter({required this.count, required this.color});
+
+  final String count;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 24, size.height / 24);
+    canvas.drawPath(
+      Path()
+        ..moveTo(1, 21)
+        ..lineTo(1, 16)
+        ..lineTo(23, 16)
+        ..lineTo(23, 21),
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+    final TextPainter text = TextPainter(
+      text: TextSpan(
+        text: count,
+        style: TextStyle(
+          color: color,
+          fontSize: 15,
+          fontWeight: FontWeight.bold,
+          height: 1,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    text.paint(canvas, Offset((24 - text.width) / 2, 0));
+    text.dispose();
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_TupletPainter oldDelegate) =>
+      oldDelegate.count != count || oldDelegate.color != color;
 }
 
 class _SlurPainter extends CustomPainter {

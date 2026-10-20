@@ -1,5 +1,6 @@
 Új funkciók
 Diasor
+- A Hang tulajdonság sor új Triola és Pentola kapcsolói az előző hangot követik, kijelöléskor csak a kijelölt hangok csoportját módosítják, és eltávolítják a fölösleges csoportkódokat
 - A Hang tulajdonság sor Alsó kötőív és Felső kötőív kapcsolói az előző hangot követik, folytatják az ívet hangbeszúráskor, és csak a kijelölt hangok ívét változtatják; az ívkódokat a szerkesztő normalizálja
 - A Hang tulajdonság sor új Tömörített kapcsolója az előző hangot követi, a következő hang vagy a kijelölés tömörített kottázását állítja, és eltávolítja a fölösleges Rt/rt kódokat
 - A kottaszerkesztő eltávolítja a fölösleges szárnélküliség-kódokat: az ismétléseket, a hang nélküli állapotváltásokat és a záró kódokat is, a hangok megjelenésének változtatása nélkül

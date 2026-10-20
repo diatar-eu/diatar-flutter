@@ -639,6 +639,8 @@
   "kottaEditorCompact": "Compact",
   "kottaEditorLowerSlur": "Lower slur",
   "kottaEditorUpperSlur": "Upper slur",
+  "kottaEditorTriplet": "Triplet",
+  "kottaEditorQuintuplet": "Quintuplet",
   "kottaEditorBeaming": "Beaming",
   "kottaEditorAccidentals": "Accidentals",
   "kottaEditorFlat": "Flat",
