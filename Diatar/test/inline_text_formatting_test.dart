@@ -3212,6 +3212,257 @@ void main() {
     });
   }
 
+  for (final testCase
+      in <
+        ({
+          String name,
+          List<String> initial,
+          int cursor,
+          int selectionSteps,
+          bool textActive,
+          LogicalKeyboardKey key,
+          List<String> expected,
+        })
+      >[
+        (
+          name: 'skips hidden controls and changes only the preceding note',
+          initial: <String>['1F', '2h', ']?', 'r8', ')a', ']3', '[1', 'rt'],
+          cursor: 8,
+          selectionSteps: 0,
+          textActive: false,
+          key: LogicalKeyboardKey.arrowUp,
+          expected: <String>['1F', '2c', ']?', 'r8', ')a', ']3', '[1', 'rt'],
+        ),
+        for (final String barrier in <String>['s4', '|1', 'kG'])
+          (
+            name: 'does not cross visible $barrier',
+            initial: <String>['2c', barrier, 'r8', ')a'],
+            cursor: 4,
+            selectionSteps: 0,
+            textActive: false,
+            key: LogicalKeyboardKey.arrowDown,
+            expected: <String>['2c', barrier, 'r8', ')a'],
+          ),
+        (
+          name: 'does nothing at the beginning',
+          initial: <String>['2c'],
+          cursor: 0,
+          selectionSteps: 0,
+          textActive: false,
+          key: LogicalKeyboardKey.arrowUp,
+          expected: <String>['2c'],
+        ),
+        (
+          name: 'does nothing without notes',
+          initial: <String>['r8', '(a'],
+          cursor: 2,
+          selectionSteps: 0,
+          textActive: false,
+          key: LogicalKeyboardKey.arrowDown,
+          expected: <String>['r8', '(a'],
+        ),
+        (
+          name: 'changes all selected notes but not surrounding notes or signs',
+          initial: <String>['1g', '1F', 's4', '|1', '2h', '3D', '2a'],
+          cursor: 1,
+          selectionSteps: 5,
+          textActive: false,
+          key: LogicalKeyboardKey.arrowUp,
+          expected: <String>['1g', '2G', 's4', '|1', '2c', '3D', '2a'],
+        ),
+        (
+          name: 'backward selection preserves stems and clamps the lower limit',
+          initial: <String>['2g', '1G', '2G', '2c', '3g'],
+          cursor: 4,
+          selectionSteps: -3,
+          textActive: false,
+          key: LogicalKeyboardKey.arrowDown,
+          expected: <String>['2g', '1G', '1F', '2h', '3g'],
+        ),
+        (
+          name: 'also changes pitch with the text cursor active',
+          initial: <String>['2c', '2e'],
+          cursor: 1,
+          selectionSteps: 0,
+          textActive: true,
+          key: LogicalKeyboardKey.arrowDown,
+          expected: <String>['2h', '2e'],
+        ),
+      ]) {
+    testWidgets('pitch arrows: ${testCase.name}', (tester) async {
+      List<KottaEditorElement> preview = <KottaEditorElement>[];
+      KottaEditorResult? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                result = await showKottaEditorDialog(
+                  context: context,
+                  labels: _kottaLabels,
+                  previewLineBuilder: (elements) {
+                    preview = List<KottaEditorElement>.of(elements);
+                    return '\\K${elements.map((e) => e.command).join()};';
+                  },
+                  initialState: KottaEditorInitialState(
+                    elements: <KottaEditorElement>[
+                      for (int i = 0; i < testCase.initial.length; i++)
+                        KottaEditorElement(
+                          command: testCase.initial[i],
+                          textOffset: i,
+                          isConditional: i.isEven,
+                        ),
+                    ],
+                    textLength: testCase.initial.length,
+                    kottaCursor: testCase.cursor,
+                    textCursor: testCase.cursor,
+                    isEditing: true,
+                  ),
+                );
+              },
+              child: Text(_kottaLabels.editTitle),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text(_kottaLabels.editTitle));
+      await tester.pumpAndSettle();
+      if (testCase.textActive) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      }
+      if (testCase.selectionSteps != 0) {
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        for (int i = 0; i < testCase.selectionSteps.abs(); i++) {
+          await tester.sendKeyEvent(
+            testCase.selectionSteps > 0
+                ? LogicalKeyboardKey.arrowRight
+                : LogicalKeyboardKey.arrowLeft,
+          );
+        }
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      }
+      await tester.sendKeyEvent(testCase.key);
+      await tester.pump();
+      expect(preview.map((e) => e.command), testCase.expected);
+      for (int i = 0; i < preview.length; i++) {
+        expect(preview[i].textOffset, i);
+        expect(preview[i].isConditional, i.isEven);
+      }
+      if (testCase.selectionSteps != 0) {
+        await tester.sendKeyEvent(
+          testCase.key == LogicalKeyboardKey.arrowUp
+              ? LogicalKeyboardKey.arrowDown
+              : LogicalKeyboardKey.arrowUp,
+        );
+        await tester.pump();
+        expect(
+          preview.map((e) => e.command),
+          testCase.selectionSteps > 0
+              ? <String>['1g', '1F', 's4', '|1', '2h', '3C', '2a']
+              : <String>['2g', '1A', '2G', '2c', '3g'],
+        );
+      }
+      final List<String> expectedPitches = preview
+          .where((e) => RegExp(r'^[123][a-hA-H]$').hasMatch(e.command))
+          .map((e) => e.command)
+          .toList();
+      await tester.tap(find.text(_kottaLabels.apply));
+      await tester.pumpAndSettle();
+      expect(
+        result!.elements
+            .where((e) => RegExp(r'^[123][a-hA-H]$').hasMatch(e.command))
+            .map((e) => e.command),
+        expectedPitches,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final bool stemDown in <bool>[false, true]) {
+    testWidgets(
+      'pitch arrows repeat across the full range, stemDown=$stemDown',
+      (tester) async {
+        const List<String> pitches = <String>[
+          '1g',
+          '1a',
+          '1h',
+          '1c',
+          '1d',
+          '1e',
+          '1f',
+          '2g',
+          '2a',
+          '2h',
+          '2c',
+          '2d',
+          '2e',
+          '2f',
+          '3g',
+          '3a',
+          '3h',
+          '3c',
+          '3d',
+        ];
+        final List<String> expected = pitches
+            .map((pitch) => stemDown ? pitch.toUpperCase() : pitch)
+            .toList();
+        List<String> preview = <String>[];
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showKottaEditorDialog(
+                  context: context,
+                  labels: _kottaLabels,
+                  previewLineBuilder: (elements) {
+                    preview = elements.map((e) => e.command).toList();
+                    return '\\K${preview.join()};';
+                  },
+                  initialState: KottaEditorInitialState(
+                    elements: <KottaEditorElement>[
+                      KottaEditorElement(
+                        command: expected.first,
+                        textOffset: 0,
+                      ),
+                      const KottaEditorElement(command: '2c', textOffset: 0),
+                    ],
+                    textLength: 0,
+                    kottaCursor: 1,
+                    textCursor: 0,
+                    isEditing: true,
+                  ),
+                ),
+                child: Text(_kottaLabels.editTitle),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text(_kottaLabels.editTitle));
+        await tester.pumpAndSettle();
+        for (final LogicalKeyboardKey key in <LogicalKeyboardKey>[
+          LogicalKeyboardKey.arrowUp,
+          LogicalKeyboardKey.arrowDown,
+        ]) {
+          await tester.sendKeyDownEvent(key);
+          for (int step = 1; step <= pitches.length + 1; step++) {
+            if (step > 1) {
+              await tester.sendKeyRepeatEvent(key);
+            }
+            await tester.pump();
+            final int index = key == LogicalKeyboardKey.arrowUp
+                ? step.clamp(0, pitches.length - 1)
+                : (pitches.length - 1 - step).clamp(0, pitches.length - 1);
+            expect(preview, <String>[expected[index], '2c']);
+          }
+          await tester.sendKeyUpEvent(key);
+        }
+        await tester.tap(find.text(_kottaLabels.apply));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('graphical barlines show named hints and insert in legacy order', (
     WidgetTester tester,
   ) async {

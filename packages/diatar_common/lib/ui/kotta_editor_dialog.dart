@@ -1206,6 +1206,43 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     });
   }
 
+  void _changePitch(int direction) {
+    final TextSelection? selection = _kottaSelection;
+    int start = selection?.start ?? _kottaCursor;
+    final int end = selection?.end ?? _kottaCursor;
+    if (selection == null) {
+      while (start > 0) {
+        start--;
+        if (_isVisibleKottaElement(_elements[start].command)) {
+          break;
+        }
+      }
+    }
+    const String notes = 'gahcdef';
+    setState(() {
+      for (int index = start; index < end; index++) {
+        final KottaEditorElement element = _elements[index];
+        final String command = element.command;
+        if (!_isPitch(command)) {
+          continue;
+        }
+        final int pitch =
+            (int.parse(command[0]) - 1) * notes.length +
+            notes.indexOf(command[1].toLowerCase());
+        final int updated = (pitch + direction).clamp(0, 18);
+        final String note = notes[updated % notes.length];
+        _elements[index] = KottaEditorElement(
+          command:
+              '${updated ~/ notes.length + 1}'
+              '${command == command.toUpperCase() ? note.toUpperCase() : note}',
+          textOffset: element.textOffset,
+          isConditional: element.isConditional,
+        );
+      }
+      _activeCursorVisible = true;
+    });
+  }
+
   void _moveActiveCursor(int direction, {bool extendSelection = false}) {
     setState(() {
       if (_textCursorActive) {
@@ -1346,6 +1383,14 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
         1,
         extendSelection: HardwareKeyboard.instance.isShiftPressed,
       );
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      _changePitch(1);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      _changePitch(-1);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;

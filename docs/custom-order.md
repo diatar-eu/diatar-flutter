@@ -195,8 +195,14 @@ agogikai jele helyett, vagy elveszíti azt, ha már mindegyiken ez volt.
 A két gombsor független: módosítójel és agogikai jel együtt is alkalmazható,
 egyik cseréje vagy eltávolítása nem változtatja meg a másikat.
 
-A hangmagasság beszúróvezérlői átmenetileg nem érhetők el. A meglévő kották jelei továbbra
-is megjelennek az előnézetben és a vetítésben.
+A **fel/le nyilakkal** a hangmagasság egy kottalépéssel emelhető vagy
+csökkenthető, a szárirány megtartásával. Kijelölés nélkül csak a kurzor
+közvetlen megelőző hangja változik; a nem látható vezérlőkódokat (például
+gerendavég, ritmus vagy kötőív vége) a program átugorja. Ha a megelőző
+látható elem nem hang, például szünet vagy ütemvonal, a billentyű hatástalan.
+Kijelöléskor az összes kijelölt hang változik, a többi jel és a kijelölés
+megmarad. Ez szövegkurzor mellett is működik. A hangkódok alsó határa
+`1g`/`1G`, felső határa `3d`/`3D`; a határon álló hang nem mozdul tovább.
 
 ## Export/Import
 
