@@ -637,6 +637,8 @@
   "kottaEditorStemDown": "Stem direction",
   "kottaEditorStemless": "Stemless notes",
   "kottaEditorCompact": "Compact",
+  "kottaEditorLowerSlur": "Lower slur",
+  "kottaEditorUpperSlur": "Upper slur",
   "kottaEditorBeaming": "Beaming",
   "kottaEditorAccidentals": "Accidentals",
   "kottaEditorFlat": "Flat",

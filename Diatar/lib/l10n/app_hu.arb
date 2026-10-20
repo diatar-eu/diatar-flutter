@@ -637,6 +637,8 @@
   "kottaEditorStemDown": "Szár iránya",
   "kottaEditorStemless": "Szár nélküli hangok",
   "kottaEditorCompact": "Tömörített",
+  "kottaEditorLowerSlur": "Alsó kötőív",
+  "kottaEditorUpperSlur": "Felső kötőív",
   "kottaEditorBeaming": "Gerendázás",
   "kottaEditorAccidentals": "Módosítójelek",
   "kottaEditorFlat": "Bé",

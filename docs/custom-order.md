@@ -132,6 +132,19 @@ Kattintásra csak a kijelölésen belüli hangokat módosítja; a kívül marad�
 hangok térköze és a szárnélküliség állapota változatlan marad.
 A fölösleges `Rt` / `rt` kódokat szerkesztés közben és alkalmazáskor
 ugyanúgy eltávolítja, mint a szárnélküliség kódjait.
+A **Hang tulajdonság** sor **Alsó kötőív** és **Felső kötőív** kapcsolói
+az előző hang ívét követik. Kattintással a következő hangbeszúrás íve
+felülbírálható; kurzormozgatáskor újra az előző hanghoz igazodnak.
+Az egymás után beszúrt hangok ugyanazt az ívet folytatják. A két kapcsoló
+egymást kizárja: egy hanghoz alsó vagy felső ív tartozhat.
+Kijelöléskor akkor bekapcsolt egy kapcsoló, ha minden kijelölt hanghoz
+ilyen irányú ív tartozik. Kattintásra a kijelölt hangokat összeköti,
+illetve az aktív kapcsoló kikapcsolásával eltávolítja róluk az ívet.
+A kívül maradó hangok ívhez tartozása változatlan; szükség esetén a korábbi
+ív a kijelölés határain külön szakaszokra bomlik. A kezdő kód az első hang
+elé, a záró az utolsó hang után kerül: alsó ívnél `(a` és `)a`,
+felső ívnél `(f` és `)f`. A fölösleges ívkódok eltűnnek, de a külön
+kezdett, egymás melletti ívek nem olvadnak össze.
 A későbbi hangok ritmusa nem változik: szükség esetén a program az új hang
 után visszaállítja az eredeti ritmusértéket. Ez kijelölt kottaelemek cseréjekor
 is érvényes.
