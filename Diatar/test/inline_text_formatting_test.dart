@@ -39,6 +39,9 @@ const ChordEditorLabels _chordLabels = ChordEditorLabels(
 
 final AppLocalizationsEn _l10n = AppLocalizationsEn();
 final KottaEditorLabels _kottaLabels = KottaEditorLabels(
+  cut: _l10n.kottaEditorCut,
+  copy: _l10n.kottaEditorCopy,
+  paste: _l10n.kottaEditorPaste,
   insertTitle: _l10n.kottaEditorInsertTitle,
   editTitle: _l10n.kottaEditorEditTitle,
   clef: _l10n.kottaEditorClef,
@@ -1645,7 +1648,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
     await tester.pump();
-    expect(_notationOverlay(tester).kottaSelection!.start, 4);
+    expect(_notationOverlay(tester).kottaSelection!.start, 5);
     final Finder eighth = find.descendant(
       of: find
           .ancestor(
@@ -4108,6 +4111,322 @@ void main() {
       controller.dispose();
     });
   }
+
+  for (final bool shortcuts in <bool>[false, true]) {
+    testWidgets('notation clipboard copies, cuts and pastes ($shortcuts)', (
+      WidgetTester tester,
+    ) async {
+      String? clipboard;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (MethodCall call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboard =
+                (call.arguments as Map<dynamic, dynamic>)['text'] as String;
+          } else if (call.method == 'Clipboard.getData') {
+            return <String, dynamic>{'text': clipboard};
+          }
+          return null;
+        },
+      );
+      addTearDown(() {
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        );
+      });
+      final InlineTextEditingController controller =
+          InlineTextEditingController.fromDia(r'\KkG;ab\Kr4mk1a;cd\Ke2|!;ef');
+      await _openNotationPreview(tester, controller);
+
+      IconButton button(String tooltip) => tester.widget<IconButton>(
+        find.byWidgetPredicate(
+          (widget) => widget is IconButton && widget.tooltip == tooltip,
+        ),
+      );
+      expect(button(_kottaLabels.cut).onPressed, isNull);
+      expect(button(_kottaLabels.copy).onPressed, isNull);
+      expect(
+        tester.getTopLeft(find.byTooltip(_kottaLabels.cut)).dy,
+        greaterThanOrEqualTo(
+          tester.getBottomLeft(_notationPreviewLayout(tester).preview).dy,
+        ),
+      );
+      Future<void> action(String label, LogicalKeyboardKey key) async {
+        if (shortcuts) {
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+          await tester.sendKeyEvent(key);
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        } else {
+          await tester.tap(find.byTooltip(label));
+        }
+        await tester.pump();
+      }
+
+      await action(_kottaLabels.copy, LogicalKeyboardKey.keyC);
+      await action(_kottaLabels.cut, LogicalKeyboardKey.keyX);
+      expect(clipboard, isNull);
+      await tester.tapAt(_kottaPosition(tester, 5));
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      expect(button(_kottaLabels.cut).onPressed, isNotNull);
+      expect(button(_kottaLabels.copy).onPressed, isNotNull);
+      final TextSelection? selection = _notationOverlay(tester).kottaSelection;
+      await action(_kottaLabels.copy, LogicalKeyboardKey.keyC);
+      expect(clipboard, r'\Kr4;\Kmk;\K1a;\Ke2;');
+      expect(_notationOverlay(tester).kottaSelection, selection);
+
+      await action(_kottaLabels.cut, LogicalKeyboardKey.keyX);
+      expect(_notationOverlay(tester).kottaPosition, 1);
+      expect(_notationOverlay(tester).textPosition, 2);
+      expect(_notationOverlay(tester).kottaSelection, isNull);
+      expect(button(_kottaLabels.cut).onPressed, isNull);
+      await action(_kottaLabels.paste, LogicalKeyboardKey.keyV);
+      expect(_notationOverlay(tester).kottaPosition, 5);
+      expect(_notationOverlay(tester).textPosition, 2);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      await action(_kottaLabels.paste, LogicalKeyboardKey.keyV);
+      expect(_notationOverlay(tester).kottaSelection, isNull);
+      expect(_notationOverlay(tester).kottaPosition, 9);
+      await tester.tap(find.text(_kottaLabels.apply));
+      await tester.pumpAndSettle();
+      expect(controller.encodedText, r'\KkG;ab\Kr4mk1ae2;cd\Kr4mk1ae2;ef');
+      controller.dispose();
+    });
+  }
+
+  for (final (String opening, String closing) in <(String, String)>[
+    ('(a', ')a'),
+    ('(f', ')f'),
+    ('[3', ']3'),
+    ('[5', ']5'),
+    ('[?', ']?'),
+    ('[0', '[1'),
+    ('Rt', 'rt'),
+  ]) {
+    testWidgets(
+      'notation selection keeps attachments between $opening groups',
+      (WidgetTester tester) async {
+        final controller = InlineTextEditingController.fromDia(
+          '\\Kr8${opening}2g${closing}r4mka-2a${opening}2h${closing}2c;word',
+        );
+        await _openNotationPreview(tester, controller);
+        for (final bool forward in <bool>[true, false]) {
+          await tester.tapAt(_kottaPosition(tester, forward ? 3 : 8));
+          await tester.pump();
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+          await tester.sendKeyEvent(
+            forward
+                ? LogicalKeyboardKey.arrowRight
+                : LogicalKeyboardKey.arrowLeft,
+          );
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+          await tester.pump();
+          expect(
+            _notationOverlay(tester).kottaSelection,
+            TextSelection(
+              baseOffset: forward ? 4 : 8,
+              extentOffset: forward ? 8 : 4,
+            ),
+          );
+        }
+        await tester.tap(find.text(_kottaLabels.cancel));
+        await tester.pumpAndSettle();
+        controller.dispose();
+      },
+    );
+
+    testWidgets('notation clipboard isolates inherited $opening groups', (
+      WidgetTester tester,
+    ) async {
+      String? clipboard;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (MethodCall call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboard =
+                (call.arguments as Map<dynamic, dynamic>)['text'] as String;
+          } else if (call.method == 'Clipboard.getData') {
+            return <String, dynamic>{'text': clipboard};
+          }
+          return null;
+        },
+      );
+      addTearDown(() {
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        );
+      });
+      final controller = InlineTextEditingController.fromDia(
+        '\\?Kr8${opening}2g2a2h${closing}r42c2d;word',
+      );
+      await _openNotationPreview(tester, controller);
+      for (final (int cursor, String pitch) in <(int, String)>[
+        (0, '2g'),
+        (4, '2h'),
+      ]) {
+        await tester.tapAt(_kottaPosition(tester, cursor));
+        await tester.pump();
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+        await tester.tap(find.byTooltip(_kottaLabels.copy));
+        await tester.pump();
+        expect(
+          clipboard!.replaceAll(RegExp(r'\\\??K|;'), ''),
+          'r8$opening$pitch$closing',
+        );
+      }
+      await tester.tapAt(_kottaPosition(tester, 3));
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      final TextSelection? selection = _notationOverlay(tester).kottaSelection;
+      await tester.tap(find.byTooltip(_kottaLabels.copy));
+      await tester.pump();
+      String commands() => clipboard!.replaceAll(RegExp(r'\\\??K|;'), '');
+      expect(commands(), 'r8${opening}2a$closing');
+      expect(clipboard, isNot(contains(r'\K')));
+      expect(_notationOverlay(tester).kottaSelection, selection);
+      await tester.tap(find.byTooltip(_kottaLabels.cut));
+      await tester.pump();
+      expect(commands(), 'r8${opening}2a$closing');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      await tester.tap(find.byTooltip(_kottaLabels.paste));
+      await tester.pump();
+      await tester.tap(find.text(_kottaLabels.apply));
+      await tester.pumpAndSettle();
+      expect(
+        controller.encodedText,
+        '\\?Kr8${opening}2g2h${closing}r42cr8${opening}2a${closing}r42d;word',
+      );
+      controller.dispose();
+    });
+  }
+
+  testWidgets('mouse selection orders closing codes before note attachments', (
+    WidgetTester tester,
+  ) async {
+    String? clipboard;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (MethodCall call) async {
+        if (call.method == 'Clipboard.setData') {
+          clipboard =
+              (call.arguments as Map<dynamic, dynamic>)['text'] as String;
+        }
+        return null;
+      },
+    );
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      );
+    });
+    final controller = InlineTextEditingController.fromDia(
+      r'\Kr8[?2gr4]?[0Rtmka-2a[1rt[?2h]?2c;word',
+    );
+    await _openNotationPreview(tester, controller);
+    final Offset start = _kottaPosition(tester, 3);
+    final Offset end = _kottaPosition(tester, 10);
+    final TestGesture gesture = await tester.startGesture(
+      start,
+      kind: ui.PointerDeviceKind.mouse,
+    );
+    await gesture.moveTo(end);
+    await gesture.up();
+    await tester.pump();
+    expect(
+      _notationOverlay(tester).kottaSelection,
+      const TextSelection(baseOffset: 4, extentOffset: 12),
+    );
+    await tester.tap(find.byTooltip(_kottaLabels.cut));
+    await tester.pump();
+    expect(clipboard!.replaceAll(RegExp(r'\\\??K|;'), ''), 'r4[0Rtmka-2a[1rt');
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\Kr8[?2g]?r4[?2h]?2c;word');
+    controller.dispose();
+  });
+
+  testWidgets('cutting all notation can be saved without removing lyrics', (
+    WidgetTester tester,
+  ) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (MethodCall call) async => null,
+    );
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      );
+    });
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\KkG;ab\K1a;cd');
+    await _openNotationPreview(tester, controller);
+    await tester.tapAt(_kottaPosition(tester, 2));
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    await tester.tap(find.byTooltip(_kottaLabels.cut));
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaPosition, 0);
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, 'abcd');
+    controller.dispose();
+  });
+
+  testWidgets('notation paste ignores unrelated text and keeps selection', (
+    WidgetTester tester,
+  ) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (MethodCall call) async => call.method == 'Clipboard.getData'
+          ? <String, dynamic>{'text': r'lyrics\KkF;'}
+          : null,
+    );
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      );
+    });
+    final InlineTextEditingController controller =
+        InlineTextEditingController.fromDia(r'\KkG1a;word');
+    await _openNotationPreview(tester, controller);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    final TextSelection? selection = _notationOverlay(tester).kottaSelection;
+    await tester.tap(find.byTooltip(_kottaLabels.paste));
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaSelection, selection);
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\KkG1a;word');
+    controller.dispose();
+  });
 
   testWidgets('Shift selection reverses and unmodified navigation clears it', (
     WidgetTester tester,

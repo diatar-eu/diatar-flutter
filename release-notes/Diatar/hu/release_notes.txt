@@ -1,5 +1,7 @@
 Új funkciók
 Diasor
+- A kottakijelölés a hanghoz tartozó láthatatlan jeleket együtt kezeli; a másolás és kivágás a határokon lezárja az átnyúló csoportokat, a megmaradó hangok tulajdonságainak megőrzésével
+- A kottaszerkesztő előnézete alatt Kivágás, Másolás és Beillesztés gombok, valamint Ctrl+X/C/V gyorsbillentyűk kezelik a kijelölt kottaelemeket, a szöveg változtatása nélkül
 - A kottaszerkesztőben a fel/le nyilak az előző hang vagy az összes kijelölt hang magasságát állítják az 1g/1G–3d/3D tartományban, a szárirány megtartásával
 - A Hang tulajdonság sor új Triola és Pentola kapcsolói az előző hangot követik, kijelöléskor csak a kijelölt hangok csoportját módosítják, és eltávolítják a fölösleges csoportkódokat
 - A Hang tulajdonság sor Alsó kötőív és Felső kötőív kapcsolói az előző hangot követik, folytatják az ívet hangbeszúráskor, és csak a kijelölt hangok ívét változtatják; az ívkódokat a szerkesztő normalizálja

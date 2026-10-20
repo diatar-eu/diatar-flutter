@@ -52,6 +52,9 @@ class KottaEditorLabels {
   const KottaEditorLabels({
     required this.insertTitle,
     required this.editTitle,
+    required this.cut,
+    required this.copy,
+    required this.paste,
     required this.clef,
     required this.keySignature,
     required this.barlines,
@@ -135,6 +138,9 @@ class KottaEditorLabels {
 
   final String insertTitle;
   final String editTitle;
+  final String cut;
+  final String copy;
+  final String paste;
   final String clef;
   final String keySignature;
   final String barlines;
@@ -264,6 +270,8 @@ class _KottaNoteGroup {
   String value;
 }
 
+typedef _KottaNoteState = ({String rhythm, bool stemless, bool compact});
+
 class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   final FocusNode _editorFocusNode = FocusNode(debugLabel: 'kotta-editor');
   late List<KottaEditorElement> _elements;
@@ -282,7 +290,8 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
       <_KottaGroupKind, String>{};
   final Map<String, String> _noteModifiers = <String, String>{};
 
-  bool get _isValid => _elements.isNotEmpty;
+  bool get _isValid =>
+      widget.initialState.elements.isNotEmpty || _elements.isNotEmpty;
 
   String _precedingPitch(int position) {
     for (int index = position - 1; index >= 0; index--) {
@@ -309,11 +318,13 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     return _stemDownOverride ?? (pitch == pitch.toUpperCase());
   }
 
-  Map<KottaEditorElement, int> _beamGroups() {
+  Map<KottaEditorElement, int> _beamGroups([
+    List<KottaEditorElement>? elements,
+  ]) {
     final Map<KottaEditorElement, int> groups = <KottaEditorElement, int>{};
     int nextGroup = 0;
     int? group;
-    for (final KottaEditorElement element in _elements) {
+    for (final KottaEditorElement element in elements ?? _elements) {
       if (element.command == '[?') {
         group ??= nextGroup++;
       } else if (element.command[0] == ']' &&
@@ -339,12 +350,14 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   bool _isSlurMarker(String command) =>
       const <String>{'(a', ')a', '(f', ')f'}.contains(command);
 
-  Map<KottaEditorElement, _KottaNoteGroup> _slurGroups() {
+  Map<KottaEditorElement, _KottaNoteGroup> _slurGroups([
+    List<KottaEditorElement>? elements,
+  ]) {
     final Map<KottaEditorElement, _KottaNoteGroup> groups =
         <KottaEditorElement, _KottaNoteGroup>{};
     _KottaNoteGroup? pending;
     _KottaNoteGroup? active;
-    for (final KottaEditorElement element in _elements) {
+    for (final KottaEditorElement element in elements ?? _elements) {
       final String command = element.command;
       if (_isSlurMarker(command)) {
         if (command[0] == '(') {
@@ -369,11 +382,13 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   bool _isTupletMarker(String command) =>
       const <String>{'[3', ']3', '[5', ']5'}.contains(command);
 
-  Map<KottaEditorElement, _KottaNoteGroup> _tupletGroups() {
+  Map<KottaEditorElement, _KottaNoteGroup> _tupletGroups([
+    List<KottaEditorElement>? elements,
+  ]) {
     final Map<KottaEditorElement, _KottaNoteGroup> groups =
         <KottaEditorElement, _KottaNoteGroup>{};
     _KottaNoteGroup? active;
-    for (final KottaEditorElement element in _elements) {
+    for (final KottaEditorElement element in elements ?? _elements) {
       final String command = element.command;
       if (_isTupletMarker(command)) {
         active = command[0] == '[' ? _KottaNoteGroup(command[1]) : null;
@@ -616,9 +631,13 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     Map<KottaEditorElement, int>? groups,
     Map<KottaEditorElement, _KottaNoteGroup>? slurs,
     Map<KottaEditorElement, _KottaNoteGroup>? tuplets,
+    Map<KottaEditorElement, _KottaNoteState>? states,
   ]) {
     slurs ??= _slurGroups();
     tuplets ??= _tupletGroups();
+    if (states != null) {
+      _applyNormalized(_withNoteStates(_elements, states));
+    }
     for (final _KottaNoteMode mode in _KottaNoteMode.values) {
       _normalizeNoteMode(mode);
     }
@@ -649,16 +668,45 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     required String Function(T) opening,
     required String Function(T) closing,
   }) {
+    _applyNormalized(
+      _normalizedNoteGroups(
+        _elements,
+        groups,
+        isMarker: isMarker,
+        opening: opening,
+        closing: closing,
+      ),
+    );
+  }
+
+  void _applyNormalized(
+    ({List<KottaEditorElement> elements, List<int> positions}) result,
+  ) {
+    _kottaCursor = result.positions[_kottaCursor];
+    if (_kottaSelectionAnchor case final int anchor) {
+      _kottaSelectionAnchor = result.positions[anchor];
+    }
+    _elements = result.elements;
+  }
+
+  ({List<KottaEditorElement> elements, List<int> positions})
+  _normalizedNoteGroups<T>(
+    List<KottaEditorElement> elements,
+    Map<KottaEditorElement, T> groups, {
+    required bool Function(String) isMarker,
+    required String Function(T) opening,
+    required String Function(T) closing,
+  }) {
     final List<KottaEditorElement> updated = <KottaEditorElement>[];
-    final List<int> positions = List<int>.filled(_elements.length + 1, 0);
-    final List<KottaEditorElement> notes = _elements
+    final List<int> positions = List<int>.filled(elements.length + 1, 0);
+    final List<KottaEditorElement> notes = elements
         .where((element) => _isPitch(element.command))
         .toList();
     int noteIndex = 0;
     T? previousGroup;
-    for (int index = 0; index < _elements.length; index++) {
+    for (int index = 0; index < elements.length; index++) {
       positions[index] = updated.length;
-      final KottaEditorElement element = _elements[index];
+      final KottaEditorElement element = elements[index];
       if (isMarker(element.command)) {
         continue;
       }
@@ -685,12 +733,82 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
       }
       previousGroup = group;
     }
-    positions[_elements.length] = updated.length;
-    _kottaCursor = positions[_kottaCursor];
-    if (_kottaSelectionAnchor case final int anchor) {
-      _kottaSelectionAnchor = positions[anchor];
+    positions[elements.length] = updated.length;
+    return (elements: updated, positions: positions);
+  }
+
+  Map<KottaEditorElement, _KottaNoteState> _noteStates([
+    List<KottaEditorElement>? elements,
+  ]) {
+    final Map<KottaEditorElement, _KottaNoteState> states =
+        <KottaEditorElement, _KottaNoteState>{};
+    String rhythm = 'r4';
+    bool stemless = false;
+    bool compact = false;
+    for (final KottaEditorElement element in elements ?? _elements) {
+      final String command = element.command;
+      if (_isRhythm(command)) {
+        rhythm = command;
+      } else if (command == '[0' || command == '[1') {
+        stemless = command == '[0';
+      } else if (command == 'Rt' || command == 'rt') {
+        compact = command == 'Rt';
+      } else if (_isPitch(command)) {
+        states[element] = (
+          rhythm: rhythm,
+          stemless: stemless,
+          compact: compact,
+        );
+      }
     }
-    _elements = updated;
+    return states;
+  }
+
+  ({List<KottaEditorElement> elements, List<int> positions}) _withNoteStates(
+    List<KottaEditorElement> elements,
+    Map<KottaEditorElement, _KottaNoteState> states,
+  ) {
+    final List<KottaEditorElement> updated = <KottaEditorElement>[];
+    final List<int> positions = List<int>.filled(elements.length + 1, 0);
+    String rhythm = 'r4';
+    bool stemless = false;
+    bool compact = false;
+    for (int index = 0; index < elements.length; index++) {
+      positions[index] = updated.length;
+      final KottaEditorElement element = elements[index];
+      final String command = element.command;
+      void add(String command) => updated.add(
+        KottaEditorElement(
+          command: command,
+          textOffset: element.textOffset,
+          isConditional: element.isConditional,
+        ),
+      );
+      if (states[element] case final _KottaNoteState state) {
+        if (rhythm != state.rhythm) {
+          add(state.rhythm);
+          rhythm = state.rhythm;
+        }
+        if (stemless != state.stemless) {
+          add(state.stemless ? '[0' : '[1');
+          stemless = state.stemless;
+        }
+        if (compact != state.compact) {
+          add(state.compact ? 'Rt' : 'rt');
+          compact = state.compact;
+        }
+      }
+      updated.add(element);
+      if (_isRhythm(command)) {
+        rhythm = command;
+      } else if (command == '[0' || command == '[1') {
+        stemless = command == '[0';
+      } else if (command == 'Rt' || command == 'rt') {
+        compact = command == 'Rt';
+      }
+    }
+    positions[elements.length] = updated.length;
+    return (elements: updated, positions: positions);
   }
 
   void _toggleBeaming() {
@@ -754,7 +872,228 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     if (anchor == null || anchor == _kottaCursor) {
       return null;
     }
-    return TextSelection(baseOffset: anchor, extentOffset: _kottaCursor);
+    final int rawStart = math.min(anchor, _kottaCursor);
+    final int rawEnd = math.max(anchor, _kottaCursor);
+    int start = rawStart;
+    while (start < rawEnd &&
+        !_isVisibleKottaElement(_elements[start].command)) {
+      start++;
+    }
+    if (start == rawEnd) {
+      return null;
+    }
+    int end = rawEnd;
+    while (end > start && !_isVisibleKottaElement(_elements[end - 1].command)) {
+      end--;
+    }
+    while (start > 0 &&
+        !_isVisibleKottaElement(_elements[start - 1].command) &&
+        !_isClosingCommand(_elements[start - 1].command)) {
+      start--;
+    }
+    while (end < _elements.length &&
+        _isClosingCommand(_elements[end].command)) {
+      end++;
+    }
+    return TextSelection(
+      baseOffset: anchor < _kottaCursor ? start : end,
+      extentOffset: anchor < _kottaCursor ? end : start,
+    );
+  }
+
+  bool _isClosingCommand(String command) =>
+      command[0] == ')' ||
+      command[0] == ']' ||
+      command == '[1' ||
+      command == 'rt';
+
+  void _normalizeSelectionBoundaries() {
+    bool hasPrefix = false;
+    bool needsOrdering = false;
+    for (final KottaEditorElement element in _elements) {
+      if (_isVisibleKottaElement(element.command)) {
+        hasPrefix = false;
+      } else if (_isClosingCommand(element.command)) {
+        needsOrdering |= hasPrefix;
+      } else {
+        hasPrefix = true;
+      }
+    }
+    if (!needsOrdering) {
+      return;
+    }
+    _normalizeCommands();
+    final List<KottaEditorElement> updated = <KottaEditorElement>[];
+    final List<KottaEditorElement> prefixes = <KottaEditorElement>[];
+    final List<int> positions = List<int>.filled(_elements.length + 1, 0);
+    for (int index = 0; index < _elements.length; index++) {
+      positions[index] = updated.length;
+      final KottaEditorElement element = _elements[index];
+      if (_isVisibleKottaElement(element.command)) {
+        // Closings stay on the left of a boundary, note prefixes on the right.
+        for (final KottaEditorElement prefix in prefixes) {
+          updated.add(
+            KottaEditorElement(
+              command: prefix.command,
+              textOffset: element.textOffset,
+              isConditional: prefix.isConditional,
+            ),
+          );
+        }
+        prefixes.clear();
+        updated.add(element);
+      } else if (_isClosingCommand(element.command)) {
+        updated.add(element);
+      } else {
+        prefixes.add(element);
+      }
+    }
+    updated.addAll(prefixes);
+    positions[_elements.length] = updated.length;
+    _applyNormalized((elements: updated, positions: positions));
+  }
+
+  List<KottaEditorElement> _clipboardElements(TextSelection selection) {
+    List<KottaEditorElement> elements = _withNoteStates(
+      _elements.sublist(selection.start, selection.end),
+      _noteStates(),
+    ).elements;
+    elements = _normalizedNoteGroups(
+      elements,
+      _beamGroups(),
+      isMarker: (command) => command == '[?' || command == ']?',
+      opening: (_) => '[?',
+      closing: (_) => ']?',
+    ).elements;
+    elements = _normalizedNoteGroups(
+      elements,
+      _slurGroups(),
+      isMarker: _isSlurMarker,
+      opening: (group) => '(${group.value}',
+      closing: (group) => ')${group.value}',
+    ).elements;
+    elements = _normalizedNoteGroups(
+      elements,
+      _tupletGroups(),
+      isMarker: _isTupletMarker,
+      opening: (group) => '[${group.value}',
+      closing: (group) => ']${group.value}',
+    ).elements;
+    for (final _KottaNoteMode mode in _KottaNoteMode.values) {
+      final Iterable<KottaEditorElement> markers = elements.where(
+        (element) =>
+            element.command == mode.enabled || element.command == mode.disabled,
+      );
+      if (markers.isNotEmpty && markers.last.command == mode.enabled) {
+        final KottaEditorElement last = elements.last;
+        elements.add(
+          KottaEditorElement(
+            command: mode.disabled,
+            textOffset: last.textOffset,
+            isConditional: last.isConditional,
+          ),
+        );
+      }
+    }
+    return elements;
+  }
+
+  Future<void> _copySelection({bool cut = false}) async {
+    final TextSelection? selection = _kottaSelection;
+    if (selection == null) {
+      return;
+    }
+    final List<KottaEditorElement> selected = _elements.sublist(
+      selection.start,
+      selection.end,
+    );
+    await Clipboard.setData(
+      ClipboardData(
+        text: _clipboardElements(selection)
+            .map(
+              (element) =>
+                  '${element.isConditional ? r'\?K' : r'\K'}'
+                  '${element.command};',
+            )
+            .join(),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    if (cut &&
+        _kottaSelection == selection &&
+        selection.end <= _elements.length &&
+        selected.asMap().entries.every(
+          (entry) =>
+              identical(entry.value, _elements[selection.start + entry.key]),
+        )) {
+      final Map<KottaEditorElement, int> groups = _beamGroups();
+      final Map<KottaEditorElement, _KottaNoteGroup> slurs = _slurGroups();
+      final Map<KottaEditorElement, _KottaNoteGroup> tuplets = _tupletGroups();
+      final Map<KottaEditorElement, _KottaNoteState> states = _noteStates();
+      setState(() {
+        _textCursor = _elements[selection.start].textOffset;
+        _elements.removeRange(selection.start, selection.end);
+        _kottaCursor = selection.start;
+        _kottaSelectionAnchor = null;
+        _normalizeCommands(groups, slurs, tuplets, states);
+        _textCursorActive = false;
+        _activeCursorVisible = true;
+      });
+    }
+    _editorFocusNode.requestFocus();
+  }
+
+  Future<void> _paste() async {
+    final ClipboardData? data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (!mounted || data?.text == null) {
+      return;
+    }
+    final String source = data!.text!;
+    final RegExp notation = RegExp(r'\\(\?)?K((?:[^;\\\r\n]{2})+);');
+    final List<RegExpMatch> matches = notation.allMatches(source).toList();
+    if (matches.isEmpty ||
+        matches.map((match) => match.group(0)).join() != source) {
+      return;
+    }
+    setState(() {
+      final Map<KottaEditorElement, int> groups = _beamGroups();
+      final Map<KottaEditorElement, _KottaNoteGroup> slurs = _slurGroups();
+      final Map<KottaEditorElement, _KottaNoteGroup> tuplets = _tupletGroups();
+      final Map<KottaEditorElement, _KottaNoteState> states = _noteStates();
+      final TextSelection? selection = _kottaSelection;
+      if (selection != null) {
+        _kottaCursor = selection.start;
+        _textCursor = _elements[selection.start].textOffset;
+        _elements.removeRange(selection.start, selection.end);
+      }
+      final List<KottaEditorElement> inserted = <KottaEditorElement>[
+        for (final RegExpMatch match in matches)
+          for (int index = 0; index < match.group(2)!.length; index += 2)
+            KottaEditorElement(
+              command: match.group(2)!.substring(index, index + 2),
+              textOffset: _textCursor,
+              isConditional: match.group(1) != null,
+            ),
+      ];
+      final int groupOffset = groups.values.fold<int>(-1, math.max) + 1;
+      groups.addAll(
+        _beamGroups(
+          inserted,
+        ).map((element, group) => MapEntry(element, group + groupOffset)),
+      );
+      slurs.addAll(_slurGroups(inserted));
+      tuplets.addAll(_tupletGroups(inserted));
+      states.addAll(_noteStates(inserted));
+      _elements.insertAll(_kottaCursor, inserted);
+      _kottaCursor += inserted.length;
+      _kottaSelectionAnchor = null;
+      _normalizeCommands(groups, slurs, tuplets, states);
+      _textCursorActive = false;
+      _activeCursorVisible = true;
+    });
+    _editorFocusNode.requestFocus();
   }
 
   @override
@@ -805,6 +1144,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
         mode: _noteModeState(mode),
     };
     final Map<KottaEditorElement, int> groups = _beamGroups();
+    final Map<KottaEditorElement, _KottaNoteState> states = _noteStates();
     setState(() {
       final TextSelection? selection = _kottaSelection;
       final String followingRhythm = _rhythmBefore(
@@ -839,7 +1179,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
           KottaEditorElement(command: command, textOffset: _textCursor),
         );
         _kottaCursor++;
-        _normalizeCommands(groups, slurs, tuplets);
+        _normalizeCommands(groups, slurs, tuplets, states);
       }
       _textCursorActive = false;
       _activeCursorVisible = true;
@@ -1257,6 +1597,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
         if (extendSelection) {
           _kottaSelectionAnchor ??= _kottaCursor;
           _kottaCursor = _nextKottaCursor(direction);
+          _normalizeSelectionBoundaries();
         } else {
           _kottaSelectionAnchor = null;
           _kottaCursor = selection == null
@@ -1316,6 +1657,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     setState(() {
       _kottaSelectionAnchor = selection.baseOffset.clamp(0, _elements.length);
       _kottaCursor = selection.extentOffset.clamp(0, _elements.length);
+      _normalizeSelectionBoundaries();
       _textCursorActive = false;
       _syncTextCursorToKotta();
       _activeCursorVisible = true;
@@ -1366,6 +1708,23 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   KeyEventResult _handleEarlyKeyEvent(KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
+    }
+    if (HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isMetaPressed) {
+      if (event.logicalKey == LogicalKeyboardKey.keyX ||
+          event.logicalKey == LogicalKeyboardKey.keyC ||
+          event.logicalKey == LogicalKeyboardKey.keyV) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.keyV) {
+            unawaited(_paste());
+          } else {
+            unawaited(
+              _copySelection(cut: event.logicalKey == LogicalKeyboardKey.keyX),
+            );
+          }
+        }
+        return KeyEventResult.handled;
+      }
     }
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.tab) {
       _toggleActiveCursor();
@@ -1429,6 +1788,30 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                   activeVisible: _activeCursorVisible,
                   kottaSelection: _kottaSelection,
                 ),
+              ),
+              Row(
+                children: <Widget>[
+                  IconButton(
+                    tooltip: labels.cut,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _kottaSelection == null
+                        ? null
+                        : () => _copySelection(cut: true),
+                    icon: const Icon(Icons.content_cut, size: 18),
+                  ),
+                  IconButton(
+                    tooltip: labels.copy,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _kottaSelection == null ? null : _copySelection,
+                    icon: const Icon(Icons.content_copy, size: 18),
+                  ),
+                  IconButton(
+                    tooltip: labels.paste,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _paste,
+                    icon: const Icon(Icons.content_paste, size: 18),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Expanded(

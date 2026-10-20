@@ -53,6 +53,19 @@ kottaelemeket egyetlen új elemre cseréli; a hozzájuk tartozó szöveg megmara
 Kattintással vagy a **Tab** billentyűvel megszüntethető a kijelölés.
 Shift nélküli nyílbillentyűvel a kijelölés megfelelő végére léphetünk.
 
+Közvetlenül az előnézet alatt külön szerkesztőgombsor található. A **Kivágás**
+(**Ctrl+X**) és a **Másolás** (**Ctrl+C**) csak kijelölt kottaelemekkel aktív.
+A **Beillesztés** (**Ctrl+V**) a másolt kottaelemeket az aktuális kottakurzorhoz
+szúrja be, a kijelölést pedig felülírja. Ezek a műveletek csak a kottát
+érintik: a dalszöveg kivágáskor és beillesztéskor is változatlan marad.
+
+A kijelölés a hangokkal együtt kezeli a hozzájuk tartozó ritmus-, módosító-
+és agogikai jeleket. A lezáró csoportjelek az előző, a nyitók a következő
+hanghoz tartoznak. A kijelölésen átnyúló kötőívek, triolák, pentolák,
+gerendák, száratlan és tömör részek a vágólapon a kijelölt rész elején
+kezdődnek és a végén lezárulnak. A kivágás nem változtatja meg a megmaradó
+hangok ritmusát és tulajdonságait.
+
 A **Kulcs** sorban a többi grafikus gombbal azonos méretű gombok a kulcs képét
 mutatják ötvonalas háttéren. A Do-kulcsok vektorosan rajzolt jelek, ezért
 nagy felbontáson is élesek, és nem igényelnek telepített zenei betűtípust.
