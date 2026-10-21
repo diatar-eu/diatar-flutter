@@ -21,9 +21,11 @@ import '../models/custom_order_set.dart';
 import '../utils/custom_entry_labels.dart';
 import '../utils/escape_sequences.dart';
 import '../utils/friendly_path.dart';
+import '../utils/ios_platform.dart';
 import '../services/song_search_service.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/macos_file_panels.dart';
+import '../services/picked_image_storage.dart';
 import '../services/zsolozsma_service.dart';
 import '../services/napi_lelki_batyu_service.dart';
 import '../services/szentiras_api_service.dart';
@@ -1256,12 +1258,24 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
 
     final String fileName = file.name;
+    String imagePath = file.path;
+    if (isIosPlatform) {
+      // iOS-en a megnyitó választó a fájlt csak a Documents/Inbox mappába
+      // másolja, amit a rendszer alacsony tárhely esetén kitakarít. Mivel a
+      // diasor hosszú távon tárolja az elérési utat, a képet a saját
+      // adatmappába másoljuk.
+      try {
+        imagePath = await PickedImageStore().import(file.path);
+      } catch (_) {
+        // Ha a másolás nem sikerül, az eredeti útvonallal dolgozunk.
+      }
+    }
     final CustomOrderEntry entry = CustomOrderEntry(
       fileName: '__custom_image__',
       songIndex: -2,
       verseIndex: 0,
       label: formatCustomImageEntryLabel(l10n, fileName),
-      customImagePath: file.path,
+      customImagePath: imagePath,
     );
 
     int lastInsertedIndex = 0;
@@ -1997,6 +2011,16 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
               ),
             );
         if (saveLocation != null) {
+          if (isIosPlatform && await File(saveLocation.path).exists()) {
+            // iOS-en nincs rendszer-mentőablak, ami a felülírást
+            // megerősítené, ezért itt kérdezzük meg.
+            final bool overwrite = await _askDiaOverwriteConfirmation(
+              path.basenameWithoutExtension(saveLocation.path),
+            );
+            if (!overwrite) {
+              return;
+            }
+          }
           targetPath = saveLocation.path;
           if (!hadUsableConfiguredDir) {
             final String selectedDir = path.dirname(saveLocation.path).trim();
@@ -2072,7 +2096,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.savedPath(formatFriendlyPathLabel(outPath, l10n))),
+          content: Text(
+            l10n.savedPath(formatAppStoragePathLabel(outPath, l10n)),
+          ),
         ),
       );
     } catch (e) {
@@ -2425,12 +2451,26 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<void> _importDia() async {
+    final AppLocalizations l10n = context.l10n;
     final List<XFile> files = await DesktopProjectorBridge.instance
         .runWithNativeDialog(
           () => showFileOpenPanel(extensions: const <String>['dia']),
         );
     final XFile? file = files.isEmpty ? null : files.first;
     if (file == null) {
+      return;
+    }
+    if (!file.name.toLowerCase().endsWith('.dia')) {
+      // A .dia-hoz nincs rendszertípus, ezért iOS-en a megnyitó választó
+      // minden fájlt felajánl; itt szűrünk a kiterjesztésre.
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.customOrderLoadDiaWrongType(file.name)),
+        ),
+      );
       return;
     }
     final CustomOrderImportMode? mode =

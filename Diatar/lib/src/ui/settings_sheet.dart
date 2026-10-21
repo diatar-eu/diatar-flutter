@@ -30,6 +30,7 @@ import '../services/wol_service.dart';
 import '../core/hotkeys/desktop_hotkey.dart';
 import '../core/settings/internet_credentials_policy.dart';
 import '../utils/friendly_path.dart';
+import '../utils/ios_platform.dart';
 import 'onboarding_sheet.dart';
 
 class SongHotkeyOption {
@@ -1574,7 +1575,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         return;
       }
       await _showInternetResultDialog(
-        l10n.savedPath(formatFriendlyPathLabel(savedPath, l10n)),
+        l10n.savedPath(formatAppStoragePathLabel(savedPath, l10n)),
       );
     } catch (error) {
       if (!sectionContext.mounted) {
@@ -2967,9 +2968,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       }
 
       if (sectionContext.mounted) {
+        final AppLocalizations l10n = sectionContext.l10n;
         await _showFileTransferMessage(
           sectionContext,
-          sectionContext.l10n.diatarExportSuccess(savedFileName),
+          // iOS-en nincs rendszer-mentőablak, a fájl az app export mappájába
+          // kerül, ezért az üzenet megmondja, hol található.
+          isIosPlatform
+              ? l10n.diatarExportSuccessOnIos(savedFileName)
+              : l10n.diatarExportSuccess(savedFileName),
         );
       }
     } catch (error) {

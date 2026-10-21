@@ -534,6 +534,7 @@
   "pathSegmentPictures": "Pictures",
   "pathSegmentMusic": "Music",
   "pathSegmentMovies": "Movies",
+  "appDocumentsFolderLabel": "Diatar folder",
   "projectionSettingsTitle": "Projection settings",
   "fontSize": "Font size",
   "titleSize": "Title size",
@@ -794,6 +795,12 @@
   "customOrderLoadModeMessage": "How should the selected custom order be loaded?",
   "@customOrderLoadModeMessage": {
     "description": "Question shown in the load mode dialog"
+  },
+  "customOrderLoadDiaWrongType": "The selected file is not a DIA custom order: {fileName}",
+  "@customOrderLoadDiaWrongType": {
+    "placeholders": {
+      "fileName": {}
+    }
   },
   "volumeListTitle": "Volume list",
   "@volumeListTitle": {
@@ -1260,6 +1267,12 @@
   "diatarZipFileTypeLabel": "Diatar backup",
   "diatarExportSuccess": "Export completed: {fileName}",
   "@diatarExportSuccess": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "diatarExportSuccessOnIos": "Export completed: {fileName}. The file is available in the Files app under On My iPhone → Diatár → export.",
+  "@diatarExportSuccessOnIos": {
     "placeholders": {
       "fileName": {}
     }

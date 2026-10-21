@@ -1,1 +1,2 @@
 Bugfixek
+- iOS: javítva a biztonsági mentés exportálása és importálása, valamint a diasor mentése és megnyitása. Az exportált fájlok a Fájlok alkalmazásban a Saját iPhone → Diatár → export mappában találhatók.

@@ -530,6 +530,7 @@
   "pathSegmentPictures": "Képek",
   "pathSegmentMusic": "Zene",
   "pathSegmentMovies": "Videók",
+  "appDocumentsFolderLabel": "Diatár mappa",
   "uiLanguage": "Felhasználói felület nyelve",
   "languageSystem": "Rendszer alapértelmezett",
   "languageHungarian": "Magyar",
@@ -794,6 +795,12 @@
   "customOrderLoadModeMessage": "Hogyan töltsük be a kiválasztott diasort?",
   "@customOrderLoadModeMessage": {
     "description": "Question shown in the load mode dialog"
+  },
+  "customOrderLoadDiaWrongType": "A kiválasztott fájl nem DIA diasor: {fileName}",
+  "@customOrderLoadDiaWrongType": {
+    "placeholders": {
+      "fileName": {}
+    }
   },
   "volumeListTitle": "Kötetlista",
   "@volumeListTitle": {
@@ -1261,6 +1268,12 @@
   "diatarZipFileTypeLabel": "Diatár biztonsági mentés",
   "diatarExportSuccess": "Az exportálás elkészült: {fileName}",
   "@diatarExportSuccess": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "diatarExportSuccessOnIos": "Az exportálás elkészült: {fileName}. A fájl a Fájlok alkalmazásban a Saját iPhone → Diatár → export mappában található.",
+  "@diatarExportSuccessOnIos": {
     "placeholders": {
       "fileName": {}
     }
