@@ -96,6 +96,8 @@ class KottaEditorLabels {
     required this.doubleFlat,
     required this.doubleSharp,
     required this.agogics,
+    required this.staffLines,
+    required this.staffLineCount,
     required this.tenuto,
     required this.staccato,
     required this.marcato,
@@ -184,6 +186,8 @@ class KottaEditorLabels {
   final String doubleFlat;
   final String doubleSharp;
   final String agogics;
+  final String staffLines;
+  final String Function(int count) staffLineCount;
   final String tenuto;
   final String staccato;
   final String marcato;
@@ -1216,6 +1220,38 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     _caretTimer.cancel();
     _editorFocusNode.dispose();
     super.dispose();
+  }
+
+  void _setStaffLines(String command) {
+    _edit(() {
+      int prefixLength = 0;
+      while (prefixLength < _elements.length &&
+          const <String>{
+            '-1',
+            '-2',
+            '-3',
+            '-4',
+            '-5',
+          }.contains(_elements[prefixLength].command)) {
+        prefixLength++;
+      }
+      _elements.removeRange(0, prefixLength);
+      final int inserted = command == '-5' ? 0 : 1;
+      if (inserted != 0) {
+        _elements.insert(
+          0,
+          KottaEditorElement(command: command, textOffset: 0),
+        );
+      }
+      int remap(int position) =>
+          math.max(0, position - prefixLength) + inserted;
+      _kottaCursor = remap(_kottaCursor);
+      if (_kottaSelectionAnchor case final int anchor) {
+        _kottaSelectionAnchor = remap(anchor);
+      }
+      _activeCursorVisible = true;
+    });
+    _editorFocusNode.requestFocus();
   }
 
   void _insertCommand(String command) {
@@ -2350,6 +2386,17 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                           ),
                         ],
                         onPressed: _toggleNoteModifier,
+                      ),
+                      _CommandSection(
+                        label: labels.staffLines,
+                        commands: <_KottaEditorCommand>[
+                          for (int count = 1; count <= 5; count++)
+                            _KottaEditorCommand(
+                              labels.staffLineCount(count),
+                              '-$count',
+                            ),
+                        ],
+                        onPressed: _setStaffLines,
                       ),
                     ],
                   ),

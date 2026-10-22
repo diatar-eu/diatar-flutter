@@ -103,6 +103,13 @@ A **Szünet** sor az ütemjelek alatt található. Öt grafikus gombja sorrendbe
 A szünetjelek kisebb méretben, a változatlan méretű gombok közepén jelennek meg.
 A gombok neve egér fölévitelére vagy hosszú koppintásra jelenik meg.
 
+A gombsorok végén a **Kottavonalak** sor **1–5** gombjai az egész sor
+vonalainak számát állítják, a kurzor és a kijelölés helyétől függetlenül.
+A `-1`–`-4` kód mindig a sor legelejére kerül, a korábbi sor eleji kód
+helyére. Az **5** az alapértelmezett: eltávolítja a külön kódot, így `-5`
+nem kerül mentésre. A hangok, a dalszöveg és a kijelölés megmaradnak;
+a módosítás visszavonható és újra végrehajtható.
+
 A **Hang** sor a szünetek alatt található. Nyolc grafikus gombja sorrendben:
 **Longa**, **Brevis**, **Semi-brevis**, **Egész**, **Fél**, **Negyed**,
 **Nyolcad**, **Tizenhatod**. A szünetgombokhoz hasonlóan kisebb grafikával

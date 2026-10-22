@@ -1,5 +1,6 @@
 Új funkciók
 Diasor
+- A kottaszerkesztő utolsó, Kottavonalak gombsorában 1–5 vonal állítható az egész sorra; a sor eleji kódot lecseréli, az alapértelmezett öt vonalhoz nem ment külön kódot
 - A kottaszerkesztő Mégse/Mégis gombjai és a Ctrl+Z/Ctrl+Y gyorsbillentyűk visszavonják és újra végrehajtják a kottamódosításokat, a kurzor és kijelölés helyreállításával
 - A kottakijelölés a hanghoz tartozó láthatatlan jeleket együtt kezeli; a másolás és kivágás a határokon lezárja az átnyúló csoportokat, a megmaradó hangok tulajdonságainak megőrzésével
 - A kottaszerkesztő előnézete alatt Kivágás, Másolás és Beillesztés gombok, valamint Ctrl+X/C/V gyorsbillentyűk kezelik a kijelölt kottaelemeket, a szöveg változtatása nélkül

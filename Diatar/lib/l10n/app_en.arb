@@ -654,6 +654,15 @@
   "kottaEditorDoubleFlat": "Double flat",
   "kottaEditorDoubleSharp": "Double sharp",
   "kottaEditorAgogics": "Agogics",
+  "kottaEditorStaffLines": "Staff lines",
+  "kottaEditorStaffLineCount": "{count}",
+  "@kottaEditorStaffLineCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "kottaEditorTenuto": "Tenuto",
   "kottaEditorStaccato": "Staccato",
   "kottaEditorMarcato": "Marcato",

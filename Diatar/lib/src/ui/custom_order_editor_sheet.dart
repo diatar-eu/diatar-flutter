@@ -3083,6 +3083,8 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
                 doubleFlat: l10n.kottaEditorDoubleFlat,
                 doubleSharp: l10n.kottaEditorDoubleSharp,
                 agogics: l10n.kottaEditorAgogics,
+                staffLines: l10n.kottaEditorStaffLines,
+                staffLineCount: l10n.kottaEditorStaffLineCount,
                 tenuto: l10n.kottaEditorTenuto,
                 staccato: l10n.kottaEditorStaccato,
                 marcato: l10n.kottaEditorMarcato,

@@ -86,6 +86,8 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   doubleFlat: _l10n.kottaEditorDoubleFlat,
   doubleSharp: _l10n.kottaEditorDoubleSharp,
   agogics: _l10n.kottaEditorAgogics,
+  staffLines: _l10n.kottaEditorStaffLines,
+  staffLineCount: _l10n.kottaEditorStaffLineCount,
   tenuto: _l10n.kottaEditorTenuto,
   staccato: _l10n.kottaEditorStaccato,
   marcato: _l10n.kottaEditorMarcato,
@@ -3647,7 +3649,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SwitchListTile), findsNothing);
-    expect(find.byType(OutlinedButton), findsNWidgets(74));
+    expect(find.byType(OutlinedButton), findsNWidgets(79));
     final Finder barlineSection = find
         .ancestor(
           of: find.text(_kottaLabels.barlines),
@@ -3676,6 +3678,7 @@ void main() {
       _kottaLabels.noteProperties,
       _kottaLabels.accidentals,
       _kottaLabels.agogics,
+      _kottaLabels.staffLines,
     ]);
 
     final List<(String, String, String)> meters = <(String, String, String)>[
@@ -4128,6 +4131,149 @@ void main() {
       controller.dispose();
     });
   }
+
+  for (final String prefix in <String>['', '-3', '-5']) {
+    testWidgets(
+      'notation staff lines replace the line prefix and preserve selection ($prefix)',
+      (tester) async {
+        final controller = InlineTextEditingController.fromDia(
+          'ab\\?K${prefix}2g;cd\\K2a;ef',
+        );
+        await _openNotationPreview(tester, controller);
+        addTearDown(controller.dispose);
+        await tester.tapAt(_kottaPosition(tester, prefix.isEmpty ? 1 : 2));
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+        final ProjectorEditorCursorOverlay before = _notationOverlay(tester);
+        expect(before.kottaSelection, isNotNull);
+        final String original = _notationLine(tester);
+
+        final Finder section = find
+            .ancestor(
+              of: find.text(_kottaLabels.staffLines),
+              matching: find.byType(Column),
+            )
+            .first;
+        expect(
+          find.descendant(of: section, matching: find.byType(OutlinedButton)),
+          findsNWidgets(5),
+        );
+
+        for (int count = 1; count <= 5; count++) {
+          final Finder button = find.descendant(
+            of: section,
+            matching: find.widgetWithText(
+              OutlinedButton,
+              _kottaLabels.staffLineCount(count),
+            ),
+          );
+          await tester.ensureVisible(button);
+          await tester.pumpAndSettle();
+          await tester.tap(button);
+          await tester.pump();
+          final String expected =
+              '${count == 5 ? '' : '\\K-$count;'}ab\\?K2g;cd\\K2a;ef';
+          expect(_notationLine(tester), expected);
+          final int delta = (count == 5 ? 0 : 1) - (prefix.isEmpty ? 0 : 1);
+          final ProjectorEditorCursorOverlay after = _notationOverlay(tester);
+          expect(after.kottaPosition, before.kottaPosition + delta);
+          expect(
+            after.kottaSelection,
+            TextSelection(
+              baseOffset: before.kottaSelection!.baseOffset + delta,
+              extentOffset: before.kottaSelection!.extentOffset + delta,
+            ),
+          );
+          expect(after.textPosition, before.textPosition);
+          if (expected == original) {
+            continue;
+          }
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+          await tester.pump();
+          expect(_notationLine(tester), original);
+          expect(
+            _notationOverlay(tester).kottaSelection,
+            before.kottaSelection,
+          );
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyY);
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+          await tester.pump();
+          expect(_notationLine(tester), expected);
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+          await tester.pump();
+        }
+        final Finder five = find.descendant(
+          of: section,
+          matching: find.widgetWithText(
+            OutlinedButton,
+            _kottaLabels.staffLineCount(5),
+          ),
+        );
+        await tester.ensureVisible(five);
+        await tester.tap(five);
+        await tester.pump();
+        await tester.tap(find.text(_kottaLabels.apply));
+        await tester.pumpAndSettle();
+        expect(controller.encodedText, r'ab\?K2g;cd\K2a;ef');
+      },
+    );
+  }
+
+  testWidgets('notation staff lines ignore the active text cursor', (
+    tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(r'ab\K2g;cd');
+    await _openNotationPreview(tester, controller);
+    addTearDown(controller.dispose);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    final ProjectorEditorCursorOverlay before = _notationOverlay(tester);
+    expect(before.textActive, isTrue);
+    final Finder button = find.widgetWithText(
+      OutlinedButton,
+      _kottaLabels.staffLineCount(2),
+    );
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pump();
+    expect(_notationLine(tester), r'\K-2;ab\K2g;cd');
+    expect(_notationOverlay(tester).textPosition, before.textPosition);
+    expect(_notationOverlay(tester).textActive, isTrue);
+    await tester.tap(button);
+    await tester.pump();
+    expect(_notationLine(tester), r'\K-2;ab\K2g;cd');
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\K-2;ab\K2g;cd');
+  });
+
+  testWidgets('notation staff lines remove a standalone default code', (
+    tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(r'\K-5;word');
+    await _openNotationPreview(tester, controller);
+    addTearDown(controller.dispose);
+    final Finder button = find.widgetWithText(
+      OutlinedButton,
+      _kottaLabels.staffLineCount(5),
+    );
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pump();
+    expect(_notationLine(tester), 'word');
+    expect(_notationOverlay(tester).kottaPosition, 0);
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, 'word');
+  });
 
   for (final bool shortcuts in <bool>[false, true]) {
     testWidgets(
