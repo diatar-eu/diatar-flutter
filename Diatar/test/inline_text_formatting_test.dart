@@ -42,6 +42,8 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   cut: _l10n.kottaEditorCut,
   copy: _l10n.kottaEditorCopy,
   paste: _l10n.kottaEditorPaste,
+  undo: _l10n.kottaEditorUndo,
+  redo: _l10n.kottaEditorRedo,
   insertTitle: _l10n.kottaEditorInsertTitle,
   editTitle: _l10n.kottaEditorEditTitle,
   clef: _l10n.kottaEditorClef,
@@ -167,6 +169,19 @@ ProjectorEditorCursorOverlay _notationOverlay(WidgetTester tester) =>
             as ProjectorPainter)
         .editorCursorOverlay!;
 
+String _notationLine(WidgetTester tester) =>
+    ((tester
+                        .widget<CustomPaint>(
+                          _notationPreviewLayout(tester).preview,
+                        )
+                        .painter!
+                    as ProjectorPainter)
+                .frame!
+            as TextFrame)
+        .record
+        .lines
+        .single;
+
 Future<void> _openNotationPreview(
   WidgetTester tester,
   InlineTextEditingController controller, {
@@ -190,8 +205,10 @@ Future<void> _openNotationPreview(
       .byKey(const ValueKey<String>('inline-kotta-marker'))
       .first;
   await tester.tap(marker);
-  await tester.pump(const Duration(milliseconds: 50));
-  await tester.tap(marker);
+  await tester.pump();
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+  await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
   await tester.pumpAndSettle();
 }
 
@@ -4113,6 +4130,220 @@ void main() {
   }
 
   for (final bool shortcuts in <bool>[false, true]) {
+    testWidgets(
+      'notation undo and redo restore edits and cursors ($shortcuts)',
+      (tester) async {
+        final controller = InlineTextEditingController.fromDia(r'\?K2g;word');
+        await _openNotationPreview(tester, controller);
+        addTearDown(controller.dispose);
+
+        IconButton button(String label) => tester.widget<IconButton>(
+          find.byWidgetPredicate(
+            (widget) => widget is IconButton && widget.tooltip == label,
+          ),
+        );
+        Future<void> history({required bool redo}) async {
+          if (shortcuts) {
+            await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+            await tester.sendKeyEvent(
+              redo ? LogicalKeyboardKey.keyY : LogicalKeyboardKey.keyZ,
+            );
+            await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+          } else {
+            await tester.tap(
+              find.byTooltip(redo ? _kottaLabels.redo : _kottaLabels.undo),
+            );
+          }
+          await tester.pump();
+        }
+
+        final String original = _notationLine(tester);
+        expect(button(_kottaLabels.undo).onPressed, isNull);
+        expect(button(_kottaLabels.redo).onPressed, isNull);
+        expect(
+          tester.getTopLeft(find.byTooltip(_kottaLabels.undo)).dy,
+          tester.getTopLeft(find.byTooltip(_kottaLabels.paste)).dy,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump();
+        expect(button(_kottaLabels.undo).onPressed, isNull);
+        final ProjectorEditorCursorOverlay before = _notationOverlay(tester);
+
+        await tester.tap(find.byTooltip(_kottaLabels.gClef));
+        await tester.pump();
+        final String first = _notationLine(tester);
+        final ProjectorEditorCursorOverlay inserted = _notationOverlay(tester);
+        await tester.tap(find.byTooltip(_kottaLabels.fClef));
+        await tester.pump();
+        final String second = _notationLine(tester);
+        expect(button(_kottaLabels.undo).onPressed, isNotNull);
+        expect(button(_kottaLabels.redo).onPressed, isNull);
+
+        await history(redo: false);
+        expect(_notationLine(tester), first);
+        expect(_notationOverlay(tester).kottaPosition, inserted.kottaPosition);
+        await history(redo: false);
+        expect(_notationLine(tester), original);
+        expect(_notationOverlay(tester).textPosition, before.textPosition);
+        expect(_notationOverlay(tester).kottaPosition, before.kottaPosition);
+        expect(_notationOverlay(tester).textActive, before.textActive);
+        expect(button(_kottaLabels.undo).onPressed, isNull);
+        expect(button(_kottaLabels.redo).onPressed, isNotNull);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(button(_kottaLabels.redo).onPressed, isNotNull);
+        await history(redo: true);
+        expect(_notationLine(tester), first);
+        expect(_notationOverlay(tester).textPosition, inserted.textPosition);
+        expect(_notationOverlay(tester).textActive, inserted.textActive);
+        await history(redo: true);
+        expect(_notationLine(tester), second);
+        expect(button(_kottaLabels.redo).onPressed, isNull);
+        await history(redo: false);
+        await tester.tap(find.byTooltip(_kottaLabels.gClef));
+        await tester.pump();
+        expect(button(_kottaLabels.redo).onPressed, isNull);
+        final String branched = _notationLine(tester);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyY);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pump();
+        expect(_notationLine(tester), branched);
+        expect(FocusManager.instance.primaryFocus?.debugLabel, 'kotta-editor');
+        await tester.tap(find.text(_kottaLabels.apply));
+        await tester.pumpAndSettle();
+        expect(controller.encodedText, r'\?K2g;wo\KkGkG;rd');
+      },
+    );
+  }
+
+  testWidgets('notation undo restores selected note properties and commands', (
+    tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(r'\?Kr82g2as4;word');
+    await _openNotationPreview(tester, controller);
+    addTearDown(controller.dispose);
+    await tester.tapAt(_kottaPosition(tester, 0));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    for (int index = 0; index < 3; index++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    }
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    final String original = _notationLine(tester);
+    final TextSelection? selection = _notationOverlay(tester).kottaSelection;
+    expect(selection, isNotNull);
+
+    final List<Finder> edits = <Finder>[
+      find.byTooltip(_kottaLabels.stemDown),
+      find.byTooltip(_kottaLabels.stemless),
+      find.byTooltip(_kottaLabels.compact),
+      find.byTooltip(_kottaLabels.beaming),
+      find.byTooltip(_kottaLabels.lowerSlur),
+      find.byTooltip(_kottaLabels.upperSlur),
+      find.byTooltip(_kottaLabels.triplet),
+      find.byTooltip(_kottaLabels.quintuplet),
+      find.byTooltip(_kottaLabels.dotted).first,
+      find.byTooltip(_kottaLabels.dotted).last,
+      find.byTooltip(_kottaLabels.sharp),
+      find.byTooltip(_kottaLabels.fermata),
+      find.byTooltip(_kottaLabels.fClef),
+    ];
+    for (final Finder edit in edits) {
+      await tester.ensureVisible(edit);
+      await tester.tap(edit);
+      await tester.pump();
+      final String changed = _notationLine(tester);
+      expect(changed, isNot(original));
+      await tester.tap(find.byTooltip(_kottaLabels.undo));
+      await tester.pump();
+      expect(_notationLine(tester), original);
+      expect(_notationOverlay(tester).kottaSelection, selection);
+      await tester.tap(find.byTooltip(_kottaLabels.redo));
+      await tester.pump();
+      expect(_notationLine(tester), changed);
+      await tester.tap(find.byTooltip(_kottaLabels.undo));
+      await tester.pump();
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(_notationLine(tester), isNot(original));
+    await tester.tap(find.byTooltip(_kottaLabels.undo));
+    await tester.pump();
+    expect(_notationLine(tester), original);
+    expect(_notationOverlay(tester).kottaSelection, selection);
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\?Kr82g2as4;word');
+  });
+
+  testWidgets('notation no-op edits preserve redo and pending note modifiers', (
+    tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(r'\K3d;word');
+    await _openNotationPreview(tester, controller);
+    addTearDown(controller.dispose);
+    final String original = _notationLine(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    IconButton button(String label) => tester.widget<IconButton>(
+      find.byWidgetPredicate(
+        (widget) => widget is IconButton && widget.tooltip == label,
+      ),
+    );
+    expect(button(_kottaLabels.undo).onPressed, isNull);
+    final Finder sharp = find.byTooltip(_kottaLabels.sharp);
+    bool sharpSelected() => tester
+        .widget<Semantics>(
+          find.descendant(
+            of: sharp,
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is Semantics && widget.properties.toggled != null,
+            ),
+          ),
+        )
+        .properties
+        .toggled!;
+    await tester.ensureVisible(sharp);
+    await tester.tap(sharp);
+    await tester.pump();
+    expect(button(_kottaLabels.undo).onPressed, isNull);
+    final Finder quarter = find.descendant(
+      of: find
+          .ancestor(
+            of: find.text(_kottaLabels.notes),
+            matching: find.byType(Column),
+          )
+          .first,
+      matching: find.byTooltip(_kottaLabels.quarterNote),
+    );
+    await tester.ensureVisible(quarter);
+    await tester.tap(quarter);
+    await tester.pump();
+    final String inserted = _notationLine(tester);
+    expect(sharpSelected(), isFalse);
+    await tester.tap(find.byTooltip(_kottaLabels.undo));
+    await tester.pump();
+    expect(_notationLine(tester), original);
+    expect(sharpSelected(), isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(button(_kottaLabels.undo).onPressed, isNull);
+    expect(button(_kottaLabels.redo).onPressed, isNotNull);
+    await tester.tap(find.byTooltip(_kottaLabels.redo));
+    await tester.pump();
+    expect(_notationLine(tester), inserted);
+    expect(sharpSelected(), isFalse);
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\K3dmk3d;word');
+  });
+
+  for (final bool shortcuts in <bool>[false, true]) {
     testWidgets('notation clipboard copies, cuts and pastes ($shortcuts)', (
       WidgetTester tester,
     ) async {
@@ -4179,15 +4410,30 @@ void main() {
       await action(_kottaLabels.copy, LogicalKeyboardKey.keyC);
       expect(clipboard, r'\Kr4;\Kmk;\K1a;\Ke2;');
       expect(_notationOverlay(tester).kottaSelection, selection);
+      expect(button(_kottaLabels.undo).onPressed, isNull);
 
+      final String beforeCut = _notationLine(tester);
       await action(_kottaLabels.cut, LogicalKeyboardKey.keyX);
       expect(_notationOverlay(tester).kottaPosition, 1);
       expect(_notationOverlay(tester).textPosition, 2);
       expect(_notationOverlay(tester).kottaSelection, isNull);
       expect(button(_kottaLabels.cut).onPressed, isNull);
+      final String afterCut = _notationLine(tester);
+      await action(_kottaLabels.undo, LogicalKeyboardKey.keyZ);
+      expect(_notationLine(tester), beforeCut);
+      expect(_notationOverlay(tester).kottaSelection, selection);
+      await action(_kottaLabels.copy, LogicalKeyboardKey.keyC);
+      expect(button(_kottaLabels.redo).onPressed, isNotNull);
+      await action(_kottaLabels.redo, LogicalKeyboardKey.keyY);
+      expect(_notationLine(tester), afterCut);
       await action(_kottaLabels.paste, LogicalKeyboardKey.keyV);
       expect(_notationOverlay(tester).kottaPosition, 5);
       expect(_notationOverlay(tester).textPosition, 2);
+      final String afterPaste = _notationLine(tester);
+      await action(_kottaLabels.undo, LogicalKeyboardKey.keyZ);
+      expect(_notationLine(tester), afterCut);
+      await action(_kottaLabels.redo, LogicalKeyboardKey.keyY);
+      expect(_notationLine(tester), afterPaste);
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
@@ -4196,6 +4442,12 @@ void main() {
       await action(_kottaLabels.paste, LogicalKeyboardKey.keyV);
       expect(_notationOverlay(tester).kottaSelection, isNull);
       expect(_notationOverlay(tester).kottaPosition, 9);
+      final String replaced = _notationLine(tester);
+      await action(_kottaLabels.undo, LogicalKeyboardKey.keyZ);
+      expect(_notationLine(tester), afterPaste);
+      expect(_notationOverlay(tester).kottaSelection, isNotNull);
+      await action(_kottaLabels.redo, LogicalKeyboardKey.keyY);
+      expect(_notationLine(tester), replaced);
       await tester.tap(find.text(_kottaLabels.apply));
       await tester.pumpAndSettle();
       expect(controller.encodedText, r'\KkG;ab\Kr4mk1ae2;cd\Kr4mk1ae2;ef');

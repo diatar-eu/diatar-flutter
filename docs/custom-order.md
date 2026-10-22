@@ -59,6 +59,14 @@ A **Beillesztés** (**Ctrl+V**) a másolt kottaelemeket az aktuális kottakurzor
 szúrja be, a kijelölést pedig felülírja. Ezek a műveletek csak a kottát
 érintik: a dalszöveg kivágáskor és beillesztéskor is változatlan marad.
 
+A vágólapgombok mellett a **Mégse** (**Ctrl+Z**) és a **Mégis** (**Ctrl+Y**)
+lépésenként visszavonja, illetve újra végrehajtja az ablakban végzett
+kottamódosításokat, a kurzor és a kijelölés helyreállításával. A gombok csak
+akkor aktívak, ha van megfelelő előzmény. Visszavonás után egy új módosítás
+törli az újra végrehajtható lépéseket. A kurzormozgatás, kijelölés, másolás
+és a következő hang előkészítő kapcsolói önmagukban nem alkotnak
+visszavonható lépést; a kottát ténylegesen módosító műveletek igen.
+
 A kijelölés a hangokkal együtt kezeli a hozzájuk tartozó ritmus-, módosító-
 és agogikai jeleket. A lezáró csoportjelek az előző, a nyitók a következő
 hanghoz tartoznak. A kijelölésen átnyúló kötőívek, triolák, pentolák,

@@ -55,6 +55,8 @@ class KottaEditorLabels {
     required this.cut,
     required this.copy,
     required this.paste,
+    required this.undo,
+    required this.redo,
     required this.clef,
     required this.keySignature,
     required this.barlines,
@@ -141,6 +143,8 @@ class KottaEditorLabels {
   final String cut;
   final String copy;
   final String paste;
+  final String undo;
+  final String redo;
   final String clef;
   final String keySignature;
   final String barlines;
@@ -272,6 +276,21 @@ class _KottaNoteGroup {
 
 typedef _KottaNoteState = ({String rhythm, bool stemless, bool compact});
 
+typedef _KottaEditorSnapshot = ({
+  List<KottaEditorElement> elements,
+  int kottaCursor,
+  int textCursor,
+  int? selectionAnchor,
+  bool textCursorActive,
+  bool dottedRests,
+  bool dottedNotes,
+  bool? stemDownOverride,
+  Map<_KottaNoteMode, bool> noteModeOverrides,
+  bool? beamingOverride,
+  Map<_KottaGroupKind, String> groupOverrides,
+  Map<String, String> noteModifiers,
+});
+
 class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   final FocusNode _editorFocusNode = FocusNode(debugLabel: 'kotta-editor');
   late List<KottaEditorElement> _elements;
@@ -289,6 +308,79 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   final Map<_KottaGroupKind, String> _groupOverrides =
       <_KottaGroupKind, String>{};
   final Map<String, String> _noteModifiers = <String, String>{};
+  final List<_KottaEditorSnapshot> _undoStack = <_KottaEditorSnapshot>[];
+  final List<_KottaEditorSnapshot> _redoStack = <_KottaEditorSnapshot>[];
+
+  _KottaEditorSnapshot _snapshot() => (
+    elements: List<KottaEditorElement>.of(_elements),
+    kottaCursor: _kottaCursor,
+    textCursor: _textCursor,
+    selectionAnchor: _kottaSelectionAnchor,
+    textCursorActive: _textCursorActive,
+    dottedRests: _dottedRests,
+    dottedNotes: _dottedNotes,
+    stemDownOverride: _stemDownOverride,
+    noteModeOverrides: Map<_KottaNoteMode, bool>.of(_noteModeOverrides),
+    beamingOverride: _beamingOverride,
+    groupOverrides: Map<_KottaGroupKind, String>.of(_groupOverrides),
+    noteModifiers: Map<String, String>.of(_noteModifiers),
+  );
+
+  void _edit(VoidCallback change) {
+    final _KottaEditorSnapshot before = _snapshot();
+    setState(() {
+      change();
+      final bool changed =
+          before.elements.length != _elements.length ||
+          before.elements.asMap().entries.any((entry) {
+            final KottaEditorElement current = _elements[entry.key];
+            return entry.value.command != current.command ||
+                entry.value.textOffset != current.textOffset ||
+                entry.value.isConditional != current.isConditional;
+          });
+      if (changed) {
+        _undoStack.add(before);
+        _redoStack.clear();
+      }
+    });
+  }
+
+  void _restoreHistory(
+    List<_KottaEditorSnapshot> from,
+    List<_KottaEditorSnapshot> to,
+  ) {
+    if (from.isEmpty) {
+      return;
+    }
+    setState(() {
+      to.add(_snapshot());
+      final _KottaEditorSnapshot snapshot = from.removeLast();
+      _elements = List<KottaEditorElement>.of(snapshot.elements);
+      _kottaCursor = snapshot.kottaCursor;
+      _textCursor = snapshot.textCursor;
+      _kottaSelectionAnchor = snapshot.selectionAnchor;
+      _textCursorActive = snapshot.textCursorActive;
+      _dottedRests = snapshot.dottedRests;
+      _dottedNotes = snapshot.dottedNotes;
+      _stemDownOverride = snapshot.stemDownOverride;
+      _noteModeOverrides
+        ..clear()
+        ..addAll(snapshot.noteModeOverrides);
+      _beamingOverride = snapshot.beamingOverride;
+      _groupOverrides
+        ..clear()
+        ..addAll(snapshot.groupOverrides);
+      _noteModifiers
+        ..clear()
+        ..addAll(snapshot.noteModifiers);
+      _activeCursorVisible = true;
+    });
+    _editorFocusNode.requestFocus();
+  }
+
+  void _undo() => _restoreHistory(_undoStack, _redoStack);
+
+  void _redo() => _restoreHistory(_redoStack, _undoStack);
 
   bool get _isValid =>
       widget.initialState.elements.isNotEmpty || _elements.isNotEmpty;
@@ -430,7 +522,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _toggleGroup(_KottaGroupKind kind, String value) {
     final bool apply = _groupValue(kind) != value;
-    setState(() {
+    _edit(() {
       final TextSelection? selection = _kottaSelection;
       if (selection == null) {
         _groupOverrides[kind] = apply ? value : '';
@@ -506,7 +598,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _toggleNoteMode(_KottaNoteMode mode) {
     final bool apply = !_noteModeState(mode);
-    setState(() {
+    _edit(() {
       final TextSelection? selection = _kottaSelection;
       if (selection == null) {
         _noteModeOverrides[mode] = apply;
@@ -813,7 +905,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _toggleBeaming() {
     final bool apply = !_beaming;
-    setState(() {
+    _edit(() {
       final TextSelection? selection = _kottaSelection;
       if (selection == null) {
         _beamingOverride = apply;
@@ -842,7 +934,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _toggleStemDirection() {
     final bool down = !_stemDown;
-    setState(() {
+    _edit(() {
       final TextSelection? selection = _kottaSelection;
       if (selection == null) {
         _stemDownOverride = down;
@@ -1032,7 +1124,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
       final Map<KottaEditorElement, _KottaNoteGroup> slurs = _slurGroups();
       final Map<KottaEditorElement, _KottaNoteGroup> tuplets = _tupletGroups();
       final Map<KottaEditorElement, _KottaNoteState> states = _noteStates();
-      setState(() {
+      _edit(() {
         _textCursor = _elements[selection.start].textOffset;
         _elements.removeRange(selection.start, selection.end);
         _kottaCursor = selection.start;
@@ -1057,7 +1149,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
         matches.map((match) => match.group(0)).join() != source) {
       return;
     }
-    setState(() {
+    _edit(() {
       final Map<KottaEditorElement, int> groups = _beamGroups();
       final Map<KottaEditorElement, _KottaNoteGroup> slurs = _slurGroups();
       final Map<KottaEditorElement, _KottaNoteGroup> tuplets = _tupletGroups();
@@ -1145,7 +1237,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     };
     final Map<KottaEditorElement, int> groups = _beamGroups();
     final Map<KottaEditorElement, _KottaNoteState> states = _noteStates();
-    setState(() {
+    _edit(() {
       final TextSelection? selection = _kottaSelection;
       final String followingRhythm = _rhythmBefore(
         selection?.end ?? _kottaCursor,
@@ -1237,7 +1329,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
 
   void _toggleDotted({required bool rests}) {
     final bool dotted = !_dottedState(rests: rests);
-    setState(() {
+    _edit(() {
       if (rests) {
         _dottedRests = dotted;
       } else {
@@ -1374,7 +1466,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
   void _toggleNoteModifier(String command) {
     final String prefix = command[0];
     final bool apply = !_noteModifierState(command);
-    setState(() {
+    _edit(() {
       final TextSelection? selection = _kottaSelection;
       if (selection == null) {
         if (apply) {
@@ -1559,7 +1651,7 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
       }
     }
     const String notes = 'gahcdef';
-    setState(() {
+    _edit(() {
       for (int index = start; index < end; index++) {
         final KottaEditorElement element = _elements[index];
         final String command = element.command;
@@ -1711,6 +1803,16 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
     }
     if (HardwareKeyboard.instance.isControlPressed ||
         HardwareKeyboard.instance.isMetaPressed) {
+      if (event.logicalKey == LogicalKeyboardKey.keyZ ||
+          event.logicalKey == LogicalKeyboardKey.keyY) {
+        if (event.logicalKey == LogicalKeyboardKey.keyY ||
+            HardwareKeyboard.instance.isShiftPressed) {
+          _redo();
+        } else {
+          _undo();
+        }
+        return KeyEventResult.handled;
+      }
       if (event.logicalKey == LogicalKeyboardKey.keyX ||
           event.logicalKey == LogicalKeyboardKey.keyC ||
           event.logicalKey == LogicalKeyboardKey.keyV) {
@@ -1810,6 +1912,18 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                     visualDensity: VisualDensity.compact,
                     onPressed: _paste,
                     icon: const Icon(Icons.content_paste, size: 18),
+                  ),
+                  IconButton(
+                    tooltip: labels.undo,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _undoStack.isEmpty ? null : _undo,
+                    icon: const Icon(Icons.undo, size: 18),
+                  ),
+                  IconButton(
+                    tooltip: labels.redo,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _redoStack.isEmpty ? null : _redo,
+                    icon: const Icon(Icons.redo, size: 18),
                   ),
                 ],
               ),

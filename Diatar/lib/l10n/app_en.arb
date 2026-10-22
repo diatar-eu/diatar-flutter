@@ -590,6 +590,8 @@
   "kottaEditorCut": "Cut (Ctrl+X)",
   "kottaEditorCopy": "Copy (Ctrl+C)",
   "kottaEditorPaste": "Paste (Ctrl+V)",
+  "kottaEditorUndo": "Undo (Ctrl+Z)",
+  "kottaEditorRedo": "Redo (Ctrl+Y)",
   "kottaEditorInsertTitle": "Insert notation",
   "kottaEditorEditTitle": "Edit notation",
   "kottaEditorClef": "Clef",

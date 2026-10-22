@@ -3039,6 +3039,8 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
                 cut: l10n.kottaEditorCut,
                 copy: l10n.kottaEditorCopy,
                 paste: l10n.kottaEditorPaste,
+                undo: l10n.kottaEditorUndo,
+                redo: l10n.kottaEditorRedo,
                 insertTitle: l10n.kottaEditorInsertTitle,
                 editTitle: l10n.kottaEditorEditTitle,
                 clef: l10n.kottaEditorClef,

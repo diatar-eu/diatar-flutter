@@ -590,6 +590,8 @@
   "kottaEditorCut": "Kivágás (Ctrl+X)",
   "kottaEditorCopy": "Másolás (Ctrl+C)",
   "kottaEditorPaste": "Beillesztés (Ctrl+V)",
+  "kottaEditorUndo": "Mégse (Ctrl+Z)",
+  "kottaEditorRedo": "Mégis (Ctrl+Y)",
   "kottaEditorInsertTitle": "Kotta beszúrása",
   "kottaEditorEditTitle": "Kotta szerkesztése",
   "kottaEditorClef": "Kulcs",
