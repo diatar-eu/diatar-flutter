@@ -4,6 +4,7 @@ Hibajavítások
 - A C-kulcsok a kottakód szerinti vonalon jelennek meg
 
 Közös kiadás
+- A verziószám követi a Diatár szövegesdia-szerkesztőjének mobilos elrendezésjavítását; a vetítési kódformátum változatlan
 - A verziószám követi a Diatár kottaszerkesztőjének Kottavonalak gombsorát; a meglévő -1…-5 kottakódok és a vetítési kódformátum változatlanok
 - A verziószám követi a Diatár kottaszerkesztőjének Mégse/Mégis gombjait és Ctrl+Z/Ctrl+Y gyorsbillentyűit; a vetítési kódformátum változatlan
 - A verziószám követi a Diatár kottaszerkesztőjének vágólapgombjait és Ctrl+X/C/V gyorsbillentyűit; a vetítési kódformátum változatlan

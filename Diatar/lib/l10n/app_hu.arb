@@ -780,7 +780,6 @@
   "customOrderInsertVersesSubtitle": "Jelöld ki, mely versszakok kerüljenek a diasorba.",
   "textSlideDialogTitle": "Szöveges dia hozzáadása",
   "textSlideTitleLabel": "Cím",
-  "textSlideBodyLabel": "Szöveg (soronként)",
   "textSlideDefaultTitle": "Dia",
   "loadDia": "Betöltés",
   "saveDia": "Mentés",

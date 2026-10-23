@@ -2993,6 +2993,7 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
+      scrollable: true,
       title: Text(widget.dialogTitle ?? l10n.textSlideDialogTitle),
       content: SizedBox(
         width: 420,
@@ -3140,7 +3141,7 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
                 cancel: l10n.cancel,
                 apply: l10n.apply,
               ),
-              decoration: InputDecoration(labelText: l10n.textSlideBodyLabel),
+              decoration: const InputDecoration(),
               minLines: 4,
               maxLines: 8,
             ),

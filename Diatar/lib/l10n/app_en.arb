@@ -780,7 +780,6 @@
   "customOrderInsertVersesSubtitle": "Select which verses should be added to the order.",
   "textSlideDialogTitle": "Add text slide",
   "textSlideTitleLabel": "Title",
-  "textSlideBodyLabel": "Text (one line per row)",
   "textSlideDefaultTitle": "Slide",
   "loadDia": "Load",
   "saveDia": "Save",

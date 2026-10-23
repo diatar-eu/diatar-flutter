@@ -23,6 +23,10 @@ Az diasor összeállítása a **Diasor** ablakban érhető el.
 
 ### Akkordok a szöveges diákban
 
+Mobilon a szöveges dia szerkesztőjének eszköztára szükség esetén több sorba
+törik. Az ablak tartalma fekvő helyzetben és megnyitott billentyűzet mellett
+is görgethető, így a beviteli mezők és a gombok elérhetők maradnak.
+
 A szöveges dia szerkesztőjének akkord gombjával külön ablakban választható ki
 az alaphang, a dúr vagy moll jelleg, a hangzat és az opcionális basszushang. Az
 akkord a szövegben vékony keretben, egyetlen elemként jelenik meg: egyben

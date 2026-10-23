@@ -1919,8 +1919,7 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
       children: <Widget>[
         Align(
           alignment: Alignment.centerLeft,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+          child: Wrap(
             children: <Widget>[
               _FormattingButton(
                 controller: widget.controller,
