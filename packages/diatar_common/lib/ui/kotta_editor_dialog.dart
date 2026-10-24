@@ -57,6 +57,10 @@ class KottaEditorLabels {
     required this.paste,
     required this.undo,
     required this.redo,
+    required this.moveLeft,
+    required this.moveRight,
+    required this.pitchUp,
+    required this.pitchDown,
     required this.clef,
     required this.keySignature,
     required this.barlines,
@@ -147,6 +151,10 @@ class KottaEditorLabels {
   final String paste;
   final String undo;
   final String redo;
+  final String moveLeft;
+  final String moveRight;
+  final String pitchUp;
+  final String pitchDown;
   final String clef;
   final String keySignature;
   final String barlines;
@@ -1927,41 +1935,79 @@ class _KottaEditorDialogState extends State<_KottaEditorDialog> {
                   kottaSelection: _kottaSelection,
                 ),
               ),
-              Row(
-                children: <Widget>[
-                  IconButton(
-                    tooltip: labels.cut,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _kottaSelection == null
-                        ? null
-                        : () => _copySelection(cut: true),
-                    icon: const Icon(Icons.content_cut, size: 18),
-                  ),
-                  IconButton(
-                    tooltip: labels.copy,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _kottaSelection == null ? null : _copySelection,
-                    icon: const Icon(Icons.content_copy, size: 18),
-                  ),
-                  IconButton(
-                    tooltip: labels.paste,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _paste,
-                    icon: const Icon(Icons.content_paste, size: 18),
-                  ),
-                  IconButton(
-                    tooltip: labels.undo,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _undoStack.isEmpty ? null : _undo,
-                    icon: const Icon(Icons.undo, size: 18),
-                  ),
-                  IconButton(
-                    tooltip: labels.redo,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _redoStack.isEmpty ? null : _redo,
-                    icon: const Icon(Icons.redo, size: 18),
-                  ),
-                ],
+              SingleChildScrollView(
+                key: const ValueKey<String>('kotta-editor-actions'),
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: <Widget>[
+                    IconButton(
+                      tooltip: labels.cut,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _kottaSelection == null
+                          ? null
+                          : () => _copySelection(cut: true),
+                      icon: const Icon(Icons.content_cut, size: 18),
+                    ),
+                    IconButton(
+                      tooltip: labels.copy,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _kottaSelection == null
+                          ? null
+                          : _copySelection,
+                      icon: const Icon(Icons.content_copy, size: 18),
+                    ),
+                    IconButton(
+                      tooltip: labels.paste,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _paste,
+                      icon: const Icon(Icons.content_paste, size: 18),
+                    ),
+                    IconButton(
+                      tooltip: labels.undo,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _undoStack.isEmpty ? null : _undo,
+                      icon: const Icon(Icons.undo, size: 18),
+                    ),
+                    IconButton(
+                      tooltip: labels.redo,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _redoStack.isEmpty ? null : _redo,
+                      icon: const Icon(Icons.redo, size: 18),
+                    ),
+                    IconButton(
+                      tooltip: labels.moveLeft,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _moveActiveCursor(
+                        -1,
+                        extendSelection:
+                            HardwareKeyboard.instance.isShiftPressed,
+                      ),
+                      icon: const Icon(Icons.arrow_back, size: 18),
+                    ),
+                    IconButton(
+                      tooltip: labels.moveRight,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _moveActiveCursor(
+                        1,
+                        extendSelection:
+                            HardwareKeyboard.instance.isShiftPressed,
+                      ),
+                      icon: const Icon(Icons.arrow_forward, size: 18),
+                    ),
+                    IconButton(
+                      tooltip: labels.pitchUp,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _changePitch(1),
+                      icon: const Icon(Icons.arrow_upward, size: 18),
+                    ),
+                    IconButton(
+                      tooltip: labels.pitchDown,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _changePitch(-1),
+                      icon: const Icon(Icons.arrow_downward, size: 18),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -2451,19 +2497,63 @@ class _KottaPreview extends StatefulWidget {
 class _KottaPreviewState extends State<_KottaPreview> {
   final ScrollController _horizontalScrollController = ScrollController();
   final GlobalKey _previewKey = GlobalKey();
+  final GlobalKey _viewportKey = GlobalKey();
   int? _dragAnchor;
+  int? _touchDragAnchor;
+  Offset? _touchDragPosition;
+  Offset _touchDragOffset = Offset.zero;
+  Timer? _selectionScrollTimer;
+  bool _showTouchHandles = false;
+  ({Offset start, Offset end})? _handleOffsets;
+  bool _handleLayoutScheduled = false;
   Rect? _pendingCursorRect;
   ProjectorEditorCursorLayout? _cursorLayout;
   bool _cursorScrollScheduled = false;
 
   @override
   void dispose() {
+    _selectionScrollTimer?.cancel();
     _horizontalScrollController.dispose();
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant _KottaPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.cursorOverlay.kottaSelection == null &&
+        _touchDragAnchor == null) {
+      _showTouchHandles = false;
+    }
+  }
+
+  ({Offset start, Offset end})? get _selectionHandleOffsets {
+    final ProjectorEditorCursorLayout? layout = _cursorLayout;
+    final TextSelection? selection = widget.cursorOverlay.kottaSelection;
+    if (!_showTouchHandles || layout == null || selection == null) {
+      return null;
+    }
+    final double? start = layout.kottaXForPosition(selection.start);
+    final double? end = layout.kottaXForPosition(selection.end);
+    if (start == null || end == null) {
+      return null;
+    }
+    return (
+      start: Offset(start, layout.kottaRect.top),
+      end: Offset(end, layout.kottaRect.bottom),
+    );
+  }
+
   void _handleEditorCursorLayout(ProjectorEditorCursorLayout layout) {
     _cursorLayout = layout;
+    if (_handleOffsets != _selectionHandleOffsets && !_handleLayoutScheduled) {
+      _handleLayoutScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleLayoutScheduled = false;
+        if (mounted) {
+          setState(() => _handleOffsets = _selectionHandleOffsets);
+        }
+      });
+    }
     final Rect cursorRect = widget.cursorOverlay.textActive
         ? layout.textRect
         : layout.kottaRect;
@@ -2477,7 +2567,9 @@ class _KottaPreviewState extends State<_KottaPreview> {
     _cursorScrollScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _cursorScrollScheduled = false;
-      if (!mounted || !_horizontalScrollController.hasClients) {
+      if (!mounted ||
+          !_horizontalScrollController.hasClients ||
+          _touchDragAnchor != null) {
         return;
       }
       final Rect? cursorRect = _pendingCursorRect;
@@ -2512,6 +2604,9 @@ class _KottaPreviewState extends State<_KottaPreview> {
       return;
     }
     final hit = layout.hitTest(event.localPosition);
+    if (_showTouchHandles) {
+      setState(() => _showTouchHandles = false);
+    }
     _dragAnchor = hit.textActive ? null : hit.position;
     widget.onCursorPlaced(hit);
   }
@@ -2533,6 +2628,170 @@ class _KottaPreviewState extends State<_KottaPreview> {
     );
     widget.onSelectionChanged(
       TextSelection(baseOffset: anchor, extentOffset: hit.position),
+    );
+  }
+
+  void _startTouchSelection(LongPressStartDetails details) {
+    final ProjectorEditorCursorLayout? layout = _cursorLayout;
+    if (layout == null || layout.hitTest(details.localPosition).textActive) {
+      return;
+    }
+    final List<MapEntry<int, double>> positions =
+        layout.kottaPositions.entries.toList()
+          ..sort((a, b) => a.key.compareTo(b.key));
+    TextSelection? selection;
+    for (int index = 0; index + 1 < positions.length; index++) {
+      final MapEntry<int, double> start = positions[index];
+      final MapEntry<int, double> end = positions[index + 1];
+      if (end.value <= start.value) {
+        continue;
+      }
+      selection = TextSelection(baseOffset: start.key, extentOffset: end.key);
+      if (details.localPosition.dx < end.value) {
+        break;
+      }
+    }
+    if (selection == null) {
+      return;
+    }
+    _beginTouchDrag(selection.baseOffset, details.globalPosition);
+    widget.onSelectionChanged(selection);
+  }
+
+  void _beginTouchDrag(
+    int anchor,
+    Offset globalPosition, {
+    Offset offset = Offset.zero,
+  }) {
+    setState(() => _showTouchHandles = true);
+    _touchDragAnchor = anchor;
+    _touchDragPosition = globalPosition;
+    _touchDragOffset = offset;
+    _selectionScrollTimer?.cancel();
+    _selectionScrollTimer = Timer.periodic(
+      const Duration(milliseconds: 16),
+      (_) => _scrollTouchSelection(),
+    );
+  }
+
+  void _startHandleDrag(DragStartDetails details, {required bool start}) {
+    final TextSelection? selection = widget.cursorOverlay.kottaSelection;
+    final ProjectorEditorCursorLayout? layout = _cursorLayout;
+    if (selection == null || layout == null) {
+      return;
+    }
+    final int moving = start ? selection.start : selection.end;
+    final double? x = layout.kottaXForPosition(moving);
+    if (x == null) {
+      return;
+    }
+    final RenderBox box =
+        _previewKey.currentContext!.findRenderObject()! as RenderBox;
+    _beginTouchDrag(
+      start ? selection.end : selection.start,
+      details.globalPosition,
+      offset: Offset(
+        box.localToGlobal(Offset(x, 0)).dx - details.globalPosition.dx,
+        0,
+      ),
+    );
+  }
+
+  void _updateTouchSelection(Offset globalPosition) {
+    _touchDragPosition = globalPosition;
+    final int? anchor = _touchDragAnchor;
+    final ProjectorEditorCursorLayout? layout = _cursorLayout;
+    if (anchor == null || layout == null) {
+      return;
+    }
+    final RenderBox box =
+        _previewKey.currentContext!.findRenderObject()! as RenderBox;
+    final RenderBox viewport =
+        _viewportKey.currentContext!.findRenderObject()! as RenderBox;
+    final Offset viewportPosition = viewport.globalToLocal(
+      globalPosition + _touchDragOffset,
+    );
+    final Offset clampedPosition = viewport.localToGlobal(
+      Offset(
+        viewportPosition.dx.clamp(0, viewport.size.width),
+        viewportPosition.dy,
+      ),
+    );
+    final hit = layout.hitTest(
+      box.globalToLocal(clampedPosition),
+      textActive: false,
+    );
+    if (hit.position != anchor) {
+      widget.onSelectionChanged(
+        TextSelection(baseOffset: anchor, extentOffset: hit.position),
+      );
+    }
+  }
+
+  void _scrollTouchSelection() {
+    final Offset? globalPosition = _touchDragPosition;
+    if (globalPosition == null ||
+        _touchDragAnchor == null ||
+        !_horizontalScrollController.hasClients) {
+      return;
+    }
+    final RenderBox viewport =
+        _viewportKey.currentContext!.findRenderObject()! as RenderBox;
+    final double x = viewport.globalToLocal(globalPosition).dx;
+    const double edge = 36;
+    final double delta = x < edge
+        ? -10 * ((edge - x) / edge).clamp(0, 1)
+        : x > viewport.size.width - edge
+        ? 10 * ((x - viewport.size.width + edge) / edge).clamp(0, 1)
+        : 0;
+    final ScrollPosition position = _horizontalScrollController.position;
+    final double target = (position.pixels + delta).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    if (target != position.pixels) {
+      _horizontalScrollController.jumpTo(target);
+      _updateTouchSelection(globalPosition);
+    }
+  }
+
+  void _endTouchDrag() {
+    _selectionScrollTimer?.cancel();
+    _selectionScrollTimer = null;
+    _touchDragAnchor = null;
+    _touchDragPosition = null;
+  }
+
+  Widget _selectionHandle(Offset position, {required bool start}) {
+    final Color color = Theme.of(context).colorScheme.primary;
+    final Widget knob = Container(
+      width: 16,
+      height: 16,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+    final Widget stem = Container(width: 2, height: 12, color: color);
+    return Positioned(
+      left: position.dx - 24,
+      top: start ? position.dy - 38 : position.dy - 10,
+      width: 48,
+      height: 48,
+      child: GestureDetector(
+        key: ValueKey<String>(
+          start ? 'kotta-selection-start' : 'kotta-selection-end',
+        ),
+        behavior: HitTestBehavior.opaque,
+        dragStartBehavior: DragStartBehavior.down,
+        onPanStart: (details) => _startHandleDrag(details, start: start),
+        onPanUpdate: (details) => _updateTouchSelection(details.globalPosition),
+        onPanEnd: (_) => _endTouchDrag(),
+        onPanCancel: _endTouchDrag,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: start ? <Widget>[knob, stem] : <Widget>[stem, knob],
+          ),
+        ),
+      ),
     );
   }
 
@@ -2561,6 +2820,7 @@ class _KottaPreviewState extends State<_KottaPreview> {
       onEditorCursorLayout: _handleEditorCursorLayout,
     );
     return ClipRRect(
+      key: _viewportKey,
       borderRadius: BorderRadius.circular(8),
       child: SizedBox(
         height: 180,
@@ -2582,28 +2842,47 @@ class _KottaPreviewState extends State<_KottaPreview> {
                 child: SizedBox(
                   width: contentWidth,
                   height: constraints.maxHeight,
-                  child: Listener(
-                    key: _previewKey,
-                    onPointerDown: _handlePointerDown,
-                    onPointerMove: _handlePointerMove,
-                    onPointerUp: (_) => _dragAnchor = null,
-                    onPointerCancel: (_) => _dragAnchor = null,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTapUp: (TapUpDetails details) {
-                        if (details.kind == PointerDeviceKind.mouse) {
-                          return;
-                        }
-                        final ProjectorEditorCursorLayout? layout =
-                            _cursorLayout;
-                        if (layout != null) {
-                          widget.onCursorPlaced(
-                            layout.hitTest(details.localPosition),
-                          );
-                        }
-                      },
-                      child: CustomPaint(painter: painter),
-                    ),
+                  child: Stack(
+                    children: <Widget>[
+                      Positioned.fill(
+                        child: Listener(
+                          key: _previewKey,
+                          onPointerDown: _handlePointerDown,
+                          onPointerMove: _handlePointerMove,
+                          onPointerUp: (_) => _dragAnchor = null,
+                          onPointerCancel: (_) => _dragAnchor = null,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            supportedDevices: const <PointerDeviceKind>{
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.stylus,
+                              PointerDeviceKind.invertedStylus,
+                            },
+                            onLongPressStart: _startTouchSelection,
+                            onLongPressMoveUpdate: (details) =>
+                                _updateTouchSelection(details.globalPosition),
+                            onLongPressEnd: (_) => _endTouchDrag(),
+                            onLongPressCancel: _endTouchDrag,
+                            onTapUp: (TapUpDetails details) {
+                              final ProjectorEditorCursorLayout? layout =
+                                  _cursorLayout;
+                              if (layout != null) {
+                                widget.onCursorPlaced(
+                                  layout.hitTest(details.localPosition),
+                                );
+                              }
+                            },
+                            child: CustomPaint(painter: painter),
+                          ),
+                        ),
+                      ),
+                      if (_showTouchHandles &&
+                          widget.cursorOverlay.kottaSelection != null &&
+                          _handleOffsets != null) ...<Widget>[
+                        _selectionHandle(_handleOffsets!.start, start: true),
+                        _selectionHandle(_handleOffsets!.end, start: false),
+                      ],
+                    ],
                   ),
                 ),
               ),

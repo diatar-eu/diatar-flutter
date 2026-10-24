@@ -44,6 +44,10 @@ final KottaEditorLabels _kottaLabels = KottaEditorLabels(
   paste: _l10n.kottaEditorPaste,
   undo: _l10n.kottaEditorUndo,
   redo: _l10n.kottaEditorRedo,
+  moveLeft: _l10n.kottaEditorMoveLeft,
+  moveRight: _l10n.kottaEditorMoveRight,
+  pitchUp: _l10n.kottaEditorPitchUp,
+  pitchDown: _l10n.kottaEditorPitchDown,
   insertTitle: _l10n.kottaEditorInsertTitle,
   editTitle: _l10n.kottaEditorEditTitle,
   clef: _l10n.kottaEditorClef,
@@ -4914,6 +4918,335 @@ void main() {
     expect(controller.encodedText, r'\KkGkF;word \K|!;other');
     controller.dispose();
   });
+
+  testWidgets('touch notation selection supports dragging both handles', (
+    WidgetTester tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(
+      r'\KkGr4mk1a2c2d2e;word',
+    );
+    addTearDown(controller.dispose);
+    await _openNotationPreview(tester, controller);
+    final Offset note = Offset.lerp(
+      _kottaPosition(tester, 1),
+      _kottaPosition(tester, 4),
+      0.5,
+    )!;
+    final TestGesture touch = await tester.startGesture(note);
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump();
+    expect(
+      _notationOverlay(tester).kottaSelection,
+      const TextSelection(baseOffset: 1, extentOffset: 4),
+    );
+    await touch.moveTo(_kottaPosition(tester, 5, textRow: true));
+    await tester.pump();
+    await touch.up();
+    await tester.pump();
+    await tester.pump();
+    expect(
+      _notationOverlay(tester).kottaSelection,
+      const TextSelection(baseOffset: 1, extentOffset: 5),
+    );
+    expect(_notationOverlay(tester).textActive, isFalse);
+    final Finder start = find.byKey(
+      const ValueKey<String>('kotta-selection-start'),
+    );
+    final Finder end = find.byKey(
+      const ValueKey<String>('kotta-selection-end'),
+    );
+    expect(start.hitTestable(), findsOneWidget);
+    expect(end.hitTestable(), findsOneWidget);
+
+    final Offset startDelta =
+        _kottaPosition(tester, 4) - _kottaPosition(tester, 1);
+    await tester.drag(start, startDelta);
+    await tester.pump();
+    await tester.pump();
+    expect(
+      _notationOverlay(tester).kottaSelection,
+      const TextSelection(baseOffset: 5, extentOffset: 4),
+    );
+    await tester.drag(
+      end,
+      _kottaPosition(tester, 6) - _kottaPosition(tester, 5),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(
+      _notationOverlay(tester).kottaSelection,
+      const TextSelection(baseOffset: 4, extentOffset: 6),
+    );
+    await tester.tap(find.byTooltip(_kottaLabels.fClef));
+    await tester.pump();
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\KkGr4mk1akF2e;word');
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('touch handles include invisible closing notation commands', (
+    WidgetTester tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(
+      r'\KkGRt1art2c;word',
+    );
+    addTearDown(controller.dispose);
+    await _openNotationPreview(tester, controller);
+    await tester.longPressAt(
+      Offset.lerp(_kottaPosition(tester, 1), _kottaPosition(tester, 3), 0.5)!,
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(
+      _notationOverlay(tester).kottaSelection,
+      const TextSelection(baseOffset: 1, extentOffset: 4),
+    );
+    final Finder end = find.byKey(
+      const ValueKey<String>('kotta-selection-end'),
+    );
+    expect(end.hitTestable(), findsOneWidget);
+    await tester.drag(
+      end,
+      _kottaPosition(tester, 5) - _kottaPosition(tester, 3),
+    );
+    await tester.pump();
+    expect(
+      _notationOverlay(tester).kottaSelection,
+      const TextSelection(baseOffset: 1, extentOffset: 5),
+    );
+    await tester.tapAt(_kottaPosition(tester, 1));
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaSelection, isNull);
+    expect(end, findsNothing);
+    await tester.tap(find.text(_kottaLabels.cancel));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets(
+    'touch notation selection scrolls at edges but plain drag scrolls',
+    (WidgetTester tester) async {
+      final controller = InlineTextEditingController.fromDia(
+        List<String>.filled(40, r'\KkG;a').join(),
+      );
+      addTearDown(controller.dispose);
+      await _openNotationPreview(tester, controller);
+      final ScrollController scroll = tester
+          .widget<Scrollbar>(find.byType(Scrollbar))
+          .controller!;
+      scroll.jumpTo(0);
+      await tester.pump();
+      final Offset origin = _kottaPosition(tester, 5);
+      await tester.dragFrom(origin, const Offset(-80, 0));
+      await tester.pumpAndSettle();
+      expect(scroll.offset, greaterThan(0));
+      expect(_notationOverlay(tester).kottaSelection, isNull);
+
+      scroll.jumpTo(0);
+      await tester.pump();
+      final Offset note = Offset.lerp(
+        _kottaPosition(tester, 3),
+        _kottaPosition(tester, 4),
+        0.5,
+      )!;
+      final TestGesture touch = await tester.startGesture(note);
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pump();
+      final Rect viewport = tester.getRect(find.byType(Scrollbar));
+      await touch.moveTo(Offset(viewport.right - 4, note.dy));
+      await tester.pump();
+      final int initialEnd = _notationOverlay(tester).kottaSelection!.end;
+      final double initialScroll = scroll.offset;
+      await tester.pump(const Duration(milliseconds: 320));
+      await tester.pump();
+      expect(scroll.offset, greaterThan(initialScroll + 100));
+      expect(
+        _notationOverlay(tester).kottaSelection!.end,
+        greaterThan(initialEnd),
+      );
+      expect(_notationOverlay(tester).kottaSelection!.baseOffset, 3);
+
+      await touch.moveTo(Offset(viewport.left + 4, note.dy));
+      await tester.pump(const Duration(milliseconds: 320));
+      await tester.pump();
+      expect(scroll.offset, lessThan(initialScroll + 100));
+      await touch.cancel();
+      await tester.pump();
+      final double stopped = scroll.offset;
+      await tester.pump(const Duration(milliseconds: 320));
+      expect(scroll.offset, stopped);
+      await tester.tap(find.text(_kottaLabels.cancel));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets('touch long press on lyrics does not select notation', (
+    WidgetTester tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(r'\KkG1a2c;word');
+    addTearDown(controller.dispose);
+    await _openNotationPreview(tester, controller);
+    await tester.longPressAt(_kottaPosition(tester, 2, textRow: true));
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaSelection, isNull);
+    expect(
+      find.byKey(const ValueKey<String>('kotta-selection-start')),
+      findsNothing,
+    );
+    await tester.tapAt(_kottaPosition(tester, 2));
+    await tester.pump();
+    expect(_notationOverlay(tester).kottaPosition, 2);
+    await tester.tapAt(_kottaPosition(tester, 1, textRow: true));
+    await tester.pump();
+    expect(_notationOverlay(tester).textActive, isTrue);
+    await tester.tap(find.text(_kottaLabels.cancel));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('notation arrow toolbar scrolls and moves either active cursor', (
+    WidgetTester tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = InlineTextEditingController.fromDia(
+      r'\KkGr4mk1a2c;word',
+    );
+    addTearDown(controller.dispose);
+    await _openNotationPreview(tester, controller);
+    final toolbar = find.byKey(const ValueKey<String>('kotta-editor-actions'));
+    expect(
+      tester
+          .widgetList<IconButton>(
+            find.descendant(of: toolbar, matching: find.byType(IconButton)),
+          )
+          .map((button) => button.tooltip),
+      <String>[
+        _kottaLabels.cut,
+        _kottaLabels.copy,
+        _kottaLabels.paste,
+        _kottaLabels.undo,
+        _kottaLabels.redo,
+        _kottaLabels.moveLeft,
+        _kottaLabels.moveRight,
+        _kottaLabels.pitchUp,
+        _kottaLabels.pitchDown,
+      ],
+    );
+    final position = tester
+        .state<ScrollableState>(
+          find.descendant(of: toolbar, matching: find.byType(Scrollable)),
+        )
+        .position;
+    expect(position.maxScrollExtent, greaterThan(0));
+    await tester.drag(toolbar, const Offset(-180, 0));
+    await tester.pumpAndSettle();
+    expect(position.pixels, greaterThan(0));
+    expect(
+      find.byTooltip(_kottaLabels.pitchDown).hitTestable(),
+      findsOneWidget,
+    );
+
+    Future<void> tapAction(String label) async {
+      final button = find.byTooltip(label);
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pump();
+      await tester.pump();
+    }
+
+    await tester.tapAt(_kottaPosition(tester, 1));
+    await tester.pump();
+    await tapAction(_kottaLabels.moveRight);
+    expect(_notationOverlay(tester).kottaPosition, 4);
+    await tapAction(_kottaLabels.moveLeft);
+    expect(_notationOverlay(tester).kottaPosition, 1);
+    await tapAction(_kottaLabels.moveRight);
+
+    for (final bool left in <bool>[true, false]) {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      expect(_notationOverlay(tester).kottaSelection, isNotNull);
+      await tapAction(left ? _kottaLabels.moveLeft : _kottaLabels.moveRight);
+      expect(_notationOverlay(tester).kottaSelection, isNull);
+      expect(_notationOverlay(tester).kottaPosition, left ? 4 : 5);
+    }
+
+    final preview = _notationPreviewLayout(tester);
+    await tester.tapAt(
+      tester.getTopLeft(preview.preview) +
+          Offset(
+            preview.layout.textPositions[1]!,
+            preview.layout.textRect.center.dy,
+          ),
+    );
+    await tester.pump();
+    expect(_notationOverlay(tester).textActive, isTrue);
+    await tapAction(_kottaLabels.moveRight);
+    expect(_notationOverlay(tester).textPosition, 2);
+    await tapAction(_kottaLabels.moveLeft);
+    expect(_notationOverlay(tester).textPosition, 1);
+    expect(_notationOverlay(tester).textActive, isTrue);
+    await tester.tap(find.text(_kottaLabels.cancel));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('notation arrow toolbar changes pitch and preserves undo', (
+    WidgetTester tester,
+  ) async {
+    final controller = InlineTextEditingController.fromDia(
+      r'\KkGr4mk1a2c;word',
+    );
+    addTearDown(controller.dispose);
+    await _openNotationPreview(tester, controller);
+    final String original = _notationLine(tester);
+
+    Future<void> tapAction(String label) async {
+      final button = find.byTooltip(label);
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pump();
+    }
+
+    await tester.tapAt(_kottaPosition(tester, 4));
+    await tester.pump();
+    await tapAction(_kottaLabels.pitchUp);
+    expect(_notationLine(tester), original.replaceFirst('mk1a2c', 'mk1h2c'));
+    await tapAction(_kottaLabels.undo);
+    expect(_notationLine(tester), original);
+    await tapAction(_kottaLabels.redo);
+    expect(_notationLine(tester), original.replaceFirst('mk1a2c', 'mk1h2c'));
+    await tapAction(_kottaLabels.pitchDown);
+    expect(_notationLine(tester), original);
+
+    await tester.tapAt(_kottaPosition(tester, 1));
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    final selection = _notationOverlay(tester).kottaSelection;
+    expect(selection, isNotNull);
+    await tapAction(_kottaLabels.pitchUp);
+    expect(_notationLine(tester), original.replaceFirst('mk1a2c', 'mk1h2d'));
+    expect(_notationOverlay(tester).kottaSelection, selection);
+    await tapAction(_kottaLabels.pitchDown);
+    expect(_notationLine(tester), original);
+    expect(_notationOverlay(tester).kottaSelection, selection);
+    await tester.tap(find.text(_kottaLabels.apply));
+    await tester.pumpAndSettle();
+    expect(controller.encodedText, r'\KkGr4mk1a2c;word');
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets('mouse selection keeps its anchor while the preview scrolls', (
     WidgetTester tester,

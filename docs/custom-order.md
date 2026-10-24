@@ -26,6 +26,8 @@ Az diasor összeállítása a **Diasor** ablakban érhető el.
 Mobilon a szöveges dia szerkesztőjének eszköztára szükség esetén több sorba
 törik. Az ablak tartalma fekvő helyzetben és megnyitott billentyűzet mellett
 is görgethető, így a beviteli mezők és a gombok elérhetők maradnak.
+A szöveg beviteli területét vékony keret és enyhén eltérő háttér jelzi
+világos és sötét témában is, a szerkesztésre használható hely csökkentése nélkül.
 
 A szöveges dia szerkesztőjének akkord gombjával külön ablakban választható ki
 az alaphang, a dúr vagy moll jelleg, a hangzat és az opcionális basszushang. Az
@@ -51,6 +53,11 @@ kurzor között. Hosszú soroknál az előnézet vízszintesen görgethető.
 
 A kottasorban lenyomott bal egérgombbal húzva, illetve aktív kottakurzor
 mellett a **Shift+balra/jobbra** billentyűkkel több kottaelem jelölhető ki.
+Érintőképernyőn a kottasor hosszú érintése kijelöli az érintett kottaelemet;
+az ujj felengedése nélkül húzva bővíthető a kijelölés. Felengedés után a
+kijelölés elején és végén megjelenő fülekkel mindkét határ módosítható.
+A szélek közelében az előnézet kijelölés közben automatikusan görget.
+A hosszú érintés nélküli ujjhúzás továbbra is csak vízszintesen görget.
 A kijelölt részt kék háttér jelzi. A **Kulcs**, **Előjegyzés**,
 **Ütemvonalak**, **Ütemjelek**, **Szünet** vagy **Hang** bármely beszúrógombja a kijelölt
 kottaelemeket egyetlen új elemre cseréli; a hozzájuk tartozó szöveg megmarad.
@@ -62,6 +69,12 @@ Közvetlenül az előnézet alatt külön szerkesztőgombsor található. A **Ki
 A **Beillesztés** (**Ctrl+V**) a másolt kottaelemeket az aktuális kottakurzorhoz
 szúrja be, a kijelölést pedig felülírja. Ezek a műveletek csak a kottát
 érintik: a dalszöveg kivágáskor és beillesztéskor is változatlan marad.
+
+A gombsor keskeny kijelzőn vízszintesen görgethető. A vágólap- és
+visszavonásgombok után a **balra/jobbra** nyílgombok az aktív kotta- vagy
+szövegkurzort mozgatják, a **fel/le** nyílgombok pedig az előző hang vagy a
+kijelölt hangok magasságát állítják, ugyanúgy, mint a megfelelő
+nyílbillentyűk. Így ezek a műveletek billentyűzet nélkül is elérhetők.
 
 A vágólapgombok mellett a **Mégse** (**Ctrl+Z**) és a **Mégis** (**Ctrl+Y**)
 lépésenként visszavonja, illetve újra végrehajtja az ablakban végzett

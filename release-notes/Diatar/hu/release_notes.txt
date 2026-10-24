@@ -1,5 +1,8 @@
 Új funkciók
 Diasor
+- A kottaszerkesztő vízszintesen görgethető szerkesztőgombsorában balra/jobbra kurzormozgató és fel/le hangmagasság-állító nyílgombok is elérhetők, billentyűzet nélkül is
+- A szöveges dia beviteli mezőjét vékony keret és enyhén eltérő háttér emeli ki világos és sötét témában, a szerkesztőterület csökkentése nélkül
+- A kottaszerkesztőben hosszú érintéssel és húzással is kijelölhetők a kottaelemek; a kijelölőfülek húzhatók, a széleken az előnézet automatikusan görget
 - Mobilon a szöveges dia szerkesztőjének gombjai több sorba törnek, az ablak tartalma fekvő helyzetben és megnyitott billentyűzet mellett is görgethető; a fölösleges „Szöveg (soronként)” felirat megszűnt
 - A kottaszerkesztő utolsó, Kottavonalak gombsorában 1–5 vonal állítható az egész sorra; a sor eleji kódot lecseréli, az alapértelmezett öt vonalhoz nem ment külön kódot
 - A kottaszerkesztő Mégse/Mégis gombjai és a Ctrl+Z/Ctrl+Y gyorsbillentyűk visszavonják és újra végrehajtják a kottamódosításokat, a kurzor és kijelölés helyreállításával

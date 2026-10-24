@@ -3042,6 +3042,10 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
                 paste: l10n.kottaEditorPaste,
                 undo: l10n.kottaEditorUndo,
                 redo: l10n.kottaEditorRedo,
+                moveLeft: l10n.kottaEditorMoveLeft,
+                moveRight: l10n.kottaEditorMoveRight,
+                pitchUp: l10n.kottaEditorPitchUp,
+                pitchDown: l10n.kottaEditorPitchDown,
                 insertTitle: l10n.kottaEditorInsertTitle,
                 editTitle: l10n.kottaEditorEditTitle,
                 clef: l10n.kottaEditorClef,
@@ -3141,7 +3145,15 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
                 cancel: l10n.cancel,
                 apply: l10n.apply,
               ),
-              decoration: const InputDecoration(),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
+                // Preserve the full input width in Material 3.
+                border: const OutlineInputBorder(gapPadding: 0),
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              ),
               minLines: 4,
               maxLines: 8,
             ),

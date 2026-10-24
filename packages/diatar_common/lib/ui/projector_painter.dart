@@ -121,6 +121,18 @@ class ProjectorEditorCursorLayout {
   final Map<int, double> kottaPositions;
   final Map<int, double> textPositions;
 
+  double? kottaXForPosition(int position) {
+    int nearest = -1;
+    double? x;
+    for (final entry in kottaPositions.entries) {
+      if (entry.key <= position && entry.key > nearest) {
+        nearest = entry.key;
+        x = entry.value;
+      }
+    }
+    return x;
+  }
+
   ({int position, bool textActive}) hitTest(Offset offset, {bool? textActive}) {
     double rowDistance(Rect rect) =>
         (offset.dy - offset.dy.clamp(rect.top, rect.bottom)).abs();
@@ -2827,10 +2839,16 @@ class ProjectorPainter extends CustomPainter {
     if (_editorKottaPositions.isEmpty) {
       _editorKottaPositions[0] = textX;
     }
+    final ProjectorEditorCursorLayout layout = ProjectorEditorCursorLayout(
+      kottaRect: Rect.fromLTRB(kottaX, kottaTop, kottaX + 2, kottaBottom),
+      textRect: Rect.fromLTRB(textX, textTop, textX + 2, textBottom),
+      kottaPositions: Map<int, double>.unmodifiable(_editorKottaPositions),
+      textPositions: Map<int, double>.unmodifiable(_editorTextPositions),
+    );
     final TextSelection? selection = overlay.kottaSelection;
     if (selection != null && !selection.isCollapsed) {
-      final double? startX = _editorKottaPositions[selection.start];
-      final double? endX = _editorKottaPositions[selection.end];
+      final double? startX = layout.kottaXForPosition(selection.start);
+      final double? endX = layout.kottaXForPosition(selection.end);
       if (startX != null && endX != null) {
         canvas.drawRect(
           Rect.fromLTRB(
@@ -2843,14 +2861,7 @@ class ProjectorPainter extends CustomPainter {
         );
       }
     }
-    onEditorCursorLayout?.call(
-      ProjectorEditorCursorLayout(
-        kottaRect: Rect.fromLTRB(kottaX, kottaTop, kottaX + 2, kottaBottom),
-        textRect: Rect.fromLTRB(textX, textTop, textX + 2, textBottom),
-        kottaPositions: Map<int, double>.unmodifiable(_editorKottaPositions),
-        textPositions: Map<int, double>.unmodifiable(_editorTextPositions),
-      ),
-    );
+    onEditorCursorLayout?.call(layout);
     _paintEditorCursorLine(
       canvas,
       x: kottaX,
