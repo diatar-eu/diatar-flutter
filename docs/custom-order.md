@@ -255,6 +255,14 @@ megmarad. Ez szövegkurzor mellett is működik. A hangkódok alsó határa
 - **Betöltés** — korábban mentett `.dia` fájl megnyitása
 - Az `.dia` fájl formátum az INI fájlformátum
 
+### iPhone és iPad
+
+iOS-en a **Mentés** a program saját `export` mappájába ír, amely a **Fájlok**
+alkalmazásban a **Saját iPhone → Diatár → export** útvonalon található. Ha
+ugyanazzal a fájlnévvel már létezik diasor, a program felülírás előtt
+rákérdez. A **Betöltés** a rendszer fájlválasztójával nyit meg `.dia` fájlt;
+más kiterjesztésű fájl kiválasztásakor a program hibát jelez.
+
 Asztali rendszereken a **Beállítások > Énektárak és fájlok > Automatikus
 mentés** kapcsolóval kérhető, hogy a program a Diasor szerkesztő bezárásakor,
 illetve a programból nyitott szerkesztő mellett történő kilépéskor lemezre

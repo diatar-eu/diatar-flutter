@@ -8,7 +8,6 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'src/app.dart';
-import 'src/services/desktop_projector_bridge.dart';
 import 'src/ui/desktop_projector_window.dart';
 import 'src/utils/file_system_provider.dart';
 
@@ -58,20 +57,9 @@ Future<void> main() async {
       );
       return;
     }
-    // Főablak: a vetítő ablakból érkező 'showControl' üzenetre
-    // visszahozzuk és fókuszba helyezzük a vezérlő ablakot.
-    const WindowMethodChannel controlChannel = WindowMethodChannel(
-      'diatar/desktop_projector_control',
-      mode: ChannelMode.bidirectional,
-    );
-    await controlChannel.setMethodCallHandler((MethodCall call) async {
-      if (call.method == 'showControl') {
-        await DesktopProjectorBridge.instance.showControlWindow();
-      } else if (call.method == 'focusControl') {
-        await DesktopProjectorBridge.instance.focusControlWindow();
-      }
-      return null;
-    });
+    // A főablak a vetítőablaktól érkező vezérlőüzeneteket a
+    // DesktopProjectorBridge-en keresztül fogadja (a bridge regisztrálja a
+    // `diatar/desktop_projector_control` csatorna kezelőjét).
   }
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);

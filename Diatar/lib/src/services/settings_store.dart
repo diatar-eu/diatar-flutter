@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diatar_common/diatar_common.dart';
 import 'pic_plc_service.dart';
+import 'secret_store.dart';
 
 class SettingsStore {
   static const String _kPort = 'Port';
@@ -12,12 +13,13 @@ class SettingsStore {
   static const String _kCameraTarget = 'CameraTarget';
   static const String _kCameraViewWidth = 'CameraViewWidth';
   static const String _kCameraViewHeight = 'CameraViewHeight';
+  static const String _kCameraViewPosX = 'CameraViewPosX';
+  static const String _kCameraViewPosY = 'CameraViewPosY';
   static const String _kWolEnabled = 'WolEnabled';
   static const String _kWolTargets = 'WolTargets';
   static const String _kWolBroadcastAddress = 'WolBroadcastAddress';
   static const String _kWolPort = 'WolPort';
   static const String _kUser = 'Username';
-  static const String _kPassword = 'Password';
   static const String _kInternetRelayEnabled = 'InternetRelayEnabled';
   static const String _kChannel = 'Channel';
   static const String _kBlankPicPath = 'BlankPicPath';
@@ -90,6 +92,23 @@ class SettingsStore {
   static const String _kPicPlcButtonActions = 'PicPlcButtonActions';
   static const String _kPicPlcLedActions = 'PicPlcLedActions';
   static const String _kShowPhotoInControl = 'ShowPhotoInControl';
+
+  /// AES-GCM ciphertext of the MQTT password; the key is in the platform
+  /// keystore, see `SecretStore`.
+  static const String _kMqttPassword = 'MqttPasswordEnc';
+
+  /// Older builds kept the password in clear text under this key. It is
+  /// migrated into [_kMqttPassword] and then removed.
+  static const String _kLegacyMqttPassword = 'Password';
+
+  final SecretStore _secrets = SecretStore();
+
+  /// The MQTT password as of the last load or save, so the many settings saves
+  /// that do not touch it do not re-encrypt and rewrite the secret every time.
+  String? _persistedMqttPassword;
+
+  /// Where the key protecting the stored secrets currently lives.
+  SecretKeyProtection get secretKeyProtection => _secrets.keyProtection;
 
   static const Map<String, String> _defaultDesktopActionHotkeys =
       <String, String>{
@@ -249,11 +268,10 @@ class SettingsStore {
     final String mqttUser = prefs.getString(_kUser) ?? '';
     final bool internetRelayEnabled =
         prefs.getBool(_kInternetRelayEnabled) ?? mqttUser.trim().isNotEmpty;
-    final String mqttPassword = !internetRelayEnabled
+    final String mqttPassword = !internetRelayEnabled || mqttUser.trim().isEmpty
         ? ''
-        : mqttUser.trim().isEmpty
-        ? ''
-        : (prefs.getString(_kPassword) ?? '');
+        : await _loadMqttPassword(prefs);
+    _persistedMqttPassword = mqttPassword;
     final int legacyPort = prefs.getInt(_kPort) ?? 1024;
     final List<String> tcpTargets =
         (prefs.getStringList(_kTcpTargets) ?? <String>[])
@@ -266,6 +284,8 @@ class SettingsStore {
     final String? cameraTarget = prefs.getString(_kCameraTarget);
     final double cameraViewWidth = prefs.getDouble(_kCameraViewWidth) ?? 200;
     final double cameraViewHeight = prefs.getDouble(_kCameraViewHeight) ?? 120;
+    final double cameraViewPosX = prefs.getDouble(_kCameraViewPosX) ?? 1.0;
+    final double cameraViewPosY = prefs.getDouble(_kCameraViewPosY) ?? 1.0;
     final bool wolEnabled = prefs.getBool(_kWolEnabled) ?? false;
     final List<String> wolTargets =
         prefs.getStringList(_kWolTargets) ?? const <String>[];
@@ -298,6 +318,8 @@ class SettingsStore {
       cameraTarget: cameraTarget,
       cameraViewWidth: cameraViewWidth,
       cameraViewHeight: cameraViewHeight,
+      cameraViewPosX: cameraViewPosX,
+      cameraViewPosY: cameraViewPosY,
       wolEnabled: wolEnabled,
       wolTargets: wolTargets,
       wolBroadcastAddress: wolBroadcastAddress,
@@ -389,6 +411,40 @@ class SettingsStore {
     );
   }
 
+  /// Returns the stored MQTT password, migrating the clear-text copy older
+  /// builds left behind on the first run after the upgrade.
+  Future<String> _loadMqttPassword(SharedPreferences prefs) async {
+    final String? legacy = prefs.getString(_kLegacyMqttPassword);
+    if (legacy == null) {
+      return await _secrets.read(_kMqttPassword) ?? '';
+    }
+    final String stored = await _secrets.read(_kMqttPassword) ?? '';
+    if (stored.isEmpty && legacy.isNotEmpty) {
+      await _secrets.write(_kMqttPassword, legacy);
+    }
+    await prefs.remove(_kLegacyMqttPassword);
+    return stored.isEmpty ? legacy : stored;
+  }
+
+  /// Persists the MQTT password through the secret store, skipping the work
+  /// when it has not changed.
+  Future<void> _saveMqttPassword(
+    SharedPreferences prefs,
+    String password,
+  ) async {
+    if (password == _persistedMqttPassword) {
+      return;
+    }
+    if (password.isEmpty) {
+      await _secrets.delete(_kMqttPassword);
+    } else {
+      await _secrets.write(_kMqttPassword, password);
+    }
+    _persistedMqttPassword = password;
+    // A clear-text copy from an older build must not survive either.
+    await prefs.remove(_kLegacyMqttPassword);
+  }
+
   Future<void> save(AppSettings settings) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final List<String> tcpTargets = settings.tcpTargets
@@ -401,6 +457,8 @@ class SettingsStore {
     await prefs.setBool(_kShowCameraView, settings.showCameraView);
     await prefs.setDouble(_kCameraViewWidth, settings.cameraViewWidth);
     await prefs.setDouble(_kCameraViewHeight, settings.cameraViewHeight);
+    await prefs.setDouble(_kCameraViewPosX, settings.cameraViewPosX);
+    await prefs.setDouble(_kCameraViewPosY, settings.cameraViewPosY);
     await prefs.setBool(_kWolEnabled, settings.wolEnabled);
     await prefs.setStringList(_kWolTargets, settings.wolTargets);
     await prefs.setString(_kWolBroadcastAddress, settings.wolBroadcastAddress);
@@ -412,8 +470,8 @@ class SettingsStore {
     }
     await prefs.setString(_kUser, settings.mqttUser);
     await prefs.setBool(_kInternetRelayEnabled, settings.internetRelayEnabled);
-    await prefs.setString(
-      _kPassword,
+    await _saveMqttPassword(
+      prefs,
       settings.internetRelayEnabled && settings.mqttUser.trim().isNotEmpty
           ? settings.mqttPassword
           : '',

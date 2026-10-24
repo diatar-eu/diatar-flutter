@@ -10,14 +10,50 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:diavetito/src/app.dart';
+import 'package:diavetito/src/controllers/projection_controller.dart';
 import 'package:diavetito/src/services/web_mqtt_settings.dart';
 import 'package:diavetito/src/ui/settings_sheet.dart';
 import 'package:diavetito/src/utils/system_platform.dart';
 import 'package:diavetito/l10n/generated/app_localizations.dart';
 
 void main() {
+  test('controller can be disposed before initialization', () {
+    final ProjectionController controller = ProjectionController();
+
+    controller.dispose();
+  });
+
+  testWidgets('startup and teardown do not initialize a camera preview', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{'Port': 0});
+    const MethodChannel channel = MethodChannel('FlutterWebRTC.Method');
+    final List<String> calls = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      MethodCall call,
+    ) async {
+      calls.add(call.method);
+      throw MissingPluginException();
+    });
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      );
+    });
+
+    await tester.pumpWidget(const DiaVetitoApp());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+
+    expect(calls, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   group('mqttUsernameFromWebUri', () {
     test('reads a simple MQTT username', () {
       expect(

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
@@ -9,6 +8,7 @@ import 'package:diatar_common/diatar_common.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import '../../sync/platform/backend_factory.dart';
 import '../../sync/ui/sync_page.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
@@ -21,9 +21,11 @@ import '../models/custom_order_set.dart';
 import '../utils/custom_entry_labels.dart';
 import '../utils/escape_sequences.dart';
 import '../utils/friendly_path.dart';
+import '../utils/ios_platform.dart';
 import '../services/song_search_service.dart';
 import '../services/desktop_projector_bridge.dart';
 import '../services/macos_file_panels.dart';
+import '../services/picked_image_storage.dart';
 import '../services/zsolozsma_service.dart';
 import '../services/napi_lelki_batyu_service.dart';
 import '../services/szentiras_api_service.dart';
@@ -61,6 +63,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   bool _canScrollHeaderActionsLeft = false;
   bool _canScrollHeaderActionsRight = false;
   bool _headerActionsRefreshScheduled = false;
+  bool _showSync = false;
   bool _allowPop = false;
   bool _closing = false;
   Future<void>? _autoSaveFuture;
@@ -481,6 +484,21 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
 
   @override
   Widget build(BuildContext context) {
+    if (_showSync) {
+      return Material(
+        color: widget.embedded
+            ? Colors.transparent
+            : Theme.of(context).scaffoldBackgroundColor,
+        child: SyncPage(
+          onClose: () {
+            setState(() {
+              _showSync = false;
+            });
+          },
+        ),
+      );
+    }
+
     final l10n = context.l10n;
     final Widget editor = AnimatedBuilder(
       animation: controller,
@@ -753,11 +771,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
                         icon: const Icon(Icons.close),
                         label: Text(l10n.close),
                       ),
-                    OutlinedButton.icon(
-                      onPressed: _openSync,
-                      icon: const Icon(Icons.sync),
-                      label: const Text('Szinkron'),
-                    ),
+                    if (isSyncSupported)
+                      OutlinedButton.icon(
+                        onPressed: _openSync,
+                        icon: const Icon(Icons.sync),
+                        label: const Text('Szinkron'),
+                      ),
                   ],
                 ),
               ),
@@ -775,6 +794,12 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       },
       child: editor,
     );
+  }
+
+  void _openSync() {
+    setState(() {
+      _showSync = true;
+    });
   }
 
   bool get _supportsDiaAutoSave =>
@@ -850,26 +875,6 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       }
     }
     return null;
-  }
-
-  Future<void> _openSync() async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        final Size screenSize = MediaQuery.sizeOf(dialogContext);
-
-        return Dialog(
-          insetPadding: const EdgeInsets.all(24),
-          clipBehavior: Clip.antiAlias,
-          child: SizedBox(
-            width: min(600, screenSize.width - 48),
-            height: min(780, screenSize.height - 48),
-            child: const SyncPage(),
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _openInsertVersesDialog() async {
@@ -1253,12 +1258,24 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     }
 
     final String fileName = file.name;
+    String imagePath = file.path;
+    if (isIosPlatform) {
+      // iOS-en a megnyitó választó a fájlt csak a Documents/Inbox mappába
+      // másolja, amit a rendszer alacsony tárhely esetén kitakarít. Mivel a
+      // diasor hosszú távon tárolja az elérési utat, a képet a saját
+      // adatmappába másoljuk.
+      try {
+        imagePath = await PickedImageStore().import(file.path);
+      } catch (_) {
+        // Ha a másolás nem sikerül, az eredeti útvonallal dolgozunk.
+      }
+    }
     final CustomOrderEntry entry = CustomOrderEntry(
       fileName: '__custom_image__',
       songIndex: -2,
       verseIndex: 0,
       label: formatCustomImageEntryLabel(l10n, fileName),
-      customImagePath: file.path,
+      customImagePath: imagePath,
     );
 
     int lastInsertedIndex = 0;
@@ -1276,7 +1293,13 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   Future<void> _openCustomTextSlideDialog() async {
     final _TextSlideInput? input = await showDialog<_TextSlideInput>(
       context: context,
-      builder: (BuildContext context) => const _CustomTextSlideDialog(),
+      builder: (BuildContext context) => _CustomTextSlideDialog(
+        chordNotation: chordNotationFromStorage(
+          controller.settings.projAkkordNotation,
+        ),
+        chordOptionalSeventh: controller.settings.projAkkordOptionalSeventh,
+        chordMinorAsDash: controller.settings.projAkkordMinorAsDash,
+      ),
     );
     if (input == null || !mounted) {
       return;
@@ -1330,6 +1353,11 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         dialogTitle: context.l10n.customOrderEditTextSlideTitle,
         initialTitle: entry.customTextTitle ?? '',
         initialBody: entry.customTextBody ?? '',
+        chordNotation: chordNotationFromStorage(
+          controller.settings.projAkkordNotation,
+        ),
+        chordOptionalSeventh: controller.settings.projAkkordOptionalSeventh,
+        chordMinorAsDash: controller.settings.projAkkordMinorAsDash,
       ),
     );
     if (input == null || !mounted) {
@@ -1983,6 +2011,16 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
               ),
             );
         if (saveLocation != null) {
+          if (isIosPlatform && await File(saveLocation.path).exists()) {
+            // iOS-en nincs rendszer-mentőablak, ami a felülírást
+            // megerősítené, ezért itt kérdezzük meg.
+            final bool overwrite = await _askDiaOverwriteConfirmation(
+              path.basenameWithoutExtension(saveLocation.path),
+            );
+            if (!overwrite) {
+              return;
+            }
+          }
           targetPath = saveLocation.path;
           if (!hadUsableConfiguredDir) {
             final String selectedDir = path.dirname(saveLocation.path).trim();
@@ -2058,7 +2096,9 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.savedPath(formatFriendlyPathLabel(outPath, l10n))),
+          content: Text(
+            l10n.savedPath(formatAppStoragePathLabel(outPath, l10n)),
+          ),
         ),
       );
     } catch (e) {
@@ -2411,12 +2451,26 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<void> _importDia() async {
+    final AppLocalizations l10n = context.l10n;
     final List<XFile> files = await DesktopProjectorBridge.instance
         .runWithNativeDialog(
           () => showFileOpenPanel(extensions: const <String>['dia']),
         );
     final XFile? file = files.isEmpty ? null : files.first;
     if (file == null) {
+      return;
+    }
+    if (!file.name.toLowerCase().endsWith('.dia')) {
+      // A .dia-hoz nincs rendszertípus, ezért iOS-en a megnyitó választó
+      // minden fájlt felajánl; itt szűrünk a kiterjesztésre.
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.customOrderLoadDiaWrongType(file.name)),
+        ),
+      );
       return;
     }
     final CustomOrderImportMode? mode =
@@ -2954,11 +3008,20 @@ class _CustomTextSlideDialog extends StatefulWidget {
     this.dialogTitle,
     this.initialTitle = '',
     this.initialBody = '',
+    this.chordNotation = ChordNotation.symbolic,
+    this.chordOptionalSeventh = false,
+    this.chordMinorAsDash = false,
   });
 
   final String? dialogTitle;
   final String initialTitle;
   final String initialBody;
+
+  /// Display options for the chord chips, so the editor preview matches the
+  /// projection settings.
+  final ChordNotation chordNotation;
+  final bool chordOptionalSeventh;
+  final bool chordMinorAsDash;
 
   @override
   State<_CustomTextSlideDialog> createState() => _CustomTextSlideDialogState();
@@ -3156,6 +3219,9 @@ class _CustomTextSlideDialogState extends State<_CustomTextSlideDialog> {
               ),
               minLines: 4,
               maxLines: 8,
+              chordNotation: widget.chordNotation,
+              chordOptionalSeventh: widget.chordOptionalSeventh,
+              chordMinorAsDash: widget.chordMinorAsDash,
             ),
           ],
         ),

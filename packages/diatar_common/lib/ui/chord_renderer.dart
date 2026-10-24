@@ -1,6 +1,46 @@
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 enum ChordPartStyle { root, normal, superscript }
+
+/// How the quality of a chord is spelled on screen.
+///
+/// The three variants mirror the "Szimbólumos" / "Szöveges" / "Számjegyes"
+/// columns of the Akkordok sheet. Each one falls back to the column on its
+/// left when a modifier has no entry of its own, so numeric notation degrades
+/// to textual and then to symbolic instead of rendering nothing.
+enum ChordNotation {
+  /// Symbols: C, Cm, C°, C△, Cø, C+7sus4 …
+  symbolic,
+
+  /// Words: Caug, Cdim, Cmaj, Cm7♭5 …
+  textual,
+
+  /// Numbers: C#5, Cm♭5, Cmmaj7♭5 …
+  numeric,
+}
+
+/// Storage form of [ChordNotation] used by the settings map and by the
+/// projection state record. It is written out explicitly so the numbers stay
+/// stable even if the enum is ever reordered.
+int chordNotationToStorage(ChordNotation notation) {
+  return switch (notation) {
+    ChordNotation.symbolic => 0,
+    ChordNotation.textual => 1,
+    ChordNotation.numeric => 2,
+  };
+}
+
+/// Inverse of [chordNotationToStorage]; unknown values fall back to symbolic.
+ChordNotation chordNotationFromStorage(int value) {
+  return switch (value) {
+    1 => ChordNotation.textual,
+    2 => ChordNotation.numeric,
+    _ => ChordNotation.symbolic,
+  };
+}
 
 class ChordPart {
   const ChordPart(this.text, this.style);
@@ -59,44 +99,209 @@ class DiatarChord {
     '49+',
   ];
 
-  static const List<String> _outputModifiers = <String>[
-    '',
-    '+',
-    'o',
-    '7',
-    '7+',
-    'o/7',
-    'o/7-',
-    'o/7+',
-    '+/7',
-    '+/7+',
-    '6',
-    '7/9',
-    '7/9-',
-    '7/9+',
-    '+/7/9',
-    '+/7/9+',
-    '7+/9',
-    '7+/9+',
-    '+/7+/9',
-    '+/7+/9+',
-    'o/7/9',
-    'o/7/9-',
-    '9',
-    '9-',
-    '9+',
-    '+/9',
-    '+/9+',
-    'o/9',
-    'o/9-',
-    '4',
-    '2',
-    '4/7',
-    '2/7',
-    '4/9',
-    '4/9-',
-    '4/9+',
+  /// Modifier tails for [ChordNotation.symbolic], indexed like
+  /// [_inputModifiers]. A leading `^` marks the following character as a
+  /// superscript, matching the sheet's own markup. Every entry is populated,
+  /// so this column never needs a fallback.
+  ///
+  /// A `~` marks where the optional seventh lands when the switch is on
+  /// ([_optionalSeventhPlaceholder]); without the switch it vanishes, so the
+  /// ninth chords are written as plain `C9`, `C+9`, `C△9`.
+  static const List<String> _symbolicModifiers = <String>[
+    '', // (major)
+    '^+', // #
+    '°', // o
+    '^7', // 7
+    '^△~', // 7+
+    '^ø', // o7
+    '°^7', // o7-
+    '°^△~', // o7+
+    '^+^7', // #7
+    '^+^△~', // #7+
+    '^6', // 6
+    '^~^9', // 79
+    '^7^♭^9', // 79-
+    '^7^#^9', // 79+
+    '^+^~^9', // #79
+    '^+^7^#^9', // #79+
+    '^△^~^9', // 7+9
+    '^△^~^#^9', // 7+9+
+    '^+^△^~^9', // #7+9
+    '^+^△^~^#^9', // #7+9+
+    '^ø^9', // o79
+    '^ø^♭^9', // o79-
+    '^a^d^d^9', // 9
+    '^a^d^d^♭^9', // 9-
+    '^a^d^d^#^9', // 9+
+    '^+^a^d^d^9', // #9
+    '^+^a^d^d^#^9', // #9+
+    '°^a^d^d^9', // o9
+    '°^a^d^d^♭^9', // o9-
+    '^s^u^s^4', // 4
+    '^s^u^s^2', // 2
+    '^7^s^u^s^4', // 47
+    '^7^s^u^s^2', // 27
+    '^9^s^u^s^4', // 49
+    '^♭^9^s^u^s^4', // 49-
+    '^#^9^s^u^s^4', // 49+
   ];
+
+  /// Modifier tails for [ChordNotation.textual]. An empty entry means the
+  /// sheet has no textual spelling and the symbolic one is used instead.
+  static const List<String> _textualModifiers = <String>[
+    '', // (major)
+    '^a^u^g', // #
+    '^d^i^m', // o
+    '', // 7
+    '^m^a^j~', // 7+
+    'm^7^♭^5', // o7
+    '^d^i^m^7', // o7-
+    '^d^i^m^(^m^a^j~^)', // o7+
+    '^a^u^g^7', // #7
+    '^a^u^g^(^m^a^j~^)', // #7+
+    '', // 6
+    '', // 79
+    '', // 79-
+    '', // 79+
+    '^a^u^g^~^9', // #79
+    '^a^u^g^7^#^9', // #79+
+    '^m^a^j^~^9', // 7+9
+    '^m^a^j^~^#^9', // 7+9+
+    '^a^u^g~^(^m^a^j^9^)', // #7+9
+    '^a^u^g~^(^m^a^j^#^9^)', // #7+9+
+    'm^9^♭^5', // o79
+    'm^♭^9^♭^5', // o79-
+    '', // 9
+    '', // 9-
+    '', // 9+
+    '^a^u^g^(^a^d^d^9^)', // #9
+    '^a^u^g^(^a^d^d^#^9^)', // #9+
+    '^d^i^m^(^a^d^d^9^)', // o9
+    '^d^i^m^(^a^d^d^♭^9^)', // o9-
+    '', // 4
+    '', // 2
+    '', // 47
+    '', // 27
+    '', // 49
+    '', // 49-
+    '', // 49+
+  ];
+
+  /// Modifier tails for [ChordNotation.numeric], with the same fallback rule
+  /// as [_textualModifiers] plus one more step down to [_symbolicModifiers].
+  static const List<String> _numericModifiers = <String>[
+    '', // (major)
+    '^#^5', // #
+    'm^♭^5', // o
+    '', // 7
+    '', // 7+
+    '', // o7
+    '^♭^7^♭^5', // o7-
+    'm^m^a^j^7^♭^5', // o7+
+    '^7^#^5', // #7
+    '^m^a^j^7^#^5', // #7+
+    '', // 6
+    '', // 79
+    '', // 79-
+    '', // 79+
+    '^~^9^#^5', // #79
+    '^7^#^9^#^5', // #79+
+    '', // 7+9
+    '', // 7+9+
+    '^m^a^j^~^9^#^5', // #7+9
+    '^m^a^j^~^#^9^#^5', // #7+9+
+    '', // o79
+    '', // o79-
+    '', // 9
+    '', // 9-
+    '', // 9+
+    '', // #9
+    '', // #9+
+    '', // o9
+    '', // o9-
+    '', // 4
+    '', // 2
+    '', // 47
+    '', // 27
+    '', // 49
+    '', // 49-
+    '', // 49+
+  ];
+
+  /// Marker in a modifier template for the place where the optional "7" switch
+  /// puts the seventh. Without the switch the marker disappears, so the ninth
+  /// chords are written as C9, C+9, C△9; with it, as C79, C+79, C△79.
+  ///
+  /// The `♭9` and `#9` ninth chords have no marker: they keep their seventh
+  /// either way (C7♭9, C7#9), because a bare `C♭9` would be the added-ninth
+  /// chord.
+  static const String _optionalSeventhPlaceholder = '~';
+
+  /// Resolves the modifier tail for [notation], walking the sheet's columns
+  /// from the requested one towards the symbolic one until a value is found.
+  static String _modifierTemplate(ChordNotation notation, int index) {
+    switch (notation) {
+      case ChordNotation.symbolic:
+        return _symbolicModifiers[index];
+      case ChordNotation.textual:
+        final String own = _textualModifiers[index];
+        return own.isNotEmpty ? own : _symbolicModifiers[index];
+      case ChordNotation.numeric:
+        final String own = _numericModifiers[index];
+        if (own.isNotEmpty) {
+          return own;
+        }
+        final String textual = _textualModifiers[index];
+        return textual.isNotEmpty ? textual : _symbolicModifiers[index];
+    }
+  }
+
+  /// Expands a modifier tail into parts, turning `^x` runs into a single
+  /// superscript part each. [optionalSeventh] decides whether
+  /// [_optionalSeventhPlaceholder] becomes a superscript `7` or nothing.
+  static List<ChordPart> _templateParts(
+    String template, {
+    required bool optionalSeventh,
+  }) {
+    final List<ChordPart> result = <ChordPart>[];
+    bool superscriptNext = false;
+    for (int i = 0; i < template.length; i++) {
+      final String character = template[i];
+      if (character == '^') {
+        superscriptNext = true;
+        continue;
+      }
+      final bool isSeventh = character == _optionalSeventhPlaceholder;
+      if (isSeventh && !optionalSeventh) {
+        continue;
+      }
+      final ChordPartStyle style = superscriptNext || isSeventh
+          ? ChordPartStyle.superscript
+          : ChordPartStyle.normal;
+      superscriptNext = false;
+      final String text = isSeventh ? '7' : character;
+      if (result.isNotEmpty && result.last.style == style) {
+        final ChordPart last = result.removeLast();
+        result.add(ChordPart(last.text + text, style));
+      } else {
+        result.add(ChordPart(text, style));
+      }
+    }
+    return result;
+  }
+
+  /// Builds the quality tail of a chord for the requested notation, optionally
+  /// revealing the seventh that the chosen spelling leaves implicit.
+  static List<ChordPart> _modifierParts(
+    int index,
+    ChordNotation notation, {
+    required bool optionalSeventh,
+  }) {
+    return _templateParts(
+      _modifierTemplate(notation, index),
+      optionalSeventh: optionalSeventh,
+    );
+  }
 
   static const Set<int> _minorModifiers = <int>{
     0,
@@ -248,29 +453,33 @@ class DiatarChord {
     );
   }
 
-  List<ChordPart> get parts {
+  /// Splits the chord into the parts that [ChordLayout] paints.
+  ///
+  /// The root letter, its accidental and the minor marker are bold, matching
+  /// the sheet where `C`, `C#`, `C♭` and `Cm` all share the strong style while
+  /// the quality tail is superscripted.
+  List<ChordPart> parts({
+    ChordNotation notation = ChordNotation.symbolic,
+    bool optionalSeventh = false,
+    bool minorAsDash = false,
+  }) {
     final List<ChordPart> result = <ChordPart>[
-      ChordPart(_displayLetter(root, accidental, isMinor), ChordPartStyle.root),
+      ChordPart(_displayLetter(root, accidental), ChordPartStyle.root),
     ];
-    final String rootSuffix = _accidentalSuffix(root, accidental);
-    if (rootSuffix.isNotEmpty) {
-      result.add(ChordPart(rootSuffix, ChordPartStyle.normal));
+    final String rootAccidental = _accidentalSuffix(root, accidental);
+    if (rootAccidental.isNotEmpty) {
+      result.add(ChordPart(rootAccidental, ChordPartStyle.root));
     }
     if (isMinor) {
-      result.add(const ChordPart('m', ChordPartStyle.normal));
+      result.add(ChordPart(minorAsDash ? '-' : 'm', ChordPartStyle.root));
     }
-    if (modifier != 0) {
-      result.add(
-        ChordPart(_outputModifiers[modifier], ChordPartStyle.superscript),
-      );
-    }
+    result.addAll(
+      _modifierParts(modifier, notation, optionalSeventh: optionalSeventh),
+    );
     if (bass != null) {
-      result.add(ChordPart('/', ChordPartStyle.normal));
+      result.add(const ChordPart('/', ChordPartStyle.normal));
       result.add(
-        ChordPart(
-          _displayLetter(bass!, bassAccidental, false),
-          ChordPartStyle.normal,
-        ),
+        ChordPart(_displayLetter(bass!, bassAccidental), ChordPartStyle.normal),
       );
       final String bassSuffix = _accidentalSuffix(bass!, bassAccidental);
       if (bassSuffix.isNotEmpty) {
@@ -280,24 +489,19 @@ class DiatarChord {
     return result;
   }
 
-  static String _displayLetter(
-    String letter,
-    String? accidental,
-    bool isMinor,
-  ) {
-    final String display = letter == 'H' && accidental == '-' ? 'B' : letter;
-    return isMinor ? display.toLowerCase() : display;
+  /// `H` is spelled `B`; every other letter keeps its own name.
+  static String _displayLetter(String letter, String? accidental) {
+    return letter == 'H' && accidental == '-' ? 'B' : letter;
   }
 
+  /// Accidentals use sharps and flats, not the Hungarian `is`/`es` suffixes.
   static String _accidentalSuffix(String letter, String? accidental) {
     if (accidental == '+') {
-      return 'is';
+      return '#';
     }
     if (accidental == '-') {
-      if (letter == 'H') {
-        return '';
-      }
-      return letter == 'E' || letter == 'A' ? 's' : 'es';
+      // Already carried by the `B` spelling of `H-`.
+      return letter == 'H' ? '' : '♭';
     }
     return '';
   }
@@ -366,6 +570,9 @@ class ChordDisplay extends StatelessWidget {
     this.backgroundColor = Colors.transparent,
     this.padding = const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
     this.borderRadius = 3,
+    this.notation = ChordNotation.symbolic,
+    this.optionalSeventh = false,
+    this.minorAsDash = false,
   });
 
   final String source;
@@ -374,13 +581,22 @@ class ChordDisplay extends StatelessWidget {
   final Color backgroundColor;
   final EdgeInsets padding;
   final double borderRadius;
+  final ChordNotation notation;
+  final bool optionalSeventh;
+  final bool minorAsDash;
 
   @override
   Widget build(BuildContext context) {
     final TextStyle effectiveStyle = DefaultTextStyle.of(
       context,
     ).style.merge(style);
-    final ChordLayout layout = ChordRenderer.layout(source, effectiveStyle);
+    final ChordLayout layout = ChordRenderer.layout(
+      source,
+      effectiveStyle,
+      notation: notation,
+      optionalSeventh: optionalSeventh,
+      minorAsDash: minorAsDash,
+    );
     final Size size = Size(
       layout.width + padding.horizontal,
       layout.height + padding.vertical,
@@ -465,19 +681,32 @@ class _ChordNote {
 
 /// Lays out a chord so every consumer uses the same notation and styling.
 class ChordRenderer {
-  static ChordLayout layout(String source, TextStyle style) {
+  static ChordLayout layout(
+    String source,
+    TextStyle style, {
+    ChordNotation notation = ChordNotation.symbolic,
+    bool optionalSeventh = false,
+    bool minorAsDash = false,
+  }) {
     final DiatarChord? chord = DiatarChord.tryParse(source);
     final List<ChordPart> parts =
-        chord?.parts ?? <ChordPart>[ChordPart(source, ChordPartStyle.normal)];
+        chord?.parts(
+          notation: notation,
+          optionalSeventh: optionalSeventh,
+          minorAsDash: minorAsDash,
+        ) ??
+        <ChordPart>[ChordPart(source, ChordPartStyle.normal)];
     return ChordLayout._(parts, style);
   }
 }
 
 class ChordLayout {
-  ChordLayout._(List<ChordPart> parts, TextStyle style)
-    : _painters = <TextPainter>[
-        for (final ChordPart part in parts)
-          TextPainter(
+  ChordLayout._(List<ChordPart> parts, TextStyle style) {
+    final List<_ChordPartLayout> layouts = <_ChordPartLayout>[
+      for (final ChordPart part in parts)
+        _ChordPartLayout(
+          style: part.style,
+          painter: TextPainter(
             text: TextSpan(
               text: part.text,
               style: switch (part.style) {
@@ -492,26 +721,76 @@ class ChordLayout {
             ),
             textDirection: TextDirection.ltr,
           )..layout(),
-      ];
+        ),
+    ];
+    final double baseFontSize = style.fontSize ?? 14;
+    final double normalBaseline = layouts
+        .where(
+          (_ChordPartLayout part) => part.style != ChordPartStyle.superscript,
+        )
+        .map((_ChordPartLayout part) => part.baseline)
+        .fold(0, (double maximum, double value) => math.max(maximum, value));
+    final double superscriptBaseline = normalBaseline - baseFontSize * 0.5;
+    final List<double> rawTopOffsets = <double>[
+      for (final _ChordPartLayout part in layouts)
+        (part.style == ChordPartStyle.superscript
+                ? superscriptBaseline
+                : normalBaseline) -
+            part.baseline,
+    ];
+    final double minTop = rawTopOffsets.fold(
+      0,
+      (double minimum, double value) => math.min(minimum, value),
+    );
+    _parts = <_ChordPartLayout>[
+      for (int i = 0; i < layouts.length; i++)
+        layouts[i].withTop(rawTopOffsets[i] - minTop),
+    ];
+  }
 
-  final List<TextPainter> _painters;
+  late final List<_ChordPartLayout> _parts;
 
-  double get width => _painters.fold(
+  double get width => _parts.fold(
     0,
-    (double total, TextPainter painter) => total + painter.width,
+    (double total, _ChordPartLayout part) => total + part.painter.width,
   );
 
-  double get height => _painters.fold(
+  double get height => _parts.fold(
     0,
-    (double maximum, TextPainter painter) =>
-        maximum > painter.height ? maximum : painter.height,
+    (double maximum, _ChordPartLayout part) =>
+        math.max(maximum, part.top + part.painter.height),
   );
+
+  @visibleForTesting
+  List<double> get debugPartTopOffsets =>
+      _parts.map((_ChordPartLayout part) => part.top).toList();
 
   void paint(Canvas canvas, Offset offset) {
     double x = offset.dx;
-    for (final TextPainter painter in _painters) {
-      painter.paint(canvas, Offset(x, offset.dy));
-      x += painter.width;
+    for (final _ChordPartLayout part in _parts) {
+      part.painter.paint(canvas, Offset(x, offset.dy + part.top));
+      x += part.painter.width;
     }
+  }
+}
+
+class _ChordPartLayout {
+  const _ChordPartLayout({
+    required this.style,
+    required this.painter,
+    this.top = 0,
+  });
+
+  final ChordPartStyle style;
+  final TextPainter painter;
+  final double top;
+
+  double get baseline {
+    final List<ui.LineMetrics> metrics = painter.computeLineMetrics();
+    return metrics.isEmpty ? painter.height : metrics.first.baseline;
+  }
+
+  _ChordPartLayout withTop(double value) {
+    return _ChordPartLayout(style: style, painter: painter, top: value);
   }
 }

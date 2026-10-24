@@ -72,5 +72,4 @@ Rendszer
 - A dia fájl ID írása helyreállítva
 
 Bugfixek
-- Dupla diák helyes kezelése és zenéjük
-- Keresési és importálási hibák javítása
+- iOS: javítva a biztonsági mentés exportálása és importálása, valamint a diasor mentése és megnyitása. Az exportált fájlok a Fájlok alkalmazásban a Saját iPhone → Diatár → export mappában találhatók.

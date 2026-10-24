@@ -13,18 +13,18 @@ class WebrtcCameraService {
 
   final CameraSignalOut sendSignal;
 
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   MediaStream? _localStream;
   RTCPeerConnection? _peer;
   final List<RTCIceCandidate> _pendingCandidates = <RTCIceCandidate>[];
 
   bool _active = false;
   bool _remoteDescriptionSet = false;
+
+  bool _disposed = false;
   String? selectedDeviceId;
 
   bool get active => _active;
   bool get available => _available();
-  RTCVideoRenderer get localRenderer => _localRenderer;
 
   bool _available() {
     if (kIsWeb || SystemPlatform.isTvOs) {
@@ -42,16 +42,13 @@ class WebrtcCameraService {
     }
   }
 
-  Future<void> init() async {
-    _localRenderer.initialize();
-  }
-
   Future<List<MediaDeviceInfo>> listDevices() async {
     if (!available) {
       return const <MediaDeviceInfo>[];
     }
     try {
-      final List<MediaDeviceInfo> all = await navigator.mediaDevices.enumerateDevices();
+      final List<MediaDeviceInfo> all = await navigator.mediaDevices
+          .enumerateDevices();
       return all.where((MediaDeviceInfo d) => d.kind == 'videoinput').toList();
     } catch (_) {
       return const <MediaDeviceInfo>[];
@@ -59,7 +56,7 @@ class WebrtcCameraService {
   }
 
   Future<void> start({String? deviceId}) async {
-    if (!available) {
+    if (!available || _disposed) {
       return;
     }
     await stop(sendStop: false);
@@ -73,13 +70,10 @@ class WebrtcCameraService {
         if (selectedDeviceId != null && selectedDeviceId!.isNotEmpty)
           'deviceId': selectedDeviceId!,
       };
-      final MediaStream stream =
-          await navigator.mediaDevices.getUserMedia(<String, Object>{
-        'audio': false,
-        'video': video,
-      });
+      final MediaStream stream = await navigator.mediaDevices.getUserMedia(
+        <String, Object>{'audio': false, 'video': video},
+      );
       _localStream = stream;
-      _localRenderer.srcObject = stream;
 
       final Map<String, Object> config = <String, Object>{
         'iceServers': <Map<String, Object>>[
@@ -93,12 +87,16 @@ class WebrtcCameraService {
       });
       peer.onIceCandidate = (RTCIceCandidate candidate) {
         debugPrint('CAM offerer ice out ${candidate.candidate}');
-        unawaited(sendSignal(CameraSignal(
-          kind: CameraSignalKind.ice,
-          candidate: candidate.candidate,
-          sdpMid: candidate.sdpMid,
-          sdpMLineIndex: candidate.sdpMLineIndex,
-        )));
+        unawaited(
+          sendSignal(
+            CameraSignal(
+              kind: CameraSignalKind.ice,
+              candidate: candidate.candidate,
+              sdpMid: candidate.sdpMid,
+              sdpMLineIndex: candidate.sdpMLineIndex,
+            ),
+          ),
+        );
       };
       peer.onConnectionState = (RTCPeerConnectionState state) {
         debugPrint('CAM offerer conn $state');
@@ -115,7 +113,7 @@ class WebrtcCameraService {
   }
 
   Future<void> handleSignal(CameraSignal signal) async {
-    if (!available) {
+    if (!available || _disposed) {
       return;
     }
     debugPrint('CAM offerer in ${signal.kind.name}');
@@ -130,17 +128,24 @@ class WebrtcCameraService {
         }
         break;
       case CameraSignalKind.answer:
-        if (signal.sdp != null) {
-          debugPrint('CAM offerer answer.len=${signal.sdp!.length}');
-          await _peer!.setRemoteDescription(
-            RTCSessionDescription(signal.sdp!, 'answer'),
-          );
-          _remoteDescriptionSet = true;
-          for (final RTCIceCandidate candidate in _pendingCandidates) {
-            await _peer!.addCandidate(candidate);
-          }
-          _pendingCandidates.clear();
+        final RTCPeerConnection? peer = _peer;
+        if (signal.sdp == null || peer == null) {
+          // An answer with no peer to apply it to: the camera was stopped
+          // between the offer going out and the reply coming back, which is an
+          // ordinary race on a machine the operator is closing. Guarded the
+          // same way the ice case below is, rather than assumed to have a peer.
+          debugPrint('CAM offerer answer dropped: no peer');
+          break;
         }
+        debugPrint('CAM offerer answer.len=${signal.sdp!.length}');
+        await peer.setRemoteDescription(
+          RTCSessionDescription(signal.sdp!, 'answer'),
+        );
+        _remoteDescriptionSet = true;
+        for (final RTCIceCandidate candidate in _pendingCandidates) {
+          await peer.addCandidate(candidate);
+        }
+        _pendingCandidates.clear();
         break;
       case CameraSignalKind.ice:
         if (signal.candidate == null) {
@@ -176,10 +181,9 @@ class WebrtcCameraService {
     final RTCSessionDescription offer = await _peer!.createOffer();
     debugPrint('CAM offerer sdp.len=${offer.sdp?.length}');
     await _peer!.setLocalDescription(offer);
-    unawaited(sendSignal(CameraSignal(
-      kind: CameraSignalKind.offer,
-      sdp: offer.sdp,
-    )));
+    unawaited(
+      sendSignal(CameraSignal(kind: CameraSignalKind.offer, sdp: offer.sdp)),
+    );
   }
 
   Future<void> stop({bool sendStop = true}) async {
@@ -194,14 +198,16 @@ class WebrtcCameraService {
       await _localStream!.dispose();
     }
     _localStream = null;
-    _localRenderer.srcObject = null;
     if (sendStop) {
       unawaited(sendSignal(const CameraSignal(kind: CameraSignalKind.stop)));
     }
   }
 
   Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
     await stop(sendStop: false);
-    await _localRenderer.dispose();
   }
 }

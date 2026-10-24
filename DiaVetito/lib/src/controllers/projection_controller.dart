@@ -38,6 +38,9 @@ class ProjectionController extends ChangeNotifier {
         onUsers: _onUsersStatic,
         onConnection: _onMqttConnectionStatic,
       ) {
+    _camera = WebrtcCameraService(
+      sendSignal: (CameraSignal signal) => _server.sendCameraSignal(signal),
+    );
     _instance = this;
     _lifecycleListener = AppLifecycleListener(onResume: _onAppResumed);
   }
@@ -99,11 +102,7 @@ class ProjectionController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
-    _camera = WebrtcCameraService(
-      sendSignal: (CameraSignal signal) => _server.sendCameraSignal(signal),
-    );
     cameraAvailable = _camera.available;
-    await _camera.init();
     settings = (await _settingsStore.load()).copyWith(mqttChannel: '1');
     _camera.selectedDeviceId = settings.cameraStreamDeviceId;
     if (kIsWeb) {
@@ -741,7 +740,7 @@ class ProjectionController extends ChangeNotifier {
     _lifecycleListener?.dispose();
     _logoTimer?.cancel();
     _server.stop(emitConnection: false);
-    _camera.dispose();
+    unawaited(_camera.dispose());
     _mqtt.dispose();
     super.dispose();
   }

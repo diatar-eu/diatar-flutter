@@ -13,6 +13,7 @@
 #include "screen_retriever_linux/screen_retriever_linux_plugin.h"
 #include "url_launcher_linux/url_launcher_plugin.h"
 #include "window_manager/window_manager_plugin.h"
+#include "graphics_fallback.h"
 #include "pic_plc_worker.h"
 
 namespace {
@@ -184,6 +185,7 @@ static void my_application_activate(GApplication* application) {
   });
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
+  graphics_fallback_schedule_startup_success();
 }
 
 // Implements GApplication::local_command_line.

@@ -1,11 +1,10 @@
-import 'dart:async';
-
+import 'package:diatar_common/diatar_common.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../controllers/diatar_main_controller.dart';
-import 'desktop_hotkey.dart';
+import '../core/hotkeys/desktop_hotkey_dispatch.dart';
 
 class DesktopHotkeysLayer extends StatefulWidget {
   const DesktopHotkeysLayer({
@@ -22,72 +21,50 @@ class DesktopHotkeysLayer extends StatefulWidget {
 }
 
 class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
-  final FocusNode _focusNode = FocusNode(debugLabel: 'desktop-hotkeys-layer');
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKeyEvent);
+  }
 
   @override
   void dispose() {
-    _focusNode.dispose();
+    HardwareKeyboard.instance.removeHandler(_onKeyEvent);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_supportsMainWindowHotkeys()) {
-      return widget.child;
-    }
-
-    return Focus(
-      autofocus: true,
-      focusNode: _focusNode,
-      onKeyEvent: _onKeyEvent,
-      child: widget.child,
-    );
+    return widget.child;
   }
 
-  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) {
-      return KeyEventResult.ignored;
-    }
-    if (_isTypingIntoTextField()) {
-      return KeyEventResult.ignored;
-    }
-
-    final Map<String, String> actionHotkeys =
-        widget.controller.settings.desktopActionHotkeys;
-    final String? actionId = desktopHotkeyActionForEvent(event, actionHotkeys);
-    if (actionId != null) {
-      widget.controller.runDesktopHotkeyAction(actionId);
-      return KeyEventResult.handled;
+  bool _onKeyEvent(KeyEvent event) {
+    if (!_supportsMainWindowHotkeys() ||
+        event is! KeyDownEvent ||
+        !_isCurrentRoute() ||
+        _isTypingIntoTextField()) {
+      return false;
     }
 
-    final String combo = desktopHotkeyComboForEvent(event);
-    if (combo.isEmpty) {
-      return KeyEventResult.ignored;
-    }
-
-    final Map<String, String> songHotkeys =
-        widget.controller.settings.desktopSongHotkeys;
-    final String? songBinding = desktopHotkeyValueForCombo(
-      combo,
-      songHotkeys,
+    final AppSettings settings = widget.controller.settings;
+    final DesktopHotkeyCommand? command = desktopHotkeyCommandForEvent(
+      event,
+      actionHotkeys: settings.desktopActionHotkeys,
+      songHotkeys: settings.desktopSongHotkeys,
+      orderSetHotkeys: settings.desktopOrderSetHotkeys,
     );
-    if (songBinding != null) {
-      widget.controller.activateSongHotkeyBinding(songBinding);
-      return KeyEventResult.handled;
+    if (command == null) {
+      return false;
     }
+    widget.controller.runDesktopHotkeyCommand(command);
+    return true;
+  }
 
-    final Map<String, String> orderSetHotkeys =
-        widget.controller.settings.desktopOrderSetHotkeys;
-    final String? orderSetId = desktopHotkeyValueForCombo(
-      combo,
-      orderSetHotkeys,
-    );
-    if (orderSetId != null) {
-      unawaited(widget.controller.setActiveCustomOrderSetById(orderSetId));
-      return KeyEventResult.handled;
+  bool _isCurrentRoute() {
+    if (!mounted) {
+      return false;
     }
-
-    return KeyEventResult.ignored;
+    return ModalRoute.of(context)?.isCurrent ?? true;
   }
 
   bool _isTypingIntoTextField() {
@@ -96,7 +73,8 @@ class _DesktopHotkeysLayerState extends State<DesktopHotkeysLayer> {
     if (focusContext == null) {
       return false;
     }
-    return focusContext.widget is EditableText;
+    return focusContext.widget is EditableText ||
+        focusContext.findAncestorWidgetOfExactType<EditableText>() != null;
   }
 
   bool _supportsMainWindowHotkeys() {

@@ -1,4 +1,5 @@
 import '../../l10n/generated/app_localizations.dart';
+import 'ios_platform.dart';
 
 String formatFriendlyPathLabel(String rawPath, AppLocalizations l10n) {
   final String normalized = rawPath.trim().replaceAll('\\', '/');
@@ -57,6 +58,30 @@ String shortFriendlyPathLabel(
     return friendly;
   }
   return '.../${segments.sublist(segments.length - keepSegments).join('/')}';
+}
+
+/// Formats a path that lives inside the app's own documents directory.
+///
+/// On iOS the sandbox path contains an opaque container UUID that means nothing
+/// to the user, so the prefix is replaced with a label matching the folder that
+/// the Files app shows for the application.
+///
+/// Other platforms keep the regular [formatFriendlyPathLabel] behaviour.
+String formatAppStoragePathLabel(String rawPath, AppLocalizations l10n) {
+  final String trimmed = rawPath.trim();
+  if (trimmed.isEmpty) {
+    return '';
+  }
+  if (isIosPlatform) {
+    const String marker = '/Documents/';
+    final String normalized = trimmed.replaceAll('\\', '/');
+    final int index = normalized.indexOf(marker);
+    if (index >= 0) {
+      final String remainder = normalized.substring(index + marker.length);
+      return '${l10n.appDocumentsFolderLabel}/$remainder';
+    }
+  }
+  return formatFriendlyPathLabel(trimmed, l10n);
 }
 
 String _mapPathSegment(String segment, AppLocalizations l10n) {

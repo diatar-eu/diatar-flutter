@@ -27,8 +27,10 @@ import '../services/blank_image_storage.dart';
 import '../services/pic_plc_service.dart';
 import '../services/web_diavetito_url.dart';
 import '../services/wol_service.dart';
+import '../core/hotkeys/desktop_hotkey.dart';
+import '../core/settings/internet_credentials_policy.dart';
 import '../utils/friendly_path.dart';
-import 'desktop_hotkey.dart';
+import '../utils/ios_platform.dart';
 import 'onboarding_sheet.dart';
 
 class SongHotkeyOption {
@@ -72,6 +74,7 @@ class DiatarSettingsSheet extends StatefulWidget {
     super.key,
     required this.initialSettings,
     required this.initialPicPlcConfiguration,
+    this.secretKeyProtectedByPlatform = true,
     required this.onApply,
     required this.onApplyPicPlc,
     required this.onExitRequested,
@@ -100,6 +103,11 @@ class DiatarSettingsSheet extends StatefulWidget {
   final List<SongHotkeyOption> Function()? availableSongsLoader;
   final List<CustomOrderSetOption> availableOrderSets;
   final List<CustomOrderSetOption> Function()? availableOrderSetsLoader;
+
+  /// Whether the stored secrets are protected by the platform keystore, as
+  /// opposed to the degraded settings-file fallback. The internet section
+  /// warns when this is false.
+  final bool secretKeyProtectedByPlatform;
   final DiatarSettingsInitialSection? initialSection;
   final bool closeAfterInitialSectionClose;
   final VoidCallback? onDownloadBooksRequested;
@@ -123,7 +131,17 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late final TextEditingController _search;
   late final TextEditingController _tcpTargets;
   late final TextEditingController _mqttUser;
-  late final TextEditingController _mqttPassword;
+
+  /// Only ever holds a *newly typed* password. The stored one is deliberately
+  /// never loaded here, so it cannot be read back out of the settings.
+  final TextEditingController _mqttPassword = TextEditingController();
+
+  /// Whether a password was stored when this sheet opened, i.e. the stored
+  /// password the field above must not disturb.
+  late bool _mqttPasswordStored;
+
+  /// Set by the "remove password" button; cancels out a typed password.
+  bool _mqttPasswordRemovalRequested = false;
   late final TextEditingController _blankPicPath;
   late final TextEditingController _diaExportPath;
   late final TextEditingController _picPlcPort;
@@ -144,6 +162,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   late int _projSpacingStep;
   late int _projKottaArany;
   late int _projAkkordArany;
+  late int _projAkkordNotation;
+  late bool _projAkkordOptionalSeventh;
+  late bool _projAkkordMinorAsDash;
   late int _projBgMode;
   late int _projBackTrans;
   late int _projBlankTrans;
@@ -188,7 +209,6 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
   String _selectedSongHotkeyOptionId = '';
   bool _availableOrderSetsResolved = false;
   String _selectedOrderSetOptionId = '';
-  bool _showInternetPassword = false;
   bool _internetActionRunning = false;
   late final TextEditingController _szentirasApiKey;
   void Function(void Function())? _setInternetSectionState;
@@ -218,7 +238,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _search = TextEditingController();
     _tcpTargets = TextEditingController(text: s.tcpTargets.join('\n'));
     _mqttUser = TextEditingController(text: s.mqttUser);
-    _mqttPassword = TextEditingController(text: s.mqttPassword);
+    _mqttPasswordStored = s.mqttPassword.isNotEmpty;
     _szentirasApiKey = TextEditingController(text: s.szentirasApiKey);
     _blankPicPath = TextEditingController(text: s.blankPicPath);
     _diaExportPath = TextEditingController(text: s.diaExportPath);
@@ -255,6 +275,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     _projSpacingStep = s.projSpacingStep.clamp(0, 10);
     _projKottaArany = s.projKottaArany.clamp(10, 200);
     _projAkkordArany = s.projAkkordArany.clamp(10, 200);
+    _projAkkordNotation = s.projAkkordNotation.clamp(0, 2);
+    _projAkkordOptionalSeventh = s.projAkkordOptionalSeventh;
+    _projAkkordMinorAsDash = s.projAkkordMinorAsDash;
     _projBgMode = s.projBgMode.clamp(0, 4);
     _projBackTrans = s.projBackTrans.clamp(0, 100);
     _projBlankTrans = s.projBlankTrans.clamp(0, 100);
@@ -440,6 +463,10 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       query,
       'enektar fajlok dtx hatterkep hatter kep blank export import backup biztonsagi mentes zip',
     );
+    final bool showChords = _matches(
+      query,
+      'akkord chord jelolesmod szimbolumos szoveges szamjegyes notation symbolic textual numeric moll szeptim heted',
+    );
     final bool showGeneral = _matches(
       query,
       'altalanos tema nyelv language gorgetheto akkord kotta hatterkep szokiemeles',
@@ -478,6 +505,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         showProjection ||
         showFiles ||
         showGeneral ||
+        showChords ||
         showSpeech ||
         showSystem ||
         showExternalCommands ||
@@ -610,7 +638,11 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       description: l10n.projectionSettingsDescription,
                     ),
                   if (showProjection &&
-                      (showFiles || showGeneral || showSpeech || showHotkeys))
+                      (showFiles ||
+                          showGeneral ||
+                          showChords ||
+                          showSpeech ||
+                          showHotkeys))
                     const Divider(height: 1),
                   if (showFiles)
                     _settingsTile(
@@ -620,7 +652,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openFileSettings,
                       description: l10n.settingsFilesDescription,
                     ),
-                  if (showFiles && (showGeneral || showSpeech || showHotkeys))
+                  if (showFiles &&
+                      (showGeneral || showChords || showSpeech || showHotkeys))
                     const Divider(height: 1),
                   if (showGeneral)
                     _settingsTile(
@@ -632,7 +665,20 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
                       onTap: _openGeneralSettings,
                       description: l10n.settingsGeneralDescription,
                     ),
-                  if (showGeneral &&
+                  if (showGeneral && showChords) const Divider(height: 1),
+                  if (showChords)
+                    _settingsTile(
+                      leading: const Icon(Icons.music_note_outlined),
+                      title: Text(l10n.settingsChordsTitle),
+                      subtitle: Text(
+                        _projUseAkkord
+                            ? l10n.settingsChordsSummary
+                            : l10n.chordNotationOff,
+                      ),
+                      onTap: _openChordSettings,
+                      description: l10n.settingsChordsDescription,
+                    ),
+                  if (showChords &&
                       (showSpeech ||
                           showExternalCommands ||
                           showSystem ||
@@ -817,7 +863,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     final bool originalInternetRelayEnabled = _internetRelayEnabled;
     final String originalMqttUser = _mqttUser.text;
     final String originalMqttPassword = _mqttPassword.text;
-    final bool originalShowInternetPassword = _showInternetPassword;
+    final bool originalMqttPasswordStored = _mqttPasswordStored;
+    final bool originalMqttPasswordRemovalRequested =
+        _mqttPasswordRemovalRequested;
 
     return _openSectionSheet(
       title: context.l10n.settingsInternetTitle,
@@ -831,7 +879,8 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
           _internetRelayEnabled = originalInternetRelayEnabled;
           _mqttUser.text = originalMqttUser;
           _mqttPassword.text = originalMqttPassword;
-          _showInternetPassword = originalShowInternetPassword;
+          _mqttPasswordStored = originalMqttPasswordStored;
+          _mqttPasswordRemovalRequested = originalMqttPasswordRemovalRequested;
         });
       },
       builder: (BuildContext context, void Function(void Function()) setBoth) {
@@ -869,29 +918,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
               ),
             ],
           ),
-          TextField(
-            controller: _mqttPassword,
-            enabled: _internetRelayEnabled,
-            obscureText: !_showInternetPassword,
-            decoration: InputDecoration(
-              labelText: l10n.userFieldPassword,
-              suffixIcon: IconButton(
-                tooltip: _showInternetPassword
-                    ? l10n.passwordHideTooltip
-                    : l10n.passwordShowTooltip,
-                onPressed: _internetRelayEnabled
-                    ? () => setBoth(
-                        () => _showInternetPassword = !_showInternetPassword,
-                      )
-                    : null,
-                icon: Icon(
-                  _showInternetPassword
-                      ? Icons.visibility_off
-                      : Icons.visibility,
-                ),
-              ),
-            ),
-          ),
+          _buildMqttPasswordField(context, l10n, setBoth),
           const SizedBox(height: 10),
           const Divider(height: 1),
           const SizedBox(height: 10),
@@ -943,6 +970,99 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         ];
       },
     ).whenComplete(() => _setInternetSectionState = null);
+  }
+
+  /// The password field for the internet section.
+  ///
+  /// It is never pre-filled: the stored password is not handed to this sheet at
+  /// all, so there is nothing here to read back. The field only means "type a
+  /// new password to replace the stored one", and the label underneath says
+  /// whether one is stored at all.
+  Widget _buildMqttPasswordField(
+    BuildContext context,
+    AppLocalizations l10n,
+    void Function(void Function()) setBoth,
+  ) {
+    final bool removalRequested = _mqttPasswordRemovalRequested;
+    final bool stored = _mqttPasswordStored && !removalRequested;
+    final bool pendingNew = _mqttPassword.text.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        TextField(
+          controller: _mqttPassword,
+          enabled: _internetRelayEnabled,
+          obscureText: true,
+          onChanged: (_) => setBoth(() {}),
+          decoration: InputDecoration(
+            labelText: pendingNew
+                ? l10n.userFieldNewPassword
+                : l10n.userFieldPassword,
+            helperText: l10n.internetPasswordStoredHint,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: <Widget>[
+            Icon(
+              removalRequested
+                  ? Icons.lock_open
+                  : stored
+                  ? Icons.lock
+                  : Icons.lock_outline,
+              size: 18,
+              color: removalRequested
+                  ? Theme.of(context).colorScheme.error
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                removalRequested
+                    ? l10n.internetPasswordRemoved
+                    : stored
+                    ? l10n.internetPasswordStored
+                    : l10n.internetPasswordNotStored,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+        if (stored && !pendingNew) ...<Widget>[
+          const SizedBox(height: 4),
+          TextButton.icon(
+            onPressed: _internetRelayEnabled
+                ? () => setBoth(() => _mqttPasswordRemovalRequested = true)
+                : null,
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: Text(l10n.internetPasswordRemove),
+          ),
+        ],
+        if (stored && !widget.secretKeyProtectedByPlatform) ...<Widget>[
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Icon(
+                Icons.warning_amber_rounded,
+                size: 18,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  l10n.internetPasswordStorageWarning,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
   }
 
   Future<void> _registerUser() async {
@@ -1455,7 +1575,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
         return;
       }
       await _showInternetResultDialog(
-        l10n.savedPath(formatFriendlyPathLabel(savedPath, l10n)),
+        l10n.savedPath(formatAppStoragePathLabel(savedPath, l10n)),
       );
     } catch (error) {
       if (!sectionContext.mounted) {
@@ -1770,7 +1890,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
   bool _applyNetworkSettings() {
     final String mqttUser = _mqttUser.text.trim();
-    final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
+    final String mqttPassword = _resolveMqttPassword(mqttUser);
     final List<String> tcpTargets = kIsWeb
         ? const <String>[]
         : _parseTcpTargets(_tcpTargets.text);
@@ -1860,6 +1980,86 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
 
     unawaited(_applySettingsSafely(updated));
     return true;
+  }
+
+  Future<void> _openChordSettings() {
+    return _openSectionSheet(
+      title: context.l10n.settingsChordsTitle,
+      builder: (BuildContext context, void Function(void Function()) setBoth) {
+        final l10n = context.l10n;
+        // Each label spells out the chords it produces, so the choice is not a
+        // guess from a word alone.
+        final List<Widget> notationTiles =
+            <(int, String)>[
+              (
+                chordNotationToStorage(ChordNotation.symbolic),
+                l10n.chordNotationSymbolic,
+              ),
+              (
+                chordNotationToStorage(ChordNotation.textual),
+                l10n.chordNotationTextual,
+              ),
+              (
+                chordNotationToStorage(ChordNotation.numeric),
+                l10n.chordNotationNumeric,
+              ),
+            ].map(((int, String) option) {
+              return RadioListTile<String>(
+                contentPadding: EdgeInsets.zero,
+                value: option.$1.toString(),
+                enabled: _projUseAkkord,
+                title: Text(option.$2),
+              );
+            }).toList();
+
+        return <Widget>[
+          // First on purpose: it is the master switch for everything below.
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projUseAkkord,
+            onChanged: (bool v) => setBoth(() => _projUseAkkord = v),
+            title: Text(l10n.showChords),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.chordNotationLabel,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          Text(
+            l10n.chordNotationHint,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          RadioGroup<String>(
+            groupValue: _projAkkordNotation.toString(),
+            onChanged: (String? v) =>
+                setBoth(() => _projAkkordNotation = int.parse(v ?? '0')),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: notationTiles,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projAkkordOptionalSeventh,
+            onChanged: _projUseAkkord
+                ? (bool v) => setBoth(() => _projAkkordOptionalSeventh = v)
+                : null,
+            title: Text(l10n.chordOptionalSeventh),
+            subtitle: Text(l10n.chordOptionalSeventhHint),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _projAkkordMinorAsDash,
+            onChanged: _projUseAkkord
+                ? (bool v) => setBoth(() => _projAkkordMinorAsDash = v)
+                : null,
+            title: Text(l10n.chordMinorAsDash),
+            subtitle: Text(l10n.chordMinorAsDashHint),
+          ),
+        ];
+      },
+    );
   }
 
   Future<void> _openGeneralSettings() {
@@ -2768,9 +2968,14 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       }
 
       if (sectionContext.mounted) {
+        final AppLocalizations l10n = sectionContext.l10n;
         await _showFileTransferMessage(
           sectionContext,
-          sectionContext.l10n.diatarExportSuccess(savedFileName),
+          // iOS-en nincs rendszer-mentőablak, a fájl az app export mappájába
+          // kerül, ezért az üzenet megmondja, hol található.
+          isIosPlatform
+              ? l10n.diatarExportSuccessOnIos(savedFileName)
+              : l10n.diatarExportSuccess(savedFileName),
         );
       }
     } catch (error) {
@@ -4191,9 +4396,22 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     });
   }
 
+  /// The password to hand to the settings: a newly typed one, the stored one
+  /// when the field was left alone, or nothing when the user asked to remove
+  /// it. See `InternetCredentialsPolicy`.
+  String _resolveMqttPassword(String mqttUser) {
+    return const InternetCredentialsPolicy().resolvePassword(
+      storedPassword: widget.initialSettings.mqttPassword,
+      enteredPassword: _mqttPassword.text,
+      removalRequested: _mqttPasswordRemovalRequested,
+      relayEnabled: _internetRelayEnabled,
+      mqttUser: mqttUser,
+    );
+  }
+
   Future<void> _save() async {
     final String mqttUser = _mqttUser.text.trim();
-    final String mqttPassword = _internetRelayEnabled ? _mqttPassword.text : '';
+    final String mqttPassword = _resolveMqttPassword(mqttUser);
     final List<String> tcpTargets = kIsWeb
         ? const <String>[]
         : _parseTcpTargets(_tcpTargets.text);
@@ -4304,6 +4522,9 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       projUseTitle: _projUseTitle,
       projKottaArany: _projKottaArany.clamp(10, 200),
       projAkkordArany: _projAkkordArany.clamp(10, 200),
+      projAkkordNotation: _projAkkordNotation.clamp(0, 2),
+      projAkkordOptionalSeventh: _projAkkordOptionalSeventh,
+      projAkkordMinorAsDash: _projAkkordMinorAsDash,
       projBgMode: _projBgMode.clamp(0, 4),
       projBackTrans: _projBackTrans.clamp(0, 100),
       projBlankTrans: _projBlankTrans.clamp(0, 100),

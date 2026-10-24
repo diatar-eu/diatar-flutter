@@ -32,3 +32,11 @@ A **Beállítások → Fájlok** szakaszban:
 - **Exportálás** — a teljes Diatár adatmappa ZIP-be mentése
 - **Importálás** — korábban mentett biztonsági mentés visszaállítása
 - Konfliktus esetén felülírás vagy mellőzés választható
+
+### iPhone és iPad
+
+Mivel iOS-en nincs rendszer-mentőpárbeszéd, az export a program saját
+mappájába kerül. A mentett ZIP a **Fájlok** alkalmazásban a **Saját iPhone →
+Diatár → export** útvonalon található, ahonnan továbbítható felhőbe, e-mailbe
+vagy számítógépre. Az **Importálás** ugyanabból a mappából választja ki a
+visszaállítandó ZIP fájlt.

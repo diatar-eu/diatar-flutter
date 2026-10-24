@@ -21,6 +21,8 @@ class AppSettings {
     this.cameraTarget,
     this.cameraViewWidth = 200,
     this.cameraViewHeight = 120,
+    this.cameraViewPosX = 1.0,
+    this.cameraViewPosY = 1.0,
     this.cameraStreamEnabled = false,
     this.cameraStreamDeviceId,
     this.rotateQuarterTurns = 0,
@@ -55,6 +57,9 @@ class AppSettings {
     this.projUseTitle = true,
     this.projKottaArany = 100,
     this.projAkkordArany = 100,
+    this.projAkkordNotation = 0,
+    this.projAkkordOptionalSeventh = false,
+    this.projAkkordMinorAsDash = false,
     this.projBoldText = false,
     this.projBgMode = 1,
     this.projBackTrans = 0,
@@ -116,6 +121,8 @@ class AppSettings {
   final String? cameraTarget;
   final double cameraViewWidth;
   final double cameraViewHeight;
+  final double cameraViewPosX;
+  final double cameraViewPosY;
   final bool cameraStreamEnabled;
   final String? cameraStreamDeviceId;
   final int rotateQuarterTurns;
@@ -150,6 +157,16 @@ class AppSettings {
   final bool projUseTitle;
   final int projKottaArany;
   final int projAkkordArany;
+
+  /// Storage form of `ChordNotation`: 0 symbolic, 1 textual, 2 numeric.
+  final int projAkkordNotation;
+
+  /// Whether the seventh is spelled out for qualities that imply it.
+  final bool projAkkordOptionalSeventh;
+
+  /// Whether the minor marker is written as `-` instead of `m`.
+  final bool projAkkordMinorAsDash;
+
   final bool projBoldText;
   final int projBgMode;
   final int projBackTrans;
@@ -218,6 +235,8 @@ class AppSettings {
     String? cameraTarget,
     double? cameraViewWidth,
     double? cameraViewHeight,
+    double? cameraViewPosX,
+    double? cameraViewPosY,
     bool? cameraStreamEnabled,
     String? cameraStreamDeviceId,
     int? rotateQuarterTurns,
@@ -252,6 +271,9 @@ class AppSettings {
     bool? projUseTitle,
     int? projKottaArany,
     int? projAkkordArany,
+    int? projAkkordNotation,
+    bool? projAkkordOptionalSeventh,
+    bool? projAkkordMinorAsDash,
     bool? projBoldText,
     int? projBgMode,
     int? projBackTrans,
@@ -311,6 +333,8 @@ class AppSettings {
       cameraTarget: cameraTarget ?? this.cameraTarget,
       cameraViewWidth: cameraViewWidth ?? this.cameraViewWidth,
       cameraViewHeight: cameraViewHeight ?? this.cameraViewHeight,
+      cameraViewPosX: cameraViewPosX ?? this.cameraViewPosX,
+      cameraViewPosY: cameraViewPosY ?? this.cameraViewPosY,
       cameraStreamEnabled: cameraStreamEnabled ?? this.cameraStreamEnabled,
       cameraStreamDeviceId: cameraStreamDeviceId ?? this.cameraStreamDeviceId,
       rotateQuarterTurns: rotateQuarterTurns ?? this.rotateQuarterTurns,
@@ -345,6 +369,11 @@ class AppSettings {
       projUseTitle: projUseTitle ?? this.projUseTitle,
       projKottaArany: projKottaArany ?? this.projKottaArany,
       projAkkordArany: projAkkordArany ?? this.projAkkordArany,
+      projAkkordNotation: projAkkordNotation ?? this.projAkkordNotation,
+      projAkkordOptionalSeventh:
+          projAkkordOptionalSeventh ?? this.projAkkordOptionalSeventh,
+      projAkkordMinorAsDash:
+          projAkkordMinorAsDash ?? this.projAkkordMinorAsDash,
       projBoldText: projBoldText ?? this.projBoldText,
       projBgMode: projBgMode ?? this.projBgMode,
       projBackTrans: projBackTrans ?? this.projBackTrans,
@@ -432,6 +461,9 @@ class AppSettings {
       'projUseTitle': projUseTitle,
       'projKottaArany': projKottaArany,
       'projAkkordArany': projAkkordArany,
+      'projAkkordNotation': projAkkordNotation,
+      'projAkkordOptionalSeventh': projAkkordOptionalSeventh,
+      'projAkkordMinorAsDash': projAkkordMinorAsDash,
       'projBoldText': projBoldText,
       'projBgMode': projBgMode,
       'projBackTrans': projBackTrans,
@@ -440,6 +472,12 @@ class AppSettings {
       'maxCustomOrderSets': maxCustomOrderSets,
       'desktopProjectorEnabled': desktopProjectorEnabled,
       'desktopProjectorMonitor': desktopProjectorMonitor,
+      // A gyorsbillentyű-térképeknek is rajta kell lenniük a térképen: a
+      // vetítőablak a `settings` üzenetből ezekkel oldja fel a saját
+      // billentyűleolvasását, amíg a vezérlő ablak rejtve van.
+      'desktopActionHotkeys': desktopActionHotkeys,
+      'desktopSongHotkeys': desktopSongHotkeys,
+      'desktopOrderSetHotkeys': desktopOrderSetHotkeys,
       'externalCommandOnStart': externalCommandOnStart,
       'externalCommandOnExit': externalCommandOnExit,
       'externalCommandOnProjectionOn': externalCommandOnProjectionOn,
@@ -495,6 +533,25 @@ class AppSettings {
       return fallback;
     }
 
+    /// A `String -> String` térképek visszaolvasása. A standard csatorna-
+    /// kódoló `Map<Object?, Object?>` alakban adja vissza a térképeket, és egy
+    /// régebbi küldő (ami nem tartalmazta a kulcsot) üres térképet kap.
+    Map<String, String> stringMapValue(String key) {
+      final Object? raw = map[key];
+      if (raw is! Map) {
+        return const <String, String>{};
+      }
+      final Map<String, String> result = <String, String>{};
+      for (final MapEntry<Object?, Object?> entry in raw.entries) {
+        final Object? entryKey = entry.key;
+        final Object? entryValue = entry.value;
+        if (entryKey is String && entryValue is String) {
+          result[entryKey] = entryValue;
+        }
+      }
+      return result;
+    }
+
     return AppSettings(
       clipL: (map['clipL'] as num?)?.toDouble() ?? 0,
       clipT: (map['clipT'] as num?)?.toDouble() ?? 0,
@@ -523,6 +580,9 @@ class AppSettings {
       projUseTitle: boolValue('projUseTitle', true),
       projKottaArany: intValue('projKottaArany', 100),
       projAkkordArany: intValue('projAkkordArany', 100),
+      projAkkordNotation: intValue('projAkkordNotation', 0).clamp(0, 2),
+      projAkkordOptionalSeventh: boolValue('projAkkordOptionalSeventh', false),
+      projAkkordMinorAsDash: boolValue('projAkkordMinorAsDash', false),
       projBoldText: boolValue('projBoldText', false),
       projBgMode: intValue('projBgMode', 0),
       projBackTrans: intValue('projBackTrans', 0),
@@ -534,6 +594,9 @@ class AppSettings {
       ).clamp(minCustomOrderSets, maxCustomOrderSetsLimit),
       desktopProjectorEnabled: boolValue('desktopProjectorEnabled', false),
       desktopProjectorMonitor: intValue('desktopProjectorMonitor', -1),
+      desktopActionHotkeys: stringMapValue('desktopActionHotkeys'),
+      desktopSongHotkeys: stringMapValue('desktopSongHotkeys'),
+      desktopOrderSetHotkeys: stringMapValue('desktopOrderSetHotkeys'),
       externalCommandOnStart: map['externalCommandOnStart'] as String? ?? '',
       externalCommandOnExit: map['externalCommandOnExit'] as String? ?? '',
       externalCommandOnProjectionOn:

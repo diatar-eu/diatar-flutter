@@ -1,5 +1,7 @@
 import 'package:diatar_app/src/services/settings_store.dart';
 import 'package:diatar_app/src/services/pic_plc_service.dart';
+import 'package:diatar_common/diatar_common.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -123,6 +125,109 @@ void main() {
     await store.saveShowPhotoInControl(true);
 
     expect(await store.loadShowPhotoInControl(), isTrue);
+  });
+
+  test('persists the MQTT password encrypted, never in clear text', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    final SettingsStore store = SettingsStore();
+
+    final loaded = await store.load();
+    await store.save(
+      loaded.copyWith(
+        internetRelayEnabled: true,
+        mqttUser: 'tester',
+        mqttPassword: 'hunter2',
+      ),
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('MqttPasswordEnc'), isNotNull);
+    expect(prefs.getString('MqttPasswordEnc'), isNot(contains('hunter2')));
+    expect(prefs.getString('Password'), isNull);
+    expect((await SettingsStore().load()).mqttPassword, 'hunter2');
+  });
+
+  test('migrates a clear-text MQTT password to the encrypted store', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'Username': 'tester',
+      'InternetRelayEnabled': true,
+      'Password': 'hunter2',
+    });
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
+
+    final loaded = await SettingsStore().load();
+
+    expect(loaded.mqttPassword, 'hunter2');
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('Password'), isNull);
+    expect(prefs.getString('MqttPasswordEnc'), isNot(contains('hunter2')));
+  });
+
+  test(
+    'prefers an already encrypted password over a stale clear-text one',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'Username': 'tester',
+        'InternetRelayEnabled': true,
+        'Password': 'stale',
+      });
+      FlutterSecureStorage.setMockInitialValues(<String, String>{});
+      final SettingsStore store = SettingsStore();
+      await store.save(
+        (await store.load()).copyWith(
+          internetRelayEnabled: true,
+          mqttUser: 'tester',
+          mqttPassword: 'current',
+        ),
+      );
+      await (await SharedPreferences.getInstance()).setString(
+        'Password',
+        'stale',
+      );
+
+      expect((await SettingsStore().load()).mqttPassword, 'current');
+    },
+  );
+
+  test(
+    'clears the stored MQTT password when the relay is switched off',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      FlutterSecureStorage.setMockInitialValues(<String, String>{});
+      final SettingsStore store = SettingsStore();
+      await store.save(
+        (await store.load()).copyWith(
+          internetRelayEnabled: true,
+          mqttUser: 'tester',
+          mqttPassword: 'hunter2',
+        ),
+      );
+
+      await store.save(
+        (await store.load()).copyWith(internetRelayEnabled: false),
+      );
+
+      expect((await SettingsStore().load()).mqttPassword, isEmpty);
+    },
+  );
+
+  test('does not re-encrypt an unchanged MQTT password', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    final SettingsStore store = SettingsStore();
+    final AppSettings settings = (await store.load()).copyWith(
+      internetRelayEnabled: true,
+      mqttUser: 'tester',
+      mqttPassword: 'hunter2',
+    );
+    await store.save(settings);
+
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? firstPayload = prefs.getString('MqttPasswordEnc');
+    await store.save(settings);
+
+    expect(prefs.getString('MqttPasswordEnc'), firstPayload);
   });
 
   test('persists all eight PICPLC button assignments', () async {

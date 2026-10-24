@@ -237,7 +237,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             clang cmake libgtk-3-dev liblzma-dev libunwind-dev ninja-build \
-            pkg-config libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+            pkg-config libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libsecret-1-dev libjsoncpp-dev
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -255,6 +256,10 @@ jobs:
       - name: Build Linux (Release)
         working-directory: ${{ matrix.app }}
         run: flutter build linux --release
+
+      - name: Verify Linux Runtime Libraries
+        working-directory: ${{ matrix.app }}
+        run: test -f build/linux/x64/release/bundle/lib/libquickjs_c_bridge_plugin.so
 
       - name: Package Linux Bundle
         working-directory: ${{ matrix.app }}/build/linux/x64/release
@@ -289,7 +294,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             clang cmake jq libgtk-3-dev liblzma-dev libunwind-dev ninja-build \
-            pkg-config libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+            pkg-config libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libsecret-1-dev libjsoncpp-dev
 
       - name: Setup Flutter
         env:
@@ -316,9 +322,30 @@ jobs:
         working-directory: ${{ matrix.app }}
         run: flutter pub get
 
+      - name: Build QuickJS Bridge arm64
+        env:
+          QUICKJS_BRIDGE_COMMIT: 7204d9bf1afbe0550d51d7decdcce398b2c22e1a
+        run: |
+          git init "$RUNNER_TEMP/quickjs-c-bridge"
+          git -C "$RUNNER_TEMP/quickjs-c-bridge" remote add origin https://github.com/abner/quickjs-c-bridge.git
+          git -C "$RUNNER_TEMP/quickjs-c-bridge" fetch --depth 1 origin "$QUICKJS_BRIDGE_COMMIT"
+          git -C "$RUNNER_TEMP/quickjs-c-bridge" checkout --detach FETCH_HEAD
+          cmake \
+            -S "$RUNNER_TEMP/quickjs-c-bridge/linux" \
+            -B "$RUNNER_TEMP/quickjs-c-bridge/build" \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build "$RUNNER_TEMP/quickjs-c-bridge/build" --parallel
+          bridge="$RUNNER_TEMP/quickjs-c-bridge/build/libquickjs_c_bridge_plugin.so"
+          test -f "$bridge"
+          echo "DIATAR_QUICKJS_BRIDGE_LIBRARY=$bridge" >> "$GITHUB_ENV"
+
       - name: Build Linux arm64 (Release)
         working-directory: ${{ matrix.app }}
         run: flutter build linux --release
+
+      - name: Verify Linux arm64 Runtime Libraries
+        working-directory: ${{ matrix.app }}
+        run: test -f build/linux/arm64/release/bundle/lib/libquickjs_c_bridge_plugin.so
 
       - name: Package Linux arm64 Bundle
         working-directory: ${{ matrix.app }}/build/linux/arm64/release

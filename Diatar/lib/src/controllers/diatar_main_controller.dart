@@ -28,6 +28,7 @@ import '../core/dia/dia_ini_parser.dart';
 import '../core/dia/dia_embedded_image_codec.dart';
 import '../core/dia/dia_matching_policy.dart';
 import '../core/dia/dia_path_policy.dart';
+import '../core/hotkeys/desktop_hotkey_dispatch.dart';
 import '../core/navigation/song_navigation_policy.dart';
 import '../core/navigation/song_selection_policy.dart';
 import '../core/settings/projection_globals_policy.dart';
@@ -49,6 +50,7 @@ import '../services/sender_callback_coordinator.dart';
 import '../services/sender_transport_coordinator.dart';
 import '../services/song_search_service.dart';
 import '../services/settings_store.dart';
+import '../services/secret_store.dart';
 import '../services/audio_service.dart';
 import '../services/tcp_sender_service.dart';
 import '../services/webrtc_camera_view_service.dart';
@@ -256,6 +258,14 @@ class DiatarMainController extends ChangeNotifier {
   DateTime? mqttConnectAttemptAt;
 
   PicPlcConfiguration get picPlcConfiguration => _picPlcConfiguration;
+
+  /// Whether the stored secrets are protected by the platform keystore. False
+  /// means the machine has no secure store available and the settings are
+  /// holding the key next to the ciphertext; the internet settings section
+  /// says so.
+  bool get secretKeyProtectedByPlatform =>
+      _settingsStore.secretKeyProtection ==
+      SecretKeyProtection.platformKeystore;
 
   DiatarMainController() {
     _audioPlaybackCompletionSubscription = _audioService.onPlaybackComplete
@@ -1184,7 +1194,7 @@ class DiatarMainController extends ChangeNotifier {
         notifyListeners();
       }
     };
-    _desktopProjectorBridge.onDesktopHotkeyAction = runDesktopHotkeyAction;
+    _desktopProjectorBridge.onDesktopHotkeyCommand = runDesktopHotkeyCommand;
     await _desktopProjectorBridge.start(settings);
     cameraAvailable = _cameraView.available;
     await _cameraView.init();
@@ -1478,6 +1488,18 @@ class DiatarMainController extends ChangeNotifier {
     settings = settings.copyWith(
       cameraViewWidth: width,
       cameraViewHeight: height,
+    );
+    notifyListeners();
+    await _settingsStore.save(settings);
+  }
+
+  /// A kántorszem (kameranézet) ablak relatív pozícióját állítja be 0..1
+  /// tartományban. A relatív értékek a szabad (az ablakot kivonó) területhez
+  /// képest értendők, így a főablak átméretezésekor az ablak a képben marad.
+  Future<void> setCameraViewPosition(double posX, double posY) async {
+    settings = settings.copyWith(
+      cameraViewPosX: posX,
+      cameraViewPosY: posY,
     );
     notifyListeners();
     await _settingsStore.save(settings);
@@ -4817,6 +4839,22 @@ class DiatarMainController extends ChangeNotifier {
     _playCurrentVerseSound();
   }
 
+  /// A vetítőablakból (vagy a vezérlőablakból) érkező, már feloldott
+  /// gyorsbillentyű-parancs végrehajtása.
+  void runDesktopHotkeyCommand(DesktopHotkeyCommand command) {
+    switch (command.kind) {
+      case DesktopHotkeyKind.action:
+        runDesktopHotkeyAction(command.value);
+        break;
+      case DesktopHotkeyKind.song:
+        activateSongHotkeyBinding(command.value);
+        break;
+      case DesktopHotkeyKind.orderSet:
+        unawaited(setActiveCustomOrderSetById(command.value));
+        break;
+    }
+  }
+
   void runDesktopHotkeyAction(String actionId) {
     switch (actionId) {
       case 'prevSong':
@@ -4896,19 +4934,33 @@ class DiatarMainController extends ChangeNotifier {
   /// Elrejti a vezérlő (fő) ablakot, ha a vetítő ablakkal azonos
   /// monitoron vagyunk, hogy a vetítés látszódjon.
   Future<void> hideControlWindow() async {
-    await _desktopProjectorBridge.hideControlWindow();
+    final bool hidden = await _desktopProjectorBridge.hideControlWindow();
+    if (!hidden) {
+      // Nem sikerült elrejteni: a vezérlőfelület marad a helyén.
+      return;
+    }
     _controlWindowHidden = true;
     notifyListeners();
   }
 
   /// Visszaállítja a vezérlő (fő) ablakot a vetítésbe való kattintás után.
   Future<void> showControlWindow() async {
-    await _desktopProjectorBridge.showControlWindow();
+    final bool shown = await _desktopProjectorBridge.showControlWindow();
+    if (!shown) {
+      return;
+    }
     _controlWindowHidden = false;
     notifyListeners();
   }
 
-  /// Igaz, ha a vezérlő ablak el van rejtve (átlátszósága 0).
+  /// A felhasználó a rendszeren keresztül hozta vissza a vezérlő ablakot
+  /// (tálcáról, Alt+TAB-bal), nem a vetítőablak kattintása váltotta ki, ezért
+  /// itt szinkonizáljuk a rejtett állapotot.
+  Future<void> handleControlWindowRestoredExternally() async {
+    await _desktopProjectorBridge.handleExternalRestore();
+  }
+
+  /// Igaz, ha a vezérlő ablak el van rejtve (`windowManager.minimize`).
   bool _controlWindowHidden = false;
   bool get controlWindowHidden => _controlWindowHidden;
 
@@ -5778,7 +5830,9 @@ class DiatarMainController extends ChangeNotifier {
     _audioPlaybackCompletionSubscription.cancel();
     _speechRecognizer?.dispose();
     _sender.stop();
-    _cameraView.dispose();
+    // `ChangeNotifier.dispose` is synchronous; the teardown is started and
+    // marked as deliberately not awaited.
+    unawaited(_cameraView.dispose());
     _mqttSender.close();
     super.dispose();
   }

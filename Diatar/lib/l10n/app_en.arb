@@ -534,6 +534,7 @@
   "pathSegmentPictures": "Pictures",
   "pathSegmentMusic": "Music",
   "pathSegmentMovies": "Movies",
+  "appDocumentsFolderLabel": "Diatar folder",
   "projectionSettingsTitle": "Projection settings",
   "fontSize": "Font size",
   "titleSize": "Title size",
@@ -718,6 +719,19 @@
   "kottaEditorSharpKey5": "B major/G♯ minor",
   "kottaEditorSharpKey6": "F♯ major/D♯ minor",
   "kottaEditorSharpKey7": "C♯ major/A♯ minor",
+  "settingsChordsTitle": "Chords",
+  "settingsChordsSummary": "Chord display, notation and optional marks",
+  "settingsChordsDescription": "Choose how chords appear in the projection and the text editor. The receiver applies the same notation.",
+  "chordNotationLabel": "Notation",
+  "chordNotationHint": "Three common ways of displaying chords",
+  "chordNotationSymbolic": "Symbolic (C, C°, Cø, C△)",
+  "chordNotationTextual": "Textual (Cdim, Cmaj, Cmmaj7)",
+  "chordNotationNumeric": "Numeric (C#5, Cm♭5, C7sus4)",
+  "chordNotationOff": "Off",
+  "chordOptionalSeventh": "Show the hidden seventh",
+  "chordOptionalSeventhHint": "Writes out the seventh only for qualities that imply it without a separate mark (C△7, Cmaj7, C°△7, Cdim(maj7), C79, C△79, Cmaj9).",
+  "chordMinorAsDash": "Mark minor with a dash",
+  "chordMinorAsDashHint": "Minor chords use \"-\" instead of \"m\", so Cm7 becomes C-7.",
   "colorsTitle": "Colors",
   "backgroundColor": "Background",
   "textColor": "Text",
@@ -913,6 +927,12 @@
   "customOrderLoadModeMessage": "How should the selected custom order be loaded?",
   "@customOrderLoadModeMessage": {
     "description": "Question shown in the load mode dialog"
+  },
+  "customOrderLoadDiaWrongType": "The selected file is not a DIA custom order: {fileName}",
+  "@customOrderLoadDiaWrongType": {
+    "placeholders": {
+      "fileName": {}
+    }
   },
   "volumeListTitle": "Volume list",
   "@volumeListTitle": {
@@ -1257,6 +1277,12 @@
   "localNetworkRelaySwitchTitle": "Local network (TCP/IP)",
   "passwordHideTooltip": "Hide",
   "passwordShowTooltip": "Show",
+  "internetPasswordStoredHint": "Leave empty to keep the stored password.",
+  "internetPasswordStored": "The password is stored securely on this machine, so it cannot be read back.",
+  "internetPasswordNotStored": "No password is set.",
+  "internetPasswordRemoved": "The password will be deleted on save.",
+  "internetPasswordRemove": "Remove password",
+  "internetPasswordStorageWarning": "Warning: this machine has no secure store available, so the password is encrypted but kept in the settings file. Anyone who can read the settings can recover it.",
   "tcpTargetsLabel": "Targets (IP:port per line)",
   "tcpTargetsHint": "192.168.1.50:1024\n192.168.1.51:1024",
   "tcpTargetsHelp": "The sender connects as a client to the addresses above.",
@@ -1373,6 +1399,12 @@
   "diatarZipFileTypeLabel": "Diatar backup",
   "diatarExportSuccess": "Export completed: {fileName}",
   "@diatarExportSuccess": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "diatarExportSuccessOnIos": "Export completed: {fileName}. The file is available in the Files app under On My iPhone → Diatár → export.",
+  "@diatarExportSuccessOnIos": {
     "placeholders": {
       "fileName": {}
     }

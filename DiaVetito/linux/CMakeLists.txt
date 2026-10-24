@@ -74,6 +74,18 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# flutter_js 0.8.7 publishes its QuickJS bridge under the wrong CMake variable
+# name. Add it to Flutter's normal post-clean bundle install list.
+if(DEFINED ENV{DIATAR_QUICKJS_BRIDGE_LIBRARY})
+  set(QUICKJS_BRIDGE_LIBRARY "$ENV{DIATAR_QUICKJS_BRIDGE_LIBRARY}")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
+  set(QUICKJS_BRIDGE_LIBRARY
+    "${FLUTTER_MANAGED_DIR}/ephemeral/.plugin_symlinks/flutter_js/linux/shared/libquickjs_c_bridge_plugin.so")
+endif()
+if(QUICKJS_BRIDGE_LIBRARY)
+  list(APPEND PLUGIN_BUNDLED_LIBRARIES "${QUICKJS_BRIDGE_LIBRARY}")
+endif()
+
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build

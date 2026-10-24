@@ -530,6 +530,7 @@
   "pathSegmentPictures": "Képek",
   "pathSegmentMusic": "Zene",
   "pathSegmentMovies": "Videók",
+  "appDocumentsFolderLabel": "Diatár mappa",
   "uiLanguage": "Felhasználói felület nyelve",
   "languageSystem": "Rendszer alapértelmezett",
   "languageHungarian": "Magyar",
@@ -718,6 +719,19 @@
   "kottaEditorSharpKey5": "H-dúr/gisz-moll",
   "kottaEditorSharpKey6": "Fisz-dúr/disz-moll",
   "kottaEditorSharpKey7": "Cisz-dúr/aisz-moll",
+  "settingsChordsTitle": "Akkordok",
+  "settingsChordsSummary": "Akkordok mutatása, jelölésmód és opcionális jelek",
+  "settingsChordsDescription": "Szabja meg, hogyan jelenjenek meg az akkordok a vetítésen és a szövegszerkesztőben. A választott jelölésmódot a vevő is alkalmazza.",
+  "chordNotationLabel": "Jelölésmód",
+  "chordNotationHint": "Három elterjedt változat az akkordok megjelenítésére",
+  "chordNotationSymbolic": "Szimbólumos (C, C°, Cø, C△)",
+  "chordNotationTextual": "Szöveges (Cdim, Cmaj, Cmmaj7)",
+  "chordNotationNumeric": "Számjegyes (C#5, Cm♭5, C7sus4)",
+  "chordNotationOff": "Kikapcsolva",
+  "chordOptionalSeventh": "A rejtett szeptim megjelenítése",
+  "chordOptionalSeventhHint": "A szeptimet csak azoknál a hangzatoknál írja ki, amelyek külön jel nélkül tartalmazzák (C△7, Cmaj7, C°△7, Cdim(maj7), C79, C△79, Cmaj9).",
+  "chordMinorAsDash": "Moll jelölése kötőjellel",
+  "chordMinorAsDashHint": "A moll akkordok \"m\" jele helyett kötőjelet kap, például Cm7 helyett C-7.",
   "colorsTitle": "Színek",
   "backgroundColor": "Háttér",
   "textColor": "Szöveg",
@@ -913,6 +927,12 @@
   "customOrderLoadModeMessage": "Hogyan töltsük be a kiválasztott diasort?",
   "@customOrderLoadModeMessage": {
     "description": "Question shown in the load mode dialog"
+  },
+  "customOrderLoadDiaWrongType": "A kiválasztott fájl nem DIA diasor: {fileName}",
+  "@customOrderLoadDiaWrongType": {
+    "placeholders": {
+      "fileName": {}
+    }
   },
   "volumeListTitle": "Kötetlista",
   "@volumeListTitle": {
@@ -1258,6 +1278,12 @@
   "localNetworkRelaySwitchTitle": "Helyi hálózat (TCP/IP)",
   "passwordHideTooltip": "Elrejtés",
   "passwordShowTooltip": "Megjelenítés",
+  "internetPasswordStoredHint": "Üresen hagyva a tárolt jelszó változatlan marad.",
+  "internetPasswordStored": "A jelszó biztonságosan el van tárolva a gépen, ezért nem olvasható vissza.",
+  "internetPasswordNotStored": "Nincs beállítva jelszó.",
+  "internetPasswordRemoved": "A jelszó mentéskor törlődik.",
+  "internetPasswordRemove": "Jelszó eltávolítása",
+  "internetPasswordStorageWarning": "Figyelem: ezen a gépen nincs elérhető biztonságos tár, ezért a jelszó titkosítva, de a beállítások fájlában tárolódik. Báki, aki eléri a beállításokat, vissza tudja olvasni.",
   "tcpTargetsLabel": "Célpontok (IP:port soronként)",
   "tcpTargetsHint": "192.168.1.50:1024\n192.168.1.51:1024",
   "tcpTargetsHelp": "A sender kliensként csatlakozik a fenti címekhez.",
@@ -1374,6 +1400,12 @@
   "diatarZipFileTypeLabel": "Diatár biztonsági mentés",
   "diatarExportSuccess": "Az exportálás elkészült: {fileName}",
   "@diatarExportSuccess": {
+    "placeholders": {
+      "fileName": {}
+    }
+  },
+  "diatarExportSuccessOnIos": "Az exportálás elkészült: {fileName}. A fájl a Fájlok alkalmazásban a Saját iPhone → Diatár → export mappában található.",
+  "@diatarExportSuccessOnIos": {
     "placeholders": {
       "fileName": {}
     }
