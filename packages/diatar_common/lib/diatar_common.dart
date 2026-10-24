@@ -18,5 +18,6 @@ export 'ui/kotta_assets.dart';
 export 'ui/chord_editor_dialog.dart';
 export 'ui/chord_renderer.dart';
 export 'ui/inline_text_editor.dart';
+export 'ui/kotta_editor_dialog.dart';
 export 'ui/projector_painter.dart';
 export 'utils/text_normalizer.dart';

@@ -9,6 +9,7 @@ import 'package:super_clipboard/super_clipboard.dart';
 
 import 'chord_editor_dialog.dart';
 import 'chord_renderer.dart';
+import 'kotta_editor_dialog.dart';
 
 enum InlineTextStyle { bold, italic, underline, strike, tieUnderline }
 
@@ -112,7 +113,26 @@ class _InlineTextElement {
     return null;
   }
 
-  String get clipboardText => chordSource ?? rawCommand ?? visibleCharacter;
+  String? get kottaSource {
+    final String? command = rawCommand;
+    if (command == null || !command.endsWith(';')) {
+      return null;
+    }
+    if (command.startsWith(r'\K')) {
+      return command.substring(2, command.length - 1);
+    }
+    if (command.startsWith(r'\?K')) {
+      return command.substring(3, command.length - 1);
+    }
+    return null;
+  }
+
+  bool get isConditionalKotta => rawCommand?.startsWith(r'\?K') ?? false;
+
+  String get clipboardText =>
+      chordSource ??
+      (kottaSource != null ? '' : rawCommand) ??
+      visibleCharacter;
 
   String get editorCharacter => switch (kind) {
     _InlineTextElementKind.softHyphen =>
@@ -375,6 +395,18 @@ class InlineChordCommand {
   final int offset;
   final String source;
   final DiatarChord? chord;
+}
+
+class InlineKottaCommand {
+  const InlineKottaCommand({
+    required this.offset,
+    required this.source,
+    required this.isConditional,
+  });
+
+  final int offset;
+  final String source;
+  final bool isConditional;
 }
 
 void _writeStyleTransition(
@@ -880,8 +912,32 @@ class InlineTextEditingController extends TextEditingController {
 
   String get encodedText => _document.encode();
 
-  InlineTextDocument get selectedDocument =>
-      _document.copyRange(selection.start, selection.end);
+  InlineTextDocument get selectedDocument {
+    final int start = _rightBoundKottaStartForRange(
+      selection.start,
+      selection.end,
+    );
+    return _document.copyRange(start, selection.end);
+  }
+
+  int _rightBoundKottaStartForRange(int start, int end) {
+    if (start <= 0 ||
+        end <= start ||
+        _document._elements[start - 1].kottaSource == null) {
+      return start;
+    }
+    int associatedEnd = start;
+    while (associatedEnd < _document._elements.length) {
+      final _InlineTextElement element = _document._elements[associatedEnd];
+      if (element.isCommand ||
+          element.visibleCharacter.trim().isEmpty ||
+          element.visibleCharacter == '-') {
+        break;
+      }
+      associatedEnd++;
+    }
+    return end >= associatedEnd ? start - 1 : start;
+  }
 
   InlineChordCommand? chordAtOffset(int offset) {
     if (offset < 0 || offset >= _document._elements.length) {
@@ -904,6 +960,42 @@ class InlineTextEditingController extends TextEditingController {
     }
     final int start = current.start;
     return current.end - start == 1 ? chordAtOffset(start) : null;
+  }
+
+  InlineKottaCommand? kottaAtOffset(int offset) {
+    if (offset < 0 || offset >= _document._elements.length) {
+      return null;
+    }
+    final _InlineTextElement element = _document._elements[offset];
+    final String? source = element.kottaSource;
+    return source == null
+        ? null
+        : InlineKottaCommand(
+            offset: offset,
+            source: source,
+            isConditional: element.isConditionalKotta,
+          );
+  }
+
+  InlineKottaCommand? get selectedKotta {
+    final TextSelection current = selection;
+    if (!current.isValid || current.isCollapsed) {
+      return null;
+    }
+    final int start = current.start;
+    return current.end - start == 1 ? kottaAtOffset(start) : null;
+  }
+
+  InlineKottaCommand? get nearbyKotta {
+    final InlineKottaCommand? selected = selectedKotta;
+    if (selected != null) {
+      return selected;
+    }
+    final TextSelection current = selection;
+    if (!current.isValid || !current.isCollapsed) {
+      return null;
+    }
+    return kottaAtOffset(current.start) ?? kottaAtOffset(current.start - 1);
   }
 
   void insertChord(String source) {
@@ -942,6 +1034,231 @@ class InlineTextEditingController extends TextEditingController {
       rawCommand: '\\G$source;',
     );
     _setDocumentValue(TextSelection.collapsed(offset: offset + 1));
+  }
+
+  void insertKotta(String source) {
+    _validateKottaSource(source);
+    final TextSelection current = selection.isValid
+        ? selection
+        : TextSelection.collapsed(offset: _document._elements.length);
+    final int start = current.start;
+    final Set<InlineTextStyle> styles = _document.stylesForInsertionAt(start);
+    _document._elements.insert(
+      start,
+      _InlineTextElement(
+        kind: _InlineTextElementKind.command,
+        styles: Set<InlineTextStyle>.unmodifiable(styles),
+        visibleCharacter: inlineCommandPlaceholder,
+        rawCommand: '\\K$source;',
+      ),
+    );
+    _setDocumentValue(TextSelection.collapsed(offset: start + 1));
+  }
+
+  void replaceKottaAt(int offset, String source) {
+    _validateKottaSource(source);
+    final InlineKottaCommand? existing = kottaAtOffset(offset);
+    if (existing == null) {
+      return;
+    }
+    final _InlineTextElement oldElement = _document._elements[offset];
+    _document._elements[offset] = _InlineTextElement(
+      kind: _InlineTextElementKind.command,
+      styles: oldElement.styles,
+      visibleCharacter: inlineCommandPlaceholder,
+      rawCommand: '${existing.isConditional ? r'\?K' : r'\K'}$source;',
+    );
+    _setDocumentValue(TextSelection.collapsed(offset: offset + 1));
+  }
+
+  KottaEditorInitialState kottaEditorStateAt(
+    int offset, {
+    required bool editingExisting,
+  }) {
+    final ({int start, int end}) bounds = _lineBoundsAt(offset);
+    final InlineTextDocument line = _document.copyRange(
+      bounds.start,
+      bounds.end,
+    );
+    final List<KottaEditorElement> elements = <KottaEditorElement>[];
+    final int selectedLineOffset =
+        offset.clamp(bounds.start, bounds.end) - bounds.start;
+    int textOffset = 0;
+    int? selectedKottaCursor;
+    for (int index = 0; index < line._elements.length; index++) {
+      final _InlineTextElement element = line._elements[index];
+      final String? source = element.kottaSource;
+      if (source != null) {
+        for (
+          int sourceOffset = 0;
+          sourceOffset + 1 < source.length;
+          sourceOffset += 2
+        ) {
+          elements.add(
+            KottaEditorElement(
+              command: source.substring(sourceOffset, sourceOffset + 2),
+              textOffset: textOffset,
+              isConditional: element.isConditionalKotta,
+            ),
+          );
+        }
+        if (index == selectedLineOffset) {
+          selectedKottaCursor = elements.length;
+        }
+      } else if (!element.isCommand) {
+        textOffset++;
+      }
+    }
+
+    final int initialTextCursor = _document._elements
+        .sublist(bounds.start, offset.clamp(bounds.start, bounds.end))
+        .where((element) => !element.isCommand)
+        .length;
+    if (editingExisting && selectedKottaCursor == null) {
+      throw ArgumentError.value(
+        offset,
+        'offset',
+        'No Diatár notation command exists at this offset',
+      );
+    }
+    final int initialKottaCursor =
+        selectedKottaCursor ??
+        elements.indexWhere(
+          (element) => element.textOffset > initialTextCursor,
+        );
+    return KottaEditorInitialState(
+      elements: List<KottaEditorElement>.unmodifiable(elements),
+      textLength: textOffset,
+      kottaCursor: initialKottaCursor < 0
+          ? elements.length
+          : initialKottaCursor,
+      textCursor: initialTextCursor,
+      isEditing: editingExisting,
+    );
+  }
+
+  String previewLineForKottaEditor(
+    int offset,
+    List<KottaEditorElement> elements,
+  ) {
+    final ({int start, int end}) bounds = _lineBoundsAt(offset);
+    return _buildKottaEditorLine(bounds, elements).encode();
+  }
+
+  void applyKottaEditorResult(int offset, KottaEditorResult result) {
+    final ({int start, int end}) bounds = _lineBoundsAt(offset);
+    final InlineTextDocument line = _buildKottaEditorLine(
+      bounds,
+      result.elements,
+    );
+    _document._elements.replaceRange(bounds.start, bounds.end, line._elements);
+    _setDocumentValue(
+      TextSelection.collapsed(
+        offset: (bounds.start + line._elements.length).clamp(
+          bounds.start,
+          _document._elements.length,
+        ),
+      ),
+    );
+  }
+
+  InlineTextDocument _buildKottaEditorLine(
+    ({int start, int end}) bounds,
+    List<KottaEditorElement> elements,
+  ) {
+    final InlineTextDocument line = _document.copyRange(
+      bounds.start,
+      bounds.end,
+    );
+    line._elements.removeWhere((element) => element.kottaSource != null);
+    final int textLength = _lineTextLength(line);
+
+    for (int index = 0; index < elements.length;) {
+      final KottaEditorElement first = elements[index];
+      if (first.command.length != 2) {
+        throw ArgumentError.value(
+          first.command,
+          'elements',
+          'Diatár notation commands must contain two characters',
+        );
+      }
+      final int textOffset = first.textOffset.clamp(0, textLength);
+      final StringBuffer source = StringBuffer(first.command);
+      int next = index + 1;
+      while (next < elements.length &&
+          elements[next].textOffset == first.textOffset &&
+          elements[next].isConditional == first.isConditional) {
+        if (elements[next].command.length != 2) {
+          throw ArgumentError.value(
+            elements[next].command,
+            'elements',
+            'Diatár notation commands must contain two characters',
+          );
+        }
+        source.write(elements[next].command);
+        next++;
+      }
+      final int targetOffset = _elementOffsetForTextOffset(line, textOffset);
+      final Set<InlineTextStyle> styles = line.stylesForInsertionAt(
+        targetOffset,
+      );
+      line._elements.insert(
+        targetOffset,
+        _InlineTextElement(
+          kind: _InlineTextElementKind.command,
+          styles: Set<InlineTextStyle>.unmodifiable(styles),
+          visibleCharacter: inlineCommandPlaceholder,
+          rawCommand:
+              '${first.isConditional ? r'\?K' : r'\K'}${source.toString()};',
+        ),
+      );
+      index = next;
+    }
+    return line;
+  }
+
+  ({int start, int end}) _lineBoundsAt(int offset) {
+    final int insertionOffset = offset.clamp(0, _document._elements.length);
+    int lineStart = insertionOffset;
+    while (lineStart > 0 &&
+        _document._elements[lineStart - 1].visibleCharacter != '\n') {
+      lineStart--;
+    }
+    int lineEnd = insertionOffset;
+    while (lineEnd < _document._elements.length &&
+        _document._elements[lineEnd].visibleCharacter != '\n') {
+      lineEnd++;
+    }
+    return (start: lineStart, end: lineEnd);
+  }
+
+  int _lineTextLength(InlineTextDocument line) {
+    return line._elements.where((element) => !element.isCommand).length;
+  }
+
+  int _elementOffsetForTextOffset(InlineTextDocument line, int textOffset) {
+    int currentTextOffset = 0;
+    for (int index = 0; index < line._elements.length; index++) {
+      final _InlineTextElement element = line._elements[index];
+      if (element.isCommand) {
+        continue;
+      }
+      if (currentTextOffset == textOffset) {
+        return index;
+      }
+      currentTextOffset++;
+    }
+    return line._elements.length;
+  }
+
+  void _validateKottaSource(String source) {
+    if (source.isEmpty || source.length.isOdd) {
+      throw ArgumentError.value(
+        source,
+        'source',
+        'Diatár notation commands must contain two-character pairs',
+      );
+    }
   }
 
   bool isStyleActiveForSelection(InlineTextStyle style) {
@@ -1025,6 +1342,24 @@ class InlineTextEditingController extends TextEditingController {
     );
   }
 
+  void deleteSelectionWithRightBoundKotta() {
+    final TextSelection currentSelection = selection;
+    if (!currentSelection.isValid || currentSelection.isCollapsed) {
+      return;
+    }
+    final int start = _rightBoundKottaStartForRange(
+      currentSelection.start,
+      currentSelection.end,
+    );
+    _document.replaceRangeWithDocument(
+      start,
+      currentSelection.end,
+      InlineTextDocument.decode(''),
+    );
+    _pendingStyles = _document.stylesForInsertionAt(start);
+    _setDocumentValue(TextSelection.collapsed(offset: start));
+  }
+
   void beginRichClipboardPaste() {
     _richClipboardPasteTimer?.cancel();
     _isRichClipboardPasteInProgress = true;
@@ -1066,19 +1401,30 @@ class InlineTextEditingController extends TextEditingController {
         oldValue.text,
         newValue.text,
       );
+      final String replacementText = newValue.text.substring(
+        change.start,
+        change.newEnd,
+      );
+      final int replacementStart = replacementText.isEmpty
+          ? _rightBoundKottaStartForRange(change.start, change.oldEnd)
+          : change.start;
       final Set<InlineTextStyle> insertionStyles =
           oldValue.selection.isCollapsed &&
               oldValue.selection.extentOffset == change.start
           ? _pendingStyles
-          : _document.stylesForInsertionAt(change.start);
+          : _document.stylesForInsertionAt(replacementStart);
       _document.replaceVisibleRange(
-        change.start,
+        replacementStart,
         change.oldEnd,
-        newValue.text.substring(change.start, change.newEnd),
+        replacementText,
         styles: insertionStyles,
       );
-      _pendingStyles =
-          newValue.text.substring(change.start, change.newEnd).isEmpty
+      if (replacementStart != change.start) {
+        _pendingStyles = _document.stylesForInsertionAt(replacementStart);
+        _setDocumentValue(TextSelection.collapsed(offset: replacementStart));
+        return;
+      }
+      _pendingStyles = replacementText.isEmpty
           ? _document.stylesForInsertionAt(newValue.selection.extentOffset)
           : insertionStyles;
     } else if (newValue.selection.isValid &&
@@ -1176,6 +1522,26 @@ class InlineTextEditingController extends TextEditingController {
         );
         continue;
       }
+      if (element.kottaSource != null) {
+        flushText();
+        final ColorScheme colors = Theme.of(context).colorScheme;
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Container(
+              key: const ValueKey<String>('inline-kotta-marker'),
+              width: 4,
+              height: (baseStyle.fontSize ?? 14) * 1.15,
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              decoration: BoxDecoration(
+                color: colors.tertiary,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        );
+        continue;
+      }
       textBuffer.write(element.editorCharacter);
     }
     flushText();
@@ -1197,6 +1563,8 @@ class InlineTextEditorLabels {
     required this.preferredLineBreak,
     required this.insertChord,
     required this.editChord,
+    required this.insertKotta,
+    required this.editKotta,
   });
 
   final String bold;
@@ -1210,6 +1578,8 @@ class InlineTextEditorLabels {
   final String preferredLineBreak;
   final String insertChord;
   final String editChord;
+  final String insertKotta;
+  final String editKotta;
 
   String specialCharacterLabel(InlineTextSpecialCharacter character) {
     return switch (character) {
@@ -1232,6 +1602,7 @@ class InlineTextEditor extends StatefulWidget {
     required this.labels,
     required this.decoration,
     required this.chordEditorLabels,
+    required this.kottaEditorLabels,
     this.focusNode,
     this.minLines,
     this.maxLines,
@@ -1244,6 +1615,7 @@ class InlineTextEditor extends StatefulWidget {
   final InlineTextEditorLabels labels;
   final InputDecoration decoration;
   final ChordEditorLabels chordEditorLabels;
+  final KottaEditorLabels kottaEditorLabels;
   final FocusNode? focusNode;
   final int? minLines;
   final int? maxLines;
@@ -1265,6 +1637,7 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
   DateTime? _lastPointerDownAt;
   Offset? _lastPointerDownPosition;
   bool _editingChord = false;
+  bool _editingKotta = false;
 
   @override
   void initState() {
@@ -1316,6 +1689,11 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
     if (!shortcut) {
       return KeyEventResult.ignored;
     }
+    if (event.logicalKey == LogicalKeyboardKey.keyK) {
+      final InlineKottaCommand? kotta = widget.controller.nearbyKotta;
+      unawaited(kotta == null ? _insertKotta() : _editKotta(kotta));
+      return KeyEventResult.handled;
+    }
     if (event.logicalKey == LogicalKeyboardKey.keyC) {
       unawaited(_copy());
       return KeyEventResult.handled;
@@ -1347,7 +1725,7 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
     _lastPointerDownAt = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        unawaited(_editChordAtPosition(event.position));
+        unawaited(_editCommandAtPosition(event.position));
       }
     });
   }
@@ -1376,7 +1754,7 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
     return result;
   }
 
-  Future<void> _editChordAtPosition(Offset globalPosition) async {
+  Future<void> _editCommandAtPosition(Offset globalPosition) async {
     final RenderEditable? editable = _findRenderEditable();
     if (editable == null) {
       return;
@@ -1387,6 +1765,13 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
         widget.controller.chordAtOffset(offset - 1);
     if (chord != null) {
       await _editChord(chord);
+      return;
+    }
+    final InlineKottaCommand? kotta =
+        widget.controller.kottaAtOffset(offset) ??
+        widget.controller.kottaAtOffset(offset - 1);
+    if (kotta != null) {
+      await _editKotta(kotta);
     }
   }
 
@@ -1435,6 +1820,59 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
     }
   }
 
+  Future<void> _insertKotta() async {
+    if (_editingKotta) {
+      return;
+    }
+    _editingKotta = true;
+    try {
+      final int offset = widget.controller.selection.isValid
+          ? widget.controller.selection.start
+          : widget.controller.text.length;
+      final KottaEditorResult? result = await showKottaEditorDialog(
+        context: context,
+        labels: widget.kottaEditorLabels,
+        initialState: widget.controller.kottaEditorStateAt(
+          offset,
+          editingExisting: false,
+        ),
+        previewLineBuilder: (List<KottaEditorElement> elements) =>
+            widget.controller.previewLineForKottaEditor(offset, elements),
+      );
+      if (result != null && mounted) {
+        widget.controller.applyKottaEditorResult(offset, result);
+        _focusNode.requestFocus();
+      }
+    } finally {
+      _editingKotta = false;
+    }
+  }
+
+  Future<void> _editKotta(InlineKottaCommand kotta) async {
+    if (_editingKotta) {
+      return;
+    }
+    _editingKotta = true;
+    try {
+      final KottaEditorResult? result = await showKottaEditorDialog(
+        context: context,
+        labels: widget.kottaEditorLabels,
+        initialState: widget.controller.kottaEditorStateAt(
+          kotta.offset,
+          editingExisting: true,
+        ),
+        previewLineBuilder: (List<KottaEditorElement> elements) =>
+            widget.controller.previewLineForKottaEditor(kotta.offset, elements),
+      );
+      if (result != null && mounted) {
+        widget.controller.applyKottaEditorResult(kotta.offset, result);
+        _focusNode.requestFocus();
+      }
+    } finally {
+      _editingKotta = false;
+    }
+  }
+
   Future<void> _copy() async {
     if (widget.controller.selection.isCollapsed) {
       return;
@@ -1447,9 +1885,7 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
       return;
     }
     await _copy();
-    widget.controller.replaceSelectionWithDocument(
-      InlineTextDocument.decode(''),
-    );
+    widget.controller.deleteSelectionWithRightBoundKotta();
   }
 
   Future<void> _paste({bool suppressPlatformTextChanges = false}) async {
@@ -1471,7 +1907,16 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
     EditableTextState editableTextState,
   ) {
     final InlineChordCommand? selectedChord = widget.controller.selectedChord;
+    final InlineKottaCommand? selectedKotta = widget.controller.selectedKotta;
     return <ContextMenuButtonItem>[
+      if (selectedKotta != null)
+        ContextMenuButtonItem(
+          label: widget.labels.editKotta,
+          onPressed: () {
+            ContextMenuController.removeAny();
+            unawaited(_editKotta(selectedKotta));
+          },
+        ),
       if (selectedChord != null)
         ContextMenuButtonItem(
           label: widget.labels.editChord,
@@ -1519,8 +1964,7 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
       children: <Widget>[
         Align(
           alignment: Alignment.centerLeft,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+          child: Wrap(
             children: <Widget>[
               _FormattingButton(
                 controller: widget.controller,
@@ -1591,6 +2035,21 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
                   final InlineChordCommand? chord =
                       widget.controller.selectedChord;
                   unawaited(chord == null ? _insertChord() : _editChord(chord));
+                },
+                icon: const Icon(Icons.grid_on),
+                style: IconButton.styleFrom(
+                  backgroundColor: colors.surfaceContainerHighest,
+                  foregroundColor: colors.onSurfaceVariant,
+                ),
+              ),
+              IconButton(
+                tooltip: widget.controller.nearbyKotta == null
+                    ? widget.labels.insertKotta
+                    : widget.labels.editKotta,
+                onPressed: () {
+                  final InlineKottaCommand? kotta =
+                      widget.controller.nearbyKotta;
+                  unawaited(kotta == null ? _insertKotta() : _editKotta(kotta));
                 },
                 icon: const Icon(Icons.queue_music),
                 style: IconButton.styleFrom(

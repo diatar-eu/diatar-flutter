@@ -1,2 +1,75 @@
+Új funkciók
+Diasor
+- A kottaszerkesztő vízszintesen görgethető szerkesztőgombsorában balra/jobbra kurzormozgató és fel/le hangmagasság-állító nyílgombok is elérhetők, billentyűzet nélkül is
+- A szöveges dia beviteli mezőjét vékony keret és enyhén eltérő háttér emeli ki világos és sötét témában, a szerkesztőterület csökkentése nélkül
+- A kottaszerkesztőben hosszú érintéssel és húzással is kijelölhetők a kottaelemek; a kijelölőfülek húzhatók, a széleken az előnézet automatikusan görget
+- Mobilon a szöveges dia szerkesztőjének gombjai több sorba törnek, az ablak tartalma fekvő helyzetben és megnyitott billentyűzet mellett is görgethető; a fölösleges „Szöveg (soronként)” felirat megszűnt
+- A kottaszerkesztő utolsó, Kottavonalak gombsorában 1–5 vonal állítható az egész sorra; a sor eleji kódot lecseréli, az alapértelmezett öt vonalhoz nem ment külön kódot
+- A kottaszerkesztő Mégse/Mégis gombjai és a Ctrl+Z/Ctrl+Y gyorsbillentyűk visszavonják és újra végrehajtják a kottamódosításokat, a kurzor és kijelölés helyreállításával
+- A kottakijelölés a hanghoz tartozó láthatatlan jeleket együtt kezeli; a másolás és kivágás a határokon lezárja az átnyúló csoportokat, a megmaradó hangok tulajdonságainak megőrzésével
+- A kottaszerkesztő előnézete alatt Kivágás, Másolás és Beillesztés gombok, valamint Ctrl+X/C/V gyorsbillentyűk kezelik a kijelölt kottaelemeket, a szöveg változtatása nélkül
+- A kottaszerkesztőben a fel/le nyilak az előző hang vagy az összes kijelölt hang magasságát állítják az 1g/1G–3d/3D tartományban, a szárirány megtartásával
+- A Hang tulajdonság sor új Triola és Pentola kapcsolói az előző hangot követik, kijelöléskor csak a kijelölt hangok csoportját módosítják, és eltávolítják a fölösleges csoportkódokat
+- A Hang tulajdonság sor Alsó kötőív és Felső kötőív kapcsolói az előző hangot követik, folytatják az ívet hangbeszúráskor, és csak a kijelölt hangok ívét változtatják; az ívkódokat a szerkesztő normalizálja
+- A Hang tulajdonság sor új Tömörített kapcsolója az előző hangot követi, a következő hang vagy a kijelölés tömörített kottázását állítja, és eltávolítja a fölösleges Rt/rt kódokat
+- A kottaszerkesztő eltávolítja a fölösleges szárnélküliség-kódokat: az ismétléseket, a hang nélküli állapotváltásokat és a záró kódokat is, a hangok megjelenésének változtatása nélkül
+- A Hang tulajdonság sor új Szár nélküli hangok kapcsolója neuma stílusú hangbeszúrást és kijelölésen belüli váltást tesz lehetővé, a kívül maradó hangok változtatása nélkül
+- A gerendázás legfeljebb négy egymást követő nyolcadot vagy tizenhatodot köt össze; a hosszabb hangok megszakítják, a vegyes ritmusú csoportok helyes második gerendát és gerendatöredékeket kapnak
+- A Hang tulajdonság sor új Gerendázás kapcsolója a következő vagy a kijelölt hangok gerendázását állítja; a felesleges gerendakódokat a szerkesztő eltávolítja
+- A Pontozott és száriránykapcsolók bekapcsolva is megtartják a grafika színét és a peremet; a szárirány külön Hang tulajdonság csoportba került, rajzolt nyílhegyes hangjeggyel
+- A száriránygomb kontúros, és kijelöléskor a kijelölt hangok szárirányát is átállítja
+- A hangbeszúrás száriránya a kurzor előtti utolsó hangot követi; a Hang sor nyílgombjával felülbírálható, kurzormozgatáskor újra igazodik
+- A kottaszerkesztő új Agogika sorában kilenc jel választható a következő hanghoz vagy a kijelölt hangokhoz, a módosítójelektől független kapcsolókkal
+- A kottaszerkesztő új Módosítójelek sorában Bé, Feloldó, Kereszt, Bebé és Kettős kereszt választható a következő hanghoz vagy a kijelölt hangokhoz
+- A Hang és Szünet sor végén külön Pontozott kapcsoló állítja a következő beszúrást vagy a kijelölt elemek pontozását; a kijelölés utáni hangok ritmusa változatlan marad
+- A Hang gombok nagybetűs hangkód után is mindig kisbetűs hangkódot szúrnak be
+- A Hang gombok tényleges hangot szúrnak be az előző hang magasságával, szükséges ritmusváltásokkal és a későbbi hangok ritmusának megőrzésével
+- A kottaszerkesztő új Hang sorában nyolc ritmusérték választható kis grafikájú, névsúgós gombokkal
+- A kottaszerkesztő új Szünet sorában egész, fél, negyed, nyolcad és tizenhatod szünet szúrható be grafikus gombokkal
+- A kottaszerkesztő kulcsgombjai a többi grafikus gombbal azonos méretűek; a Do-kulcsok jól olvasható, fontfüggetlen vektoros jelek
+- A kottaszerkesztőben egérhúzással vagy Shift+nyilakkal több kottaelem jelölhető ki; a beszúrógombok a kijelölést az új elemre cserélik
+- A kottaszerkesztő előnézetében egérkattintással vagy koppintással választható a kotta- és szövegkurzor legközelebbi pozíciója
+- Az ütemjelgombokon éles, nagy, egymás alá írt számok váltották a kis felbontású képeket
+- A kottaszerkesztő kilenc grafikus ütemjelgombot kapott; a ritmus-, hangjegy-, szünet- és módosítójel-beszúrás átmenetileg kikerült
+- A kottaszerkesztő ütemvonalai, cezúrái és ismétlőjelei nyolc grafikus gombbal szúrhatók be, névsúgóval
+- A kottaszerkesztő előjegyzésgombjai rövid jelölést és dúr/moll hangnemsúgót kaptak; a nem támogatott „Nincs” gomb megszűnt
+- A kottaszerkesztőben grafikus gombokkal választható G-, F-, minden C- és Do-kulcs; a nevük egér fölévitelére vagy hosszú koppintásra jelenik meg
+- A C-kulcsok a kottakód szerinti vonalon jelennek meg
+- A szöveges diák kottajelei külön, élő előnézetes szerkesztőben módosíthatók a Ctrl+K billentyűvel vagy az eszköztárból
+- Asztali rendszereken automatikusan menthetők a módosított diasorok a szerkesztő bezárásakor vagy a programból kilépéskor
+- Beállítható az egyszerre betölthető diasorok száma; a korlát elérésekor a legrégebben használt, gyorsbillentyű nélküli diasor törlődik
+- A szöveges diákban keretes akkordok szúrhatók be, másolhatók és külön ablakban szerkeszthetők
+- Az akkordok transzponálása kezeli a Diatár hangneveit, módosítóit és a basszushangot
+
+Zene
+- Letölthetők a zenék (Letöltés ablak, Zenék lap)
+- Zene lejátszás a diasorban, és továbbítás a vetítőre
+- Zene után automatikus továbblépés a következő diára
+- Kettőzött diák helyes kezelése és zenéjük
+
+Beszédfelismerés
+- Kikapcsolható a beszédfelismerés (beállítások)
+- Több (offline) felismerő modell közül lehet választani
+- Optimalizált, háttérszálon futó felismerés
+- A VAD (hangaktivitás-detektáló) modell már nem feltétlenül szükséges a streaming modellekhez
+
+Vetítés
+- Gyorsbillentyűk a képernyőmód váltásához (Kötetek / Diasor / Vetítés), a meglévő gyorsbillentyű-rendszerben
+- A vetítő ablak mindig visszaadja a fókuszt az irányító ablaknak
+- Vetítő képernyő megjelenítése a főablakból is
+- Nem szabályozható a vetítés görgethetősége — a szöveg mindig a területhez illeszkedik
+
+Énekkeresés
+- A keresés nem érzékeny az ékezetekre, írásjelekre, kis- és nagybetűkre
+
+Import / letöltés
+- Minden ZIP import streamelve (nagyobb fájlok is)
+- ZIP import javítva (pufferelés)
+
+Rendszer
+- Windows: kilépéskor shell parancs végrehajtása
+- Linux: ikon beállítva, régi hardveren is indul (Impeller kikapcsolva)
+- A dia fájl ID írása helyreállítva
+
 Bugfixek
 - iOS: javítva a biztonsági mentés exportálása és importálása, valamint a diasor mentése és megnyitása. Az exportált fájlok a Fájlok alkalmazásban a Saját iPhone → Diatár → export mappában találhatók.

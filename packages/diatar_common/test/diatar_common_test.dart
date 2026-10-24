@@ -7,8 +7,119 @@ import 'package:diatar_common/utils/transposition_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+class _BeamRecordingCanvas extends Fake implements Canvas {
+  final List<({Offset start, Offset end})> beams = [];
+
+  @override
+  void drawLine(Offset p1, Offset p2, Paint paint) {
+    if (paint.strokeWidth > 2) {
+      beams.add((start: p1, end: p2));
+    }
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+List<({Offset start, Offset end})> _renderBeams(String commands) {
+  final canvas = _BeamRecordingCanvas();
+  ProjectorPainter(
+    frame: TextFrame(
+      record: RecTextRecord(
+        scholaLine: '',
+        title: '',
+        lines: <String>['\\K$commands;word'],
+      ),
+    ),
+    globals: const ProjectionGlobals(
+      autoResize: false,
+      fontSize: 34,
+      hCenter: false,
+      hideTitle: true,
+      useKotta: true,
+    ),
+    settings: const AppSettings(receiverUseKotta: true),
+    allowLineWrapping: false,
+  ).paint(canvas, const Size(1000, 200));
+  return canvas.beams;
+}
+
 void main() {
-  test('Diatar chords split into a bold root and a superscripted quality', () {
+  for (final String interruption in <String>[
+    'r42g',
+    'r22g',
+    'r12g',
+    'rb2g',
+    '[02g[1',
+    's8',
+    'kG',
+  ]) {
+    test('beams stop at $interruption without disabling later beaming', () {
+      final beams = _renderBeams('[?r82g2g${interruption}r82g2g]?');
+      expect(beams, hasLength(2));
+      expect(beams.first.end.dx, lessThan(beams.last.start.dx));
+    });
+  }
+
+  for (final int count in <int>[4, 5, 6, 8, 9]) {
+    test('beams contain at most four of $count consecutive notes', () {
+      final beams = _renderBeams('[?r8${List.filled(count, '2g').join()}]?');
+      expect(beams, hasLength(count ~/ 4 + (count % 4 >= 2 ? 1 : 0)));
+      final reference = _renderBeams('[?r82g2g]?').single;
+      final double spacing = (reference.end - reference.start).dx;
+      for (final beam in beams) {
+        expect(
+          (beam.end - beam.start).dx,
+          lessThanOrEqualTo(spacing * 3 + 0.001),
+        );
+      }
+    });
+  }
+
+  for (final String pitch in <String>['2g', '2G']) {
+    for (final (List<String> rhythms, List<(double, double)> spans) in [
+      (['8', '8'], <(double, double)>[]),
+      (['6', '6'], [(0.0, 1.0)]),
+      (['6', '8'], [(0.0, 0.5)]),
+      (['8', '6'], [(0.5, 1.0)]),
+      (['8', '6', '8'], [(0.5, 1.5)]),
+      (['6', '8', '6'], [(0.0, 0.5), (1.5, 2.0)]),
+      (['8', '6', '6', '8'], [(1.0, 2.0)]),
+      (['6', '6', '8', '6'], [(0.0, 1.0), (2.5, 3.0)]),
+      (['6', '6', '6', '6'], [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0)]),
+    ]) {
+      test('sixteenth beams and hooks for $pitch with $rhythms', () {
+        final beams = _renderBeams(
+          '[?${rhythms.map((rhythm) => 'r$rhythm$pitch').join()}]?',
+        );
+        expect(beams, hasLength(1 + spans.length));
+        final primary = beams.first;
+        final double spacing =
+            (primary.end.dx - primary.start.dx) / (rhythms.length - 1);
+        for (int index = 0; index < spans.length; index++) {
+          final secondary = beams[index + 1];
+          expect(
+            secondary.start.dx,
+            closeTo(primary.start.dx + spacing * spans[index].$1, 0.001),
+          );
+          expect(
+            secondary.end.dx,
+            closeTo(primary.start.dx + spacing * spans[index].$2, 0.001),
+          );
+          expect(
+            secondary.start.dy - primary.start.dy,
+            pitch == '2g' ? greaterThan(0) : lessThan(0),
+          );
+        }
+      });
+    }
+  }
+
+  test('tuplet endings do not end a surrounding beam', () {
+    expect(_renderBeams('[?[3r82g2g]32g]?'), hasLength(1));
+  });
+
+  test('Diatar chords use Hungarian note names and styled parts', () {
     final DiatarChord chord = DiatarChord.tryParse('H-7+/C+')!;
 
     expect(chord.parts().map((ChordPart part) => part.text), <String>[
@@ -891,6 +1002,310 @@ void main() {
     expect(prefixes.skip(1), everyElement('kGE2'));
   });
 
+  test('projector measures a kotta line wide enough to avoid wrapping', () {
+    const String source =
+        r'\KkGE2r41a;Alpha \Kr41b;beta \Kr41c;gamma \Kr41d;delta';
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: const TextFrame(
+        record: RecTextRecord(
+          scholaLine: '',
+          title: '',
+          lines: <String>[source],
+        ),
+      ),
+      globals: const ProjectionGlobals(
+        autoResize: false,
+        fontSize: 34,
+        hideTitle: true,
+        useAkkord: false,
+        useKotta: true,
+      ),
+      settings: const AppSettings(receiverUseKotta: true),
+    );
+
+    final double requiredWidth = painter.measureRequiredWidth();
+
+    expect(requiredWidth, greaterThan(200));
+    expect(
+      painter.debugKottaRowPrefixesForLine(
+        source,
+        fontSize: 34,
+        maxWidth: requiredWidth + 8,
+      ),
+      hasLength(1),
+    );
+  });
+
+  test('projector can disable kotta line wrapping explicitly', () {
+    const String source =
+        r'\KkGE2r41a;Alpha \Kr41b;beta \Kr41c;gamma \Kr41d;delta';
+    final ProjectorPainter painter = ProjectorPainter(
+      frame: const TextFrame(
+        record: RecTextRecord(
+          scholaLine: '',
+          title: '',
+          lines: <String>[source],
+        ),
+      ),
+      globals: const ProjectionGlobals(
+        autoResize: false,
+        fontSize: 34,
+        hideTitle: true,
+        useKotta: true,
+      ),
+      settings: const AppSettings(receiverUseKotta: true),
+      allowLineWrapping: false,
+    );
+
+    expect(
+      painter.debugFullPipelineRowsForRecord(
+        size: const Size(120, 180),
+        record: const RecTextRecord(
+          scholaLine: '',
+          title: '',
+          lines: <String>[source],
+        ),
+      ),
+      hasLength(1),
+    );
+  });
+
+  test('graphical editor cursor overlay does not change kotta width', () {
+    ProjectorPainter painterFor({bool withOverlay = false}) {
+      return ProjectorPainter(
+        frame: const TextFrame(
+          record: RecTextRecord(
+            scholaLine: '',
+            title: '',
+            lines: <String>[r'\KkGr41a;word'],
+          ),
+        ),
+        globals: const ProjectionGlobals(
+          autoResize: false,
+          fontSize: 34,
+          hideTitle: true,
+          useKotta: true,
+        ),
+        settings: const AppSettings(receiverUseKotta: true),
+        allowLineWrapping: false,
+        editorCursorOverlay: withOverlay
+            ? const ProjectorEditorCursorOverlay(
+                kottaPosition: 2,
+                textPosition: 0,
+                textActive: false,
+                activeVisible: true,
+              )
+            : null,
+      );
+    }
+
+    final double plainWidth = painterFor().measureRequiredWidth();
+    final double cursorWidth = painterFor(
+      withOverlay: true,
+    ).measureRequiredWidth();
+
+    expect(cursorWidth, closeTo(plainWidth, 0.001));
+  });
+
+  test('graphical editor paints the active cursor overlay', () async {
+    Future<Uint8List> render({required bool activeVisible}) async {
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(recorder);
+      ProjectorPainter(
+        frame: const TextFrame(
+          record: RecTextRecord(
+            scholaLine: '',
+            title: '',
+            lines: <String>[r'\KkGr41a;word'],
+          ),
+        ),
+        globals: const ProjectionGlobals(
+          autoResize: false,
+          fontSize: 34,
+          hideTitle: true,
+          useKotta: true,
+          vCenter: true,
+        ),
+        settings: const AppSettings(receiverUseKotta: true),
+        allowLineWrapping: false,
+        editorCursorOverlay: ProjectorEditorCursorOverlay(
+          kottaPosition: 2,
+          textPosition: 0,
+          textActive: false,
+          activeVisible: activeVisible,
+        ),
+      ).paint(canvas, const Size(400, 180));
+      final ui.Image image = await recorder.endRecording().toImage(400, 180);
+      final ByteData data = (await image.toByteData())!;
+      image.dispose();
+      return data.buffer.asUint8List();
+    }
+
+    final Uint8List visible = await render(activeVisible: true);
+    final Uint8List hidden = await render(activeVisible: false);
+
+    expect(visible, isNot(orderedEquals(hidden)));
+  });
+
+  test('graphical editor reports the actual kotta insertion position', () {
+    ProjectorEditorCursorLayout? layout;
+    ProjectorPainter(
+      frame: const TextFrame(
+        record: RecTextRecord(
+          scholaLine: '',
+          title: '',
+          lines: <String>[r'\Kr41a;word'],
+        ),
+      ),
+      globals: const ProjectionGlobals(
+        autoResize: false,
+        fontSize: 34,
+        hCenter: false,
+        hideTitle: true,
+        useKotta: true,
+      ),
+      settings: const AppSettings(receiverUseKotta: true),
+      allowLineWrapping: false,
+      editorCursorOverlay: const ProjectorEditorCursorOverlay(
+        kottaPosition: 2,
+        textPosition: 0,
+        textActive: true,
+        activeVisible: true,
+      ),
+      onEditorCursorLayout: (value) => layout = value,
+    ).paint(Canvas(ui.PictureRecorder()), const Size(400, 180));
+
+    expect(layout, isNotNull);
+    expect(layout!.kottaRect.left, greaterThan(layout!.textRect.left));
+  });
+
+  for (final bool hiddenClosing in <bool>[false, true]) {
+    test(
+      'editor selection paints only the selected notation band, hiddenClosing=$hiddenClosing',
+      () async {
+        ProjectorPainter painterFor(TextSelection? selection) =>
+            ProjectorPainter(
+              frame: TextFrame(
+                record: RecTextRecord(
+                  scholaLine: '',
+                  title: '',
+                  lines: <String>[
+                    hiddenClosing ? r'\KkGRt1art2c;word' : r'\KkGe2u4|1;word',
+                  ],
+                ),
+              ),
+              globals: const ProjectionGlobals(
+                autoResize: false,
+                fontSize: 34,
+                hideTitle: true,
+                hCenter: false,
+                useKotta: true,
+                vCenter: true,
+              ),
+              settings: const AppSettings(receiverUseKotta: true),
+              allowLineWrapping: false,
+              editorCursorOverlay: ProjectorEditorCursorOverlay(
+                kottaPosition: 3,
+                textPosition: 0,
+                textActive: false,
+                activeVisible: true,
+                kottaSelection: selection,
+              ),
+            );
+
+        ProjectorEditorCursorLayout? layout;
+        final ProjectorPainter plain = painterFor(null);
+        final ProjectorPainter selected = painterFor(
+          TextSelection(baseOffset: hiddenClosing ? 4 : 3, extentOffset: 1),
+        );
+        final ui.PictureRecorder measureRecorder = ui.PictureRecorder();
+        ProjectorPainter(
+          frame: plain.frame,
+          globals: plain.globals,
+          settings: plain.settings,
+          allowLineWrapping: false,
+          editorCursorOverlay: plain.editorCursorOverlay,
+          onEditorCursorLayout: (value) => layout = value,
+        ).paint(Canvas(measureRecorder), const Size(400, 180));
+        measureRecorder.endRecording().dispose();
+
+        Future<Uint8List> render(ProjectorPainter painter) async {
+          final ui.PictureRecorder recorder = ui.PictureRecorder();
+          painter.paint(Canvas(recorder), const Size(400, 180));
+          final ui.Picture picture = recorder.endRecording();
+          final ui.Image image = await picture.toImage(400, 180);
+          final ByteData data = (await image.toByteData())!;
+          image.dispose();
+          picture.dispose();
+          return data.buffer.asUint8List();
+        }
+
+        final Uint8List before = await render(plain);
+        final Uint8List after = await render(selected);
+        final Rect band = Rect.fromLTRB(
+          layout!.kottaPositions[1]!,
+          layout!.kottaRect.top,
+          layout!.kottaPositions[3]!,
+          layout!.kottaRect.bottom,
+        ).inflate(1);
+        int changedPixels = 0;
+        for (int index = 0; index < before.length; index += 4) {
+          if (before[index] != after[index] ||
+              before[index + 1] != after[index + 1] ||
+              before[index + 2] != after[index + 2]) {
+            final int pixel = index ~/ 4;
+            expect(
+              band.contains(
+                Offset((pixel % 400).toDouble(), (pixel ~/ 400).toDouble()),
+              ),
+              isTrue,
+              reason:
+                  'Changed pixel $pixel outside $band; '
+                  'positions: ${layout!.kottaPositions}',
+            );
+            changedPixels++;
+          }
+        }
+        expect(changedPixels, greaterThan(100));
+        expect(selected.shouldRepaint(plain), isTrue);
+      },
+    );
+  }
+
+  test('graphical editor retains the first matching kotta boundary', () {
+    double cursorX(String line) {
+      ProjectorEditorCursorLayout? layout;
+      ProjectorPainter(
+        frame: TextFrame(
+          record: RecTextRecord(
+            scholaLine: '',
+            title: '',
+            lines: <String>[line],
+          ),
+        ),
+        globals: const ProjectionGlobals(
+          autoResize: false,
+          fontSize: 34,
+          hCenter: false,
+          hideTitle: true,
+          useKotta: true,
+        ),
+        settings: const AppSettings(receiverUseKotta: true),
+        allowLineWrapping: false,
+        editorCursorOverlay: const ProjectorEditorCursorOverlay(
+          kottaPosition: 1,
+          textPosition: 0,
+          textActive: false,
+          activeVisible: true,
+        ),
+        onEditorCursorLayout: (value) => layout = value,
+      ).paint(Canvas(ui.PictureRecorder()), const Size(500, 180));
+      return layout!.kottaRect.left;
+    }
+
+    expect(cursorX(r'\KkG;a \Kr41a;b'), closeTo(cursorX(r'\KkG;a'), 0.001));
+  });
+
   test(r'preferred break after a kotta block still separates the words', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
@@ -949,6 +1364,76 @@ void main() {
 
     expect(painter.debugKottaStaffLineCountForLine(r'\K-3r41a;Alfa'), 3);
     expect(painter.debugKottaStaffLineCountForLine(r'\Kr41a;Alfa'), 5);
+  });
+
+  test('editor hit testing selects the nearest rendered boundary and row', () {
+    ProjectorEditorCursorLayout layoutAt(int kottaPosition, int textPosition) {
+      ProjectorEditorCursorLayout? layout;
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      ProjectorPainter(
+        frame: const TextFrame(
+          record: RecTextRecord(
+            scholaLine: '',
+            title: '',
+            lines: <String>[r'\KkGr4mk1a;wide \KkF;word'],
+          ),
+        ),
+        globals: const ProjectionGlobals(
+          autoResize: false,
+          fontSize: 34,
+          hCenter: false,
+          hideTitle: true,
+          useKotta: true,
+          vCenter: true,
+        ),
+        settings: const AppSettings(receiverUseKotta: true),
+        allowLineWrapping: false,
+        editorCursorOverlay: ProjectorEditorCursorOverlay(
+          kottaPosition: kottaPosition,
+          textPosition: textPosition,
+          textActive: false,
+          activeVisible: true,
+        ),
+        onEditorCursorLayout: (value) => layout = value,
+      ).paint(Canvas(recorder), const Size(600, 180));
+      recorder.endRecording().dispose();
+      return layout!;
+    }
+
+    final ProjectorEditorCursorLayout layout = layoutAt(0, 0);
+    expect(layout.kottaPositions.keys, <int>[0, 1, 4, 5]);
+    for (final int position in layout.kottaPositions.keys) {
+      final double x = layoutAt(position, 0).kottaRect.left;
+      expect(layout.kottaPositions[position], closeTo(x, 0.001));
+      expect(layout.hitTest(Offset(x + 0.1, layout.kottaRect.center.dy)), (
+        position: position,
+        textActive: false,
+      ));
+    }
+    for (int position = 0; position <= 9; position++) {
+      final double x = layoutAt(0, position).textRect.left;
+      expect(layout.textPositions[position], closeTo(x, 0.001));
+      expect(layout.hitTest(Offset(x + 0.1, layout.textRect.center.dy)), (
+        position: position,
+        textActive: true,
+      ));
+    }
+    final double first = layout.textPositions[0]!;
+    final double second = layout.textPositions[1]!;
+    expect(
+      layout.hitTest(
+        Offset(first + (second - first) * 0.6, layout.textRect.center.dy),
+      ),
+      (position: 1, textActive: true),
+    );
+    expect(layout.hitTest(Offset(-100, layout.kottaRect.top - 20)), (
+      position: 0,
+      textActive: false,
+    ));
+    expect(layout.hitTest(Offset(1000, layout.textRect.bottom + 20)), (
+      position: 9,
+      textActive: true,
+    ));
   });
 
   test('real eneklo egyhaz sample repeats clef and key signature', () {

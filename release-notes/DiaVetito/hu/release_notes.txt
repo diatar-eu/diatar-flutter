@@ -1,1 +1,38 @@
-Bugfixek
+Hibajavítások
+- A gerendák legfeljebb négy nyolcadot vagy tizenhatodot kötnek össze, hosszabb hangokon nem ívelnek át; a tizenhatodok második gerendája és gerendatöredékei a régi Diatár szabályait követik
+- A vetítő felismeri és helyesen jeleníti meg a 2/7 akkordot
+- A C-kulcsok a kottakód szerinti vonalon jelennek meg
+
+Közös kiadás
+- A verziószám követi a Diatár kottaszerkesztőjének görgethető gombsorát és nyílgombjait; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár szövegszerkesztő mezőjének jobb láthatóságát; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének érintéses kijelölését; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár szövegesdia-szerkesztőjének mobilos elrendezésjavítását; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének Kottavonalak gombsorát; a meglévő -1…-5 kottakódok és a vetítési kódformátum változatlanok
+- A verziószám követi a Diatár kottaszerkesztőjének Mégse/Mégis gombjait és Ctrl+Z/Ctrl+Y gyorsbillentyűit; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének vágólapgombjait és Ctrl+X/C/V gyorsbillentyűit; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének fel/le nyilakkal állítható hangmagasságát; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének Triola és Pentola kapcsolóit; a meglévő [3/]3 és [5/]5 kottakódok és a vetítési kódformátum változatlanok
+- A verziószám követi a Diatár kottaszerkesztőjének alsó és felső kötőívkapcsolóit; a meglévő (a/)a és (f/)f kottakódok és a vetítési kódformátum változatlanok
+- A verziószám követi a Diatár kottaszerkesztőjének Tömörített kapcsolóját; a meglévő Rt/rt kottakódok és a vetítési kódformátum változatlanok
+- A verziószám követi a Diatár kottaszerkesztőjének szárnélküliség-kódokat normalizáló javítását; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének szár nélküli kapcsolóját; a meglévő [0 és [1 kottakódok és a vetítési kódformátum változatlanok
+- A verziószám követi a Diatár kottaszerkesztőjének Gerendázás kapcsolóját; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének kapcsoló- és szárirányikon-javítását; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kijelölt hangokra alkalmazható szárirányváltását; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kurzorfüggő szárirányának és kapcsológombjának bevezetését; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének új Agogika gombsorát; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének új Módosítójelek gombsorát; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének Pontozott kapcsolóit; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kisbetűs hangbeszúrásának javítását; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár hangbeszúrásának és ritmusmegőrzésének javítását; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének új Hang gombsorát; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének új szünetgombjait; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kompakt kulcsgombjainak és vektoros Do-kulcsainak javítását; a vetítési kép és kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének kijelölési és cserefunkcióját; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének kattintásos kurzorkezelését; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár ütemjelgombjainak olvashatósági javítását; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár ütemjelgombjainak bővítését; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár grafikus ütemvonal- és ismétlőjelgombjainak bővítését; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár előjegyzésgombjainak javítását; a vetítési kódformátum változatlan
+- A verziószám követi a Diatár kottaszerkesztőjének bővítését; a vetítési kódformátum változatlan
