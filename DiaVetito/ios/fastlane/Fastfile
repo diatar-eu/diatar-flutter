@@ -61,8 +61,10 @@ platform :ios do
 
     upload_to_testflight(
       api_key: api_key,
-      ipa: File.join(ios_dir, "unsigned.ipa"),
-      skip_waiting_for_build_processing: true,
+      distribute_only: true,
+      app_version: get_info_plist_value(path: File.join(ios_dir, "Payload", "Runner.app", "Info.plist"), key: "CFBundleShortVersionString"),
+      build_number: get_info_plist_value(path: File.join(ios_dir, "Payload", "Runner.app", "Info.plist"), key: "CFBundleVersion"),
+      skip_waiting_for_build_processing: false,
       distribute_external: true,
       groups: ["Bárki"],
       notify_external_testers: true,

@@ -46,6 +46,7 @@ platform :ios do
 
     upload_to_app_store(
       api_key: api_key,
+      platform: "appletvos",
       ipa: File.join(tvos_dir, "unsigned.ipa"),
       skip_screenshots: true,
       skip_metadata: false,
@@ -62,8 +63,11 @@ platform :ios do
 
     upload_to_testflight(
       api_key: api_key,
-      ipa: File.join(tvos_dir, "unsigned.ipa"),
-      skip_waiting_for_build_processing: true,
+      app_platform: "appletvos",
+      distribute_only: true,
+      app_version: get_info_plist_value(path: File.join(tvos_dir, "Payload", "Runner.app", "Info.plist"), key: "CFBundleShortVersionString"),
+      build_number: get_info_plist_value(path: File.join(tvos_dir, "Payload", "Runner.app", "Info.plist"), key: "CFBundleVersion"),
+      skip_waiting_for_build_processing: false,
       distribute_external: true,
       groups: ["Bárki"],
       notify_external_testers: true,
@@ -110,6 +114,7 @@ platform :ios do
 
     upload_to_testflight(
       api_key: api_key,
+      app_platform: "appletvos",
       ipa: File.join(tvos_dir, "unsigned.ipa"),
       skip_waiting_for_build_processing: true,
       distribute_external: true,
