@@ -1,5 +1,38 @@
 # Letöltések és importálás
 
+## Windows-telepítő
+
+[A legfrissebb Windows-telepítő letöltése](https://web.diatar.eu/downloads/Diatar/Diatar-Setup.exe)
+
+A `Diatar-Setup-<verzió>-windows-x64.exe` egyetlen telepítőben tartalmazza a
+**Diatár** és a **DiaVetítő** programot. Windows 10 (1809-es vagy újabb), illetve
+Windows 11 64 bites rendszerre telepíthető.
+
+A fenti hivatkozás állandó: minden webes vagy kiadási közzétételkor az új
+telepítő kerül erre a címre. A letöltött fájl neve `Diatar-Setup.exe`.
+
+1. Indítsd el a telepítőt, és engedélyezd a rendszergazdai jogosultságot.
+2. Válaszd ki, hogy mindkét programot, csak a Diatárt vagy csak a DiaVetítőt kéred.
+3. Igény szerint kérj asztali parancsikonokat, majd indítsd el a telepítést.
+
+A szükséges Microsoft Visual C++ futtatókörnyezetet a telepítő tartalmazza és
+szükség esetén telepíti; ehhez internetkapcsolat nem kell. Külön Flutter, Dart
+vagy .NET telepítése nem szükséges. Ha a telepítő újraindítást kér, a programok
+első indítása előtt indítsd újra a számítógépet.
+
+A programok a Start menüből indíthatók. Újabb verzió ugyanazzal a telepítővel
+rátelepíthető a régire; a saját adatok megmaradnak. Korábban telepített komponens
+kijelölésének elhagyása nem távolítja el azt: eltávolításhoz a Windows
+**Telepített alkalmazások** listájában keresd a **Diatár és DiaVetítő** bejegyzést.
+Az eltávolítás a közös csomag mindkét telepített programját törli, a saját
+adatokat és a más programok által is használt VC++ futtatókörnyezetet nem.
+
+A telepítő egyelőre nincs digitálisan aláírva, ezért a Windows SmartScreen
+figyelmeztethet. Csak megbízható Diatár-forrásból származó telepítőt indíts el.
+Windows N kiadáson a kamera- és hangfunkciókhoz a Windows Médiafunkció-csomagja
+is szükséges lehet. Az énektárak és egyéb tartalmak letöltése továbbra is a
+programból történik.
+
 ## Énektárak (DTX) letöltése
 
 1. Kattints a **Letöltés** gombra a főképernyőn

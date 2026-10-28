@@ -47,6 +47,55 @@ Besides the web apps, the Web deploy also builds the Windows, Linux and Android 
 
 These artifacts are built in `deploy.yml` from the same checked-out (already bumped) revision as the web apps, so they always match the deployed web version.
 
+### Windows: combined offline installer
+
+After both Windows matrix builds succeed, `build-windows-installer` downloads
+their ZIP artifacts and runs `tools/build-windows-installer.ps1` with Inno Setup 6.
+The ZIP downloads remain unchanged. The additional `Diatar-windows-installer`
+artifact contains `Diatar-Setup-<version>-windows-x64.exe`, also published to
+`https://web.diatar.eu/downloads/Windows/Diatar-Setup-<version>-windows-x64.exe`
+on Pages deploys and attached to published GitHub Releases.
+
+Pages also copies the installer beside `Diatar-windows.zip` under a stable name:
+`https://web.diatar.eu/downloads/Diatar/Diatar-Setup.exe`.
+Link to this URL from `www.diatar.eu` to always download the latest deployed
+installer without changing the link for each version. The `www.diatar.eu`
+website is separate from this repository's Pages site (`web.diatar.eu`).
+Pages publication runs only for the `web` and `release` deploy channels;
+ordinary branch pushes build downloadable Actions artifacts but do not update Pages.
+
+The installer supports Windows 10 version 1809 or later (x64), requires
+administrator approval, and offers sender-only, receiver-only, or both apps.
+Each app keeps its complete release bundle in a separate subdirectory to avoid
+DLL collisions. The latest Microsoft VC++ x64 redistributable is downloaded
+at packaging time, its Microsoft Authenticode signature is verified, and it is
+embedded in the EXE for offline installation. Setup installs it before copying
+the apps when the installed runtime is missing or older; runtime failures abort
+setup, and restart requests are preserved. No .NET, Dart, or Flutter installation
+is needed on the target machine.
+
+Installer-specific text comes from the sender's `app_hu.arb` / `app_en.arb`;
+the packaging script generates temporary Inno language files from these keys.
+Built-in wizard text uses Inno's Hungarian and English language packs.
+
+To package existing, extracted release bundles locally (PowerShell 7):
+
+```powershell
+.\tools\build-windows-installer.ps1 `
+  -SenderBundle 'build\windows-installer\bundles\Diatar' `
+  -ReceiverBundle 'build\windows-installer\bundles\DiaVetito'
+```
+
+Inno Setup 6 must already be installed locally; CI installs it if missing.
+The default output directory is `build\windows-installer` (gitignored).
+Versions are read from the bundled executables, not from a possibly newer
+checkout's pubspecs. CI smoke-tests component selection, adding a component on
+upgrade, installed file hashes, and uninstall on its disposable Windows runner.
+Before release, also test on a clean Windows 10 machine without developer tools:
+the CI runner already has runtime libraries. Windows N editions may need the
+Windows Media Feature Pack for camera/audio features. The installer is not
+code-signed; SmartScreen may show a warning until release signing is configured.
+
 ### Automatic build number bump
 
 The `deploy.yml` workflow automatically increments the build number (the `+N` suffix in the app's `pubspec.yaml`, i.e. `version: X.Y.Z+N`) **before** any store upload, and commits the change back to the repository with a `ci: bump build number to N [skip ci]` message. This guarantees that every store upload uses a strictly increasing `versionCode` (Android) / `CFBundleVersion` (iOS), so re-running a deploy (e.g. after a transient failure) never collides with an already-published build.
