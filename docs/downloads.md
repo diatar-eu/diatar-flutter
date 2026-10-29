@@ -33,6 +33,43 @@ Windows N kiadáson a kamera- és hangfunkciókhoz a Windows Médiafunkció-csom
 is szükséges lehet. Az énektárak és egyéb tartalmak letöltése továbbra is a
 programból történik.
 
+## Linux – Flatpak-telepítők
+
+Mindkét program külön telepíthető:
+
+| Program | Intel/AMD 64 bit | ARM 64 bit (például Raspberry Pi) |
+|---|---|---|
+| Diatár | [Letöltés](https://web.diatar.eu/downloads/Diatar/Diatar-x86_64.flatpak) | [Letöltés](https://web.diatar.eu/downloads/Diatar/Diatar-aarch64.flatpak) |
+| DiaVetítő | [Letöltés](https://web.diatar.eu/downloads/DiaVetito/DiaVetito-x86_64.flatpak) | [Letöltés](https://web.diatar.eu/downloads/DiaVetito/DiaVetito-aarch64.flatpak) |
+
+Először a Linux-disztribúciód csomagkezelőjével telepítsd a Flatpakot.
+Ezután a letöltött fájl könyvtárában futtasd:
+
+```bash
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install --user ./Diatar-x86_64.flatpak
+flatpak install --user ./DiaVetito-x86_64.flatpak
+```
+
+ARM gépen a fájlnevekben az `x86_64` helyett `aarch64` szerepeljen.
+Raspberry Pi esetén 64 bites, grafikus Linux szükséges; a 32 bites rendszer
+nem támogatott. Az első telepítés internetkapcsolatot igényel, mert a közös
+GNOME futtatókörnyezetet a Flathubról tölti le. Flutter vagy Dart nem kell.
+
+A programok az alkalmazásmenüből, illetve a `flatpak run eu.diatar.diatar`
+és `flatpak run eu.diatar.vetito` parancsokkal indíthatók.
+Frissítéshez töltsd le az újabb `.flatpak` fájlt, majd a telepítésnél add meg a
+`--reinstall` kapcsolót, például:
+`flatpak install --user --reinstall ./Diatar-x86_64.flatpak`.
+A saját adatok megmaradnak.
+Egyelőre nincs saját frissítési tároló vagy hivatalos Flathub-megjelenés:
+a `flatpak update` önmagában nem tölti le a program új verzióját.
+
+A csomagok nincsenek digitálisan aláírva; csak a fenti HTTPS-hivatkozásokról
+vagy a projekt GitHub-kiadásaiból töltsd le őket. A programok hozzáférnek a
+saját könyvtáradhoz, a hálózathoz, a hanghoz, a kijelzőkhöz és az eszközökhöz
+(például a kamerához); nem szigorúan elkülönített alkalmazások.
+
 ## Énektárak (DTX) letöltése
 
 1. Kattints a **Letöltés** gombra a főképernyőn

@@ -1,83 +1,73 @@
-name: Build & Publish Flatpak
+name: Build Flatpak bundles
 
 on:
-  # Only run after the "Deploy" workflow has completed (it performs the version
-  # bump on the default branch). This guarantees the Flatpak build picks up
-  # the bumped pubspec version.
-  workflow_run:
-    workflows: ["Deploy"]
-    types:
-      - completed
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 jobs:
   flatpak:
-    name: Flatpak (${{ matrix.app }})
-    # Run on manual dispatch, or after a successful "Deploy" run that was
-    # triggered by a release tag starting with 'v' (excludes rc/beta tags).
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       startsWith(github.event.workflow_run.head_branch, 'v') &&
-       !contains(github.event.workflow_run.head_branch, 'rc'))
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
-      options: --privileged
+    name: Flatpak (${{ matrix.app }}, ${{ matrix.platform.arch }})
+    runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
       matrix:
-        app:
-          - Diatar
-          - DiaVetito
+        app: [Diatar, DiaVetito]
+        platform:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            artifact: linux
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            artifact: linux-arm64
     steps:
-      - name: Checkout
+      - name: Checkout packaging tools
         uses: actions/checkout@v4
+
+      - name: Download matching Linux build
+        uses: actions/download-artifact@v4
         with:
-          # After the stores deploy the bumped version lives on the default
-          # branch, so check that out to build with the updated pubspec.
-          ref: ${{ github.event_name == 'workflow_run' && github.event.repository.default_branch || github.ref_name }}
-          submodules: recursive
+          name: ${{ matrix.app }}-${{ matrix.platform.artifact }}
+          path: input
 
-      - name: Derive version and date from tag
-        id: meta
+      - name: Install Flatpak tooling and runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder appstream-util desktop-file-utils
+          # Ubuntu 24.04 otherwise blocks bubblewrap's unprivileged user namespace.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak --user install -y --noninteractive flathub org.gnome.Platform//49 org.gnome.Sdk//49
+
+      - name: Prepare bundle and metadata
         env:
-          TAG_REF: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+          APP: ${{ matrix.app }}
+          LINUX_ARTIFACT: ${{ matrix.platform.artifact }}
         run: |
-          # Tag is like v9.1.0 ; strip the leading 'v'
-          TAG="${TAG_REF}"
-          VERSION="${TAG#v}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "date=$(date +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
-
-      - name: Inject version/date into metainfo
-        run: |
-          APP_LC=$(echo '${{ matrix.app }}' | tr '[:upper:]' '[:lower:]')
-          META="flatpak/eu.diatar.${APP_LC}.metainfo.xml"
-          sed -i "s/__VERSION__/${{ steps.meta.outputs.version }}/g" "$META"
-          sed -i "s/__DATE__/${{ steps.meta.outputs.date }}/g" "$META"
+          python3 -m unittest discover -s tools -p 'test_prepare_flatpak.py'
+          python3 tools/prepare-flatpak.py "$APP" "input/$APP-$LINUX_ARTIFACT.tar.gz" build/flatpak-input
+          appstream-util validate-relax --nonet build/flatpak-input/*.metainfo.xml
+          desktop-file-validate build/flatpak-input/*.desktop
 
       - name: Build Flatpak
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
-        with:
-          bundle: ${{ matrix.app }}.flatpak
-          manifest-path: flatpak/eu.diatar.${{ matrix.app == 'DiaVetito' && 'vetito' || 'diatar' }}.yaml
-          cache-key: flatpak-builder-${{ matrix.app }}
-          branch: ${{ github.event.workflow_run.head_branch || github.ref_name }}
-          arch: x86_64
+        env:
+          APP: ${{ matrix.app }}
+          ARCH: ${{ matrix.platform.arch }}
+        run: |
+          if [ "$APP" = Diatar ]; then APP_ID=eu.diatar.diatar; else APP_ID=eu.diatar.vetito; fi
+          flatpak-builder --user --disable-rofiles-fuse --sandbox \
+            --arch="$ARCH" --default-branch=stable --repo=build/flatpak-repo \
+            --state-dir=build/flatpak-state \
+            build/flatpak-app "build/flatpak-input/$APP_ID.yaml"
+          flatpak build --runtime build/flatpak-app sh < tools/check-flatpak-libraries.sh
+          flatpak build-bundle --arch="$ARCH" \
+            --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
+            build/flatpak-repo "$APP-$ARCH.flatpak" "$APP_ID" stable
 
-      - name: Publish to Flathub-style branch
-        uses: flatpak/flatpak-github-actions/publish@v6
+      - name: Upload Flatpak bundle
+        uses: actions/upload-artifact@v4
         with:
-          gh-token: ${{ github.token }}
-          repo-owner: ${{ github.repository_owner }}
-          repo-name: ${{ github.event.repository.name }}
-          repo-branch: flathub
-          flatpak-bundle: ${{ matrix.app }}.flatpak
-          comment: "Flatpak build for ${{ matrix.app }} (${{ github.event.workflow_run.head_branch || github.ref_name }})"
+          name: ${{ matrix.app }}-flatpak-${{ matrix.platform.arch }}
+          path: ${{ matrix.app }}-${{ matrix.platform.arch }}.flatpak
+          if-no-files-found: error

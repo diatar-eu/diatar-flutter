@@ -7,5 +7,5 @@ Icon=eu.diatar.vetito
 Exec=diavetito
 StartupWMClass=eu.diatar.vetito
 Terminal=false
-Categories=Utility;Religion;
+Categories=Utility;
 Keywords=diatar;vetítő;zsolozsma;liturgia;

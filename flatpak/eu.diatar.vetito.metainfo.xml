@@ -12,8 +12,8 @@
     </p>
   </description>
   <launchable type="desktop-id">eu.diatar.vetito.desktop</launchable>
-  <url type="homepage">https://github.com/vlacko0930/diatar-flutter</url>
-  <url type="bugtracker">https://github.com/vlacko0930/diatar-flutter/issues</url>
+  <url type="homepage">https://github.com/diatar-eu/diatar-flutter</url>
+  <url type="bugtracker">https://github.com/diatar-eu/diatar-flutter/issues</url>
   <developer id="eu.diatar">
     <name>Diatár</name>
   </developer>

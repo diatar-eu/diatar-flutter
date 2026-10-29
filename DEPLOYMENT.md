@@ -1,23 +1,75 @@
-# Deployment to Play Store, App Store and Flathub
+# Deployment to Play Store, App Store and Linux bundles
 
 This project uses **Fastlane** and **GitHub Actions** to automatically deploy the `Diatar` and `DiaVetito` apps to the Google Play Store and Apple App Store when a version tag (e.g., `v1.0.0`) is pushed.
 
 ## Flatpak (Linux)
 
-When you push a tag starting with `v` (e.g., `git tag v9.1.0 && git push origin v9.1.0`), the `Deploy to Stores` workflow runs first and performs the automatic build-number bump (see below). Only **after** that workflow completes successfully does the workflow in `.github/workflows/flatpak.yml` build a Flatpak bundle for both `Diatar` and `DiaVetito` (checking out the bumped default branch) and publish them to a `flathub` branch in this repository.
+`Deploy` calls the reusable `.github/workflows/flatpak.yml` after its Linux
+x64 and arm64 builds succeed. It packages those exact artifacts, not a later
+checkout of the default branch. Each app gets an `x86_64` and an `aarch64`
+bundle on the stable Flatpak branch; no Flutter SDK or network-dependent
+`pub get` runs inside the packaging sandbox.
 
-- The Flatpak manifests live in `flatpak/` (`eu.diatar.diatar.yaml`, `eu.diatar.vetito.yaml`) together with the `.desktop` and `.metainfo.xml` files.
-- The published `flathub` branch acts as a self-hosted Flatpak repository. Users can install the apps with:
+The manifests and desktop/AppStream metadata live in `flatpak/`.
+`tools/prepare-flatpak.py` reads the version and icon from the built Flutter
+assets and injects the packaging date. GNOME 49 provides GTK, GStreamer and
+libsecret. Packaging
+checks the desktop/AppStream files and resolves the executable and plugin
+libraries against the **Platform** runtime, not just the SDK.
+The unused Android JNI native asset (`libdartjni.so`) is omitted when present;
+neither app uses Java on Linux, so no JVM is required.
 
-  ```bash
-  flatpak remote-add --if-not-exists diatar-flutter \
-    https://github.com/vlacko0930/diatar-flutter.git
-  flatpak install diatar-flutter eu.diatar.diatar
-  flatpak install diatar-flutter eu.diatar.vetito
-  ```
+Actions artifacts are named `<App>-flatpak-<arch>`. On `release` and `web`
+deploys, Pages publishes the four bundles:
 
-- The version and release date are injected into the metainfo from the git tag automatically during the build.
-- To submit the apps to the official Flathub repository, move the manifests and metadata into a separate `flathub` fork and open a PR there (the manifests are already Flathub-compatible).
+- `https://web.diatar.eu/downloads/Diatar/Diatar-x86_64.flatpak`
+- `https://web.diatar.eu/downloads/Diatar/Diatar-aarch64.flatpak`
+- `https://web.diatar.eu/downloads/DiaVetito/DiaVetito-x86_64.flatpak`
+- `https://web.diatar.eu/downloads/DiaVetito/DiaVetito-aarch64.flatpak`
+
+Published GitHub Release runs also attach the bundles as release assets.
+Ordinary CI builds only upload Actions artifacts. Flatpak packaging and Pages
+do not depend on successful store uploads.
+
+Install Flatpak using the distribution's package manager, then install a
+downloaded bundle (use `aarch64` instead on 64-bit ARM):
+
+```bash
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install --user ./Diatar-x86_64.flatpak
+flatpak install --user ./DiaVetito-x86_64.flatpak
+flatpak run eu.diatar.diatar
+flatpak run eu.diatar.vetito
+```
+
+The first install downloads the shared GNOME runtime from Flathub, so it
+needs internet access. These are **unsigned, downloadable bundles**, not a
+Flathub submission or a self-hosted update repository. Updates require
+downloading the newer bundle and running
+`flatpak install --user --reinstall ./Diatar-x86_64.flatpak` (or the matching
+receiver/ARM filename); app data is retained. `flatpak update` alone
+does not download new app versions. Download only from the trusted HTTPS
+site or this repository's release assets.
+
+Home-directory access supports user-selected songs, orders and media.
+Network, display and audio access support projection and playback; device
+access also permits WebRTC's direct V4L2 camera capture. This is not a
+minimal-permission sandbox. Test file import/export, TCP/MQTT, multiple
+windows, audio and cameras on real Linux/Pi hardware before release.
+Official Flathub publication would need a separate submission and a
+reviewable, reproducible source-build manifest.
+
+To package an existing build locally on Linux with Python 3.12+, Flatpak,
+flatpak-builder and GNOME Platform/SDK 49 installed:
+
+```bash
+python3 tools/prepare-flatpak.py Diatar Diatar-linux.tar.gz build/flatpak-input
+flatpak-builder --user --sandbox --disable-rofiles-fuse --state-dir=build/flatpak-state \
+  --default-branch=stable --repo=build/flatpak-repo build/flatpak-app build/flatpak-input/eu.diatar.diatar.yaml
+flatpak build --runtime build/flatpak-app sh < tools/check-flatpak-libraries.sh
+flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
+  build/flatpak-repo Diatar-x86_64.flatpak eu.diatar.diatar stable
+```
 
 ## How it works
 
@@ -28,9 +80,12 @@ When you push a tag starting with `v` (e.g., `git tag v1.2.3 && git push origin 
 
 No new screenshots are uploaded; only the application binary and the localized "What's New" release notes (from `release-notes/<App>/<locale>/release_notes.txt`) are pushed to production.
 
-### Flatpak and Web run after the stores deploy
+### Flatpak and Web are part of Deploy
 
-The Flatpak (`.github/workflows/flatpak.yml`) and Web (`.github/workflows/web-deploy.yml`) deployments do **not** start directly on the tag push. They are triggered by the `workflow_run` event of the `Deploy to Stores` workflow, so they only execute once the stores deploy — including the build-number bump — has finished successfully. This guarantees the Flatpak and Web builds pick up the bumped `pubspec.yaml` version.
+`deploy.yml` builds the web apps and calls the reusable Flatpak workflow in
+the same run. Both use that run's build outputs; neither waits for the entire
+store deployment to finish. Pages publication is enabled for the `web` and
+`release` channels.
 
 ### Web: downloadable artifacts
 

@@ -7,5 +7,5 @@ Icon=eu.diatar.diatar
 Exec=diatar_app
 StartupWMClass=eu.diatar.diatar
 Terminal=false
-Categories=Utility;Religion;
+Categories=Utility;
 Keywords=diatar;énekeskönyv;zsolozsma;liturgia;
