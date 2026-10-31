@@ -164,11 +164,11 @@ void graphics_log_handler(const gchar* log_domain,
   if ((log_level & G_LOG_LEVEL_WARNING) != 0 &&
       g_strcmp0(message, kCompositorSetupFailure) == 0 &&
       software_marker_path != nullptr &&
-      !g_file_test(software_marker_path, G_FILE_TEST_EXISTS) &&
-      write_marker(software_marker_path)) {
-    g_message(
-        "OpenGL compositor initialization failed; software rendering will be "
-        "used on the next start");
+      !g_file_test(software_marker_path, G_FILE_TEST_EXISTS)) {
+    // Logging from a GLib log handler recurses and can terminate the process.
+    // Keep marker creation silent; the original warning is forwarded to GLib's
+    // default handler below.
+    g_file_set_contents(software_marker_path, "", 0, nullptr);
   }
 
   g_log_default_handler(log_domain, log_level, message, user_data);
