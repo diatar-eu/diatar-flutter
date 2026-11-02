@@ -14,6 +14,10 @@ Az diasor összeállítása a **Diasor** ablakban érhető el.
    - **Napi lelki batyu** — napi olvasmányok betöltése
    - **Szentírás** — bibliai versek beillesztése
 
+Több versszak együttes beszúrásakor az utolsó beszúrt versszak lesz kijelölve,
+így a következő beszúrás az új versszakok után folytatódik. Ez az énekválasztóból
+és a keresésből történő beszúrásra is érvényes.
+
 ## Diasor szerkesztése
 
 - **Csoport áthelyezés** — több dia egyszeri áthelyezése egy csoportban
