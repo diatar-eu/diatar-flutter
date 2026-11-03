@@ -939,6 +939,12 @@
   "@customOrderLoadModeMessage": {
     "description": "Question shown in the load mode dialog"
   },
+  "customOrderLoadDiaError": "A DIA fájl betöltése nem sikerült. Részletek: {error}",
+  "@customOrderLoadDiaError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
   "customOrderLoadDiaWrongType": "A kiválasztott fájl nem DIA diasor: {fileName}",
   "@customOrderLoadDiaWrongType": {
     "placeholders": {

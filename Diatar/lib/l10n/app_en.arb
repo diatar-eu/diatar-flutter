@@ -939,6 +939,12 @@
   "@customOrderLoadModeMessage": {
     "description": "Question shown in the load mode dialog"
   },
+  "customOrderLoadDiaError": "The DIA file could not be loaded. Details: {error}",
+  "@customOrderLoadDiaError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
   "customOrderLoadDiaWrongType": "The selected file is not a DIA custom order: {fileName}",
   "@customOrderLoadDiaWrongType": {
     "placeholders": {

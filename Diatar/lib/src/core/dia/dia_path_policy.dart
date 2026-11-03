@@ -1,4 +1,4 @@
-import 'dart:io';
+import '../../utils/file_system_provider.dart';
 
 class DiaPathPolicy {
   const DiaPathPolicy();
@@ -22,10 +22,10 @@ class DiaPathPolicy {
     }
 
     try {
-      final File imageFile = File(
-        normalized.replaceAll('/', Platform.pathSeparator),
+      final File imageFile = FileSystemProvider.instance.file(
+        normalized.replaceAll('/', FileSystemProvider.instance.path.separator),
       );
-      final File diaFile = File(diaDir.path);
+      final File diaFile = FileSystemProvider.instance.file(diaDir.path);
       final String imagePath = imageFile.absolute.path.replaceAll('\\', '/');
       final String basePath = diaFile.absolute.path.replaceAll('\\', '/');
 
@@ -47,17 +47,17 @@ class DiaPathPolicy {
     final bool looksUnixAbs = normalized.startsWith('/');
 
     if (looksWindowsAbs || looksUnixAbs) {
-      final File absFile = File(
-        normalized.replaceAll('/', Platform.pathSeparator),
+      final File absFile = FileSystemProvider.instance.file(
+        normalized.replaceAll('/', FileSystemProvider.instance.path.separator),
       );
       if (absFile.existsSync()) {
         return absFile.path;
       }
 
       final String fileName = fileNameFromPath(normalized);
-      final Directory diaDir = File(diaPath).parent;
-      final File fallbackFile = File(
-        '${diaDir.path}${Platform.pathSeparator}$fileName',
+      final Directory diaDir = FileSystemProvider.instance.file(diaPath).parent;
+      final File fallbackFile = FileSystemProvider.instance.file(
+        FileSystemProvider.instance.path.join(diaDir.path, fileName),
       );
       if (fallbackFile.existsSync()) {
         return fallbackFile.path;
@@ -66,10 +66,12 @@ class DiaPathPolicy {
       return normalized;
     }
 
-    final Directory parent = File(diaPath).parent;
-    final String resolvedPath =
-        '${parent.path}${Platform.pathSeparator}${normalized.replaceAll('/', Platform.pathSeparator)}';
-    final File relFile = File(resolvedPath);
+    final Directory parent = FileSystemProvider.instance.file(diaPath).parent;
+    final String resolvedPath = FileSystemProvider.instance.path.join(
+      parent.path,
+      normalized.replaceAll('/', FileSystemProvider.instance.path.separator),
+    );
+    final File relFile = FileSystemProvider.instance.file(resolvedPath);
     if (relFile.existsSync()) {
       return relFile.path;
     }

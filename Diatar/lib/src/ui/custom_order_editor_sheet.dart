@@ -1966,6 +1966,38 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         fallback: l10n.customOrderUnnamedFileName,
       );
       final String defaultFileName = '$defaultBaseName.dia';
+      if (kIsWeb) {
+        final _DiaSaveTarget? target = await _askDiaSaveTarget(
+          initialName: defaultBaseName,
+          initialDirectory: '',
+        );
+        if (target == null) {
+          return;
+        }
+        final String fileName =
+            '${_normalizeDiaBaseName(target.fileName, fallback: defaultBaseName)}.dia';
+        final Uint8List bytes = await controller.createCustomOrderDiaBytes(
+          fileName,
+          embedImages: embedImages,
+          customOrderSetId: customOrderSetId,
+        );
+        await XFile.fromData(
+          bytes,
+          mimeType: 'application/octet-stream',
+          name: fileName,
+        ).saveTo(fileName);
+        await controller.markCustomOrderDiaExportSaved(
+          fileName,
+          embedImages: embedImages,
+          customOrderSetId: customOrderSetId,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.savedPath(fileName))));
+        }
+        return;
+      }
       final String configuredDir = controller.settings.diaExportPath.trim();
       final String? initialDir = configuredDir.isNotEmpty
           ? _existingDirectoryPathOrNull(configuredDir)
@@ -2453,6 +2485,19 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
   }
 
   Future<void> _importDia() async {
+    try {
+      await _pickAndImportDia();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.customOrderLoadDiaError('$error'))),
+      );
+    }
+  }
+
+  Future<void> _pickAndImportDia() async {
     final AppLocalizations l10n = context.l10n;
     final List<XFile> files = await DesktopProjectorBridge.instance
         .runWithNativeDialog(
@@ -2469,9 +2514,7 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.customOrderLoadDiaWrongType(file.name)),
-        ),
+        SnackBar(content: Text(l10n.customOrderLoadDiaWrongType(file.name))),
       );
       return;
     }
@@ -2484,12 +2527,20 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     if (mode == null) {
       return;
     }
-    final int count = await controller.importCustomOrderFromDia(
-      file.path,
-      activate: true,
-      mode: mode,
-      sourceFileName: file.name,
-    );
+    final int count = kIsWeb
+        ? await controller.importCustomOrderFromDiaContent(
+            await file.readAsString(),
+            path: file.name,
+            activate: true,
+            mode: mode,
+            sourceFileName: file.name,
+          )
+        : await controller.importCustomOrderFromDia(
+            file.path,
+            activate: true,
+            mode: mode,
+            sourceFileName: file.name,
+          );
     if (!mounted) {
       return;
     }
@@ -3294,7 +3345,8 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
   _DiaSaveTarget? _buildTargetOrNull() {
     final String fileName = _fileNameController.text.trim();
     final String directoryPath = _directoryPath.trim();
-    if (fileName.isEmpty || !_isValidExistingDirectory(directoryPath)) {
+    if (fileName.isEmpty ||
+        (!kIsWeb && !_isValidExistingDirectory(directoryPath))) {
       return null;
     }
     return _DiaSaveTarget(fileName: fileName, directoryPath: directoryPath);
@@ -3308,7 +3360,7 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
         : formatFriendlyPathLabel(_directoryPath.trim(), l10n);
     final bool canSave =
         _fileNameController.text.trim().isNotEmpty &&
-        _isValidExistingDirectory(_directoryPath);
+        (kIsWeb || _isValidExistingDirectory(_directoryPath));
 
     return AlertDialog(
       title: Text(l10n.saveDia),
@@ -3332,40 +3384,41 @@ class _DiaSaveDialogState extends State<_DiaSaveDialog> {
                 }
               },
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: TextFormField(
-                    key: ValueKey<String>(
-                      'friendly_dir_${_directoryPath.trim()}',
-                    ),
-                    initialValue: friendlyDirectory,
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.diaExportFolderPath,
-                      border: const OutlineInputBorder(),
+            if (!kIsWeb) const SizedBox(height: 12),
+            if (!kIsWeb)
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextFormField(
+                      key: ValueKey<String>(
+                        'friendly_dir_${_directoryPath.trim()}',
+                      ),
+                      initialValue: friendlyDirectory,
+                      readOnly: true,
+                      decoration: InputDecoration(
+                        labelText: l10n.diaExportFolderPath,
+                        border: const OutlineInputBorder(),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  tooltip: l10n.fileChoose,
-                  onPressed: () async {
-                    final String? folderPath = await DesktopProjectorBridge
-                        .instance
-                        .runWithNativeDialog(showDirectoryPicker);
-                    if (folderPath == null || !mounted) {
-                      return;
-                    }
-                    setState(() {
-                      _directoryPath = folderPath;
-                    });
-                  },
-                  icon: const Icon(Icons.folder_open),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: l10n.fileChoose,
+                    onPressed: () async {
+                      final String? folderPath = await DesktopProjectorBridge
+                          .instance
+                          .runWithNativeDialog(showDirectoryPicker);
+                      if (folderPath == null || !mounted) {
+                        return;
+                      }
+                      setState(() {
+                        _directoryPath = folderPath;
+                      });
+                    },
+                    icon: const Icon(Icons.folder_open),
+                  ),
+                ],
+              ),
           ],
         ),
       ),

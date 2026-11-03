@@ -3570,6 +3570,28 @@ class DiatarMainController extends ChangeNotifier {
     if (!await diaDir.exists()) {
       await diaDir.create(recursive: true);
     }
+    final Uint8List bytes = await createCustomOrderDiaBytes(
+      safePath,
+      embedImages: embedImages,
+      customOrderSetId: customOrderSetId,
+    );
+    await diaFile.writeAsBytes(bytes);
+    if (recordSave) {
+      await markCustomOrderDiaExportSaved(
+        safePath,
+        embedImages: embedImages,
+        customOrderSetId: customOrderSetId,
+      );
+    }
+    return safePath;
+  }
+
+  Future<Uint8List> createCustomOrderDiaBytes(
+    String path, {
+    bool embedImages = false,
+    String? customOrderSetId,
+  }) async {
+    final Directory diaDir = FileSystemProvider.instance.file(path).parent;
     final int targetSetIndex = customOrderSetId == null
         ? _activeOrderSetIndex
         : _customOrderSets.indexWhere(
@@ -3680,15 +3702,7 @@ class DiatarMainController extends ChangeNotifier {
       }
     }
 
-    await diaFile.writeAsString(out.toString(), encoding: utf8);
-    if (recordSave) {
-      await markCustomOrderDiaExportSaved(
-        safePath,
-        embedImages: embedImages,
-        customOrderSetId: customOrderSetId,
-      );
-    }
-    return safePath;
+    return Uint8List.fromList(utf8.encode(out.toString()));
   }
 
   Future<void> markCustomOrderDiaExportSaved(
@@ -3778,7 +3792,23 @@ class DiatarMainController extends ChangeNotifier {
       return 0;
     }
 
-    final String content = await f.readAsString();
+    return importCustomOrderFromDiaContent(
+      await f.readAsString(),
+      path: path,
+      activate: activate,
+      sourceFileName: sourceFileName,
+      mode: mode,
+    );
+  }
+
+  Future<int> importCustomOrderFromDiaContent(
+    String content, {
+    required String path,
+    bool activate = true,
+    String? sourceFileName,
+    CustomOrderImportMode mode = CustomOrderImportMode.addNew,
+  }) async {
+    _customOrderLimitExceeded = false;
     final Map<String, Map<String, String>> sections = _parseDiaIni(content);
     final Map<String, Uint8List> embeddedImages = _diaEmbeddedImageCodec.decode(
       sections['embedded'],
@@ -3856,8 +3886,10 @@ class DiatarMainController extends ChangeNotifier {
             embeddedImageDirectory ??= await _createEmbeddedImageDirectory();
             final String extension = _fileExtension(kep);
             final File target = FileSystemProvider.instance.file(
-              '${embeddedImageDirectory.path}${Platform.pathSeparator}'
-              '${embeddedImageIndex++}${extension.isEmpty ? '' : '.$extension'}',
+              FileSystemProvider.instance.path.join(
+                embeddedImageDirectory.path,
+                '${embeddedImageIndex++}${extension.isEmpty ? '' : '.$extension'}',
+              ),
             );
             await target.writeAsBytes(embeddedImage);
             resolved = target.path;
@@ -4047,9 +4079,12 @@ class DiatarMainController extends ChangeNotifier {
   Future<Directory> _createEmbeddedImageDirectory() async {
     final String documentsPath = await PathHelper.getDocumentsDirectoryPath();
     final Directory directory = FileSystemProvider.instance.directory(
-      '$documentsPath${Platform.pathSeparator}diatar'
-      '${Platform.pathSeparator}embedded_dia_images'
-      '${Platform.pathSeparator}${DateTime.now().microsecondsSinceEpoch}',
+      FileSystemProvider.instance.path.join(
+        documentsPath,
+        'diatar',
+        'embedded_dia_images',
+        '${DateTime.now().microsecondsSinceEpoch}',
+      ),
     );
     await directory.create(recursive: true);
     return directory;

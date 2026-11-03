@@ -259,6 +259,15 @@ megmarad. Ez szövegkurzor mellett is működik. A hangkódok alsó határa
 - **Betöltés** — korábban mentett `.dia` fájl megnyitása
 - Az `.dia` fájl formátum az INI fájlformátum
 
+### Böngésző
+
+A **Betöltés** a kiválasztott `.dia` fájl tartalmát olvassa be; a diasor az
+aktuális helyére vagy új diasorként is betölthető. A **Mentés** a fájlnév
+megadása után letöltést indít. A mentés helyét a böngésző letöltési
+beállításai határozzák meg, ezért a program nem kér külön mappát.
+Képes diák hordozható mentéséhez válaszd a képek beágyazását; a böngésző
+nem fér hozzá a gépen tárolt, csupán fájlútvonallal hivatkozott képekhez.
+
 ### iPhone és iPad
 
 iOS-en a **Mentés** a program saját `export` mappájába ír, amely a **Fájlok**
