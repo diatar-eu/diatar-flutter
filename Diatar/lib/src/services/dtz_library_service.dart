@@ -1,14 +1,10 @@
 import 'package:diatar_common/diatar_common.dart';
+import 'package:flutter/foundation.dart';
+import '../core/dtz/dtz_media_paths.dart';
 import '../utils/path_helper.dart';
 import '../utils/file_system_provider.dart';
 
-/// A .dtz fajlokat kezeli: a bennuk levo dia-id -> foto utvonal lekepezeset
-/// epiti fel. A formatum:
-///   - 'b' sor: a fotok alapkonyvtara (base directory)
-///   - 'f' sor: a dia-id, majd szokoz, majd a foto relatív utvonala
-///   - 'Z'/'z' sor: a dia-id, majd szokoz, majd a hangfajl relatív utvonala
-///   - 'F'/'f' sor: a dia-id, majd szokoz, majd a fotófajl relatív utvonala
-///   - 'i' sor: a dia-id, majd szokoz, majd a forwardMS (ms) ertek
+/// Merges installed photos, sounds and slide timings from local DTZ files.
 class DtzLibraryService {
   const DtzLibraryService();
 
@@ -30,6 +26,8 @@ class DtzLibraryService {
     children.sort(
       (FileSystemEntity a, FileSystemEntity b) => a.path.compareTo(b.path),
     );
+    final Map<(String, bool), DtzMediaPaths> mediaPaths =
+        <(String, bool), DtzMediaPaths>{};
 
     for (final FileSystemEntity child in children) {
       if (child is! File || !child.path.toLowerCase().endsWith('.dtz')) {
@@ -37,9 +35,33 @@ class DtzLibraryService {
       }
       try {
         final String content = await child.readAsString();
-        _parseFile(content, entries, child.parent.path);
-      } catch (_) {
-        // Hibas dtz fajlokat atugrunk, hogy az app hasznalhato maradjon.
+        final String directory = child.parent.path.replaceAll('\\', '/');
+        final bool local = content.startsWith(DtzMediaPaths.localHeader);
+        final DtzMediaPaths paths = mediaPaths.putIfAbsent(
+          (directory, local),
+          () {
+            final String prefix = '$directory/';
+            return DtzMediaPaths(
+              children
+                  .whereType<File>()
+                  .map((File file) {
+                    return file.path.replaceAll('\\', '/');
+                  })
+                  .where((String path) => path.startsWith(prefix))
+                  .map((String path) => path.substring(prefix.length))
+                  .where(
+                    (String path) =>
+                        !path.toLowerCase().endsWith('.dtz') &&
+                        !(!local &&
+                            directory == dtzDir.path.replaceAll('\\', '/') &&
+                            path.startsWith('Music/')),
+                  ),
+            );
+          },
+        );
+        _parseFile(paths.localize(content), entries, child.parent.path);
+      } catch (error) {
+        debugPrint('DtzLibraryService: ${child.path}: $error');
       }
     }
 
@@ -53,11 +75,7 @@ class DtzLibraryService {
   ) {
     final List<String> lines = content.replaceAll('\r\n', '\n').split('\n');
 
-    String baseDir = mediaDirectory;
-    final bool isMusicDirectory = mediaDirectory
-        .replaceAll('\\', '/')
-        .toLowerCase()
-        .endsWith('/music');
+    final String baseDir = mediaDirectory;
 
     for (final String raw in lines) {
       if (raw.isEmpty) {
@@ -68,17 +86,6 @@ class DtzLibraryService {
       final String rest = raw.substring(1).trim();
 
       if (prefix == 'b' || prefix == 'B') {
-        if (isMusicDirectory) {
-          final String relativeBase = rest
-              .replaceAll('\\', '/')
-              .replaceAll(RegExp(r'^/+|/+$'), '');
-          if (relativeBase.isNotEmpty &&
-              !relativeBase.startsWith('../') &&
-              !relativeBase.contains('/../')) {
-            baseDir =
-                '${mediaDirectory.endsWith('/') ? mediaDirectory : '$mediaDirectory/'}$relativeBase';
-          }
-        }
         continue;
       }
 

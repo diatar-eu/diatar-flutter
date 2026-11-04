@@ -90,11 +90,19 @@ saját könyvtáradhoz, a hálózathoz, a hanghoz, a kijelzőkhöz és az eszkö
 3. Nyomj a **Letöltés** gombra
 4. A zenék a hozzájuk tartozó DTZ- és ZIP-csomagból kerülnek kibontásra; a mellőzött csomagok helyi fájljai törlődnek
 
+A kotta és a zene ugyanahhoz az énekhez egyszerre is letölthető és használható.
+A program a ZIP-ből kibontott fájlok tényleges helyét tárolja; a DTZ régi
+`B` (hang) és `b` (kotta) báziskönyvtár-bejegyzéseit nem alkalmazza.
+A korábban letöltött csomagokhoz is a meglévő helyi fájlokat keresi meg,
+ezért a javításhoz nem szükséges újra letölteni őket.
+
 ## Felhasználói import
 
 - **DTX importálás fájlból** — saját `dtx` fájlok importálása
 - **DTZ importálás** — saját `dtz` fájl és médiumok importálása
 - A fájlok automatikusan ellenőrzésre kerülnek (párosított médiafájlok, helyes dia-azonosítók)
+- Importáláskor is a ZIP-ben található útvonalak számítanak. Ha egy hivatkozás
+  több különböző fájlra illene, a program hibát jelez ahelyett, hogy találomra választana.
 
 ## Biztonsági mentés
 

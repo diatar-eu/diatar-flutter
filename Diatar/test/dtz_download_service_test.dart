@@ -3,16 +3,75 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'package:file/file.dart';
 import 'package:file/local.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diatar_app/src/services/dtz_download_service.dart';
+import 'package:diatar_app/src/services/dtz_library_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues(<String, Object>{});
 
   group('DtzDownloadService', () {
+    for (final bool musicFirst in <bool>[true, false]) {
+      test(
+        'shared DTZ download and removal, music first: $musicFirst',
+        () async {
+          final Directory root = await LocalFileSystem().systemTempDirectory
+              .createTemp('dtz_combined_download_');
+          addTearDown(() => root.delete(recursive: true));
+          const MethodChannel channel = MethodChannel(
+            'plugins.flutter.io/path_provider',
+          );
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(channel, (_) async => root.path);
+          addTearDown(
+            () => TestDefaultBinaryMessengerBinding
+                .instance
+                .defaultBinaryMessenger
+                .setMockMethodCallHandler(channel, null),
+          );
+          final DtzDownloadService scores = DtzDownloadService(
+            client: _DownloadingFakeDtzHttpClient(),
+          );
+          final DtzDownloadService music = DtzDownloadService.music(
+            client: _MusicHttpClient(),
+          );
+          for (final DtzDownloadService service
+              in musicFirst
+                  ? <DtzDownloadService>[music, scores]
+                  : <DtzDownloadService>[scores, music]) {
+            final Directory directory = await service.resolveDirectory();
+            await service.downloadUpdates(targetDir: directory);
+          }
+          const DtzLibraryService library = DtzLibraryService();
+          final combined = (await library.loadLibrary())['00000001']!;
+          expect(combined.soundFilePath, isNotNull);
+          expect(combined.fotoFilePath, isNotNull);
+          expect(
+            await LocalFileSystem().file(combined.soundFilePath!).exists(),
+            isTrue,
+          );
+          expect(
+            await LocalFileSystem().file(combined.fotoFilePath!).exists(),
+            isTrue,
+          );
+          final Directory scoreDir = await scores.resolveDirectory();
+          final items = await scores.listAll(targetDir: scoreDir);
+          await scores.deletePackages(
+            targetDir: scoreDir,
+            itemsToDelete: items,
+            allItems: items,
+          );
+          final musicOnly = (await library.loadLibrary())['00000001']!;
+          expect(musicOnly.soundFilePath, combined.soundFilePath);
+          expect(musicOnly.fotoFilePath, isNull);
+        },
+      );
+    }
+
     test(
       'uses the dedicated DTZ list and still resolves zip dependencies',
       () async {
@@ -45,6 +104,10 @@ void main() {
       await service.downloadUpdates(targetDir: dir, selected: items);
       expect(dir.childFile('song.dtz').existsSync(), isTrue);
       expect(dir.childFile('scores/song.png').existsSync(), isTrue);
+      final String local = await dir.childFile('song.dtz').readAsString();
+      expect(local, contains('f00000001 scores/song.png'));
+      expect(local, isNot(contains('.mp3')));
+      expect(local, isNot(contains('legacy')));
 
       await service.deletePackages(
         targetDir: dir,
@@ -74,6 +137,10 @@ void main() {
       expect(dir.childFile('song.dtz').existsSync(), isTrue);
       expect(dir.childFile('music/song.mp3').existsSync(), isTrue);
       expect(dir.childFile('song.zip').existsSync(), isFalse);
+      final String local = await dir.childFile('song.dtz').readAsString();
+      expect(local, contains('Z00000001 music/song.mp3'));
+      expect(local, isNot(contains('.png')));
+      expect(local, isNot(contains('legacy')));
     });
   });
 }
@@ -118,7 +185,13 @@ class _DownloadingFakeDtzHttpClient extends _FakeDtzHttpClient {
   @override
   Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
     if (url.toString() == 'https://diatar.eu/downloads/dtz/song.dtz') {
-      return http.Response.bytes(utf8.encode('song'), 200);
+      return http.Response.bytes(
+        utf8.encode(
+          'Blegacy\\audio\\\nZ00000001 song.mp3\n'
+          'blegacy\\scores\\\nf00000001 song.png\n',
+        ),
+        200,
+      );
     }
 
     if (url.toString() == 'https://diatar.eu/downloads/kottak/cover.zip') {
@@ -162,7 +235,10 @@ class _MusicHttpClient implements http.Client {
         return http.Response.bytes(utf8.encode('song.dtz=song.zip\n'), 200);
       case 'https://diatar.eu/downloads/dtz/song.dtz':
         return http.Response.bytes(
-          utf8.encode('Z00000001 music/song.mp3'),
+          utf8.encode(
+            'Blegacy\\audio\\\nZ00000001 song.mp3\n'
+            'blegacy\\scores\\\nf00000001 song.png\n',
+          ),
           200,
         );
       case 'https://github.com/diatar-eu/diatar-web/releases/download/zene/song.zip':

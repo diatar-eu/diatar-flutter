@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:archive/archive.dart';
 
+import '../core/dtz/dtz_media_paths.dart';
 import '../utils/file_system_provider.dart';
 import 'streaming_zip_service.dart';
 
@@ -31,7 +32,7 @@ class DtzImportPackageAnalysis {
 
   final String dtzFileName;
 
-  /// Relative paths (relative to the DTZs/ root) that this DTZ expects.
+  /// Matched ZIP paths, or the original references when unavailable.
   final Set<String> referencedFiles;
 
   /// Subset of [referencedFiles] that are covered by the provided ZIPs.
@@ -191,26 +192,10 @@ class DtzUserImportService {
         .expand((DtzImportPackageAnalysis p) => p.matchedFiles)
         .toSet();
 
-    int importedDtzCount = 0;
     int extractedFileCount = 0;
+    final Set<String> extractedFiles = <String>{};
     final List<String> failures = <String>[];
 
-    // 1. Copy DTZ files.
-    for (final DtzImportPackageAnalysis pkg in toImport) {
-      final List<int>? bytes = dtzFiles[pkg.dtzFileName];
-      if (bytes == null) continue;
-      try {
-        final File dtzFile = FileSystemProvider.instance.file(
-          '${targetDir.path}/${pkg.dtzFileName}',
-        );
-        await dtzFile.writeAsBytes(bytes);
-        importedDtzCount++;
-      } catch (e) {
-        failures.add('${pkg.dtzFileName}: $e');
-      }
-    }
-
-    // 2. Extract only the referenced+matched files from each ZIP.
     for (final MapEntry<String, List<int>> entry in zipFiles.entries) {
       try {
         final Archive archive = ZipDecoder().decodeBytes(entry.value);
@@ -224,6 +209,7 @@ class DtzUserImportService {
           );
           await outFile.create(recursive: true);
           await outFile.writeAsBytes(f.content as List<int>);
+          extractedFiles.add(normalized);
           extractedFileCount++;
         }
       } catch (e) {
@@ -231,6 +217,13 @@ class DtzUserImportService {
       }
     }
 
+    final int importedDtzCount = await _writeLocalPackages(
+      toImport,
+      dtzFiles,
+      extractedFiles,
+      targetDir,
+      failures,
+    );
     await FileSystemProvider.persistWebFileSystem();
 
     return DtzUserImportCommitResult(
@@ -253,40 +246,39 @@ class DtzUserImportService {
     final Set<String> neededFiles = toImport
         .expand((DtzImportPackageAnalysis p) => p.matchedFiles)
         .toSet();
-    int importedDtzCount = 0;
     int extractedFileCount = 0;
+    final Set<String> extractedFiles = <String>{};
     final List<String> failures = <String>[];
     final List<DtzZipFailure> zipFailures = <DtzZipFailure>[];
 
-    for (final DtzImportPackageAnalysis pkg in toImport) {
-      final List<int>? bytes = dtzFiles[pkg.dtzFileName];
-      if (bytes == null) continue;
-      try {
-        await FileSystemProvider.instance
-            .file('${targetDir.path}/${pkg.dtzFileName}')
-            .writeAsBytes(bytes);
-        importedDtzCount++;
-      } catch (error) {
-        failures.add('${pkg.dtzFileName}: $error');
-      }
-    }
     for (final MapEntry<String, String> entry in zipFilePaths.entries) {
       try {
-        extractedFileCount += (await _streamingZipService.extract(
+        final List<String> extracted = await _streamingZipService.extract(
           entry.value,
           targetDirectory: targetDir,
           only: neededFiles,
           onProgress: onProgress,
           isCancelled: isCancelled,
-        )).length;
+        );
+        extractedFileCount += extracted.length;
+        extractedFiles.addAll(extracted);
       } on StreamingZipException catch (error) {
-        failures.add('${entry.key}: ${error.code.name}'
-            '${error.entryName == null ? '' : ' (${error.entryName})'}');
+        failures.add(
+          '${entry.key}: ${error.code.name}'
+          '${error.entryName == null ? '' : ' (${error.entryName})'}',
+        );
         zipFailures.add(DtzZipFailure(zipName: entry.key, error: error));
       } catch (error) {
         failures.add('${entry.key}: $error');
       }
     }
+    final int importedDtzCount = await _writeLocalPackages(
+      toImport,
+      dtzFiles,
+      extractedFiles,
+      targetDir,
+      failures,
+    );
     await FileSystemProvider.persistWebFileSystem();
     return DtzUserImportCommitResult(
       importedDtzCount: importedDtzCount,
@@ -294,6 +286,35 @@ class DtzUserImportService {
       failures: failures,
       zipFailures: zipFailures,
     );
+  }
+
+  Future<int> _writeLocalPackages(
+    List<DtzImportPackageAnalysis> packages,
+    Map<String, List<int>> dtzFiles,
+    Set<String> extractedFiles,
+    Directory targetDir,
+    List<String> failures,
+  ) async {
+    int count = 0;
+    for (final DtzImportPackageAnalysis package in packages) {
+      try {
+        final List<int>? bytes = dtzFiles[package.dtzFileName];
+        if (bytes == null ||
+            !package.matchedFiles.every(extractedFiles.contains)) {
+          throw StateError(package.dtzFileName);
+        }
+        final String content = DtzMediaPaths(
+          extractedFiles.intersection(package.matchedFiles),
+        ).localize(utf8.decode(bytes, allowMalformed: true));
+        await FileSystemProvider.instance
+            .file('${targetDir.path}/${package.dtzFileName}')
+            .writeAsString(content);
+        count++;
+      } catch (error) {
+        failures.add('${package.dtzFileName}: $error');
+      }
+    }
+    return count;
   }
 
   DtzUserImportAnalysis _analyze({
@@ -346,7 +367,7 @@ class DtzUserImportService {
     final Set<String> referencedFiles;
     final Set<String> referencedDiaIds;
     try {
-      referencedFiles = _extractReferencedFiles(bytes);
+      referencedFiles = _extractReferencedFiles(bytes, allProvidedFiles);
       referencedDiaIds = _extractReferencedDiaIds(bytes);
     } catch (e) {
       return DtzImportPackageAnalysis(
@@ -449,12 +470,15 @@ class DtzUserImportService {
     );
   }
 
-  /// Parses a DTZ byte sequence and returns all referenced media paths
-  /// relative to the DTZs/ root.
-  Set<String> _extractReferencedFiles(List<int> bytes) {
+  /// Resolves references to ZIP paths, retaining unmatched names for diagnostics.
+  Set<String> _extractReferencedFiles(
+    List<int> bytes,
+    Set<String> providedFiles,
+  ) {
     final String content = utf8.decode(bytes, allowMalformed: true);
     final List<String> lines = content.replaceAll('\r\n', '\n').split('\n');
-    String baseDir = '';
+    final DtzMediaPaths paths = DtzMediaPaths(providedFiles);
+    final bool exact = content.startsWith(DtzMediaPaths.localHeader);
     final Set<String> refs = <String>{};
 
     for (final String raw in lines) {
@@ -463,10 +487,6 @@ class DtzUserImportService {
       final String rest = raw.substring(1).trim();
 
       if (prefix == 'b' || prefix == 'B') {
-        baseDir = rest.replaceAll('\\', '/');
-        if (baseDir.endsWith('/')) {
-          baseDir = baseDir.substring(0, baseDir.length - 1);
-        }
         continue;
       }
 
@@ -479,8 +499,7 @@ class DtzUserImportService {
             .trim()
             .replaceAll('\\', '/');
         if (value.isEmpty) continue;
-        final String full = baseDir.isEmpty ? value : '$baseDir/$value';
-        refs.add(full);
+        refs.add(paths.resolve(value, exact: exact) ?? value);
       }
     }
     return refs;
@@ -515,8 +534,5 @@ class DtzUserImportService {
     return diaIds;
   }
 
-  bool _isPathSafe(String path) =>
-      !path.startsWith('/') &&
-      !path.startsWith('../') &&
-      !path.contains('/../');
+  bool _isPathSafe(String path) => DtzMediaPaths.isSafe(path);
 }

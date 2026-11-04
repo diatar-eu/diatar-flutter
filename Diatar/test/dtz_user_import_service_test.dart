@@ -158,7 +158,7 @@ void main() {
     );
 
     final DtzImportPackageAnalysis pkg = analysis.packages.single;
-    expect(pkg.missingFiles, <String>{'foto/a/2.jpg', 'foto/a/3.jpg'});
+    expect(pkg.missingFiles, <String>{'a/2.jpg', 'a/3.jpg'});
     expect(pkg.matchedFiles, <String>{'foto/a/1.jpg'});
     expect(pkg.missingDiaIds, isEmpty);
     expect(pkg.status, DtzImportStatus.error); // 2 of 3 missing -> 66 %.
@@ -197,6 +197,92 @@ void main() {
       await tempDir.childFile('target/foto/kotta/01.jpg').readAsString(),
       'image',
     );
+    final String localDtz = await tempDir
+        .childFile('target/sample.dtz')
+        .readAsString();
+    expect(localDtz, contains('f3894733E foto/kotta/01.jpg'));
+    expect(localDtz, isNot(contains('b foto')));
+  });
+
+  test('memory import stores actual paths without applying B or b', () async {
+    final Directory dir = await LocalFileSystem().systemTempDirectory
+        .createTemp('dtz_memory_import_');
+    addTearDown(() => dir.delete(recursive: true));
+    final Map<String, List<int>> dtzFiles = <String, List<int>>{
+      'sample.dtz': _bytes(
+        'B C:\\legacy\\audio\\\nZ1234 song.mp3\n'
+        'b D:\\legacy\\scores\\\nf1234 page.png\n',
+      ),
+    };
+    final Map<String, List<int>> zipFiles = <String, List<int>>{
+      'media.zip': _zip(<String, String>{
+        'actual/audio/song.mp3': 'sound',
+        'actual/scores/page.png': 'photo',
+        'unused.txt': 'unused',
+      }),
+    };
+    final analysis = service.analyze(
+      dtzFiles: dtzFiles,
+      zipFiles: zipFiles,
+      availableDiaIds: <String>{'1234'},
+    );
+    expect(analysis.packages.single.status, DtzImportStatus.ok);
+    final result = await service.commit(
+      toImport: analysis.packages,
+      dtzFiles: dtzFiles,
+      zipFiles: zipFiles,
+      targetDir: dir,
+    );
+    expect(result.failures, isEmpty);
+    expect(result.importedDtzCount, 1);
+    expect(result.extractedFileCount, 2);
+    final local = await dir.childFile('sample.dtz').readAsString();
+    expect(local, contains('Z1234 actual/audio/song.mp3'));
+    expect(local, contains('f1234 actual/scores/page.png'));
+    expect(local, isNot(contains('legacy')));
+    expect(dir.childFile('unused.txt').existsSync(), isFalse);
+  });
+
+  test('ambiguous references are rejected during analysis', () {
+    final analysis = service.analyze(
+      dtzFiles: <String, List<int>>{'sample.dtz': _bytes('z1234 song.mp3\n')},
+      zipFiles: <String, List<int>>{
+        'media.zip': _zip(<String, String>{
+          'first/song.mp3': 'first',
+          'second/song.mp3': 'second',
+        }),
+      },
+      availableDiaIds: <String>{'1234'},
+    );
+    expect(analysis.packages.single.status, DtzImportStatus.error);
+    expect(analysis.packages.single.errorReason, contains('song.mp3'));
+  });
+
+  test('failed extraction does not publish an imported DTZ', () async {
+    final Directory dir = await LocalFileSystem().systemTempDirectory
+        .createTemp('dtz_failed_import_');
+    addTearDown(() => dir.delete(recursive: true));
+    final Map<String, List<int>> dtzFiles = <String, List<int>>{
+      'sample.dtz': _bytes('z1234 song.mp3\n'),
+    };
+    final analysis = service.analyze(
+      dtzFiles: dtzFiles,
+      zipFiles: <String, List<int>>{
+        'media.zip': _zip(<String, String>{'audio/song.mp3': 'audio'}),
+      },
+      availableDiaIds: <String>{'1234'},
+    );
+    final File broken = dir.childFile('broken.zip');
+    await broken.writeAsString('not a zip');
+    final result = await service.commitFiles(
+      toImport: analysis.packages,
+      dtzFiles: dtzFiles,
+      zipFilePaths: <String, String>{'media.zip': broken.path},
+      targetDir: dir,
+    );
+    expect(result.importedDtzCount, 0);
+    expect(result.failures, isNotEmpty);
+    expect(dir.childFile('sample.dtz').existsSync(), isFalse);
   });
 
   test('reports ZIP validation failures instead of hiding them', () async {

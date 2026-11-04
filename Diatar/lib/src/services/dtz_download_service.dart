@@ -4,6 +4,7 @@ import 'dart:io' show IOSink;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/dtz/dtz_media_paths.dart';
 import '../utils/file_system_provider.dart';
 import '../utils/path_helper.dart';
 import 'streaming_zip_service.dart';
@@ -231,6 +232,7 @@ class DtzDownloadService {
       final DtzDownloadItem item = toDownload[i];
       final int currentFile = i + 1;
       bool neededSomething = false;
+      final Set<String> installedFiles = <String>{};
 
       final File dtzFile = FileSystemProvider.instance.file(
         '${targetDir.path}/${item.fileName}',
@@ -254,6 +256,9 @@ class DtzDownloadService {
           continue;
         }
         if (handledZips.contains(zip)) {
+          installedFiles.addAll(
+            prefs.getStringList('$_zipContentsPrefix$zip') ?? const <String>[],
+          );
           continue;
         }
         handledZips.add(zip);
@@ -281,7 +286,26 @@ class DtzDownloadService {
           await prefs.setStringList('$_zipContentsPrefix$zip', extractedFiles);
           neededSomething = true;
         }
+        installedFiles.addAll(
+          prefs.getStringList('$_zipContentsPrefix$zip') ?? const <String>[],
+        );
       }
+
+      final Set<String> existingFiles = <String>{};
+      for (final String path in installedFiles) {
+        if (DtzMediaPaths.isSafe(path) &&
+            await FileSystemProvider.instance
+                .file('${targetDir.path}/$path')
+                .exists()) {
+          existingFiles.add(path);
+        }
+      }
+      await dtzFile.writeAsString(
+        DtzMediaPaths(existingFiles).localize(
+          await dtzFile.readAsString(),
+          music: _directoryName == 'Music',
+        ),
+      );
 
       if (neededSomething) {
         downloaded++;
