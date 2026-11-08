@@ -259,6 +259,11 @@ megmarad. Ez szövegkurzor mellett is működik. A hangkódok alsó határa
 - **Betöltés** — korábban mentett `.dia` fájl megnyitása
 - Az `.dia` fájl formátum az INI fájlformátum
 
+Asztali rendszereken a **Betöltés** és a **Mentés** fájlválasztója a
+**Beállítások > Énektárak és fájlok** alatt megadott `.dia`-könyvtárból
+indul. Ha nincs beállítva könyvtár, vagy az már nem létezik, a rendszer
+alapértelmezett helyét használja.
+
 ### Böngésző
 
 A **Betöltés** a kiválasztott `.dia` fájl tartalmát olvassa be; a diasor az

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' as io;
 
 import 'package:diatar_app/l10n/generated/app_localizations.dart';
 import 'package:diatar_app/src/controllers/diatar_main_controller.dart';
@@ -132,6 +133,82 @@ void main() {
     },
     skip: !kIsWeb,
   );
+
+  for (final directoryCase in <String>['existing', 'empty', 'missing']) {
+    testWidgets(
+      'DIA load starts in the configured directory when $directoryCase',
+      (tester) async {
+        final directory = io.Directory.systemTemp.createTempSync('dia-picker-');
+        addTearDown(() => directory.deleteSync(recursive: true));
+        final configuredPath = switch (directoryCase) {
+          'existing' => '  ${directory.path}  ',
+          'empty' => '',
+          _ => '${directory.path}${io.Platform.pathSeparator}missing',
+        };
+        const windowChannel = MethodChannel('window_manager');
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          windowChannel,
+          (_) async => null,
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            windowChannel,
+            null,
+          ),
+        );
+        const channel = MethodChannel('diatar/macos_file_panels');
+        final calls = <MethodCall>[];
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          (call) async {
+            calls.add(call);
+            return null;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            channel,
+            null,
+          ),
+        );
+        final controller = DiatarMainController();
+        addTearDown(controller.dispose);
+        controller.settings = controller.settings.copyWith(
+          diaExportPath: configuredPath,
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('hu'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: CustomOrderEditorPanel(controller: controller),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(CustomOrderEditorPanel)),
+        )!;
+        final loadButton = find.widgetWithText(OutlinedButton, l10n.loadDia);
+        await tester.ensureVisible(loadButton);
+        await tester.tap(loadButton);
+        await tester.pumpAndSettle();
+
+        expect(calls, hasLength(1));
+        expect(calls.single.method, 'openPanel');
+        expect(calls.single.arguments, <String, Object?>{
+          'extensions': <String>['dia'],
+          'multiple': false,
+          'directoryPath': directoryCase == 'existing' ? directory.path : null,
+        });
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+      variant: TargetPlatformVariant(<TargetPlatform>{TargetPlatform.macOS}),
+      skip: kIsWeb,
+    );
+  }
 
   testWidgets('web save asks only for a filename and starts the download', (
     tester,

@@ -2501,7 +2501,14 @@ class _CustomOrderEditorPanelState extends State<CustomOrderEditorPanel> {
     final AppLocalizations l10n = context.l10n;
     final List<XFile> files = await DesktopProjectorBridge.instance
         .runWithNativeDialog(
-          () => showFileOpenPanel(extensions: const <String>['dia']),
+          () => showFileOpenPanel(
+            extensions: const <String>['dia'],
+            initialDirectory: kIsWeb
+                ? null
+                : _existingDirectoryPathOrNull(
+                    controller.settings.diaExportPath,
+                  ),
+          ),
         );
     final XFile? file = files.isEmpty ? null : files.first;
     if (file == null) {
