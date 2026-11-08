@@ -964,7 +964,7 @@ class DiatarMainController extends ChangeNotifier {
   bool get shouldAutoOpenDownloadDialog =>
       !_startupDownloadDialogHandled &&
       !loading &&
-      (statusCode == 'statusNoDtxFiles' || _startupDownloadDialogRequested);
+      _startupDownloadDialogRequested;
   bool get tcpActive => settings.tcpClientEnabled;
   bool get tcpConfigured => _transportSettingsPolicy.isTcpConfigured(settings);
 
@@ -2363,6 +2363,9 @@ class DiatarMainController extends ChangeNotifier {
 
       if (loaded.isEmpty) {
         books = const <DtxBook>[];
+        if (!_startupDownloadDialogHandled) {
+          _startupDownloadDialogRequested = true;
+        }
         final Directory dtxDir = await _resolveDtxDirectory();
         _setStatus('statusNoDtxFiles', <String, String>{'path': dtxDir.path});
       } else if (enabled.isEmpty) {
