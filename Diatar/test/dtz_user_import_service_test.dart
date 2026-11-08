@@ -330,4 +330,38 @@ void main() {
       ),
     );
   });
+
+  test('ZIP progress identifies each entry before and after writing', () async {
+    final Directory tempDir = await LocalFileSystem().systemTempDirectory
+        .createTemp('dtz_zip_progress_');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final File zipFile = tempDir.childFile('scores.zip');
+    await zipFile.writeAsBytes(
+      _zip(<String, String>{'scores/one.png': 'one', 'scores/two.png': 'two'}),
+    );
+    final List<StreamingZipProgress> progress = <StreamingZipProgress>[];
+    await const StreamingZipService().extract(
+      zipFile.path,
+      targetDirectory: tempDir,
+      onProgress: (StreamingZipProgress value) {
+        if (!value.entryComplete && value.writtenBytes == 0) {
+          expect(tempDir.childFile(value.entryName).existsSync(), isFalse);
+        }
+        progress.add(value);
+      },
+    );
+    final List<StreamingZipProgress> completed = progress
+        .where((StreamingZipProgress value) => value.entryComplete)
+        .toList();
+    expect(completed.map((StreamingZipProgress p) => p.entryName), <String>[
+      'scores/one.png',
+      'scores/two.png',
+    ]);
+    expect(completed.map((StreamingZipProgress p) => p.completedEntries), <int>[
+      1,
+      2,
+    ]);
+    expect(completed.last.totalEntries, 2);
+    expect(completed.last.writtenBytes, completed.last.totalBytes);
+  });
 }

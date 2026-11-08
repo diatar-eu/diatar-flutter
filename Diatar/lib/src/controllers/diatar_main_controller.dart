@@ -285,6 +285,21 @@ class DiatarMainController extends ChangeNotifier {
   int downloadTotalFiles = 0;
   String downloadCurrentName = '';
   double downloadCurrentFraction = 0;
+  DtzDownloadProgress? mediaDownloadProgress;
+
+  void _onMediaDownloadProgress(DtzDownloadProgress progress) {
+    mediaDownloadProgress = progress;
+    downloadCurrentFile = progress.currentFile;
+    downloadTotalFiles = progress.totalFiles;
+    downloadCurrentName = progress.fileName;
+    downloadCurrentFraction = progress.fraction;
+    notifyListeners();
+  }
+
+  Future<void> _showMediaPhase(DtzDownloadPhase phase) async {
+    _onMediaDownloadProgress(DtzDownloadProgress(phase: phase));
+    await Future<void>.delayed(const Duration(milliseconds: 16));
+  }
 
   void setFileTransferProgress(double? progress) {
     fileTransferInProgress = progress != null;
@@ -1497,10 +1512,7 @@ class DiatarMainController extends ChangeNotifier {
   /// tartományban. A relatív értékek a szabad (az ablakot kivonó) területhez
   /// képest értendők, így a főablak átméretezésekor az ablak a képben marad.
   Future<void> setCameraViewPosition(double posX, double posY) async {
-    settings = settings.copyWith(
-      cameraViewPosX: posX,
-      cameraViewPosY: posY,
-    );
+    settings = settings.copyWith(cameraViewPosX: posX, cameraViewPosY: posY);
     notifyListeners();
     await _settingsStore.save(settings);
   }
@@ -2348,11 +2360,14 @@ class DiatarMainController extends ChangeNotifier {
     }
   }
 
-  Future<void> reloadBooks() async {
+  Future<void> reloadBooks({bool mediaDownload = false}) async {
     loading = true;
     notifyListeners();
 
     try {
+      if (mediaDownload) {
+        await _showMediaPhase(DtzDownloadPhase.loadingBooks);
+      }
       final List<DtxBook> loaded = await _loadBooksFromDisk();
       final List<DtxBook> enabled = loaded
           .where((DtxBook b) => !_disabledSongbooks.contains(b.fileName))
@@ -2410,12 +2425,21 @@ class DiatarMainController extends ChangeNotifier {
           _selectByCustomOrderCursor(_customOrderCursor, sync: false);
         }
       }
+      if (mediaDownload) {
+        await _showMediaPhase(DtzDownloadPhase.loadingLibrary);
+      }
       await _loadDtzPhotos();
+      if (mediaDownload) {
+        await _showMediaPhase(DtzDownloadPhase.saving);
+      }
       await _persistCurrentCustomOrder();
       _persistActiveSetToSets();
       await _persistAllSets();
 
       // Keresési index építése háttérfolyamatban (nem fagyasztja az UI-t).
+      if (mediaDownload) {
+        await _showMediaPhase(DtzDownloadPhase.indexing);
+      }
       _searchIndex = await compute(buildSearchIndex, books);
     } catch (e) {
       _setStatus('statusLoadError', <String, String>{'error': '$e'});
@@ -3348,6 +3372,7 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      await _showMediaPhase(DtzDownloadPhase.listing);
       final Set<String> requestedDownloads = downloadSelected
           .map((String name) => name.trim())
           .where((String name) => name.isNotEmpty)
@@ -3377,6 +3402,7 @@ class DiatarMainController extends ChangeNotifier {
         final DtzDownloadItem? item = byFile[name];
         return item != null && item.isOfficial && item.updateAvailable;
       }).toSet();
+      await _showMediaPhase(DtzDownloadPhase.deleting);
       final int deleted = await _musicDownloadService.deletePackages(
         targetDir: musicDir,
         itemsToDelete: all
@@ -3388,6 +3414,7 @@ class DiatarMainController extends ChangeNotifier {
         allItems: all,
       );
       if (deleted > 0) {
+        await _showMediaPhase(DtzDownloadPhase.loadingLibrary);
         await _loadDtzPhotos();
       }
 
@@ -3401,22 +3428,12 @@ class DiatarMainController extends ChangeNotifier {
             .downloadUpdates(
               targetDir: musicDir,
               selected: selected,
-              onProgress: (DtzDownloadProgress progress) {
-                downloadCurrentFile = progress.currentFile;
-                downloadTotalFiles = progress.totalFiles;
-                downloadCurrentName = progress.fileName;
-                downloadCurrentFraction = progress.fraction;
-                _setStatus('statusDownloadProgress', <String, String>{
-                  'current': '${progress.currentFile}',
-                  'total': '${progress.totalFiles}',
-                  'name': progress.fileName,
-                  'percent': (progress.fraction * 100).toStringAsFixed(0),
-                });
-                notifyListeners();
-              },
+              onProgress: _onMediaDownloadProgress,
             );
+        await _showMediaPhase(DtzDownloadPhase.loadingLibrary);
         await _loadDtzPhotos();
         if (summary.downloaded > 0 && !settings.useSound) {
+          await _showMediaPhase(DtzDownloadPhase.settings);
           await applySettings(settings.copyWith(useSound: true));
         }
         _setStatus('statusDownloadSummary', <String, String>{
@@ -3427,6 +3444,7 @@ class DiatarMainController extends ChangeNotifier {
     } catch (e) {
       _setStatus('statusDownloadError', <String, String>{'error': '$e'});
     } finally {
+      mediaDownloadProgress = null;
       downloadInProgress = false;
       loading = false;
       notifyListeners();
@@ -3460,6 +3478,7 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      await _showMediaPhase(DtzDownloadPhase.listing);
       final Set<String> requestedDownloads = downloadSelected
           .map((String name) => name.trim())
           .where((String name) => name.isNotEmpty)
@@ -3499,14 +3518,16 @@ class DiatarMainController extends ChangeNotifier {
                   effectiveExcluded.contains(item.fileName),
             )
             .toList();
+        await _showMediaPhase(DtzDownloadPhase.deleting);
         final int deleted = await _dtzDownloadService.deletePackages(
           targetDir: dtzDir,
           itemsToDelete: excludedPackages,
           allItems: all,
         );
         if (deleted > 0) {
-          await reloadBooks();
+          await reloadBooks(mediaDownload: true);
         }
+        await _showMediaPhase(DtzDownloadPhase.loadingLibrary);
         await _loadDtzPhotos();
 
         downloadTotalFiles = effectiveDownload.length;
@@ -3522,22 +3543,10 @@ class DiatarMainController extends ChangeNotifier {
               .downloadUpdates(
                 targetDir: dtzDir,
                 selected: selected,
-                onProgress: (DtzDownloadProgress progress) {
-                  downloadCurrentFile = progress.currentFile;
-                  downloadTotalFiles = progress.totalFiles;
-                  downloadCurrentName = progress.fileName;
-                  downloadCurrentFraction = progress.fraction;
-                  _setStatus('statusDownloadProgress', <String, String>{
-                    'current': '${progress.currentFile}',
-                    'total': '${progress.totalFiles}',
-                    'name': progress.fileName,
-                    'percent': (progress.fraction * 100).toStringAsFixed(0),
-                  });
-                  notifyListeners();
-                },
+                onProgress: _onMediaDownloadProgress,
               );
           if (summary.downloaded > 0) {
-            await reloadBooks();
+            await reloadBooks(mediaDownload: true);
           }
           _setStatus('statusDownloadSummary', <String, String>{
             'downloaded': '${summary.downloaded}',
@@ -3550,6 +3559,7 @@ class DiatarMainController extends ChangeNotifier {
     } catch (e) {
       _setStatus('statusDownloadError', <String, String>{'error': '$e'});
     } finally {
+      mediaDownloadProgress = null;
       downloadInProgress = false;
       loading = false;
       notifyListeners();

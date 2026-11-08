@@ -35,13 +35,32 @@ class DtzDownloadItem {
   List<String> get zipNames => zips;
 }
 
+enum DtzDownloadPhase {
+  listing,
+  downloading,
+  extracting,
+  checking,
+  writing,
+  deleting,
+  cleanup,
+  saving,
+  loadingBooks,
+  loadingLibrary,
+  indexing,
+  settings,
+}
+
 class DtzDownloadProgress {
   const DtzDownloadProgress({
-    required this.currentFile,
-    required this.totalFiles,
-    required this.fileName,
-    required this.receivedBytes,
-    required this.totalBytes,
+    this.currentFile = 0,
+    this.totalFiles = 0,
+    this.fileName = '',
+    this.receivedBytes = 0,
+    this.totalBytes = 0,
+    this.phase = DtzDownloadPhase.downloading,
+    this.currentEntry = 0,
+    this.totalEntries = 0,
+    this.entryName = '',
   });
 
   final int currentFile;
@@ -49,8 +68,22 @@ class DtzDownloadProgress {
   final String fileName;
   final int receivedBytes;
   final int totalBytes;
+  final DtzDownloadPhase phase;
+  final int currentEntry;
+  final int totalEntries;
+  final String entryName;
+
+  bool get isDeterminate => switch (phase) {
+    DtzDownloadPhase.downloading ||
+    DtzDownloadPhase.extracting => totalBytes > 0,
+    DtzDownloadPhase.checking => totalEntries > 0,
+    _ => false,
+  };
 
   double get fraction {
+    if (phase == DtzDownloadPhase.checking && totalEntries > 0) {
+      return (currentEntry / totalEntries).clamp(0, 1);
+    }
     if (totalBytes <= 0) {
       return 0;
     }
@@ -165,7 +198,8 @@ class DtzDownloadService {
         final _RemoteEntry entryForName = name == dtzName
             ? dtzEntry
             : remoteByName[name]!;
-        if (oldStamp != entryForName.timestamp) {
+        if (oldStamp != entryForName.timestamp ||
+            (name != dtzName && !_isZipCurrent(name, entryForName, prefs))) {
           upToDate = false;
           break;
         }
@@ -200,6 +234,9 @@ class DtzDownloadService {
     List<DtzDownloadItem>? selected,
     void Function(DtzDownloadProgress progress)? onProgress,
   }) async {
+    onProgress?.call(
+      const DtzDownloadProgress(phase: DtzDownloadPhase.listing),
+    );
     await targetDir.create(recursive: true);
 
     final List<DtzDownloadItem> items =
@@ -266,7 +303,7 @@ class DtzDownloadService {
         final File zipFile = FileSystemProvider.instance.file(
           '${targetDir.path}/$zip',
         );
-        if (await _needsDownload(zipFile, zip, zipEntry.timestamp, prefs)) {
+        if (!_isZipCurrent(zip, zipEntry, prefs)) {
           await _downloadOne(
             url: zipEntry.url == null
                 ? Uri.parse('$_scoreZipBaseUrl$zip')
@@ -277,13 +314,75 @@ class DtzDownloadService {
             totalFiles: total,
             onProgress: onProgress,
           );
-          final List<String> extractedFiles = await _extractZip(
-            zipFile,
-            targetDir,
+          final Stopwatch progressClock = Stopwatch()..start();
+          String lastEntry = '';
+          onProgress?.call(
+            DtzDownloadProgress(
+              phase: DtzDownloadPhase.extracting,
+              currentFile: currentFile,
+              totalFiles: total,
+              fileName: zip,
+            ),
           );
-          await zipFile.delete();
-          await prefs.setString('$_stampPrefix$zip', zipEntry.timestamp);
+          if (onProgress != null) {
+            await Future<void>.delayed(const Duration(milliseconds: 16));
+          }
+          final List<String> extractedFiles = await _zipService.extract(
+            zipFile.path,
+            targetDirectory: targetDir,
+            onProgress: (StreamingZipProgress progress) {
+              if (progress.entryName == lastEntry &&
+                  progressClock.elapsedMilliseconds < 100 &&
+                  !progress.entryComplete &&
+                  progress.writtenBytes < progress.totalBytes) {
+                return;
+              }
+              lastEntry = progress.entryName;
+              progressClock.reset();
+              onProgress?.call(
+                DtzDownloadProgress(
+                  phase: DtzDownloadPhase.extracting,
+                  currentFile: currentFile,
+                  totalFiles: total,
+                  fileName: zip,
+                  currentEntry:
+                      (progress.completedEntries +
+                              (progress.entryComplete ? 0 : 1))
+                          .clamp(0, progress.totalEntries),
+                  totalEntries: progress.totalEntries,
+                  entryName: progress.entryName,
+                  receivedBytes: progress.writtenBytes,
+                  totalBytes: progress.totalBytes,
+                ),
+              );
+            },
+          );
+          onProgress?.call(
+            DtzDownloadProgress(
+              phase: DtzDownloadPhase.writing,
+              currentFile: currentFile,
+              totalFiles: total,
+              fileName: zip,
+            ),
+          );
+          if (onProgress != null) {
+            await Future<void>.delayed(const Duration(milliseconds: 16));
+          }
           await prefs.setStringList('$_zipContentsPrefix$zip', extractedFiles);
+          await prefs.setInt('${_stampPrefix}size_$zip', zipEntry.size);
+          await prefs.setString('$_stampPrefix$zip', zipEntry.timestamp);
+          onProgress?.call(
+            DtzDownloadProgress(
+              phase: DtzDownloadPhase.cleanup,
+              currentFile: currentFile,
+              totalFiles: total,
+              fileName: zip,
+            ),
+          );
+          if (onProgress != null) {
+            await Future<void>.delayed(const Duration(milliseconds: 16));
+          }
+          await zipFile.delete();
           neededSomething = true;
         }
         installedFiles.addAll(
@@ -292,6 +391,17 @@ class DtzDownloadService {
       }
 
       final Set<String> existingFiles = <String>{};
+      int checkedFiles = 0;
+      final Stopwatch checkClock = Stopwatch()..start();
+      onProgress?.call(
+        DtzDownloadProgress(
+          phase: DtzDownloadPhase.checking,
+          currentFile: currentFile,
+          totalFiles: total,
+          fileName: item.fileName,
+          totalEntries: installedFiles.length,
+        ),
+      );
       for (final String path in installedFiles) {
         if (DtzMediaPaths.isSafe(path) &&
             await FileSystemProvider.instance
@@ -299,6 +409,36 @@ class DtzDownloadService {
                 .exists()) {
           existingFiles.add(path);
         }
+        checkedFiles++;
+        if (checkClock.elapsedMilliseconds >= 100 ||
+            checkedFiles == installedFiles.length) {
+          onProgress?.call(
+            DtzDownloadProgress(
+              phase: DtzDownloadPhase.checking,
+              currentFile: currentFile,
+              totalFiles: total,
+              fileName: item.fileName,
+              currentEntry: checkedFiles,
+              totalEntries: installedFiles.length,
+              entryName: path,
+            ),
+          );
+          checkClock.reset();
+          if (onProgress != null) {
+            await Future<void>.delayed(const Duration(milliseconds: 16));
+          }
+        }
+      }
+      onProgress?.call(
+        DtzDownloadProgress(
+          phase: DtzDownloadPhase.writing,
+          currentFile: currentFile,
+          totalFiles: total,
+          fileName: item.fileName,
+        ),
+      );
+      if (onProgress != null) {
+        await Future<void>.delayed(const Duration(milliseconds: 16));
       }
       await dtzFile.writeAsString(
         DtzMediaPaths(existingFiles).localize(
@@ -314,6 +454,9 @@ class DtzDownloadService {
       }
     }
 
+    onProgress?.call(
+      const DtzDownloadProgress(phase: DtzDownloadPhase.cleanup),
+    );
     // Remove the downloaded zip archives after extraction to save disk space.
     // Only zips that were successfully extracted (have a stamp) are removed,
     // which also cleans up leftovers from previous runs.
@@ -339,6 +482,7 @@ class DtzDownloadService {
       // Ignore cleanup errors; extracted content is already in place.
     }
 
+    onProgress?.call(const DtzDownloadProgress(phase: DtzDownloadPhase.saving));
     await FileSystemProvider.persistWebFileSystem();
 
     return DtzDownloadSummary(downloaded: downloaded, skipped: skipped);
@@ -364,6 +508,7 @@ class DtzDownloadService {
         deleted++;
       }
       await prefs.remove('$_stampPrefix$name');
+      await prefs.remove('${_stampPrefix}size_$name');
     }
 
     await FileSystemProvider.persistWebFileSystem();
@@ -429,6 +574,15 @@ class DtzDownloadService {
     final String oldStamp = prefs.getString('$_stampPrefix$name') ?? '';
     return !(await local.exists() && oldStamp == timestamp);
   }
+
+  bool _isZipCurrent(
+    String name,
+    _RemoteEntry entry,
+    SharedPreferences prefs,
+  ) =>
+      prefs.getString('$_stampPrefix$name') == entry.timestamp &&
+      prefs.getInt('${_stampPrefix}size_$name') == entry.size &&
+      prefs.getStringList('$_zipContentsPrefix$name') != null;
 
   Future<List<_RemoteEntry>> _fetchRemoteList(String url) async {
     final http.Response response = await _client.get(Uri.parse(url));
@@ -531,6 +685,13 @@ class DtzDownloadService {
     required int totalFiles,
     void Function(DtzDownloadProgress progress)? onProgress,
   }) async {
+    onProgress?.call(
+      DtzDownloadProgress(
+        currentFile: currentFile,
+        totalFiles: totalFiles,
+        fileName: fileName,
+      ),
+    );
     final http.StreamedResponse response = await _client.send(
       http.Request('GET', url),
     );
@@ -564,10 +725,6 @@ class DtzDownloadService {
     } finally {
       await sink.close();
     }
-  }
-
-  Future<List<String>> _extractZip(File zipFile, Directory targetDir) async {
-    return _zipService.extract(zipFile.path, targetDirectory: targetDir);
   }
 }
 

@@ -91,6 +91,17 @@ saját könyvtáradhoz, a hálózathoz, a hanghoz, a kijelzőkhöz és az eszkö
 4. A zenék a hozzájuk tartozó DTZ- és ZIP-csomagból kerülnek kibontásra; a mellőzött csomagok helyi fájljai törlődnek
 
 A kotta és a zene ugyanahhoz az énekhez egyszerre is letölthető és használható.
+Az alsó folyamatjelző külön mutatja a letöltést, a kicsomagolást (csak az aktuális
+fájl sorszámával és az összes fájl számával), a helyi fájlok ellenőrzését, a bejegyzések
+beírását, a ZIP-ek törlését, a mentést és az újratöltést. Kottáknál a
+keresési index újraépítése is külön lépésként látható. A letöltés 100%-a még
+nem jelenti a teljes telepítés végét.
+
+A sikeresen kibontott ZIP-eket a program törli, de a méretüket, dátumukat
+és kibontott fájljaik listáját megőrzi. A változatlan ZIP-et ezért egy
+DTZ-frissítéshez nem kell újra letölteni. A régebbi, méretadat nélküli
+nyilvántartás egyszeri újraletöltéssel egészül ki.
+
 A program a ZIP-ből kibontott fájlok tényleges helyét tárolja; a DTZ régi
 `B` (hang) és `b` (kotta) báziskönyvtár-bejegyzéseit nem alkalmazza.
 A korábban letöltött csomagokhoz is a meglévő helyi fájlokat keresi meg,

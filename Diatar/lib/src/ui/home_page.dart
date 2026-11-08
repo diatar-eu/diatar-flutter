@@ -10,6 +10,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../controllers/diatar_main_controller.dart';
 import '../l10n/l10n.dart';
+import '../l10n/dtz_download_progress.dart';
 import '../models/custom_order_set.dart';
 import '../services/dtx_download_service.dart';
 import '../services/dtz_download_service.dart';
@@ -1697,17 +1698,22 @@ class _DiatarHomePageState extends State<DiatarHomePage> {
         ),
         if (controller.downloadInProgress) ...<Widget>[
           const SizedBox(height: 8),
-          LinearProgressIndicator(value: controller.downloadCurrentFraction),
+          LinearProgressIndicator(
+            value: controller.mediaDownloadProgress?.isDeterminate == false
+                ? null
+                : controller.downloadCurrentFraction,
+          ),
           const SizedBox(height: 4),
           Align(
             alignment: Alignment.centerLeft,
-            child: Text(
-              l10n.downloadProgress(
+            child: Text(switch (controller.mediaDownloadProgress) {
+              final progress? => localizeDtzDownloadProgress(l10n, progress),
+              null => l10n.downloadProgress(
                 controller.downloadCurrentFile,
                 controller.downloadTotalFiles,
                 controller.downloadCurrentName,
               ),
-            ),
+            }),
           ),
         ],
       ],
@@ -3809,7 +3815,8 @@ class _ImportDtzDialogState extends State<_ImportDtzDialog> {
                       ? l10n.importDtzImportButton
                       : l10n.importDtzProgress(
                           _progress!.entryName,
-                          _progress!.completedEntries + 1,
+                          _progress!.completedEntries +
+                              (_progress!.entryComplete ? 0 : 1),
                           _progress!.totalEntries,
                         ),
                   overflow: TextOverflow.ellipsis,

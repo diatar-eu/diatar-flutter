@@ -181,6 +181,40 @@
     }
   },
   "statusDownloadListLoading": "Loading songbook update list...",
+  "mediaProgressListing": "Fetching package list...",
+  "mediaProgressExtracting": "Extracting {entry}/{entries}",
+  "@mediaProgressExtracting": {
+    "placeholders": {
+      "entry": {"type": "int"},
+      "entries": {"type": "int"}
+    }
+  },
+  "mediaProgressChecking": "Checking {current}/{total} {name} → {entry}/{entries} {path}",
+  "@mediaProgressChecking": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"},
+      "name": {},
+      "entry": {"type": "int"},
+      "entries": {"type": "int"},
+      "path": {}
+    }
+  },
+  "mediaProgressWriting": "Writing {current}/{total} {name}",
+  "@mediaProgressWriting": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"},
+      "name": {}
+    }
+  },
+  "mediaProgressDeleting": "Deleting excluded packages...",
+  "mediaProgressCleanup": "Deleting ZIP files...",
+  "mediaProgressSaving": "Saving local data...",
+  "mediaProgressBooks": "Reloading songbooks...",
+  "mediaProgressLibrary": "Reloading sheet music and audio entries...",
+  "mediaProgressIndexing": "Rebuilding search index...",
+  "mediaProgressSettings": "Configuring audio playback...",
   "statusDownloadProgress": "Download: {current}/{total} {name} {percent}%",
   "@statusDownloadProgress": {
     "placeholders": {

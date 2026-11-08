@@ -47,6 +47,7 @@ class StreamingZipProgress {
     required this.totalEntries,
     required this.writtenBytes,
     required this.totalBytes,
+    this.entryComplete = false,
   });
 
   final String archivePath;
@@ -55,6 +56,7 @@ class StreamingZipProgress {
   final int totalEntries;
   final int writtenBytes;
   final int totalBytes;
+  final bool entryComplete;
 }
 
 /// Reads ZIP metadata and extracts files without retaining archive contents in
@@ -95,6 +97,7 @@ class StreamingZipService {
         targetDirectory: targetDirectory,
         only: only,
         limits: limits,
+        onProgress: onProgress,
         isCancelled: isCancelled,
       );
     }
@@ -105,6 +108,7 @@ class StreamingZipService {
       final _ZipMetadata metadata = _validateHeaders(directory.headers, limits);
       int writtenBytes = 0;
       int completedEntries = 0;
+      final Stopwatch frameClock = Stopwatch()..start();
       for (final ZipFileHeader header in directory.headers) {
         if (isCancelled?.call() ?? false) {
           throw const StreamingZipException(StreamingZipErrorCode.cancelled);
@@ -122,6 +126,22 @@ class StreamingZipService {
             StreamingZipErrorCode.entryUnreadable,
             entryName: name,
           );
+        }
+        onProgress?.call(
+          StreamingZipProgress(
+            archivePath: zipPath,
+            entryName: name,
+            completedEntries: completedEntries,
+            totalEntries: metadata.fileCount,
+            writtenBytes: writtenBytes,
+            totalBytes: metadata.totalSize,
+          ),
+        );
+        // Give the UI a frame before synchronous decompression blocks it.
+        if (onProgress != null &&
+            (completedEntries == 0 || frameClock.elapsedMilliseconds >= 50)) {
+          await Future<void>.delayed(const Duration(milliseconds: 16));
+          frameClock.reset();
         }
         final File target = FileSystemProvider.instance.file(
           '${targetDirectory.path}/$name',
@@ -142,7 +162,9 @@ class StreamingZipService {
               ),
             );
             if (isCancelled?.call() ?? false) {
-              throw const StreamingZipException(StreamingZipErrorCode.cancelled);
+              throw const StreamingZipException(
+                StreamingZipErrorCode.cancelled,
+              );
             }
           },
         )..open();
@@ -161,6 +183,17 @@ class StreamingZipService {
         }
         extracted.add(name);
         completedEntries++;
+        onProgress?.call(
+          StreamingZipProgress(
+            archivePath: zipPath,
+            entryName: name,
+            completedEntries: completedEntries,
+            totalEntries: metadata.fileCount,
+            writtenBytes: writtenBytes,
+            totalBytes: metadata.totalSize,
+            entryComplete: true,
+          ),
+        );
       }
     } on StreamingZipException {
       rethrow;
@@ -180,6 +213,7 @@ class StreamingZipService {
     required Directory targetDirectory,
     Set<String>? only,
     required StreamingZipLimits limits,
+    void Function(StreamingZipProgress progress)? onProgress,
     bool Function()? isCancelled,
   }) async {
     try {
@@ -189,13 +223,23 @@ class StreamingZipService {
       );
       int count = 0;
       int total = 0;
+      final List<ArchiveFile> files = archive
+          .where((ArchiveFile entry) => entry.isFile && !entry.isSymbolicLink)
+          .toList();
+      final int totalBytes = files.fold<int>(
+        0,
+        (int size, ArchiveFile entry) => size + entry.size,
+      );
+      int writtenBytes = 0;
+      final Stopwatch frameClock = Stopwatch()..start();
       final List<String> extracted = <String>[];
-      for (final ArchiveFile entry in archive) {
-        if (!entry.isFile || entry.isSymbolicLink) continue;
+      for (final ArchiveFile entry in files) {
         count++;
         total += entry.size;
         if (count > limits.maxEntries) {
-          throw const StreamingZipException(StreamingZipErrorCode.tooManyEntries);
+          throw const StreamingZipException(
+            StreamingZipErrorCode.tooManyEntries,
+          );
         }
         if (entry.size > limits.maxEntrySize) {
           throw StreamingZipException(
@@ -204,13 +248,32 @@ class StreamingZipService {
           );
         }
         if (total > limits.maxTotalSize) {
-          throw const StreamingZipException(StreamingZipErrorCode.totalTooLarge);
+          throw const StreamingZipException(
+            StreamingZipErrorCode.totalTooLarge,
+          );
         }
         if (isCancelled?.call() ?? false) {
           throw const StreamingZipException(StreamingZipErrorCode.cancelled);
         }
         final String name = entry.name.replaceAll(r'\', '/');
-        if (!_isSafePath(name) || (only != null && !only.contains(name))) continue;
+        if (!_isSafePath(name) || (only != null && !only.contains(name))) {
+          continue;
+        }
+        onProgress?.call(
+          StreamingZipProgress(
+            archivePath: zipPath,
+            entryName: name,
+            completedEntries: extracted.length,
+            totalEntries: files.length,
+            writtenBytes: writtenBytes,
+            totalBytes: totalBytes,
+          ),
+        );
+        if (onProgress != null &&
+            (extracted.isEmpty || frameClock.elapsedMilliseconds >= 50)) {
+          await Future<void>.delayed(const Duration(milliseconds: 16));
+          frameClock.reset();
+        }
         final Uint8List? bytes = entry.readBytes();
         if (bytes == null) {
           throw StreamingZipException(
@@ -224,6 +287,18 @@ class StreamingZipService {
         await target.parent.create(recursive: true);
         await target.writeAsBytes(bytes, flush: true);
         extracted.add(name);
+        writtenBytes += bytes.length;
+        onProgress?.call(
+          StreamingZipProgress(
+            archivePath: zipPath,
+            entryName: name,
+            completedEntries: extracted.length,
+            totalEntries: files.length,
+            writtenBytes: writtenBytes,
+            totalBytes: totalBytes,
+            entryComplete: true,
+          ),
+        );
       }
       return extracted;
     } on StreamingZipException {

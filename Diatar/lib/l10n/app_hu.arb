@@ -181,6 +181,40 @@
     }
   },
   "statusDownloadListLoading": "Énektár lista letöltése...",
+  "mediaProgressListing": "Csomaglista lekérése...",
+  "mediaProgressExtracting": "Kicsomagolás {entry}/{entries}",
+  "@mediaProgressExtracting": {
+    "placeholders": {
+      "entry": {"type": "int"},
+      "entries": {"type": "int"}
+    }
+  },
+  "mediaProgressChecking": "Ellenőrzés {current}/{total} {name} → {entry}/{entries} {path}",
+  "@mediaProgressChecking": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"},
+      "name": {},
+      "entry": {"type": "int"},
+      "entries": {"type": "int"},
+      "path": {}
+    }
+  },
+  "mediaProgressWriting": "Beírás {current}/{total} {name}",
+  "@mediaProgressWriting": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"},
+      "name": {}
+    }
+  },
+  "mediaProgressDeleting": "Mellőzött csomagok törlése...",
+  "mediaProgressCleanup": "ZIP-fájlok törlése...",
+  "mediaProgressSaving": "Helyi adatok mentése...",
+  "mediaProgressBooks": "Énektárak újratöltése...",
+  "mediaProgressLibrary": "Kották és zenék bejegyzéseinek újratöltése...",
+  "mediaProgressIndexing": "Keresési index újraépítése...",
+  "mediaProgressSettings": "Zenelejátszás beállítása...",
   "statusDownloadProgress": "Letöltés: {current}/{total} {name} {percent}%",
   "@statusDownloadProgress": {
     "placeholders": {
