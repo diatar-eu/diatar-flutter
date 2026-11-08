@@ -37,6 +37,21 @@ class DtzMediaPaths {
     return resolved;
   }
 
+  /// Returns installed media references for package removal.
+  Set<String> references(String content) {
+    final Set<String> references = <String>{};
+    for (final String line in localize(content).split('\n')) {
+      if (line.isEmpty ||
+          !const <String>{'f', 'F', 'z', 'Z'}.contains(line[0])) {
+        continue;
+      }
+      final String rest = line.substring(1).trim();
+      final int space = rest.indexOf(' ');
+      if (space > 0) references.add(rest.substring(space + 1).trim());
+    }
+    return references;
+  }
+
   /// Stores only installed media, relative to the local DTZ's directory.
   /// [music] restricts official packages to their independently managed media.
   String localize(String content, {bool? music}) {

@@ -312,7 +312,6 @@ class DiatarMainController extends ChangeNotifier {
   Set<String> _disabledSongbooks = <String>{};
   Set<String> _disabledDtzFiles = <String>{};
   Set<String> _disabledMusicFiles = <String>{};
-  bool _musicSelectionConfigured = false;
   List<CustomOrderEntry> _customOrder = <CustomOrderEntry>[];
   bool customOrderActive = false;
   String? _songOrderTitle;
@@ -329,8 +328,6 @@ class DiatarMainController extends ChangeNotifier {
   String? _customOrderSourceType;
   static const String _disabledDtzPrefsKey = 'disabled_dtz_files';
   static const String _disabledMusicPrefsKey = 'disabled_music_files';
-  static const String _musicSelectionConfiguredPrefsKey =
-      'music_selection_configured';
 
   /// A párhuzamosan betöltött diasorok (saját diasorok) listája.
   List<CustomOrderSet> _customOrderSets = <CustomOrderSet>[];
@@ -1190,7 +1187,6 @@ class DiatarMainController extends ChangeNotifier {
     _disabledSongbooks = await _orderStore.loadDisabled();
     _disabledDtzFiles = await _loadDisabledDtzFiles();
     _disabledMusicFiles = await _loadDisabledMusicFiles();
-    _musicSelectionConfigured = await _loadMusicSelectionConfigured();
     await _loadCustomOrderSets();
     globals = _projectionGlobalsPolicy.fromSettings(
       settings,
@@ -1312,14 +1308,6 @@ class DiatarMainController extends ChangeNotifier {
 
   Future<void> _saveDisabledMusicFiles(Set<String> files) async {
     await _saveDisabledFiles(_disabledMusicPrefsKey, files);
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_musicSelectionConfiguredPrefsKey, true);
-    _musicSelectionConfigured = true;
-  }
-
-  Future<bool> _loadMusicSelectionConfigured() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_musicSelectionConfiguredPrefsKey) ?? false;
   }
 
   Future<void> _saveDisabledFiles(String key, Set<String> files) async {
@@ -3319,10 +3307,8 @@ class DiatarMainController extends ChangeNotifier {
     );
     return all
         .map(
-          (DtzDownloadItem item) => DtzManageItem(
-            item: item,
-            excluded: _disabledDtzFiles.contains(item.fileName),
-          ),
+          (DtzDownloadItem item) =>
+              DtzManageItem(item: item, excluded: !item.isInstalled),
         )
         .toList();
   }
@@ -3348,12 +3334,8 @@ class DiatarMainController extends ChangeNotifier {
     );
     return all
         .map(
-          (DtzDownloadItem item) => DtzManageItem(
-            item: item,
-            excluded:
-                !_musicSelectionConfigured ||
-                _disabledMusicFiles.contains(item.fileName),
-          ),
+          (DtzDownloadItem item) =>
+              DtzManageItem(item: item, excluded: !item.isInstalled),
         )
         .toList();
   }
@@ -3390,17 +3372,13 @@ class DiatarMainController extends ChangeNotifier {
       final Map<String, DtzDownloadItem> byFile = <String, DtzDownloadItem>{
         for (final DtzDownloadItem item in all) item.fileName: item,
       };
-      if (!_musicSelectionConfigured) {
-        effectiveExcluded.addAll(byFile.keys);
-        effectiveExcluded.removeAll(requestedDownloads);
-      }
       _disabledMusicFiles = effectiveExcluded;
       await _saveDisabledMusicFiles(_disabledMusicFiles);
       final Set<String> effectiveDownload = requestedDownloads.where((
         String name,
       ) {
         final DtzDownloadItem? item = byFile[name];
-        return item != null && item.isOfficial && item.updateAvailable;
+        return item != null && item.isOfficial;
       }).toSet();
       await _showMediaPhase(DtzDownloadPhase.deleting);
       final int deleted = await _musicDownloadService.deletePackages(
@@ -3428,6 +3406,7 @@ class DiatarMainController extends ChangeNotifier {
             .downloadUpdates(
               targetDir: musicDir,
               selected: selected,
+              force: true,
               onProgress: _onMediaDownloadProgress,
             );
         await _showMediaPhase(DtzDownloadPhase.loadingLibrary);
@@ -3508,7 +3487,7 @@ class DiatarMainController extends ChangeNotifier {
             .where((String n) => n.isNotEmpty)
             .where((String n) {
               final DtzDownloadItem? item = byFile[n];
-              return item != null && item.isOfficial && item.updateAvailable;
+              return item != null && item.isOfficial;
             })
             .toSet();
 
@@ -3543,6 +3522,7 @@ class DiatarMainController extends ChangeNotifier {
               .downloadUpdates(
                 targetDir: dtzDir,
                 selected: selected,
+                force: true,
                 onProgress: _onMediaDownloadProgress,
               );
           if (summary.downloaded > 0) {
@@ -4145,10 +4125,12 @@ class DiatarMainController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final Set<String> effectiveExcluded = excludedSelected
-          .map((String name) => name.trim())
-          .where((String name) => name.isNotEmpty)
-          .toSet();
+      final Set<String> effectiveExcluded =
+          excludedSelected
+              .map((String name) => name.trim())
+              .where((String name) => name.isNotEmpty)
+              .toSet()
+            ..removeAll(downloadSelected);
 
       // A mellőzés-módosítást mindenekelőtt mentjük, így az
       // hálózati/letöltési hiba esetén is érvényesül.
@@ -4174,7 +4156,7 @@ class DiatarMainController extends ChangeNotifier {
             .where((String name) => name.isNotEmpty)
             .where((String name) {
               final DtxDownloadItem? item = byFile[name];
-              return item != null && item.isOfficial && item.updateAvailable;
+              return item != null && item.isOfficial;
             })
             .toSet();
 
@@ -4197,6 +4179,7 @@ class DiatarMainController extends ChangeNotifier {
               .downloadUpdates(
                 targetDir: dtxDir,
                 selected: selectedForDownload,
+                force: true,
                 onProgress: (DtxDownloadProgress progress) {
                   downloadCurrentFile = progress.currentFile;
                   downloadTotalFiles = progress.totalFiles;

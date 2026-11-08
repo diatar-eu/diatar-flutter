@@ -215,6 +215,7 @@ class DtxDownloadService {
   Future<DtxDownloadSummary> downloadUpdates({
     required Directory targetDir,
     List<DtxDownloadItem>? selected,
+    bool force = false,
     void Function(DtxDownloadProgress progress)? onProgress,
   }) async {
     await targetDir.create(recursive: true);
@@ -236,11 +237,12 @@ class DtxDownloadService {
       final String oldStamp =
           prefs.getString('$_stampPrefix${item.fileName}') ?? '';
       final bool upToDate = local.existsSync() && oldStamp == item.timestamp;
-      if (upToDate) {
+      if (upToDate && !force) {
         skipped++;
         continue;
       }
 
+      await prefs.remove('$_stampPrefix${item.fileName}');
       await _downloadOne(
         item: _RemoteDtx(
           fileName: item.fileName,

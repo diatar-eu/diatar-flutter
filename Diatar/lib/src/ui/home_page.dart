@@ -2327,6 +2327,8 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
   final Set<String> _collapsedDtxGroups = <String>{};
   bool _dtxCollapsedGroupsInitialized = false;
   bool _dtxSelectionInitialized = false;
+  int _loadGeneration = 0;
+  Object? _managerLoadError;
 
   final _MediaTabSelections _dtzSelections = _MediaTabSelections();
   final _MediaTabSelections _musicSelections = _MediaTabSelections();
@@ -2338,9 +2340,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) setState(() {});
     });
-    _dtxItemsFuture = widget.controller.loadDtxManagerItems();
-    _dtzItemsFuture = widget.controller.loadDtzManagerItems();
-    _musicItemsFuture = widget.controller.loadMusicManagerItems();
+    _loadManagerItems();
   }
 
   @override
@@ -2356,19 +2356,109 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
       _excludedFiles.clear();
       _collapsedDtxGroups.clear();
       _dtxCollapsedGroupsInitialized = false;
-      _dtxItemsFuture = widget.controller.loadDtxManagerItems();
 
       _dtzSelections.initialized = false;
       _dtzSelections.downloadSelected.clear();
       _dtzSelections.excludedFiles.clear();
       _dtzSelections.allItems = const <DtzManageItem>[];
-      _dtzItemsFuture = widget.controller.loadDtzManagerItems();
       _musicSelections.initialized = false;
       _musicSelections.downloadSelected.clear();
       _musicSelections.excludedFiles.clear();
       _musicSelections.allItems = const <DtzManageItem>[];
-      _musicItemsFuture = widget.controller.loadMusicManagerItems();
+      _loadManagerItems();
     });
+  }
+
+  void _loadManagerItems() {
+    final int generation = ++_loadGeneration;
+    _managerLoadError = null;
+    _dtxItemsFuture = widget.controller.loadDtxManagerItems().then((items) {
+      if (mounted && generation == _loadGeneration) {
+        setState(() {
+          _downloadSelected
+            ..clear()
+            ..addAll(
+              items
+                  .where(
+                    (item) =>
+                        item.item.isOfficial &&
+                        item.item.updateAvailable &&
+                        !item.excluded,
+                  )
+                  .map((item) => item.item.fileName),
+            );
+          _excludedFiles
+            ..clear()
+            ..addAll(
+              items
+                  .where((item) => item.excluded)
+                  .map((item) => item.item.fileName),
+            );
+          _dtxSelectionInitialized = true;
+        });
+      }
+      return items;
+    });
+    _dtzItemsFuture = _loadMediaItems(
+      _dtzSelections,
+      music: false,
+      generation: generation,
+    );
+    _musicItemsFuture = _loadMediaItems(
+      _musicSelections,
+      music: true,
+      generation: generation,
+    );
+    unawaited(
+      Future.wait<Object>([
+        _dtxItemsFuture,
+        _dtzItemsFuture,
+        _musicItemsFuture,
+      ]).then<void>(
+        (_) {},
+        onError: (Object error, StackTrace stackTrace) {
+          if (mounted && generation == _loadGeneration) {
+            setState(() => _managerLoadError = error);
+          }
+        },
+      ),
+    );
+  }
+
+  Future<List<DtzManageItem>> _loadMediaItems(
+    _MediaTabSelections selections, {
+    required bool music,
+    required int generation,
+  }) async {
+    final List<DtzManageItem> items = await (music
+        ? widget.controller.loadMusicManagerItems()
+        : widget.controller.loadDtzManagerItems());
+    if (mounted && generation == _loadGeneration) {
+      setState(() {
+        selections.allItems = items;
+        selections.downloadSelected
+          ..clear()
+          ..addAll(
+            items
+                .where(
+                  (item) =>
+                      item.item.isOfficial &&
+                      item.item.updateAvailable &&
+                      !item.excluded,
+                )
+                .map((item) => item.item.fileName),
+          );
+        selections.excludedFiles
+          ..clear()
+          ..addAll(
+            items
+                .where((item) => item.excluded)
+                .map((item) => item.item.fileName),
+          );
+        selections.initialized = true;
+      });
+    }
+    return items;
   }
 
   String _displayGroup(DtxManageItem managed, BuildContext context) {
@@ -2382,10 +2472,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
 
   bool? _groupDownloadValue(List<DtxManageItem> items) {
     final List<DtxManageItem> eligible = items
-        .where(
-          (DtxManageItem item) =>
-              item.item.isOfficial && item.item.updateAvailable,
-        )
+        .where((DtxManageItem item) => item.item.isOfficial)
         .toList();
     if (eligible.isEmpty) {
       return false;
@@ -2407,10 +2494,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
 
   bool? _dtxUpdateValue(List<DtxManageItem> items) {
     final List<DtxManageItem> eligible = items
-        .where(
-          (DtxManageItem item) =>
-              item.item.isOfficial && item.item.updateAvailable,
-        )
+        .where((DtxManageItem item) => item.item.isOfficial)
         .toList();
     if (eligible.isEmpty) {
       return false;
@@ -2468,10 +2552,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
 
   bool? _mediaUpdateValue(_MediaTabSelections selections) {
     final List<DtzManageItem> eligible = selections.allItems
-        .where(
-          (DtzManageItem item) =>
-              item.item.isOfficial && item.item.updateAvailable,
-        )
+        .where((DtzManageItem item) => item.item.isOfficial)
         .toList();
     if (eligible.isEmpty) {
       return false;
@@ -2537,6 +2618,8 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                 Tab(text: l10n.downloadTabMusic),
               ],
             ),
+            if (_managerLoadError != null)
+              Text(l10n.statusDownloadError('$_managerLoadError')),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -2570,7 +2653,11 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
           ),
         ),
         FilledButton(
-          onPressed: widget.controller.downloadInProgress
+          onPressed:
+              widget.controller.downloadInProgress ||
+                  !_dtxSelectionInitialized ||
+                  !_dtzSelections.initialized ||
+                  !_musicSelections.initialized
               ? null
               : () => Navigator.of(context).pop(
                   _DownloadDialogResult(
@@ -2610,28 +2697,6 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
 
             final List<DtxManageItem> items =
                 snapshot.data ?? const <DtxManageItem>[];
-            if (!_dtxSelectionInitialized) {
-              _downloadSelected
-                ..clear()
-                ..addAll(
-                  items
-                      .where(
-                        (DtxManageItem managed) =>
-                            managed.item.isOfficial &&
-                            managed.item.updateAvailable &&
-                            !managed.excluded,
-                      )
-                      .map((DtxManageItem managed) => managed.item.fileName),
-                );
-              _excludedFiles
-                ..clear()
-                ..addAll(
-                  items
-                      .where((DtxManageItem managed) => managed.excluded)
-                      .map((DtxManageItem managed) => managed.item.fileName),
-                );
-              _dtxSelectionInitialized = true;
-            }
 
             if (items.isEmpty) {
               return Padding(
@@ -2673,8 +2738,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                 final bool compactMode = constraints.maxWidth < 560;
                 final double actionColumnWidth = compactMode ? 56 : 92;
                 final bool canToggleUpdates = items.any(
-                  (DtxManageItem item) =>
-                      item.item.isOfficial && item.item.updateAvailable,
+                  (DtxManageItem item) => item.item.isOfficial,
                 );
 
                 return Column(
@@ -2744,10 +2808,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                       false;
                                                   for (final DtxManageItem item
                                                       in items) {
-                                                    if (!item.item.isOfficial ||
-                                                        !item
-                                                            .item
-                                                            .updateAvailable) {
+                                                    if (!item.item.isOfficial) {
                                                       continue;
                                                     }
                                                     if (!clearColumn) {
@@ -2819,9 +2880,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                             final List<DtxManageItem> groupItems =
                                 grouped[groupName] ?? const <DtxManageItem>[];
                             final bool hasDownloadEligible = groupItems.any(
-                              (DtxManageItem item) =>
-                                  item.item.isOfficial &&
-                                  item.item.updateAvailable,
+                              (DtxManageItem item) => item.item.isOfficial,
                             );
                             return Padding(
                               padding: const EdgeInsets.only(top: 8, bottom: 2),
@@ -2893,10 +2952,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                       false;
                                                   for (final DtxManageItem item
                                                       in groupItems) {
-                                                    if (!item.item.isOfficial ||
-                                                        !item
-                                                            .item
-                                                            .updateAvailable) {
+                                                    if (!item.item.isOfficial) {
                                                       continue;
                                                     }
                                                     if (!clearColumn) {
@@ -2962,8 +3018,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
 
                           final DtxManageItem managed = entry.item!;
                           final DtxDownloadItem item = managed.item;
-                          final bool canUpdate =
-                              item.isOfficial && item.updateAvailable;
+                          final bool canUpdate = item.isOfficial;
                           return Padding(
                             padding: const EdgeInsets.only(left: 12),
                             child: Row(
@@ -3029,7 +3084,8 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                             _excludedFiles.remove(
                                               item.fileName,
                                             );
-                                            if (canUpdate) {
+                                            if (canUpdate &&
+                                                item.updateAvailable) {
                                               _downloadSelected.add(
                                                 item.fileName,
                                               );
@@ -3071,18 +3127,6 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
 
             final List<DtzManageItem> items =
                 snapshot.data ?? const <DtzManageItem>[];
-            selections.allItems = items;
-            if (!selections.initialized) {
-              selections.downloadSelected.clear();
-              selections.excludedFiles
-                ..clear()
-                ..addAll(
-                  items
-                      .where((DtzManageItem item) => !music || item.excluded)
-                      .map((DtzManageItem item) => item.item.fileName),
-                );
-              selections.initialized = true;
-            }
 
             if (items.isEmpty) {
               return Padding(
@@ -3096,8 +3140,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                 final bool compactMode = constraints.maxWidth < 560;
                 final double actionColumnWidth = compactMode ? 56 : 92;
                 final bool canToggleUpdates = items.any(
-                  (DtzManageItem item) =>
-                      item.item.isOfficial && item.item.updateAvailable,
+                  (DtzManageItem item) => item.item.isOfficial,
                 );
 
                 return Column(
@@ -3169,10 +3212,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                                       false;
                                                   for (final DtzManageItem item
                                                       in selections.allItems) {
-                                                    if (!item.item.isOfficial ||
-                                                        !item
-                                                            .item
-                                                            .updateAvailable) {
+                                                    if (!item.item.isOfficial) {
                                                       continue;
                                                     }
                                                     if (!clearColumn) {
@@ -3243,8 +3283,7 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
 
                           final DtzManageItem managed = items[index - 1];
                           final DtzDownloadItem item = managed.item;
-                          final bool canUpdate =
-                              item.isOfficial && item.updateAvailable;
+                          final bool canUpdate = item.isOfficial;
                           final String displayTitle = item.title.trim().isEmpty
                               ? item.longName
                               : item.title;
@@ -3318,7 +3357,8 @@ class _DownloadSongbooksDialogState extends State<_DownloadSongbooksDialog>
                                             selections.excludedFiles.remove(
                                               item.fileName,
                                             );
-                                            if (canUpdate) {
+                                            if (canUpdate &&
+                                                item.updateAvailable) {
                                               selections.downloadSelected.add(
                                                 item.fileName,
                                               );

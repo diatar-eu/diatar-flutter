@@ -41,4 +41,21 @@ void main() {
       '${DtzMediaPaths.localHeader}\n',
     );
   });
+
+  test(
+    'removal references include photos and sounds but not timing or missing files',
+    () {
+      final DtzMediaPaths paths = DtzMediaPaths(<String>[
+        'scores/page.png',
+        'audio/song.mp3',
+      ]);
+      expect(
+        paths.references(
+          'b C:\\old\\scores\\\nf1234 page.png\n'
+          'Z1234 song.mp3\ni1234 3000\nf5678 absent.png\n',
+        ),
+        <String>{'scores/page.png', 'audio/song.mp3'},
+      );
+    },
+  );
 }

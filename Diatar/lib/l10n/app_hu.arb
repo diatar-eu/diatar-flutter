@@ -189,15 +189,11 @@
       "entries": {"type": "int"}
     }
   },
-  "mediaProgressChecking": "Ellenőrzés {current}/{total} {name} → {entry}/{entries} {path}",
+  "mediaProgressChecking": "Ellenőrzés {entry}/{entries}",
   "@mediaProgressChecking": {
     "placeholders": {
-      "current": {"type": "int"},
-      "total": {"type": "int"},
-      "name": {},
       "entry": {"type": "int"},
-      "entries": {"type": "int"},
-      "path": {}
+      "entries": {"type": "int"}
     }
   },
   "mediaProgressWriting": "Beírás {current}/{total} {name}",

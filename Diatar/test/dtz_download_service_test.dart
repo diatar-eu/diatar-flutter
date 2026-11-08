@@ -13,12 +13,318 @@ import 'package:diatar_app/src/services/dtz_download_service.dart';
 import 'package:diatar_app/src/services/dtz_library_service.dart';
 import 'package:diatar_app/l10n/generated/app_localizations.dart';
 import 'package:diatar_app/src/l10n/dtz_download_progress.dart';
+import 'package:diatar_app/src/controllers/diatar_main_controller.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('xyz.luan/audioplayers'),
+          (_) async => null,
+        );
+  });
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('xyz.luan/audioplayers'),
+          null,
+        );
+  });
 
   group('DtzDownloadService', () {
+    test(
+      'score and music defaults follow installed files across restart',
+      () async {
+        final Directory root = await LocalFileSystem().systemTempDirectory
+            .createTemp('media_manager_restart_');
+        addTearDown(() => root.delete(recursive: true));
+        const MethodChannel channel = MethodChannel(
+          'plugins.flutter.io/path_provider',
+        );
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (_) async => root.path);
+        addTearDown(
+          () => TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .setMockMethodCallHandler(channel, null),
+        );
+        final MockClient client = MockClient((request) async {
+          if (request.url.path == '/downloads/enektarak/_list.php') {
+            return http.Response('song.dtx,1,1,,,,\n', 200);
+          }
+          if (request.url.path.startsWith('/downloads/zene/') ||
+              request.url.host == 'github.com') {
+            return _MusicHttpClient().get(request.url);
+          }
+          return _DownloadingFakeDtzHttpClient().get(request.url);
+        });
+        addTearDown(client.close);
+        await http.runWithClient(() async {
+          final DiatarMainController fresh = DiatarMainController();
+          expect((await fresh.loadDtzManagerItems()).single.excluded, isTrue);
+          expect((await fresh.loadMusicManagerItems()).single.excluded, isTrue);
+          fresh.dispose();
+          for (final DtzDownloadService service in [
+            DtzDownloadService(client: client),
+            DtzDownloadService.music(client: client),
+          ]) {
+            await service.downloadUpdates(
+              targetDir: await service.resolveDirectory(),
+            );
+          }
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setStringList('disabled_dtz_files', ['song.dtz']);
+          await prefs.setStringList('disabled_music_files', ['song.dtz']);
+          await prefs.setBool('music_selection_configured', true);
+          final DiatarMainController restarted = DiatarMainController();
+          final List<DtzManageItem> scores = await restarted
+              .loadDtzManagerItems();
+          final List<DtzManageItem> music = await restarted
+              .loadMusicManagerItems();
+          expect(scores.single.excluded, isFalse);
+          expect(music.single.excluded, isFalse);
+          expect(
+            DiatarMainController.hasEligibleStartupDtzUpdate(scores),
+            isFalse,
+          );
+          expect(
+            DiatarMainController.hasEligibleStartupDtzUpdate(music),
+            isFalse,
+          );
+          restarted.dispose();
+        }, () => client);
+      },
+    );
+
+    for (final bool music in <bool>[false, true]) {
+      test('forced refresh repairs current DTZ and media: $music', () async {
+        final Directory dir = await LocalFileSystem().systemTempDirectory
+            .createTemp('dtz_force_refresh_');
+        addTearDown(() => dir.delete(recursive: true));
+        final List<String> downloads = <String>[];
+        bool invalidZip = false;
+        final http.Client source = music
+            ? _MusicHttpClient()
+            : _DownloadingFakeDtzHttpClient();
+        final MockClient client = MockClient((request) async {
+          if (invalidZip && request.url.path.endsWith('.zip')) {
+            return http.Response('broken zip', 200);
+          }
+          if (request.url.path.endsWith('.dtz') ||
+              request.url.path.endsWith('.zip')) {
+            downloads.add(request.url.pathSegments.last);
+          }
+          return source.get(request.url);
+        });
+        addTearDown(client.close);
+        final DtzDownloadService service = music
+            ? DtzDownloadService.music(client: client)
+            : DtzDownloadService(client: client);
+        await service.downloadUpdates(targetDir: dir);
+        final List<DtzDownloadItem> installed = await service.listAll(
+          targetDir: dir,
+        );
+        expect(installed.single.updateAvailable, isFalse);
+        final String path = music ? 'music/song.mp3' : 'scores/song.png';
+        await dir.childFile(path).writeAsString('damaged');
+        await dir.childFile('song.dtz').writeAsString('damaged');
+        downloads.clear();
+        final DtzDownloadSummary summary = await service.downloadUpdates(
+          targetDir: dir,
+          selected: installed,
+          force: true,
+        );
+        expect(downloads, <String>[
+          'song.dtz',
+          music ? 'song.zip' : 'cover.zip',
+        ]);
+        expect(summary.downloaded, 1);
+        expect(await dir.childFile(path).readAsBytes(), <int>[1, 2, 3, 4]);
+        expect(
+          await dir.childFile('song.dtz').readAsString(),
+          contains('00000001'),
+        );
+        invalidZip = true;
+        await expectLater(
+          service.downloadUpdates(
+            targetDir: dir,
+            selected: installed,
+            force: true,
+          ),
+          throwsA(isA<Exception>()),
+        );
+        expect(
+          (await service.listAll(targetDir: dir)).single.updateAvailable,
+          isTrue,
+        );
+      });
+    }
+
+    for (final bool sharedZip in <bool>[true, false]) {
+      test(
+        'removal keeps shared media and deletes exclusive files: $sharedZip',
+        () async {
+          final Directory dir = await LocalFileSystem().systemTempDirectory
+              .createTemp('dtz_shared_removal_');
+          addTearDown(() => dir.delete(recursive: true));
+          final MockClient client = MockClient((request) async {
+            final String name = request.url.pathSegments.last;
+            if (request.url.path == '/downloads/dtz/_list.php') {
+              return http.Response('a.dtz,1,1\nb.dtz,1,1\n', 200);
+            }
+            if (name == '_list.php') {
+              return http.Response(
+                sharedZip ? 'shared.zip,1,1\n' : 'a.zip,1,1\nb.zip,1,1\n',
+                200,
+              );
+            }
+            if (name == 'kottak.txt') {
+              return http.Response(
+                sharedZip
+                    ? 'a.dtz=shared.zip\nb.dtz=shared.zip\n'
+                    : 'a.dtz=a.zip\nb.dtz=b.zip\n',
+                200,
+              );
+            }
+            if (name.endsWith('.dtz')) {
+              return http.Response(
+                'f00000001 scores/shared.png\n'
+                'f00000002 scores/only-${name[0]}.png\n',
+                200,
+              );
+            }
+            final Archive archive = Archive();
+            for (final String path in <String>[
+              'scores/shared.png',
+              if (sharedZip || name == 'a.zip') 'scores/only-a.png',
+              if (sharedZip || name == 'b.zip') 'scores/only-b.png',
+            ]) {
+              archive.addFile(ArchiveFile(path, 1, <int>[1]));
+            }
+            return http.Response.bytes(ZipEncoder().encodeBytes(archive), 200);
+          });
+          addTearDown(client.close);
+          final DtzDownloadService service = DtzDownloadService(client: client);
+          await service.downloadUpdates(targetDir: dir);
+          final List<DtzDownloadItem> installed = await service.listAll(
+            targetDir: dir,
+          );
+          await service.deletePackages(
+            targetDir: dir,
+            itemsToDelete: installed.where((item) => item.fileName == 'a.dtz'),
+            allItems: installed,
+          );
+          expect(dir.childFile('a.dtz').existsSync(), isFalse);
+          expect(dir.childFile('scores/only-a.png').existsSync(), isFalse);
+          expect(dir.childFile('scores/shared.png').existsSync(), isTrue);
+          expect(dir.childFile('scores/only-b.png').existsSync(), isTrue);
+          final List<DtzDownloadItem> remaining = await service.listAll(
+            targetDir: dir,
+          );
+          await service.deletePackages(
+            targetDir: dir,
+            itemsToDelete: remaining.where((item) => item.fileName == 'b.dtz'),
+            allItems: remaining,
+          );
+          expect(dir.childFile('scores/shared.png').existsSync(), isFalse);
+          expect(dir.childFile('scores/only-b.png').existsSync(), isFalse);
+        },
+      );
+    }
+
+    test('counts actual files, skipping cached and shared ZIPs', () async {
+      final Directory dir = await LocalFileSystem().systemTempDirectory
+          .createTemp('dtz_download_counts_');
+      addTearDown(() => dir.delete(recursive: true));
+      String zipStamp = '20240101010102';
+      final List<String> downloadedFiles = <String>[];
+      final MockClient client = MockClient((http.Request request) async {
+        final String name = request.url.pathSegments.last;
+        if (request.url.path == '/downloads/dtz/_list.php') {
+          return http.Response(
+            'song.dtz,42,20240101010101\nother.dtz,42,20240101010101\n',
+            200,
+          );
+        }
+        if (name == '_list.php') {
+          return http.Response(
+            'one.zip,111,$zipStamp\ntwo.zip,111,20240101010102\n'
+            'three.zip,111,20240101010102\n',
+            200,
+          );
+        }
+        if (name == 'kottak.txt') {
+          return http.Response(
+            'song.dtz=one.zip,two.zip,three.zip\n'
+            'other.dtz=one.zip,two.zip,three.zip\n',
+            200,
+          );
+        }
+        downloadedFiles.add(name);
+        if (name.endsWith('.dtz')) {
+          return http.Response('f00000001 scores/one.png\n', 200);
+        }
+        final Archive archive = Archive()
+          ..addFile(
+            ArchiveFile('scores/${name.replaceAll('.zip', '.png')}', 1, <int>[
+              1,
+            ]),
+          );
+        return http.Response.bytes(ZipEncoder().encodeBytes(archive), 200);
+      });
+      addTearDown(client.close);
+      final DtzDownloadService service = DtzDownloadService(client: client);
+      final List<DtzDownloadProgress> progress = <DtzDownloadProgress>[];
+
+      Future<void> downloadAndCheck({
+        List<DtzDownloadItem>? selected,
+        required List<String> expectedFiles,
+      }) async {
+        progress.clear();
+        downloadedFiles.clear();
+        await service.downloadUpdates(
+          targetDir: dir,
+          selected: selected,
+          onProgress: progress.add,
+        );
+        expect(downloadedFiles, expectedFiles);
+        final List<DtzDownloadProgress> starts = progress
+            .where(
+              (DtzDownloadProgress p) =>
+                  p.phase == DtzDownloadPhase.downloading &&
+                  p.receivedBytes == 0,
+            )
+            .toList();
+        expect(
+          starts.map((DtzDownloadProgress p) => p.fileName),
+          expectedFiles,
+        );
+        expect(
+          starts.map((DtzDownloadProgress p) => p.currentFile),
+          List<int>.generate(expectedFiles.length, (int i) => i + 1),
+        );
+        expect(
+          starts.map((DtzDownloadProgress p) => p.totalFiles),
+          everyElement(expectedFiles.length),
+        );
+      }
+
+      final List<DtzDownloadItem> items = await service.listAll(targetDir: dir);
+      await downloadAndCheck(
+        selected: items
+            .where((DtzDownloadItem item) => item.fileName == 'song.dtz')
+            .toList(),
+        expectedFiles: <String>['song.dtz', 'one.zip', 'two.zip', 'three.zip'],
+      );
+      await downloadAndCheck(expectedFiles: <String>['other.dtz']);
+      zipStamp = '20250101010102';
+      await downloadAndCheck(expectedFiles: <String>['one.zip']);
+      await downloadAndCheck(expectedFiles: <String>[]);
+    });
+
     test('localizes extraction details and switches to writing', () async {
       final AppLocalizations hu = await AppLocalizations.delegate.load(
         const Locale('hu'),
@@ -40,6 +346,17 @@ void main() {
         'Kicsomagolás 24/105',
       );
       expect(localizeDtzDownloadProgress(en, extracting), 'Extracting 24/105');
+      const DtzDownloadProgress checking = DtzDownloadProgress(
+        phase: DtzDownloadPhase.checking,
+        currentFile: 1,
+        totalFiles: 1,
+        fileName: 'song.dtz',
+        currentEntry: 123,
+        totalEntries: 999,
+        entryName: 'scores/song.png',
+      );
+      expect(localizeDtzDownloadProgress(hu, checking), 'Ellenőrzés 123/999');
+      expect(localizeDtzDownloadProgress(en, checking), 'Checking 123/999');
       expect(
         localizeDtzDownloadProgress(
           hu,

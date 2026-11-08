@@ -232,6 +232,7 @@ class DtzDownloadService {
   Future<DtzDownloadSummary> downloadUpdates({
     required Directory targetDir,
     List<DtzDownloadItem>? selected,
+    bool force = false,
     void Function(DtzDownloadProgress progress)? onProgress,
   }) async {
     onProgress?.call(
@@ -260,6 +261,25 @@ class DtzDownloadService {
     };
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
+    final Set<String> pendingDtzs = <String>{};
+    final Set<String> pendingZips = <String>{};
+    for (final DtzDownloadItem item in toDownload) {
+      final File dtzFile = FileSystemProvider.instance.file(
+        '${targetDir.path}/${item.fileName}',
+      );
+      if (force ||
+          await _needsDownload(dtzFile, item.fileName, item.timestamp, prefs)) {
+        pendingDtzs.add(item.fileName);
+      }
+      for (final String zip in item.zips) {
+        final _RemoteEntry? entry = remote[zip];
+        if (entry != null && (force || !_isZipCurrent(zip, entry, prefs))) {
+          pendingZips.add(zip);
+        }
+      }
+    }
+    final int totalDownloads = pendingDtzs.length + pendingZips.length;
+    int currentDownload = 0;
     int downloaded = 0;
     int skipped = 0;
     final Set<String> handledZips = <String>{};
@@ -274,13 +294,14 @@ class DtzDownloadService {
       final File dtzFile = FileSystemProvider.instance.file(
         '${targetDir.path}/${item.fileName}',
       );
-      if (await _needsDownload(dtzFile, item.fileName, item.timestamp, prefs)) {
+      if (pendingDtzs.remove(item.fileName)) {
+        await prefs.remove('$_stampPrefix${item.fileName}');
         await _downloadOne(
           url: Uri.parse('$_dtzBaseUrl${item.fileName}'),
           fileName: item.fileName,
           targetFile: dtzFile,
-          currentFile: currentFile,
-          totalFiles: total,
+          currentFile: ++currentDownload,
+          totalFiles: totalDownloads,
           onProgress: onProgress,
         );
         await prefs.setString('$_stampPrefix${item.fileName}', item.timestamp);
@@ -303,15 +324,16 @@ class DtzDownloadService {
         final File zipFile = FileSystemProvider.instance.file(
           '${targetDir.path}/$zip',
         );
-        if (!_isZipCurrent(zip, zipEntry, prefs)) {
+        if (pendingZips.remove(zip)) {
+          await prefs.remove('$_stampPrefix$zip');
           await _downloadOne(
             url: zipEntry.url == null
                 ? Uri.parse('$_scoreZipBaseUrl$zip')
                 : Uri.parse(zipEntry.url!),
             fileName: zip,
             targetFile: zipFile,
-            currentFile: currentFile,
-            totalFiles: total,
+            currentFile: ++currentDownload,
+            totalFiles: totalDownloads,
             onProgress: onProgress,
           );
           final Stopwatch progressClock = Stopwatch()..start();
@@ -532,7 +554,10 @@ class DtzDownloadService {
 
     final List<DtzDownloadItem> packages = allItems.toList();
     final Set<String> zipsStillUsed = packages
-        .where((DtzDownloadItem item) => !packageNames.contains(item.fileName))
+        .where(
+          (DtzDownloadItem item) =>
+              item.isInstalled && !packageNames.contains(item.fileName),
+        )
         .expand((DtzDownloadItem item) => item.zipNames)
         .toSet();
     final Set<String> zipsToDelete = packages
@@ -541,24 +566,71 @@ class DtzDownloadService {
         .where((String zip) => !zipsStillUsed.contains(zip))
         .toSet();
 
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final List<File> localFiles =
+        (await targetDir.list(recursive: true).toList())
+            .whereType<File>()
+            .toList();
+    final DtzMediaPaths paths = DtzMediaPaths(
+      localFiles.map(
+        (File file) => file.path
+            .replaceAll('\\', '/')
+            .substring(targetDir.path.replaceAll('\\', '/').length + 1),
+      ),
+    );
+    final Map<String, DtzMediaPaths> pathsByDirectory = <String, DtzMediaPaths>{
+      targetDir.path: paths,
+    };
+    final Set<String> mediaToDelete = <String>{};
+    final Set<String> mediaStillUsed = <String>{};
+    for (final File file in localFiles) {
+      if (!file.path.toLowerCase().endsWith('.dtz')) continue;
+      final String name = file.uri.pathSegments.last;
+      final String directory = file.parent.path.replaceAll('\\', '/');
+      final String root = targetDir.path.replaceAll('\\', '/');
+      final String relativeDirectory = directory == root
+          ? ''
+          : '${directory.substring(root.length + 1)}/';
+      final DtzMediaPaths filePaths = pathsByDirectory.putIfAbsent(
+        file.parent.path,
+        () => DtzMediaPaths(
+          localFiles
+              .map((File file) => file.path.replaceAll('\\', '/'))
+              .where((String path) => path.startsWith('$directory/'))
+              .map((String path) => path.substring(directory.length + 1)),
+        ),
+      );
+      final Set<String> references = filePaths
+          .references(await file.readAsString())
+          .map((String path) => '$relativeDirectory$path')
+          .toSet();
+      if (file.parent.path == targetDir.path && packageNames.contains(name)) {
+        mediaToDelete.addAll(references);
+      } else {
+        mediaStillUsed.addAll(references);
+      }
+    }
     int deleted = await deleteLocalFiles(
       targetDir: targetDir,
       fileNames: <String>[...packageNames, ...zipsToDelete],
     );
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
     for (final String zip in zipsToDelete) {
-      final List<String> extractedFiles =
-          prefs.getStringList('$_zipContentsPrefix$zip') ?? const <String>[];
-      for (final String relativePath in extractedFiles) {
-        final File local = FileSystemProvider.instance.file(
-          '${targetDir.path}/$relativePath',
-        );
-        if (await local.exists()) {
-          await local.delete();
-          deleted++;
-        }
-      }
+      mediaToDelete.addAll(
+        prefs.getStringList('$_zipContentsPrefix$zip') ?? const <String>[],
+      );
       await prefs.remove('$_zipContentsPrefix$zip');
+    }
+    for (final String relativePath in mediaToDelete.difference(
+      mediaStillUsed,
+    )) {
+      if (!DtzMediaPaths.isSafe(relativePath)) continue;
+      final File local = FileSystemProvider.instance.file(
+        '${targetDir.path}/$relativePath',
+      );
+      if (await local.exists()) {
+        await local.delete();
+        deleted++;
+      }
     }
 
     await FileSystemProvider.persistWebFileSystem();

@@ -83,6 +83,28 @@ saját könyvtáradhoz, a hálózathoz, a hanghoz, a kijelzőkhöz és az eszkö
 2. Jelöld ki a DTZ fájlokat és a hozzájuk tartozó képeket (ZIP)
 3. Nyomj a **Letöltés** gombra
 
+### Frissítés és mellőzés
+
+Új telepítéskor a **Kötetek** fül minden hivatalos köteténél a **Frissítés**
+van kijelölve; a **Kották** és **Zenék** fülön a még nem telepített csomagok
+**Mellőzött** állapotúak. A telepített, naprakész tételeknél mindkét oszlop
+üres marad, újraindítás után is. A telepített, frissítésre váró tételeknél
+a **Frissítés** automatikusan kijelölt.
+
+A **Frissítés** naprakész hivatalos tételeknél is pipálható. Az **Alkalmaz**
+ilyenkor újra letölti és felülírja a kijelölt kötetet, illetve a kijelölt kotta-
+vagy zenecsomag DTZ-jét és összes ZIP-jét. Ez sérült vagy hiányzó fájlok
+javítására is használható. A két oszlop kizárja egymást.
+
+A **Mellőzött** kijelölése és az **Alkalmaz** eltávolítja a tétel helyi
+bejegyzéseit és a csak általa használt fájlokat. Más megmaradó csomagok
+által is hivatkozott médiafájlokat nem töröl. Az összes fül kijelölése
+érvényesül akkor is, ha valamelyik fület nem nyitottad meg; az **Alkalmaz**
+csak mindhárom lista betöltése után választható.
+
+Ha minden használatban lévő tétel naprakész, a letöltési ablak nem nyílik
+meg automatikusan.
+
 ## Zenék letöltése
 
 1. Válts a **Letöltés** ablak **Zenék** lapjára
@@ -91,15 +113,20 @@ saját könyvtáradhoz, a hálózathoz, a hanghoz, a kijelzőkhöz és az eszkö
 4. A zenék a hozzájuk tartozó DTZ- és ZIP-csomagból kerülnek kibontásra; a mellőzött csomagok helyi fájljai törlődnek
 
 A kotta és a zene ugyanahhoz az énekhez egyszerre is letölthető és használható.
-Az alsó folyamatjelző külön mutatja a letöltést, a kicsomagolást (csak az aktuális
-fájl sorszámával és az összes fájl számával), a helyi fájlok ellenőrzését, a bejegyzések
+Az alsó folyamatjelző külön mutatja a letöltést, a kicsomagolást és a helyi fájlok
+ellenőrzését (utóbbi kettőt csak az aktuális fájl sorszámával és az összes fájl
+számával), a bejegyzések
 beírását, a ZIP-ek törlését, a mentést és az újratöltést. Kottáknál a
 keresési index újraépítése is külön lépésként látható. A letöltés 100%-a még
 nem jelenti a teljes telepítés végét.
+Letöltéskor a számláló a ténylegesen letöltendő DTZ- és ZIP-fájlokat számolja:
+egy DTZ és három ZIP esetén `1/4`–`4/4` látható. Kézi frissítésnél a kijelölt
+csomag összes fájlja beleszámít, a több kötethez tartozó közös ZIP csak egyszer
+szerepel.
 
 A sikeresen kibontott ZIP-eket a program törli, de a méretüket, dátumukat
-és kibontott fájljaik listáját megőrzi. A változatlan ZIP-et ezért egy
-DTZ-frissítéshez nem kell újra letölteni. A régebbi, méretadat nélküli
+és kibontott fájljaik listáját megőrzi. Az automatikus ellenőrzés így a ZIP
+hiányától még nem tekinti elavultnak a csomagot. A régebbi, méretadat nélküli
 nyilvántartás egyszeri újraletöltéssel egészül ki.
 
 A program a ZIP-ből kibontott fájlok tényleges helyét tárolja; a DTZ régi

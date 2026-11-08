@@ -16,12 +16,8 @@ String localizeDtzDownloadProgress(
     progress.totalEntries,
   ),
   DtzDownloadPhase.checking => l10n.mediaProgressChecking(
-    progress.currentFile,
-    progress.totalFiles,
-    progress.fileName,
     progress.currentEntry,
     progress.totalEntries,
-    progress.entryName,
   ),
   DtzDownloadPhase.writing => l10n.mediaProgressWriting(
     progress.currentFile,
