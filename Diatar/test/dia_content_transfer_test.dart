@@ -5,6 +5,7 @@ import 'package:diatar_app/l10n/generated/app_localizations.dart';
 import 'package:diatar_app/src/controllers/diatar_main_controller.dart';
 import 'package:diatar_app/src/core/dia/dia_embedded_image_codec.dart';
 import 'package:diatar_app/src/core/dia/dia_ini_parser.dart';
+import 'package:diatar_app/src/services/macos_file_panels.dart';
 import 'package:diatar_app/src/ui/custom_order_editor_sheet.dart';
 import 'package:diatar_app/src/utils/file_system_provider.dart';
 import 'package:flutter/foundation.dart';
@@ -209,6 +210,45 @@ void main() {
       skip: kIsWeb,
     );
   }
+
+  test(
+    'imports an Android document picked with its original DIA filename',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      final directory = io.Directory.systemTemp.createTempSync('dia-android-');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final file =
+          io.File('${directory.path}${io.Platform.pathSeparator}Áldás.mai.dia')
+            ..writeAsStringSync(
+              '[main]\ndiaszam=1\nutf8=1\n\n'
+              '[1]\ncaption=Áldás\nlines=1\nline0=Őrizz meg!\n',
+            );
+      const channel = MethodChannel('diatar.eu/dia_save');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(channel, (_) async => file.path);
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      final controller = DiatarMainController();
+      addTearDown(controller.dispose);
+      final picked = await showFileOpenPanel(extensions: const <String>['dia']);
+
+      expect(picked.single.name, 'Áldás.mai.dia');
+      expect(
+        await controller.importCustomOrderFromDia(
+          picked.single.path,
+          sourceFileName: picked.single.name,
+          activate: false,
+        ),
+        1,
+      );
+      expect(controller.customOrder.single.customTextTitle, 'Áldás');
+      expect(controller.customOrder.single.customTextBody, 'Őrizz meg!');
+      expect(controller.customOrderSets.single.displayName, 'Áldás.mai');
+      expect(controller.customOrderSets.single.diaFilePath, file.path);
+    },
+    skip: kIsWeb,
+  );
 
   testWidgets('web save asks only for a filename and starts the download', (
     tester,

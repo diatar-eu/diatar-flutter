@@ -14,6 +14,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.OpenableColumns
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.android.FlutterActivity
@@ -29,6 +30,7 @@ class MainActivity : FlutterActivity() {
 		private const val EXTERNAL_COMMAND_CHANNEL = "diatar.eu/external_command"
 		private const val REQUEST_SAVE_DIA = 6091
 		private const val REQUEST_PICK_ZIP = 6092
+		private const val REQUEST_PICK_DIA = 6093
 
         private const val STORAGE_CHANNEL = "com.example.sync_app/storage"
         private const val SYNC_CHANNEL = "com.example.sync_app/sync"
@@ -44,6 +46,7 @@ class MainActivity : FlutterActivity() {
 	private var pendingSaveBytes: ByteArray? = null
 	private var pendingSavePath: String? = null
 	private var pendingZipImportResult: MethodChannel.Result? = null
+	private var pendingDiaImportResult: MethodChannel.Result? = null
 	private var backupSaveProgressChannel: MethodChannel? = null
 
     private var pendingFolderResult: MethodChannel.Result? = null
@@ -57,6 +60,7 @@ class MainActivity : FlutterActivity() {
 		MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DIA_SAVE_CHANNEL)
 			.setMethodCallHandler { call, result ->
 				when (call.method) {
+					"pickDiaFile" -> startDiaImportPick(call, result)
 					"saveDiaFile" -> startSaveDiaFlow(call, result)
 					"overwriteDiaFile" -> overwriteDiaFile(call, result)
 					"saveBackupFile" -> startSaveBackupFlow(call, result)
@@ -144,6 +148,70 @@ class MainActivity : FlutterActivity() {
 			pendingZipImportResult = null
 			result.error("picker_failed", e.localizedMessage ?: e.toString(), null)
 		}
+	}
+
+	private fun startDiaImportPick(call: MethodCall, result: MethodChannel.Result) {
+		if (pendingDiaImportResult != null) {
+			result.error("busy", "Another DIA import picker is already in progress.", null)
+			return
+		}
+		pendingDiaImportResult = result
+		val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+			addCategory(Intent.CATEGORY_OPENABLE)
+			// DIA has no registered MIME type; validate the original name in Dart.
+			type = "*/*"
+			addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+			val directory = call.argument<String>("directoryPath")
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !directory.isNullOrEmpty()) {
+				putExtra(DocumentsContract.EXTRA_INITIAL_URI, Uri.fromFile(File(directory)))
+			}
+		}
+		try {
+			startActivityForResult(intent, REQUEST_PICK_DIA)
+		} catch (e: Exception) {
+			pendingDiaImportResult = null
+			result.error("picker_failed", e.localizedMessage ?: e.toString(), null)
+		}
+	}
+
+	private fun handleDiaImportPick(resultCode: Int, data: Intent?) {
+		val result = pendingDiaImportResult
+		pendingDiaImportResult = null
+		if (result == null) return
+		if (resultCode != Activity.RESULT_OK) {
+			result.success(null)
+			return
+		}
+		val uri = data?.data
+		if (uri == null) {
+			result.error("dia_copy_failed", "No document URI returned by the picker.", null)
+			return
+		}
+		Thread {
+			try {
+				val displayName = queryDisplayName(uri)
+				val safeName = displayName.substringAfterLast('/').substringAfterLast('\\')
+					.replace("..", "_")
+				if (safeName.isBlank()) {
+					throw IOException("Cannot read the selected document's name.")
+				}
+				val directory = File(cacheDir, "dia_import_${System.nanoTime()}")
+				if (!directory.mkdir()) {
+					throw IOException("Cannot create the DIA import cache directory.")
+				}
+				val target = File(directory, safeName)
+				contentResolver.openInputStream(uri)?.use { input ->
+					target.outputStream().use { output ->
+						input.copyTo(output, bufferSize = 64 * 1024)
+					}
+				} ?: throw IOException("Cannot open the selected DIA file.")
+				runOnUiThread { result.success(target.absolutePath) }
+			} catch (e: Exception) {
+				runOnUiThread {
+					result.error("dia_copy_failed", e.localizedMessage ?: e.toString(), null)
+				}
+			}
+		}.start()
 	}
 
 	private fun startSaveDiaFlow(call: MethodCall, result: MethodChannel.Result) {
@@ -257,6 +325,10 @@ class MainActivity : FlutterActivity() {
 
 		if (requestCode == REQUEST_PICK_ZIP) {
 			handleZipImportPick(resultCode, data)
+			return
+		}
+		if (requestCode == REQUEST_PICK_DIA) {
+			handleDiaImportPick(resultCode, data)
 			return
 		}
 		if (requestCode != REQUEST_SAVE_DIA) {

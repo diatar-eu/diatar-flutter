@@ -18,6 +18,10 @@ Több versszak együttes beszúrásakor az utolsó beszúrt versszak lesz kijel�
 így a következő beszúrás az új versszakok után folytatódik. Ez az énekválasztóból
 és a keresésből történő beszúrásra is érvényes.
 
+Androidon a **Betöltés** gomb a rendszer dokumentumválasztóját nyitja
+meg. A betöltés az eredeti fájlnevet használja akkor is, ha a tárhelyszolgáltató
+általános bináris fájlként jelzi a `.dia` dokumentumot.
+
 ## Diasor szerkesztése
 
 - **Csoport áthelyezés** — több dia egyszeri áthelyezése egy csoportban

@@ -26,6 +26,7 @@ import '../utils/ios_platform.dart';
 const MethodChannel _macosFilePanelsChannel = MethodChannel(
   'diatar/macos_file_panels',
 );
+const MethodChannel _androidDiaChannel = MethodChannel('diatar.eu/dia_save');
 
 bool _useNativePanels() =>
     !kIsWeb &&
@@ -90,6 +91,19 @@ Future<List<XFile>> showFileOpenPanel({
   bool multiple = false,
   String? initialDirectory,
 }) async {
+  if (!kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.android &&
+      !multiple &&
+      extensions.length == 1 &&
+      extensions.single.toLowerCase() == 'dia') {
+    // file_selector replaces the cache copy's extension with the MIME type's
+    // extension (.bin for application/octet-stream), losing the DIA filename.
+    final String? path = await _androidDiaChannel.invokeMethod<String>(
+      'pickDiaFile',
+      <String, Object?>{'directoryPath': initialDirectory},
+    );
+    return path == null ? <XFile>[] : <XFile>[XFile(path)];
+  }
   if (_useNativePanels()) {
     try {
       final Object? result = await _macosFilePanelsChannel

@@ -9,6 +9,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const MethodChannel channel = MethodChannel('diatar/macos_file_panels');
+  const MethodChannel androidChannel = MethodChannel('diatar.eu/dia_save');
   final List<MethodCall> calls = <MethodCall>[];
 
   setUp(() {
@@ -25,6 +26,8 @@ void main() {
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(androidChannel, null);
     debugDefaultTargetPlatformOverride = null;
   });
 
@@ -63,5 +66,54 @@ void main() {
         });
 
     expect(await showFileOpenPanel(), isEmpty);
+  });
+
+  test('Android DIA picker preserves the original document filename', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    const path = 'Áldás.mai.dia';
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(androidChannel, (MethodCall call) async {
+          calls.add(call);
+          return path;
+        });
+
+    final files = await showFileOpenPanel(
+      extensions: const <String>['dia'],
+      initialDirectory: '/storage/emulated/0/Download',
+    );
+
+    expect(calls.single.method, 'pickDiaFile');
+    expect(calls.single.arguments, <String, Object?>{
+      'directoryPath': '/storage/emulated/0/Download',
+    });
+    expect(files.single.path, path);
+    expect(files.single.name, 'Áldás.mai.dia');
+  });
+
+  test('a cancelled Android DIA picker yields no files', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(androidChannel, (_) async => null);
+
+    expect(await showFileOpenPanel(extensions: const <String>['dia']), isEmpty);
+  });
+
+  test('Android DIA picker errors reach the caller', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(androidChannel, (_) async {
+          throw PlatformException(code: 'dia_copy_failed');
+        });
+
+    await expectLater(
+      showFileOpenPanel(extensions: const <String>['dia']),
+      throwsA(
+        isA<PlatformException>().having(
+          (error) => error.code,
+          'code',
+          'dia_copy_failed',
+        ),
+      ),
+    );
   });
 }
