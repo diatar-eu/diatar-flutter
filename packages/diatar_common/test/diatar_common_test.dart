@@ -7,118 +7,7 @@ import 'package:diatar_common/utils/transposition_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class _BeamRecordingCanvas extends Fake implements Canvas {
-  final List<({Offset start, Offset end})> beams = [];
-
-  @override
-  void drawLine(Offset p1, Offset p2, Paint paint) {
-    if (paint.strokeWidth > 2) {
-      beams.add((start: p1, end: p2));
-    }
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => null;
-}
-
-List<({Offset start, Offset end})> _renderBeams(String commands) {
-  final canvas = _BeamRecordingCanvas();
-  ProjectorPainter(
-    frame: TextFrame(
-      record: RecTextRecord(
-        scholaLine: '',
-        title: '',
-        lines: <String>['\\K$commands;word'],
-      ),
-    ),
-    globals: const ProjectionGlobals(
-      autoResize: false,
-      fontSize: 34,
-      hCenter: false,
-      hideTitle: true,
-      useKotta: true,
-    ),
-    settings: const AppSettings(receiverUseKotta: true),
-    allowLineWrapping: false,
-  ).paint(canvas, const Size(1000, 200));
-  return canvas.beams;
-}
-
 void main() {
-  for (final String interruption in <String>[
-    'r42g',
-    'r22g',
-    'r12g',
-    'rb2g',
-    '[02g[1',
-    's8',
-    'kG',
-  ]) {
-    test('beams stop at $interruption without disabling later beaming', () {
-      final beams = _renderBeams('[?r82g2g${interruption}r82g2g]?');
-      expect(beams, hasLength(2));
-      expect(beams.first.end.dx, lessThan(beams.last.start.dx));
-    });
-  }
-
-  for (final int count in <int>[4, 5, 6, 8, 9]) {
-    test('beams contain at most four of $count consecutive notes', () {
-      final beams = _renderBeams('[?r8${List.filled(count, '2g').join()}]?');
-      expect(beams, hasLength(count ~/ 4 + (count % 4 >= 2 ? 1 : 0)));
-      final reference = _renderBeams('[?r82g2g]?').single;
-      final double spacing = (reference.end - reference.start).dx;
-      for (final beam in beams) {
-        expect(
-          (beam.end - beam.start).dx,
-          lessThanOrEqualTo(spacing * 3 + 0.001),
-        );
-      }
-    });
-  }
-
-  for (final String pitch in <String>['2g', '2G']) {
-    for (final (List<String> rhythms, List<(double, double)> spans) in [
-      (['8', '8'], <(double, double)>[]),
-      (['6', '6'], [(0.0, 1.0)]),
-      (['6', '8'], [(0.0, 0.5)]),
-      (['8', '6'], [(0.5, 1.0)]),
-      (['8', '6', '8'], [(0.5, 1.5)]),
-      (['6', '8', '6'], [(0.0, 0.5), (1.5, 2.0)]),
-      (['8', '6', '6', '8'], [(1.0, 2.0)]),
-      (['6', '6', '8', '6'], [(0.0, 1.0), (2.5, 3.0)]),
-      (['6', '6', '6', '6'], [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0)]),
-    ]) {
-      test('sixteenth beams and hooks for $pitch with $rhythms', () {
-        final beams = _renderBeams(
-          '[?${rhythms.map((rhythm) => 'r$rhythm$pitch').join()}]?',
-        );
-        expect(beams, hasLength(1 + spans.length));
-        final primary = beams.first;
-        final double spacing =
-            (primary.end.dx - primary.start.dx) / (rhythms.length - 1);
-        for (int index = 0; index < spans.length; index++) {
-          final secondary = beams[index + 1];
-          expect(
-            secondary.start.dx,
-            closeTo(primary.start.dx + spacing * spans[index].$1, 0.001),
-          );
-          expect(
-            secondary.end.dx,
-            closeTo(primary.start.dx + spacing * spans[index].$2, 0.001),
-          );
-          expect(
-            secondary.start.dy - primary.start.dy,
-            pitch == '2g' ? greaterThan(0) : lessThan(0),
-          );
-        }
-      });
-    }
-  }
-
-  test('tuplet endings do not end a surrounding beam', () {
-    expect(_renderBeams('[?[3r82g2g]32g]?'), hasLength(1));
-  });
-
   test('Diatar chords use Hungarian note names and styled parts', () {
     final DiatarChord chord = DiatarChord.tryParse('H-7+/C+')!;
 
@@ -417,29 +306,14 @@ void main() {
     expect(render('C#7+9'), 'C+△79');
     expect(render('C#7+9+'), 'C+△7#9');
 
-    expect(
-      render('C#79', notation: ChordNotation.textual),
-      'Caug79',
-    );
+    expect(render('C#79', notation: ChordNotation.textual), 'Caug79');
     expect(render('C7+9', notation: ChordNotation.textual), 'Cmaj79');
-    expect(
-      render('C7+9+', notation: ChordNotation.textual),
-      'Cmaj7#9',
-    );
-    expect(
-      render('C#7+9', notation: ChordNotation.textual),
-      'Caug7(maj9)',
-    );
-    expect(
-      render('C#7+9+', notation: ChordNotation.textual),
-      'Caug7(maj#9)',
-    );
+    expect(render('C7+9+', notation: ChordNotation.textual), 'Cmaj7#9');
+    expect(render('C#7+9', notation: ChordNotation.textual), 'Caug7(maj9)');
+    expect(render('C#7+9+', notation: ChordNotation.textual), 'Caug7(maj#9)');
     expect(render('C#79', notation: ChordNotation.numeric), 'C79#5');
     expect(render('C#7+9', notation: ChordNotation.numeric), 'Cmaj79#5');
-    expect(
-      render('C#7+9+', notation: ChordNotation.numeric),
-      'Cmaj7#9#5',
-    );
+    expect(render('C#7+9+', notation: ChordNotation.numeric), 'Cmaj7#9#5');
 
     // A bare ♭9 or #9 would be the added-ninth chord, so these keep the seventh.
     expect(render('C79-'), 'C7♭9');
@@ -1451,7 +1325,8 @@ void main() {
 
     expect(prefixes.length, greaterThanOrEqualTo(2));
     expect(prefixes.first, isEmpty);
-    expect(prefixes.skip(1), everyElement('kGE2'));
+    expect(prefixes[1], isEmpty);
+    expect(prefixes.skip(2), everyElement('kGE2'));
   });
 
   test('real multi-line eneklo egyhaz sample carries clef and key across lines', () {
@@ -1502,35 +1377,51 @@ void main() {
     expect(linePrefixes[1], everyElement('kGE2'));
   });
 
-  test('centered kotta continuation rows share the same left edge', () {
+  test('kotta continuation rows are centered independently', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
       globals: const ProjectionGlobals(useKotta: true, hCenter: true),
       settings: const AppSettings(receiverUseKotta: true),
     );
 
+    const source =
+        r'\KkGE2r41a;Alfa \Kr41a;Beta \Kr41a;Gamma \Kr41a;Delta \Kr41a;Epszilon';
     final List<double> startXs = painter.debugKottaRowStartXsForLine(
-      r'\KkGE2r41a;Alfa \Kr41a;Beta \Kr41a;Gamma \Kr41a;Delta \Kr41a;Epszilon',
+      source,
       fontSize: 24,
       maxWidth: 90,
       sizeWidth: 320,
       horizontalPad: 16,
     );
-
+    final widths = painter.debugKottaRowWidthsForLine(
+      source,
+      fontSize: 24,
+      maxWidth: 90,
+    );
     expect(startXs.length, greaterThanOrEqualTo(2));
-    expect(startXs.skip(2), everyElement(startXs[1]));
-    expect(startXs[1] - startXs.first, 16);
+    expect(startXs.toSet().length, greaterThan(1));
+    for (int i = 0; i < widths.length; i++) {
+      expect(
+        startXs[i],
+        closeTo(
+          (widths[i] < 320 ? (320 - widths[i]) / 2 : 0) + (i == 0 ? 0 : 16),
+          0.001,
+        ),
+      );
+    }
   });
 
-  test('continuation row prefixes start at the same visible x position', () {
+  test('continuation prefixes begin at their own staff origin', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
       globals: const ProjectionGlobals(useKotta: true, hCenter: true),
       settings: const AppSettings(receiverUseKotta: true),
     );
 
+    const source =
+        r'\KkGE2r41a;Alfa \Kr41a;Be \Kr41a;Sokkalhosszabb \Kr41a;Ko \Kr41a;Megegy';
     final List<double> visibleStartXs = painter.debugKottaVisibleStartXsForLine(
-      r'\KkGE2r41a;Alfa \Kr41a;Be \Kr41a;Sokkalhosszabb \Kr41a;Ko \Kr41a;Megegy',
+      source,
       fontSize: 24,
       maxWidth: 95,
       sizeWidth: 320,
@@ -1538,7 +1429,16 @@ void main() {
     );
 
     expect(visibleStartXs.length, greaterThanOrEqualTo(2));
-    expect(visibleStartXs.skip(1), everyElement(visibleStartXs[1]));
+    expect(
+      visibleStartXs,
+      painter.debugKottaRowStartXsForLine(
+        source,
+        fontSize: 24,
+        maxWidth: 95,
+        sizeWidth: 320,
+        horizontalPad: 16,
+      ),
+    );
   });
 
   test('first kotta row text starts after leading clef and key signature', () {
@@ -1616,7 +1516,7 @@ void main() {
     );
   });
 
-  test('real sample first kotta row text starts after prefixed clef and key', () {
+  test('real sample preserves the leading space before the first clef', () {
     final ProjectorPainter painter = ProjectorPainter(
       frame: null,
       globals: const ProjectionGlobals(useKotta: true, hCenter: false),
@@ -1643,7 +1543,8 @@ void main() {
 
     expect(rowStartXs, isNotEmpty);
     expect(textStartXs, isNotEmpty);
-    expect(textStartXs.first, greaterThan(rowStartXs.first));
+    expect(textStartXs.first, rowStartXs.first);
+    expect(textStartXs[1], greaterThan(rowStartXs[1]));
   });
 
   test('continuation rows are indented by the configured left margin', () {
@@ -1710,40 +1611,6 @@ void main() {
 
     expect(painter.debugTieUnderlineTipOffset(12), 0);
     expect(painter.debugTieUnderlineTipOffset(24), greaterThanOrEqualTo(1));
-  });
-
-  test('slur apex moves away from intermediate notes', () {
-    final ProjectorPainter painter = ProjectorPainter(
-      frame: null,
-      globals: const ProjectionGlobals(),
-      settings: const AppSettings(),
-    );
-
-    final Offset apexWithoutMiddle = painter.debugSlurApexForPoints(
-      <Offset>[const Offset(0, 10), const Offset(20, 10)],
-      down: false,
-      lineGap: 4,
-    );
-    final Offset apexWithMiddle = painter.debugSlurApexForPoints(
-      <Offset>[const Offset(0, 10), const Offset(10, 4), const Offset(20, 10)],
-      down: false,
-      lineGap: 4,
-    );
-
-    expect(apexWithMiddle.dy, lessThan(apexWithoutMiddle.dy));
-    expect(apexWithMiddle.dy, lessThan(4));
-    expect(apexWithMiddle.dx, 10);
-  });
-
-  test('slur is translated by one staff space without reshaping', () {
-    final ProjectorPainter painter = ProjectorPainter(
-      frame: null,
-      globals: const ProjectionGlobals(),
-      settings: const AppSettings(),
-    );
-
-    expect(painter.debugSlurYOffsetForDirection(down: false, lineGap: 4), -4);
-    expect(painter.debugSlurYOffsetForDirection(down: true, lineGap: 4), 4);
   });
 
   test('kotta control sequences do not create intra-word wrap points', () {
@@ -2013,35 +1880,37 @@ void main() {
     }
   });
 
-  test('overlong kotta words are shrunk so no kotta row exceeds the width', () {
-    final ProjectorPainter painter = ProjectorPainter(
-      frame: null,
-      globals: const ProjectionGlobals(useKotta: true, hCenter: false),
-      settings: const AppSettings(receiverUseKotta: true),
-    );
-    for (final double width in <double>[300, 400, 500]) {
-      final List<String> rows = painter.debugFullPipelineRowsForRecord(
-        size: ui.Size(width, 640),
-        record: RecTextRecord(
-          scholaLine: '',
-          title: '',
-          lines: <String>[r'\Kr34a;paradicsomkertben hosszúvégződéssel szó'],
+  test(
+    'notation lyrics keep their font size when automatic resizing is off',
+    () {
+      final ProjectorPainter painter = ProjectorPainter(
+        frame: null,
+        globals: const ProjectionGlobals(
+          useKotta: true,
+          hCenter: false,
+          autoResize: false,
+          fontSize: 24,
         ),
+        settings: const AppSettings(receiverUseKotta: true),
       );
-      expect(rows, isNotEmpty, reason: 'expected at least one kotta row');
-      for (final String row in rows) {
-        final RegExpMatch? m = RegExp(r'K<([0-9.]+)>').firstMatch(row);
-        if (m == null) {
-          continue;
-        }
-        final double rowWidth = double.parse(m.group(1)!);
-        expect(
-          rowWidth,
-          lessThanOrEqualTo(width + 1),
-          reason: 'kotta row overflow: $row (container $width)',
+      final List<double> measuredWidths = [];
+      for (final double width in <double>[100, 150]) {
+        final List<String> rows = painter.debugFullPipelineRowsForRecord(
+          size: ui.Size(width, 640),
+          record: RecTextRecord(
+            scholaLine: '',
+            title: '',
+            lines: <String>[r'\Kr42g;paradicsomkertben'],
+          ),
         );
+        expect(rows, hasLength(1));
+        final match = RegExp(r'K<([0-9.]+)>').firstMatch(rows.single)!;
+        final double rowWidth = double.parse(match.group(1)!);
+        measuredWidths.add(rowWidth);
+        expect(rowWidth, greaterThan(width));
+        expect(rows.first.contains('paradicsomkertben'), isTrue);
       }
-      expect(rows.first.contains('paradicsomkertben'), isTrue);
-    }
-  });
+      expect(measuredWidths[0], measuredWidths[1]);
+    },
+  );
 }

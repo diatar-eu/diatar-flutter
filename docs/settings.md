@@ -69,3 +69,39 @@ könyvtárában lévő `diatar` mappa törlése tehát nem törli a beállítás
 - **Akkordok/Kotta/Háttérkép mutatása**
 - **Szókiemelés** — kulcsszó kiemelés a vetítés közben
 - **Félkövér szöveg**
+
+### A szövegbe ágyazott kotta
+
+A kottakulcs és az előjegyzés a következő kottasorokra is érvényes;
+sortörés után automatikusan megismétlődik, az új kulcsra váltás pedig
+a megadott helyen történik. A csökkentett számú kottavonal szintén
+érvényben marad, amíg új vonalszám nincs megadva.
+
+A hangok helyét a kotta és a hozzájuk tartozó szöveg közös helyigénye
+határozza meg, a régi androidos Diatárhoz igazodva. Tömör módban az egy
+szövegrészhez tartozó hangcsoporton belül a hangfejek összeérhetnek,
+a következő szövegrész hangcsoportja előtt viszont legalább egy hangfejnyi
+hely marad. A hosszabb szöveg helyigénye ezen felül is érvényesül.
+A kulcsok és ütemjelek után a dalszöveg is beljebb
+kezdődik. A **Kotta/Akkord arány** kottaértéke nagyobb betűméretnél is
+arányosan változtatja a kottát, a szöveg betűmagasságából kiindulva.
+
+Az ütemvonalak mindig a kódolásban megadott helyükön jelennek meg:
+a `||` kettősvonal nem kerül át automatikusan a sor vagy az utolsó
+szótag végére. A vékony–vastag záróvonal külön jelölés (`|.`).
+A kottavonalak a teljes sor tartalmáig, a hosszabb dalszöveg végéig
+is elérnek. A kottarajzolás alapja az eredeti androidos algoritmus,
+a következő tudatos eltérésekkel: a gerendás és a különálló hangok
+alapszárhossza egyaránt három vonalköz; a dallamív követéséhez a szárak
+hosszabbodhatnak. Az egymagasságú hangok triola- és kvintolajelölése
+vízszintes, és vonala a szárvégektől háromnegyed vonalközre halad,
+nem fél vonalközre.
+
+Kottás versnél minden szövegsor kap kottasávot. A tördelt
+sorok külön-külön kerülnek középre. A közönséges kötőjel nem töri meg
+a kottához kötött szót; feltételes elválasztáshoz a `\-` jelölés használható.
+A `\.` sortörési javaslat akkor kap elsőbbséget, ha ettől nem nő a
+szükséges sorok száma.
+Kikapcsolt automatikus méretezésnél a hosszú szótagok betűmérete sem
+csökken külön: ha nem férnek el, az **Automatikus méretezés**
+bekapcsolásával vagy kisebb betűmérettel lehet helyet biztosítani.
