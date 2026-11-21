@@ -19,6 +19,54 @@ Ha a két eszköz nem ugyanazon a hálózaton van, MQTT segítségével közvet�
 3. Add meg a MQTT felhasználónevet és jelszót.
 4. A **QR-kód** gombbal láthatod a QR-kódot, amit a DiaVetito webes verziójában beolvasva gyorsan csatlakozhatsz.
 
+### Automatikus újracsatlakozás
+
+A Diatár és a DiaVetítő megszakadt internetes kapcsolat esetén 5 másodperc
+múlva friss MQTT-kapcsolattal próbálkozik. A DiaVetítő újra feliratkozik a
+kiválasztott felhasználó közvetítésére, a Diatár pedig újraküldi az aktuális
+vetítési állapotot, diát és háttérképet. A sikertelen kapcsolódási kísérlet
+legfeljebb 30 másodpercig tart, utána a próbálkozás ismétlődik.
+
+A kapcsolatot akkor is felügyeli, ha éppen nem változik a vetített dia:
+15 másodpercenként MQTT-életjelet küld, és ha egy percen át nem érkezik
+életjelválasz, teljesen újraépíti a kapcsolatot. Ehhez nem kell kilépni az
+alkalmazásból vagy feloldani az iPad irányított hozzáférését. Alvó vagy az
+operációs rendszer által felfüggesztett alkalmazásban az időzítők nem futnak;
+a helyreállítás az alkalmazás visszatérésekor folytatódik.
+
+### Diagnosztikai napló küldése hiba esetén
+
+A **Beállítások → Általános → Diagnosztikai naplózás** kapcsolóval a
+Diatárban és a DiaVetítőben is bekapcsolhatod a kapcsolati események rögzítését.
+A kapcsoló azonnal érvényes, a beállítások ablakának külön mentése nélkül is,
+és újraindítás után is megmarad. Alapértelmezésben ki van kapcsolva.
+
+1. Kapcsold be a naplózást azon az eszközön, amelyiken a hiba jelentkezik;
+   ha lehet, a küldő és a fogadó oldalon is.
+2. Hagyd bekapcsolva a hiba megismétlődéséig. Jegyezd fel, mikor történt,
+   és mi látszott a képernyőn.
+3. Válaszd ugyanitt a **Napló megosztása** gombot, és küldd el a létrejött
+   `diatar-diagnostics.txt` fájlt a hibaleírással együtt. iPaden a rendszer
+   megosztási ablaka nyílik meg. Linuxon a **Napló mentése** gombbal
+   menthetsz fájlt; böngészőben megosztás vagy letöltés érhető el.
+4. A vizsgálat után kikapcsolhatod a naplózást. A korábbi feljegyzések
+   megmaradnak a megosztáshoz; a **Napló törlése** gombbal törölheted őket.
+   A törlés önmagában nem kapcsolja ki a további naplózást.
+
+A napló időpontokat, alkalmazás- és rendszerverziót, az alkalmazás
+háttérbe kerülését és visszatérését, valamint az MQTT-kapcsolódások,
+hibatípusok, életjelválaszok és újrapróbálkozások műszaki adatait tartalmazza.
+Jelszót, felhasználónevet, hálózati címet, MQTT-topikot, vetített szöveget
+vagy képet nem rögzít; a nyers hibaüzenetek helyett csak hibatípust tárol.
+Semmit nem tölt fel automatikusan.
+
+Az újabb bejegyzések kiszorítják a legrégebbieket; a megosztott napló
+legfeljebb 1 MiB. Az életjelválaszok csak ritkítva kerülnek bele, így normál
+működés mellett több nap eseményei is elférnek. A mentés néhány másodpercenként,
+illetve háttérbe kerüléskor történik: váratlan leállásnál a legutolsó
+bejegyzések elveszhetnek. Felfüggesztett alkalmazásban a naplózás sem fut.
+Apple TV-n a megosztás nem érhető el, ezt az alkalmazás külön jelzi.
+
 ### A jelszó kezelése
 
 A jelszó a beállításokban **nem olvasható vissza**. Amit elmentesz, azt a

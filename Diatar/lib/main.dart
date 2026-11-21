@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
+import 'package:diatar_common/services/diagnostic_log.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -65,5 +66,7 @@ Future<void> main() async {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
+  await DiagnosticLog.instance.initialize(DiagnosticApp.sender);
+  DiagnosticLog.instance.observeAppLifecycle();
   runApp(const DiatarApp());
 }

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:diatar_common/services/mqtt_connection_supervisor.dart';
+import 'package:diatar_common/services/diagnostic_log.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'mqtt_client_factory.dart';
@@ -9,10 +11,15 @@ typedef SenderErrorCallback =
     void Function(String code, Map<String, String> params);
 
 class MqttSenderService {
-  MqttSenderService({required this.onStatusChanged, required this.onError});
+  MqttSenderService({
+    required this.onStatusChanged,
+    required this.onError,
+    MqttClient Function(String host, String clientId)? clientFactory,
+  }) : _clientFactory = clientFactory ?? createMqttClient;
 
   ValueChanged<bool> onStatusChanged;
   SenderErrorCallback onError;
+  final MqttClient Function(String host, String clientId) _clientFactory;
 
   static const String _host = 'mqtt.diatar.eu';
   static const String _webHost = 'wss://mqttws.diatar.eu';
@@ -20,7 +27,26 @@ class MqttSenderService {
   static const int _webPort = 443;
 
   MqttClient? _client;
-  StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? _sub;
+  late final MqttConnectionSupervisor _connection = MqttConnectionSupervisor(
+    role: DiagnosticRole.mqttSender,
+    createClient: _createClient,
+    onReady: (MqttClient client) async {
+      _client = client;
+      await _replayCache();
+    },
+    onConnection: (bool connected) {
+      if (!connected) {
+        _client = null;
+      }
+      onStatusChanged(connected);
+    },
+    onConnectionFailed: () =>
+        onError('senderMqttConnectFailed', const <String, String>{}),
+    onError: (Object error) =>
+        onError('senderMqttError', <String, String>{'error': '$error'}),
+  );
+  String _username = '';
+  String _password = '';
   String _topicGroup = '';
   String _topicState = '';
   String _topicBlank = '';
@@ -61,59 +87,35 @@ class MqttSenderService {
     _topicState = '${_topicGroup}state';
     _topicBlank = '${_topicGroup}blank';
     _topicDia = '${_topicGroup}dia';
+    _username = user;
+    _password = pass;
 
+    await _connection.start();
+  }
+
+  MqttClient _createClient() {
     final String clientId = 'sender-${DateTime.now().millisecondsSinceEpoch}';
     final String host = kIsWeb ? _webHost : _host;
     final int port = kIsWeb ? _webPort : _port;
-    final MqttClient client = createMqttClient(host, clientId);
+    final MqttClient client = _clientFactory(host, clientId);
     client.port = port;
 
     client
       ..logging(on: false)
-      ..keepAlivePeriod = 15
-      ..autoReconnect = true
-      ..resubscribeOnAutoReconnect = false
-      ..onDisconnected = () {
-        onStatusChanged(false);
-      }
       ..connectionMessage = MqttConnectMessage()
-          .authenticateAs(user, pass)
+          .authenticateAs(_username, _password)
           .withClientIdentifier(clientId)
           .withWillQos(MqttQos.atMostOnce);
 
-    try {
-      final MqttClientConnectionStatus? status = await client.connect();
-      if (status?.state != MqttConnectionState.connected) {
-        onError('senderMqttConnectFailed', const <String, String>{});
-        client.disconnect();
-        onStatusChanged(false);
-        return;
-      }
-
-      _client = client;
-      _sub = client.updates?.listen((_) {});
-      onStatusChanged(true);
-      await _replayCache();
-    } catch (e) {
-      onError('senderMqttError', <String, String>{'error': '$e'});
-      try {
-        client.disconnect();
-      } catch (_) {}
-      onStatusChanged(false);
-    }
+    return client;
   }
 
   Future<void> close({bool clearRetained = true}) async {
     if (clearRetained) {
       await clearRetainedMessages();
     }
-    await _sub?.cancel();
-    _sub = null;
-    try {
-      _client?.disconnect();
-    } catch (_) {}
-    _client = null;
-    onStatusChanged(false);
+    await _connection.stop();
+    _password = '';
   }
 
   Future<void> clearRetainedMessages() async {
@@ -198,10 +200,8 @@ class MqttSenderService {
 
   Future<void> sendPic(Uint8List bytes, {String ext = ''}) async {
     final Uint8List body = encodeImageRecord(bytes: bytes, ext: ext);
-    await _publish(
-      _topicDia,
-      Uint8List.fromList(<int>['P'.codeUnitAt(0), ...body]),
-    );
+    _cachedText = Uint8List.fromList(<int>['P'.codeUnitAt(0), ...body]);
+    await _publish(_topicDia, _cachedText);
   }
 
   Future<void> _replayCache() async {
@@ -227,6 +227,11 @@ class MqttSenderService {
       );
       _publishedTopics.add(topic);
     } catch (e) {
+      DiagnosticLog.instance.record(
+        DiagnosticEvent.mqttPublishFailed,
+        role: DiagnosticRole.mqttSender,
+        error: e,
+      );
       // Átmeneti publikálási hiba (pl. reconnect közben) nem eldobható: a
       // payload már a cache-ben van, auto-reconnect után újraküldjük. A
       // hivatkozás nem tartható, de a kapcsolat-jelzőt jelezzük és az

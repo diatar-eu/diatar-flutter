@@ -5,6 +5,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:diatar_common/services/diagnostic_log.dart';
+import 'package:diatar_common/ui/diagnostic_controls.dart';
 import 'package:diatar_speech/diatar_speech.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -469,7 +471,7 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
     );
     final bool showGeneral = _matches(
       query,
-      'altalanos tema nyelv language gorgetheto akkord kotta hatterkep szokiemeles',
+      'altalanos tema nyelv language gorgetheto akkord kotta hatterkep szokiemeles ${l10n.diagnosticsTitle} ${l10n.diagnosticsShare}',
     );
     final bool showSpeech =
         !kIsWeb &&
@@ -2068,6 +2070,22 @@ class _DiatarSettingsSheetState extends State<DiatarSettingsSheet> {
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         return <Widget>[
+          DiagnosticControls(
+            app: DiagnosticApp.sender,
+            labels: DiagnosticLabels(
+              title: l10n.diagnosticsTitle,
+              hint: l10n.diagnosticsHint,
+              share: l10n.diagnosticsShare,
+              save: l10n.diagnosticsSave,
+              clear: l10n.diagnosticsClear,
+              cleared: l10n.diagnosticsCleared,
+              error: l10n.diagnosticsError,
+              retry: l10n.diagnosticsRetry,
+              empty: l10n.diagnosticsEmpty,
+              shareUnavailable: l10n.diagnosticsShareUnavailable,
+            ),
+          ),
+          const Divider(),
           DropdownButtonFormField<int>(
             initialValue: _appThemeMode,
             decoration: InputDecoration(labelText: l10n.uiTheme),

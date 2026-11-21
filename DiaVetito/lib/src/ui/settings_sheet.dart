@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:diatar_common/diatar_common.dart';
+import 'package:diatar_common/services/diagnostic_log.dart';
+import 'package:diatar_common/ui/diagnostic_controls.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -234,7 +236,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
     final bool showColors = _matches(query, l10n.settingsSearchKeywordsColors);
     final bool showGeneral = _matches(
       query,
-      l10n.settingsSearchKeywordsGeneral,
+      '${l10n.settingsSearchKeywordsGeneral} ${l10n.diagnosticsTitle} ${l10n.diagnosticsShare}',
     );
     final bool showSystem = _matches(query, l10n.settingsSearchKeywordsSystem);
     final bool showCameraAvailable = !kIsWeb &&
@@ -866,6 +868,23 @@ class _SettingsSheetState extends State<SettingsSheet> {
       builder: (BuildContext context, void Function(void Function()) setBoth) {
         final l10n = context.l10n;
         return <Widget>[
+          DiagnosticControls(
+            app: DiagnosticApp.receiver,
+            sharingAvailable: !SystemPlatform.isTvOs,
+            labels: DiagnosticLabels(
+              title: l10n.diagnosticsTitle,
+              hint: l10n.diagnosticsHint,
+              share: l10n.diagnosticsShare,
+              save: l10n.diagnosticsSave,
+              clear: l10n.diagnosticsClear,
+              cleared: l10n.diagnosticsCleared,
+              error: l10n.diagnosticsError,
+              retry: l10n.diagnosticsRetry,
+              empty: l10n.diagnosticsEmpty,
+              shareUnavailable: l10n.diagnosticsShareUnavailable,
+            ),
+          ),
+          const Divider(),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: _boot,

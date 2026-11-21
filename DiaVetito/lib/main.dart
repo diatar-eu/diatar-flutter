@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:diatar_common/services/diagnostic_log.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -16,5 +17,7 @@ Future<void> main() async {
     debugPrintStack(stackTrace: stackTrace);
   }
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  await DiagnosticLog.instance.initialize(DiagnosticApp.receiver);
+  DiagnosticLog.instance.observeAppLifecycle();
   runApp(const DiaVetitoApp());
 }

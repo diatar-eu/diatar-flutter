@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -7,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:mqtt_client/mqtt_client.dart';
 
 import 'mqtt_client_factory.dart';
+import 'mqtt_connection_supervisor.dart';
+import 'diagnostic_log.dart';
 
 import '../models/mqtt_user.dart';
 import '../models/records.dart';
@@ -27,7 +28,8 @@ class MqttService {
     required this.onBlank,
     required this.onUsers,
     this.onConnection,
-  });
+    MqttClient Function(String host, String clientId)? clientFactory,
+  }) : _clientFactory = clientFactory ?? createMqttClient;
 
   final MqttErrorCallback onError;
   final MqttStateCallback onState;
@@ -36,14 +38,23 @@ class MqttService {
   final MqttImageCallback onBlank;
   final MqttUsersCallback onUsers;
   final MqttConnectionCallback? onConnection;
+  final MqttClient Function(String host, String clientId) _clientFactory;
 
   static const String _host = 'mqtt.diatar.eu';
   static const String _webHost = 'wss://mqttws.diatar.eu';
   static const int _port = 1883;
   static const String _apiBase = 'https://mqtt.diatar.eu';
-
-  MqttClient? _receiverClient;
-  StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? _receiverSub;
+  late final MqttConnectionSupervisor _receiver = MqttConnectionSupervisor(
+    role: DiagnosticRole.mqttReceiver,
+    createClient: _createReceiverClient,
+    onReady: (MqttClient client) {
+      client.subscribe(_topicMask, MqttQos.atLeastOnce);
+    },
+    onConnection: (bool connected) => onConnection?.call(connected),
+    onConnectionFailed: () => onError('MQTT receiver kapcsolodas sikertelen.'),
+    onError: (Object error) => onError('MQTT receiver hiba: $error'),
+    onMessages: _onReceiverMessages,
+  );
 
   String _username = '';
   String _channel = '1';
@@ -60,10 +71,11 @@ class MqttService {
     required String username,
     required String channel,
   }) async {
-    await closeReceiver();
+    _lastStateBytes = null;
     _username = username.trim();
     _channel = channel.trim().isEmpty ? '1' : channel.trim();
     if (_username.isEmpty) {
+      await _receiver.stop();
       return;
     }
 
@@ -73,56 +85,26 @@ class MqttService {
     _topicBlank = '${_topicGroup}blank';
     _topicDia = '${_topicGroup}dia';
 
+    await _receiver.start();
+  }
+
+  MqttClient _createReceiverClient() {
     final String clientId =
         'receiver-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(10000)}';
     final bool isWeb = kIsWeb;
     final String host = isWeb ? _webHost : _host;
-    final MqttClient client = createMqttClient(host, clientId)
+    return _clientFactory(host, clientId)
       ..port = isWeb ? 443 : _port
       ..logging(on: false)
-      ..keepAlivePeriod = 15
-      ..autoReconnect = true
-      ..resubscribeOnAutoReconnect = true
-      ..onConnected = () {
-        onConnection?.call(true);
-      }
-      ..onDisconnected = () {
-        onConnection?.call(false);
-      }
       ..connectionMessage = MqttConnectMessage()
           .authenticateAs('receiver', 'receiverpsw')
           .withClientIdentifier(clientId)
           .withWillQos(MqttQos.atMostOnce);
-
-    try {
-      final MqttClientConnectionStatus? status = await client.connect();
-      if (status?.state != MqttConnectionState.connected) {
-        onError('MQTT receiver kapcsolodas sikertelen.');
-        onConnection?.call(false);
-        client.disconnect();
-        return;
-      }
-      client.subscribe(_topicMask, MqttQos.atLeastOnce);
-      _receiverSub = client.updates?.listen(_onReceiverMessages);
-      _receiverClient = client;
-    } catch (e) {
-      onError('MQTT receiver hiba: $e');
-      onConnection?.call(false);
-      try {
-        client.disconnect();
-      } catch (_) {}
-    }
   }
 
   Future<void> closeReceiver() async {
-    await _receiverSub?.cancel();
-    _receiverSub = null;
-    try {
-      _receiverClient?.disconnect();
-    } catch (_) {}
-    _receiverClient = null;
     _lastStateBytes = null;
-    onConnection?.call(false);
+    await _receiver.stop();
   }
 
   Future<void> fillUserList() async {
@@ -164,12 +146,7 @@ class MqttService {
     final Uri uri = Uri.parse('$_apiBase/api/v1/users/list');
     try {
       final http.Response response = await http
-          .get(
-            uri,
-            headers: <String, String>{
-              'Accept': 'application/json',
-            },
-          )
+          .get(uri, headers: <String, String>{'Accept': 'application/json'})
           .timeout(const Duration(seconds: 12));
 
       if (response.statusCode != 200) {
